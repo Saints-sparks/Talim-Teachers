@@ -30,6 +30,8 @@ const poppins = Poppins({
   weight: ["300", "400", "500", "600", "700"],
 });
 
+
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -48,11 +50,13 @@ export default function RootLayout({
       >
         <PageIndicatorProvider>
           {/* Main layout structure */}
-          <div className="flex flex-row h-screen">
-            <Sidebar />
-            <div className="bg-[#F8F8F8] flex-1 border border-dashed h-full">
+          <div className="flex">
+            {showSidebar && (
+              <Sidebar />
+            )}
+            <main className={classNames("flex-1 ", { "ml-[248px] ": showSidebar })}>
               {children}
-            </div>
+            </main>
           </div>
         </PageIndicatorProvider>
       </body>

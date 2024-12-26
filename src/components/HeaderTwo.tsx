@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 export function Header() {
   return (
-    <header className="px-10">
+    <header className="px-10 sticky top-0 left-1 max-w-full z-50 bg-[#F3F3F3]">
       {/* <div className="relative w-full max-w-xs">
         <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input

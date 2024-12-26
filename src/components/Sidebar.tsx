@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation'; // Correct hook for Next.js 13 App Router
+import { usePathname } from 'next/navigation';
 
-// Type for Menu Item
 type MenuItem = {
   label: string;
   iconPath: string;
@@ -14,24 +13,24 @@ type MenuItem = {
 };
 
 const menuItems: MenuItem[] = [
-  { label: 'Dashboard', iconPath: '/icons/dashboard.svg', link: "/dashboard" },
-  { label: 'Subjects', iconPath: '/icons/subjects.svg', link: "/subjects" },
-  { label: 'Students', iconPath: '/icons/student.svg', link: "/students" },
-  { label: 'Resources', iconPath: '/icons/resources.svg', link: "/resources" },
-  { label: 'Timetable', iconPath: '/icons/timetable.svg', link: "/timetable" },
-  { label: 'Attendance', iconPath: '/icons/attendance.svg', link: "/attendance" },
-  { label: 'Grading', iconPath: '/icons/results.svg', link: "/grading" },
-  { label: 'Messages', iconPath: '/icons/messages.svg', link: "/messages", notification: 5 },
+  { label: 'Dashboard', iconPath: '/icons/dashboard.svg', link: '/dashboard' },
+  { label: 'Subjects', iconPath: '/icons/subjects.svg', link: '/subjects' },
+  { label: 'Students', iconPath: '/icons/student.svg', link: '/students' },
+  { label: 'Resources', iconPath: '/icons/resources.svg', link: '/resources' },
+  { label: 'Timetable', iconPath: '/icons/timetable.svg', link: '/timetable' },
+  { label: 'Attendance', iconPath: '/icons/attendance.svg', link: '/attendance' },
+  { label: 'Grading', iconPath: '/icons/results.svg', link: '/grading' },
+  { label: 'Messages', iconPath: '/icons/messages.svg', link: '/messages', notification: 5 },
 ];
 
 const Sidebar: React.FC = () => {
-  const pathname = usePathname(); // usePathname is the correct hook for App Router
-  
+  const pathname = usePathname();
+
   return (
-    <div className=" w-[266px] font-manrope px-4  pb-4 bg-[#FBFBFB] flex flex-col justify-between border-r">
+    <div className="fixed top-0 left-0 h-screen max-w-[266px] font-manrope px-4 pb-4 bg-[#FBFBFB] flex flex-col justify-between border-r">
       {/* Header */}
       <div>
-        <div className="flex items-center ">
+        <div className="flex items-center">
           <div className="text-white p-3 rounded-lg">
             <Image src="/icons/talim.svg" alt="School" width={44.29} height={43.23} />
           </div>
@@ -49,7 +48,7 @@ const Sidebar: React.FC = () => {
         <nav>
           <ul>
             {menuItems.map((item) => {
-              const isActive = pathname === item.link; // Check if the current pathname matches the link
+              const isActive = pathname === item.link;
 
               return (
                 <li key={item.label} className="mb-4">

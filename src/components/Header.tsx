@@ -22,7 +22,7 @@ const Header: React.FC<HeaderProps> = ({ greeting, tent, mogi, SearchComponent }
   }, []);
 
   return (
-    <header className="sticky flex justify-between items-center bg-white py-4 px-3 mt-[-15px] max-w-[100%]">
+    <header className="sticky top-3 left-10 max-w-full z-50 flex justify-between items-center bg-white py-4 px-3 shadow-md">
       {/* Greeting Section */}
       <div>
         <h1 className="text-2xl font-semibold text-gray-800 flex items-center">

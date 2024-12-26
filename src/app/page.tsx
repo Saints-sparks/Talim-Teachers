@@ -47,7 +47,7 @@ export default function Home() {
       <div className="w-1/2 flex flex-col justify-center items-center px-8">
         <div className="w-[70%] bg-white shadow-lg rounded-lg p-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-4 text-center">
-            Welcome Home!
+            Welcome Teacher!
           </h1>
           <p className="text-sm text-gray-600 mb-6 text-center">
             Sign up to begin your management journey.
