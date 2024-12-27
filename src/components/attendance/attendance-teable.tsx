@@ -69,6 +69,7 @@ export function AttendanceTable() {
               <TableCell>{record.day}</TableCell>
               <TableCell>
                 <Badge
+                  text={record.status === "present" ? "Present" : "Absent"}
                   variant="secondary"
                   className={`${
                     record.status === "present" 

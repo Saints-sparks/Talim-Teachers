@@ -1,9 +1,12 @@
 "use client";
+
+import React from "react";
+import Image from "next/image";
+import TaskRow, { TaskStatus, TaskRowProps } from "./TaskRow";
 import bg from "../../public/image/dash/picstude.png";
-import TaskRow from "./TaskRow";
 
 const TaskTable: React.FC = () => {
-  const tasks = [
+  const tasks: (Omit<TaskRowProps, 'student'> & { student: string | typeof bg })[] = [
     {
       name: "Further Mathematics",
       student: bg,
@@ -44,62 +47,52 @@ const TaskTable: React.FC = () => {
 
   return (
     <div className="px-4 py-6">
-      {/* Header */}
-      <div className="mb-4">
+      <header className="mb-4">
         <h2 className="text-lg font-semibold text-gray-800">Tasks</h2>
         <p className="text-sm text-gray-600">
           Keep track of your students' assignments and course activities.
         </p>
-      </div>
+      </header>
 
-      {/* Table */}
       <div className="overflow-x-auto">
-        <table className="min-w-full table-auto border-collapse ">
+        <table className="min-w-full table-auto border-collapse">
           <thead>
             <tr className="bg-gray-100">
-              <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">
-                Name
-              </th>
-              <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">
-                Student
-              </th>
-              <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">
-                Class
-              </th>
-              <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">
-                Duration
-              </th>
-              <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">
-                Status
-              </th>
-              <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">
-                Completion rate
-              </th>
+              <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">Name</th>
+              <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">Student</th>
+              <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">Class</th>
+              <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">Duration</th>
+              <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">Status</th>
+              <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">Completion rate</th>
             </tr>
           </thead>
           <tbody>
             {tasks.map((task) => (
-              <TaskRow key={task.name} {...task} />
+              <TaskRow
+                key={task.name}
+                {...task}
+                student={typeof task.student === 'string' ? task.student : task.student.src}
+              />
             ))}
           </tbody>
         </table>
       </div>
 
-      {/* Footer */}
-      <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
+      <footer className="mt-4 flex items-center justify-between text-sm text-gray-600">
         <span>Row per page: 4</span>
         <span>Showing 1-4 of 40</span>
         <div className="flex space-x-2">
-          <button className="px-2 py-1 border border-gray-300 rounded-md">
+          <button className="px-2 py-1 border border-gray-300 rounded-md" aria-label="Previous page">
             &lt;
           </button>
-          <button className="px-2 py-1 border border-gray-300 rounded-md">
+          <button className="px-2 py-1 border border-gray-300 rounded-md" aria-label="Next page">
             &gt;
           </button>
         </div>
-      </div>
+      </footer>
     </div>
   );
 };
 
 export default TaskTable;
+

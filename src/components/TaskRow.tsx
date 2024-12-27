@@ -1,15 +1,17 @@
 import { StaticImageData } from "next/image";
 import React from "react";
 
-type TaskRowProps = {
+export type TaskStatus = "In Progress" | "Pending" | "Completed";
+
+export interface TaskRowProps {
   name: string;
   student: string | StaticImageData;
   className: string;
   duration: string;
-  status: "In Progress" | "Pending" | "Completed";
+  status: TaskStatus;
   completed: number;
   total: number;
-};
+}
 
 const TaskRow: React.FC<TaskRowProps> = ({
   name,
@@ -22,7 +24,7 @@ const TaskRow: React.FC<TaskRowProps> = ({
 }) => {
   const completionRate = Math.round((completed / total) * 100);
 
-  const statusStyles = {
+  const statusStyles: Record<TaskStatus, string> = {
     "In Progress": "bg-orange-200 text-orange-800",
     Pending: "bg-gray-200 text-gray-800",
     Completed: "bg-green-200 text-green-800",
@@ -35,7 +37,11 @@ const TaskRow: React.FC<TaskRowProps> = ({
         {typeof student === "string" ? (
           student
         ) : (
-          <img src={student.src} alt="Student" className="h-8 rounded-full" />
+          <img
+            src={student.src}
+            alt={`Photo of ${name}`}
+            className="h-8 rounded-full"
+          />
         )}
       </td>
       <td className="px-4 py-5 text-sm text-gray-700">{className}</td>
@@ -65,3 +71,4 @@ const TaskRow: React.FC<TaskRowProps> = ({
 };
 
 export default TaskRow;
+
