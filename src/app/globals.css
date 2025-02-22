@@ -24,3 +24,8 @@ body {
   background: var(--background);
   font-family: 'Poppins', Arial, Helvetica, sans-serif;
 }
+
+.tiptap:focus {
+  outline: none !important;
+  border: none !important;
+}
