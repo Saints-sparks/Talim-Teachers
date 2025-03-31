@@ -8,18 +8,18 @@ import type { MetricCardProps } from "@/types/dashboard"
 export function MetricCard({ icon, value, label }: MetricCardProps) {
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden bg-white shadow-none border-[#F0F0F0]">
       <CardContent className="p-6">
         <div className="space-y-2 flex mb-6 justify-start items-center gap-2 flex-row">
         <div className=" flex justify-center items-center text-blue-600">{icon}</div>
           <div className="space-y-1">
             <div className="text-2xl font-semibold text-gray-900">{value}</div>
-            <p className="text-sm text-gray-500">{label}</p>
+            <p className="text-sm text-[#878787]">{label}</p>
           </div>
         </div>
         {/* Horizontal lines */}
-        <div className=" h-px -mx-6 bg-gray-200" />
-        <button className="mt-4 inline-flex items-center text-sm text-gray-600 hover:text-gray-900">
+        <div className=" h-px -mx-6 bg-[#F0F0F0]" />
+        <button className="mt-4 inline-flex items-center text-sm text-[#878787] hover:text-gray-900">
           See more
           <svg
             className="ml-1 h-4 w-4"

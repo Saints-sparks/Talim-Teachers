@@ -28,9 +28,9 @@ export function UploadModal({ isOpen, onClose }: UploadModalProps) {
                 <SelectValue placeholder="Select class" />
               </SelectTrigger>
               <SelectContent className="text-black bg-white">
-                <SelectItem value="jss1">JSS 1</SelectItem>
-                <SelectItem value="jss2">JSS 2</SelectItem>
-                <SelectItem value="jss3">JSS 3</SelectItem>
+                <SelectItem value="jss1">JS 1</SelectItem>
+                <SelectItem value="jss2">JS 2</SelectItem>
+                <SelectItem value="jss3">JS 3</SelectItem>
                 <SelectItem value="ss1">SS 1</SelectItem>
                 <SelectItem value="ss2">SS 2</SelectItem>
                 <SelectItem value="ss3">SS 3</SelectItem>
@@ -45,8 +45,7 @@ export function UploadModal({ isOpen, onClose }: UploadModalProps) {
             </div>
           </div>
         </div>
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
+        <div className="flex justify-end">
           <Button className="bg-[#002147] text-white">Send</Button>
         </div>
       </DialogContent>

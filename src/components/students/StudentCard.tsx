@@ -3,7 +3,6 @@ import { Menu } from "@headlessui/react";
 import { MoreVertical, Phone, MessageCircle } from "lucide-react";
 import Link from "next/link";
 
-
 interface Student {
   name: string;
   classLevel: string;
@@ -17,7 +16,7 @@ interface StudentCardProps {
 
 export const StudentCard: React.FC<StudentCardProps> = ({ student }) => {
   return (
-    <div className="relative border rounded-md p-4 shadow-sm bg-white w-full max-w-sm">
+    <div className="relative border border-[#F0F0F0] rounded-md p-4 bg-white w-full max-w-sm shadow-none">
       {/* Dropdown Menu */}
       <Menu as="div" className="absolute top-2 right-2 text-left">
         <Menu.Button className="flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded-full h-8 w-8">
@@ -28,19 +27,22 @@ export const StudentCard: React.FC<StudentCardProps> = ({ student }) => {
           <Menu.Item>
             {({ active }) => (
               <Link href={`/students/${student.id}`}>
-              <button
-                className={`block w-full text-left px-4 py-2 text-sm text-[#030E18] ${active ? "bg-gray-100" : ""}`}
-                
-              >
-                View Profile
-              </button>
+                <button
+                  className={`block w-full text-left px-4 py-2 text-sm text-[#030E18] ${
+                    active ? "bg-gray-100" : ""
+                  }`}
+                >
+                  View Profile
+                </button>
               </Link>
             )}
           </Menu.Item>
           <Menu.Item>
             {({ active }) => (
               <button
-                className={`block w-full text-left px-4 py-2 text-sm text-[#030E18] ${active ? "bg-gray-100" : ""}`}
+                className={`block w-full text-left px-4 py-2 text-sm text-[#030E18] ${
+                  active ? "bg-gray-100" : ""
+                }`}
               >
                 Edit
               </button>
@@ -49,7 +51,9 @@ export const StudentCard: React.FC<StudentCardProps> = ({ student }) => {
           <Menu.Item>
             {({ active }) => (
               <button
-                className={`block w-full text-left px-4 py-2 text-sm text-red-600 ${active ? "bg-gray-100" : ""}`}
+                className={`block w-full text-left px-4 py-2 text-sm text-red-600 ${
+                  active ? "bg-gray-100" : ""
+                }`}
               >
                 Delete
               </button>
@@ -68,19 +72,23 @@ export const StudentCard: React.FC<StudentCardProps> = ({ student }) => {
           className="rounded-full object-cover"
         />
         <div>
-          <h3 className="text-[18px] text-[#030E18] font-manrope font-medium leading-[28px]">{student.name}</h3>
-          <p className="text-[18px] text-[#030E18] font-manrope font-normal leading-[28px] text-center">{student.classLevel}</p>
+          <h3 className="text-[18px] text-[#030E18] font-manrope font-medium leading-[28px]">
+            {student.name}
+          </h3>
+          <p className="text-[18px] text-[#030E18] font-manrope font-normal leading-[28px] text-center">
+            {student.classLevel}
+          </p>
         </div>
       </div>
 
       {/* Buttons */}
       <div className="flex gap-2 mt-4">
-        <button className="flex-1 bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-md flex items-center justify-center gap-2 shadow-sm hover:bg-gray-50">
-          <Phone className="w-4 h-4" />
+        <button className="flex-1 bg-white text-[#434343] border border-[#F6F6F6] shadow-none px-4 py-2 rounded-md flex items-center justify-center gap-2 rounded-2xl   hover:bg-gray-50">
+          <Phone className="w-4 h-4 text-[#6F6F6F]" />
           Call
         </button>
-        <button className="flex-1 bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-md flex items-center justify-center gap-2 shadow-sm hover:bg-gray-50">
-          <MessageCircle className="w-4 h-4" />
+        <button className="flex-1 bg-white text-[#434343] border border-[#F6F6F6] shadow-none px-4 py-2 rounded-md flex items-center justify-center gap-2 rounded-2xl hover:bg-gray-50">
+          <MessageCircle className="w-4 h-4 text-[#6F6F6F]" />
           Chat
         </button>
       </div>

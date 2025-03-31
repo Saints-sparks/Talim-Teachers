@@ -1,20 +1,19 @@
 "use client";
-
-
 import { Header } from "@/components/HeaderTwo";
+import Layout from "@/components/Layout";
 import RowNumber from "@/components/RowNumber";
 import SubjectGrid from "@/components/SubjectGrid";
-
-import { use } from "react";
 
 const SubjectPage: React.FC = () => {
 
   return (
-    <div className=" space-y-1 bg-[#Fbfbfb] h-screen">
-      <Header/>
-      <SubjectGrid />
-      <RowNumber />
-    </div>
+    <Layout>
+      <div className="flex flex-col justify-between h-full">
+        {/* <Header/> */}
+        <SubjectGrid />
+        <RowNumber />
+      </div>
+    </Layout>
   );
 };
 export default SubjectPage;
