@@ -23,7 +23,7 @@ const tabs = [
 ];
 
 const Profile = () => {
-  const { getUser, getToken } = useAuth(); // Get logged-in teacher's info
+  const { getUser, getAccessToken } = useAuth(); // Get logged-in teacher's info
   const [user, setUser] = useState<any>(null); // Store user information locally
   const [teacher, setTeacher] = useState<Teacher | null>(null); // Store teacher's details
   const [assignedClasses, setAssignedClasses] = useState<any[]>([]); // Store assigned classes
@@ -45,7 +45,7 @@ const Profile = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const token = getToken(); // Get the access token
+        const token = getAccessToken(); // Get the access token
         if (!token) {
           setError("Unauthorized: No token found.");
           return;

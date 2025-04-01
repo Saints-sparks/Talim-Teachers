@@ -13,12 +13,12 @@ const StudentPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const params = useParams();
   const id = params?.id as string;
-  const { getToken } = useAuth();
+  const { getAccessToken } = useAuth();
 
   useEffect(() => {
     const loadStudent = async () => {
       try {
-        const token = getToken();
+        const token = getAccessToken();
         if (!token) return;
         const studentData = await fetchStudent(id, token);
         setStudent(studentData);

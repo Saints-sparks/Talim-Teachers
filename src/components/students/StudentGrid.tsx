@@ -17,7 +17,7 @@ import {
 import { Button } from "../ui/button";
 
 const StudentGrid: React.FC = () => {
-  const { getUser, getToken } = useAuth(); // Get logged-in teacher's info
+  const { getUser, getAccessToken } = useAuth(); // Get logged-in teacher's info
   const [classes, setClasses] = useState<any[]>([]); // Store classes here
   const [loading, setLoading] = useState(true);
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
@@ -37,7 +37,7 @@ const StudentGrid: React.FC = () => {
 
     const fetchClasses = async () => {
       setLoading(true);
-      const token = getToken();
+      const token = getAccessToken();
       if (!token) return;
       const classDetails = await getAssignedClasses(user.userId, token);
       setClasses(classDetails);
@@ -51,7 +51,7 @@ const StudentGrid: React.FC = () => {
     setSelectedClass(classItem.name);
     setLoadingStudents(true);
 
-    const token = getToken();
+    const token = getAccessToken();
     if (!token) return;
 
     const students = await getStudentsByClass(classItem._id, token);
