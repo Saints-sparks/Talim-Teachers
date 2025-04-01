@@ -6,7 +6,7 @@ import { ResourcesTable } from "@/components/resorces/ResourceTable";
 import { UploadModal } from "@/components/resorces/uploadmodal";
 import { Input } from "@/components/ui/input";
 import { Header } from "@/components/HeaderTwo";
-import RowNumber from "@/components/RowNumber";
+import { RowNumber } from "@/components/RowNumber";
 import Layout from "@/components/Layout";
 
 const resources = [
@@ -48,17 +48,19 @@ export default function ResourcePage() {
       <div className="space-y-6">
         <div className="flex justify-between items-center p-4">
           <div>
-            <h1 className="text-xl font-medium mb-1 text-[#2F2F2F]">Resources</h1>
+            <h1 className="text-xl font-medium mb-1 text-[#2F2F2F]">
+              Resources
+            </h1>
             <p className="text-[#AAAAAA]">Share Your Lessons and Resources</p>
           </div>
           <div className="flex gap-2">
             <div className="flex items-center border border-[#F0F0F0] shadow-none rounded-lg px-3  bg-white">
-                    <Search className="text-[#898989]" size={18} />
-                    <Input
-                      className="border-0 shadow-none focus-visible:ring-0 focus:outline-none flex-1"
-                      placeholder="Search"
-                    />
-                  </div>
+              <Search className="text-[#898989]" size={18} />
+              <Input
+                className="border-0 shadow-none focus-visible:ring-0 focus:outline-none flex-1"
+                placeholder="Search"
+              />
+            </div>
             <Button
               onClick={() => setIsUploadModalOpen(true)}
               className="bg-[#001466] hover:bg-[#003366] text-white"

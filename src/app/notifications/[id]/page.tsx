@@ -53,7 +53,7 @@ const ExpandedNotification = ({ params, onClose }: Props) => {
 
   return (
     <Layout>
-      <div className="flex flex-col h-full gap-4 overflow-y-auto p-4">
+      <div className="flex flex-col max-h-full gap-4 overflow-y-auto p-4">
         <div>
           <Button
             className="bg-transparent shadow-none hover:bg-gray-200"
@@ -85,15 +85,6 @@ const ExpandedNotification = ({ params, onClose }: Props) => {
                   {line}
                 </p>
               ))}
-            </div>
-            <div className="flex flex-col flex-1 gap-4">
-              <Input
-                placeholder="reply here if you have a question or response"
-                className="flex-1 text-[#8C8C8C] border-[#8C8C8C] border-0 rounded-none border-b shadow-none focus:outline-none focus-visible:ring-0"
-              />
-              <div className="flex justify-end">
-                <Button className="bg-[#A7A7A7]">Reply</Button>
-              </div>
             </div>
           </div>
         </div>

@@ -1,7 +1,7 @@
 "use client";
 import { Header } from "@/components/HeaderTwo";
 import Layout from "@/components/Layout";
-import RowNumber from "@/components/RowNumber";
+import { RowNumber } from "@/components/RowNumber";
 import SubjectGrid from "@/components/SubjectGrid";
 
 const SubjectPage: React.FC = () => {

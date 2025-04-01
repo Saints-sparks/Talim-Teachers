@@ -27,10 +27,9 @@ const menuItems: MenuItem[] = [
   },
   {
     label: "Grading",
-    iconPath: "/icons/medal-star.svg",
+    iconPath: "/icons/results.svg",
     link: "/grading",
   },
-  { label: "Results", iconPath: "/icons/results.svg", link: "/results" },
   // {
   //   label: "Messages",
   //   iconPath: "/icons/messages.svg",

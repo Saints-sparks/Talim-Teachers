@@ -1,5 +1,5 @@
 import { API_ENDPOINTS } from '../lib/api/config';
-import { AuthResponse, LoginCredentials } from '../types/auth';
+import { AuthResponse, LoginCredentials } from '../../types/auth';
 
 class AuthService {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {

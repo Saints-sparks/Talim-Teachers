@@ -11,8 +11,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { CheckCheck, ChevronDown, Search } from "lucide-react";
-import React, { useEffect, useState } from "react";
-import { API_BASE_URL } from "@/app/lib/api/config";
+import React from "react";
+import useNotifications from "@/app/hooks/useNotifications"; 
 
 type Notification = {
   id: string;
@@ -31,55 +31,16 @@ type Notification = {
 
 function page() {
   const router = useRouter();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Fetch notifications from the API on component mount
-  useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/notifications`);
-
-        if (!response.ok) {
-          throw new Error(`Error: ${response.status} - ${response.statusText}`);
-        }
-
-        const data = await response.json();
-
-        // Extract notifications from the "data" field
-        if (Array.isArray(data.data)) {
-          const formattedNotifications = data.data.map((notif: any) => ({
-            id: notif._id,
-            title: notif.title,
-            message: notif.message,
-            senderId: notif.senderId,
-            createdAt: notif.createdAt,
-            unread: notif.readBy.length === 0, // Assuming unread notifications have no readBy data
-          }));
-          setNotifications(formattedNotifications);
-        } else {
-          throw new Error("Unexpected response format");
-        }
-      } catch (error) {
-        console.error("Failed to fetch notifications:", error);
-        setError(
-          "Failed to load notifications. Please check if the endpoint is correct."
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchNotifications();
-  }, []);
+  const { notifications, loading, error } = useNotifications();
 
   if (loading) return <p>Loading...</p>;
   if (error) return <p>{error}</p>;
 
   return (
     <Layout>
-      <div className="p-4 h-full border-[#F0F0F0] overflow-y-auto">
+      <div className="p-4 max-h-full border-[#F0F0F0] overflow-y-auto rounded-xl">
         <div className="flex flex-col gap-4 h-full">
           <div className="flex flex-col lg:flex-row justify-between">
             <p className="text-[#2F2F2F] font-medium">Notifications</p>
@@ -127,7 +88,7 @@ function page() {
                   onClick={() =>
                     router.push(`/notifications/${notification.id}`)
                   }
-                  className="flex items-center gap-4 p-2 sm:px-10 border-b border-l sm:border-l-0 border-r cursor-pointer"
+                  className="flex items-center gap-4 p-2 sm:px-10 border-b border-l-0 border-r-0 sm:border-l-0  cursor-pointer"
                 >
                   <div className="relative w-10 h-10">
                     <Avatar className="w-10 h-10 rounded-full bg-gray-300">

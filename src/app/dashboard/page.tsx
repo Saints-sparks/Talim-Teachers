@@ -5,6 +5,7 @@ import { MetricCard } from "@/components/metric-card";
 
 import { ScheduleTimeline } from "@/components/schedule-timeline";
 import Timetable from "@/components/Timetable";
+import { link } from "fs";
 
 import React from "react";
 
@@ -17,9 +18,9 @@ const schedule = [
 ];
 
 const metrics = {
-  assignedSubjects: 15,
-  addedResources: 23,
-  recordedAttendance: 95,
+  assignedSubjects: {value: 15, link: "/subjects"},
+  addedResources: {value: 23, link: "/resources"},
+  recordedAttendance: {value: 95, link: "/attendance"},
 };
 
 const DashboardPage: React.FC = () => {
@@ -40,8 +41,9 @@ const DashboardPage: React.FC = () => {
                     className="h-[52px] w-[52px]"
                   />
                 }
-                value={metrics.assignedSubjects}
+                value={metrics.assignedSubjects.value}
                 label="Assigned Subjects"
+                link={metrics.assignedSubjects.link}
               />
               <MetricCard
                 icon={
@@ -51,8 +53,9 @@ const DashboardPage: React.FC = () => {
                     className="h-[52px] w-[52px]"
                   />
                 }
-                value={metrics.addedResources}
+                value={metrics.addedResources.value}
                 label="Added Resources"
+                link={metrics.addedResources.link}
               />
               <MetricCard
                 icon={
@@ -62,8 +65,9 @@ const DashboardPage: React.FC = () => {
                     className="h-[52px] w-[52px]"
                   />
                 }
-                value={metrics.recordedAttendance}
+                value={metrics.recordedAttendance.value}
                 label="Recorded Attendance"
+                link={metrics.recordedAttendance.link}
               />
             </div>
           </div>

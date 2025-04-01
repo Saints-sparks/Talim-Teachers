@@ -21,31 +21,40 @@ export interface StudentContact {
     type: 'pdf' | 'img' | 'vid' | 'txt'
   }
   
-  export interface Student {
-    id: string
-    fullName: string
-    class: string
-    studentId: string
-    dateOfBirth: string
-    gender: string
-    status: string
-    contact: {
-      phoneNumber: string
-      emailAddress: string
-    }
-    father: {
-      name: string
-      contactDetails: string
-    }
-    mother: {
-      name: string
-      contactDetails: string
-    }
-    guardian: {
-      name: string
-      contactDetails: string
-    }
-    imageUrl: string
-  }
-  
-  
+  // /src/types/student.ts
+
+export interface User {
+  _id: string;
+  email: string;
+  role: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+}
+
+export interface Class {
+  _id: string;
+  name: string;
+}
+
+export interface ParentContact {
+  fullName: string;
+  phoneNumber: string;
+  email: string;
+  relationship: string;
+  _id: string;
+}
+
+export interface Student {
+  _id: string;
+  userId: User;  // Nested user data
+  classId: Class; // Nested class data
+  gradeLevel: string;
+  parentId: User;  // Nested parent data
+  parentContact: ParentContact; // Nested parent contact data
+  isActive: boolean;
+}
+
+export interface StudentCardProps {
+  student: Student;
+}

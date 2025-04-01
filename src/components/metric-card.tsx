@@ -1,11 +1,12 @@
 import { Book, Award, Calendar } from 'lucide-react'
 import { Card, CardContent } from "@/components/ui/card"
 import type { MetricCardProps } from "@/types/dashboard"
+import Link from 'next/link'
 
 
 
 
-export function MetricCard({ icon, value, label }: MetricCardProps) {
+export function MetricCard({ icon, value, label, link }: MetricCardProps) {
 
   return (
     <Card className="overflow-hidden bg-white shadow-none border-[#F0F0F0]">
@@ -19,22 +20,24 @@ export function MetricCard({ icon, value, label }: MetricCardProps) {
         </div>
         {/* Horizontal lines */}
         <div className=" h-px -mx-6 bg-[#F0F0F0]" />
-        <button className="mt-4 inline-flex items-center text-sm text-[#878787] hover:text-gray-900">
-          See more
-          <svg
-            className="ml-1 h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
-        </button>
+        <Link href={link}>
+          <button className="mt-4 inline-flex items-center text-sm text-[#878787] hover:text-gray-900">
+            See more
+            <svg
+              className="ml-1 h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
+          </button>
+        </Link>
       </CardContent>
     </Card>
   )

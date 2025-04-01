@@ -1,5 +1,4 @@
 "use client";
-import Layout from "@/components/Layout";
 import AcademicInformation from "./AcademicInformation";
 import ParentDetails from "./ParentDetails";
 import StudentDetails from "./StudentDetails";
@@ -8,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { BookOpenText, ChevronLeft, UserRound, UsersRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
+import { Student } from "@/types/student";
 
 const tabs = [
   { label: "Personal Information", icon: <UserRound /> },
@@ -15,7 +15,7 @@ const tabs = [
   { label: "Academic Information", icon: <BookOpenText /> },
 ];
 
-const Profile = () => {
+const Profile: React.FC<{ student: Student }> = ({ student }) => {
   const [selectedTab, setSelectedTab] = useState("Personal Information");
   const router = useRouter();
   return (
@@ -34,7 +34,9 @@ const Profile = () => {
           <AvatarFallback className="bg-green-300">OA</AvatarFallback>
         </Avatar>
         <div className="flex flex-col gap-3">
-          <p>Emeka Adewale</p>
+          <p>
+            {student.userId.firstName} {student.userId.lastName}
+          </p>
           <Button className="border border-[#F0F0F0] text-black bg-white shadow-none hover:bg-gray-200">
             Chat
           </Button>
@@ -57,9 +59,23 @@ const Profile = () => {
             </Button>
           ))}
         </div>
-        {selectedTab === "Personal Information" && <StudentDetails />}
-        {selectedTab === "Parent/Guardian Information" && <ParentDetails />}
-        {selectedTab === "Academic Information" && <AcademicInformation />}
+        {selectedTab === "Personal Information" && (
+          <StudentDetails student={student} />
+        )}
+        {selectedTab === "Parent/Guardian Information" && (
+          <ParentDetails  parent={{
+            ...student.parentId, 
+            relationship: student.parentContact.relationship, 
+          }} />
+        )}
+        {selectedTab === "Academic Information" && (
+          <AcademicInformation
+            academicInfo={{
+              classLevel: student.classId.name,
+              gradeLevel: student.gradeLevel,
+            }}
+          />
+        )}
       </div>
     </div>
   );
