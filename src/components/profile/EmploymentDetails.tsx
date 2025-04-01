@@ -1,16 +1,19 @@
 import React from "react";
 
-const studentDetails = [
-  { label: "Employment Type:", value: "Full time" },
-  { label: "Classroom Role:", value: "Teacher" },
-];
+interface EmploymentProps {
+  employmentType: string;
+  role: string;
+}
 
-const Qualifications = () => {
+const Qualifications = ({ employmentType, role }: EmploymentProps) => {
+  const studentDetails = [
+    { label: "Employment Type:", value: employmentType },
+    { label: "Classroom Role:", value: role },
+  ];
+
   return (
     <div className="w-full mx-auto bg-white shadow-sm rounded-lg border">
-      <p className="p-3 bg-[#F9F9F9] text-[#454545]">
-        Employment Details
-      </p>
+      <p className="p-3 bg-[#F9F9F9] text-[#454545]">Employment Details</p>
       <table className="w-full table-fixed sm:table-auto text-sm">
         <tbody className="w-full">
           {studentDetails.map((item, index) => (

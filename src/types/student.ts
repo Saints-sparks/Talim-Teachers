@@ -55,6 +55,23 @@ export interface Student {
   isActive: boolean;
 }
 
+export interface Teacher {
+  _id: string;
+  userId: User;
+  assignedClasses: string[];
+  assignedCourses: string[];
+  isFormTeacher: boolean;
+  highestAcademicQualification: string;
+  yearsOfExperience: number;
+  specialization: string;
+  employmentType: string;
+  employmentRole: string;
+  availabilityDays: string[];
+  availableTime: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface StudentCardProps {
   student: Student;
 }

@@ -7,21 +7,69 @@ import Availability from "@/components/profile/Availability";
 import ClassAndSubjects from "@/components/profile/ClassAndSubjects";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { BookOpenText, ChevronLeft, UserRound, UsersRound } from "lucide-react";
+import { BookOpenText, BriefcaseBusiness, ChevronLeft, Clock, Medal, UserRound, UsersRound } from "lucide-react";
 import { useRouter } from "next/navigation";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useAuth } from "../hooks/useAuth";
+import { fetchTeacherDetails, getAssignedClasses } from "../services/api.service";
+import { Teacher } from "@/types/student";
 
 const tabs = [
   { label: "Personal Information", icon: <UserRound /> },
-  { label: "Qualifications and Experience", icon: <UsersRound /> },
-  { label: "Employment Details", icon: <BookOpenText /> },
+  { label: "Qualifications and Experience", icon: <Medal /> },
+  { label: "Employment Details", icon: <BriefcaseBusiness /> },
   { label: "Class and Subjects", icon: <BookOpenText /> },
-  { label: "Availability", icon: <BookOpenText /> },
+  { label: "Availability", icon: <Clock /> },
 ];
 
 const Profile = () => {
+  const { getUser, getToken } = useAuth(); // Get logged-in teacher's info
+  const [user, setUser] = useState<any>(null); // Store user information locally
+  const [teacher, setTeacher] = useState<Teacher | null>(null); // Store teacher's details
+  const [assignedClasses, setAssignedClasses] = useState<any[]>([]); // Store assigned classes
+  const [loading, setLoading] = useState<boolean>(true); // Handle loading state
+  const [error, setError] = useState<string | null>(null);
   const [selectedTab, setSelectedTab] = useState("Personal Information");
   const router = useRouter();
+
+  useEffect(() => {
+    const storedUser = getUser();
+    if (storedUser) {
+      setUser(storedUser);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!user) return; // Prevent fetching if no user is found
+
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const token = getToken(); // Get the access token
+        if (!token) {
+          setError("Unauthorized: No token found.");
+          return;
+        }
+
+        // Fetch teacher details using user ID and token
+        const teacherDetails = await fetchTeacherDetails(user.userId, token);
+        setTeacher(teacherDetails); // Store the teacher details in state
+        const classes = await getAssignedClasses(user.userId, token);
+        setAssignedClasses(classes); // Store the classes in state
+      } catch (err) {
+        setError("Failed to fetch teacher details.");
+      } finally {
+        setLoading(false);
+        console.log("teacher", teacher);
+      }
+    };
+
+    fetchData(); // Call the fetch function when the usejkhkjr is available
+  }, [user]); // Dependency
+
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p>{error}</p>;
+
   return (
     <Layout>
       <div className="flex h-full flex-col p-4 gap-6">
@@ -62,13 +110,26 @@ const Profile = () => {
               </Button>
             ))}
           </div>
-          {selectedTab === "Personal Information" && <PersonalInformation />}
-          {selectedTab === "Qualifications and Experience" && (
-            <Qualifications />
+          {selectedTab === "Personal Information" && (
+            <PersonalInformation
+              firstName={teacher?.userId?.firstName || ""}
+              lastName={teacher?.userId?.lastName || ""}
+              email={teacher?.userId?.email || ""}
+              phoneNumber={teacher?.userId?.phoneNumber || ""}
+            />
           )}
-          {selectedTab === "Employment Details" && <EmploymentDetails />}
-          {selectedTab === "Class and Subjects" && <ClassAndSubjects />}
-          {selectedTab === "Availability" && <Availability />}
+          {selectedTab === "Qualifications and Experience" && (
+            <Qualifications
+              highestAcademicQualification={
+                teacher?.highestAcademicQualification || ""
+              }
+              yearsOfExperience={teacher?.yearsOfExperience || 1}
+              specialization={teacher?.specialization || ""}
+            />
+          )}
+          {selectedTab === "Employment Details" && <EmploymentDetails employmentType={teacher?.employmentType || ""} role={teacher?.userId.role || ""} />}
+          {selectedTab === "Class and Subjects" && <ClassAndSubjects assignedClasses={assignedClasses} assignedCourses={teacher?.assignedCourses || []} />}
+          {selectedTab === "Availability" && <Availability availableDays={teacher?.availabilityDays || []} availableTime={teacher?.availableTime || ""} />}
         </div>
       </div>
     </Layout>

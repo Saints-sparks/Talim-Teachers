@@ -1,12 +1,21 @@
 import React from "react";
 
-const studentDetails = [
-  { label: "Highest Degree:", value: "PhD" },
-  { label: "Years of Experience:", value: "2 Years" },
-  { label: "Subject Expertise:", value: "Mathematics" },
-];
+interface QualififcationsProps {
+  highestAcademicQualification: string;
+  yearsOfExperience: number;
+  specialization: string;
+}
 
-const Qualifications = () => {
+
+
+const Qualifications = ({highestAcademicQualification, yearsOfExperience, specialization} : QualififcationsProps) => {
+
+  const studentDetails = [
+    { label: "Highest Degree:", value: highestAcademicQualification },
+    { label: "Years of Experience:", value: yearsOfExperience},
+    { label: "Subject Expertise:", value: specialization },
+  ];
+
   return (
     <div className="w-full mx-auto bg-white shadow-sm rounded-lg border">
       <p className="p-3 bg-[#F9F9F9] text-[#454545]">

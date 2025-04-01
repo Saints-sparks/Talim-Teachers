@@ -68,3 +68,20 @@ export const getAssignedClasses = async (userId: string, token: string) => {
     }
   };
 
+  export const fetchTeacherDetails = async (id: string, token: string) => {
+    if (!id) throw new Error("Teacher ID is missing.");
+    if (!token) throw new Error("Unauthorized: No token found.");
+  
+    try {
+      const response = await axios.get(`${API_BASE_URL}/teachers/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+  
+      return response.data || null; 
+    } catch (err) {
+      throw new Error((err as any).response?.data?.message || "Failed to fetch teacher data.");
+    }
+  }
+
+

@@ -1,16 +1,22 @@
 import React from "react";
 
-const studentDetails = [
-  { label: "Available Days:", value: "Monday, Tuesday" },
-  { label: "Available Time:", value: "8:00 AM - 3:00 PM" },
-];
+interface AvailabilityProps {
+  availableDays: string[];
+  availableTime: string;
+}
 
-const Qualifications = () => {
+const Qualifications = ({
+  availableDays,
+  availableTime,
+}: AvailabilityProps) => {
+  const studentDetails = [
+    { label: "Available Days:", value: availableDays.length > 0 ? availableDays.join(", ") : "No days available" },
+    { label: "Available Time:", value: availableTime },
+  ];
+
   return (
     <div className="w-full mx-auto bg-white shadow-sm rounded-lg border">
-      <p className="p-3 bg-[#F9F9F9] text-[#454545]">
-        Availability
-      </p>
+      <p className="p-3 bg-[#F9F9F9] text-[#454545]">Availability</p>
       <table className="w-full table-fixed sm:table-auto text-sm">
         <tbody className="w-full">
           {studentDetails.map((item, index) => (

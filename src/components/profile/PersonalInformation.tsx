@@ -1,15 +1,25 @@
 import React from "react";
 
-const studentDetails = [
-  { label: "First Name:", value: "Emeka" },
-  { label: "Last Name:", value: "Adewale" },
-  { label: "Phone Number:", value: "+234XXXXX" },
-  { label: "Email Address:", value: "emeka@gmail.com" },
-  { label: "Date Of Birth:", value: "12/10/2024" },
-  { label: "Gender:", value: "Male" },
-];
+interface PersonalInformationProps {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber: string;
+}
 
-const PersonalInformation = () => {
+
+
+const PersonalInformation = ({firstName, lastName, email, phoneNumber}: PersonalInformationProps) => {
+
+  const studentDetails = [
+    { label: "First Name:", value: firstName },
+    { label: "Last Name:", value: lastName },
+    { label: "Phone Number:", value: phoneNumber },
+    { label: "Email Address:", value: email },
+    { label: "Date Of Birth:", value: "12/10/2024" },
+    { label: "Gender:", value: "Female" },
+  ];
+
   return (
     <div className="w-full mx-auto bg-white shadow-sm rounded-lg border">
       <p className="p-3 bg-[#F9F9F9] text-[#454545]">Personal Information</p>

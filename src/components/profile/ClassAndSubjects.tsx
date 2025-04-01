@@ -1,11 +1,23 @@
 import React from "react";
 
-const studentDetails = [
-  { label: "Subjects to Teach:", value: "Mathematics" },
-  { label: "Assigned Class:", value: "Class 1" },
-];
+interface ClassAndSubjectsProps {
+    assignedClasses: { name: string }[];
+    assignedCourses: string[]; // Array of course IDs
+  }
 
-const Qualifications = () => {
+
+
+const ClassAndSubjects = ({assignedClasses, assignedCourses}: ClassAndSubjectsProps) => {
+
+    const classNames = assignedClasses.length > 0 
+    ? assignedClasses.map((classObj) => classObj.name).join(", ") 
+    : "No classes assigned";
+
+    const studentDetails = [
+        { label: "Subjects to Teach:", value: assignedCourses.length > 0 ? assignedCourses.join(", ") : "No subjects assigned" },
+        { label: "Assigned Classes:", value: classNames },
+      ];
+
   return (
     <div className="w-full mx-auto bg-white shadow-sm rounded-lg border">
       <p className="p-3 bg-[#F9F9F9] text-[#454545]">
@@ -29,4 +41,4 @@ const Qualifications = () => {
   );
 };
 
-export default Qualifications;
+export default ClassAndSubjects;

@@ -42,7 +42,6 @@ const StudentGrid: React.FC = () => {
       const classDetails = await getAssignedClasses(user.userId, token);
       setClasses(classDetails);
       setLoading(false);
-      // console.log(classes);
     };
 
     fetchClasses();
