@@ -1,54 +1,77 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ResourcesTable } from "@/components/resorces/ResourceTable";
 import { UploadModal } from "@/components/resorces/uploadmodal";
 import { Input } from "@/components/ui/input";
-import { Header } from "@/components/HeaderTwo";
-import { RowNumber } from "@/components/RowNumber";
 import Layout from "@/components/Layout";
-
-const resources = [
-  {
-    id: "1",
-    name: "History Video.pdf",
-    subject: "History",
-    uploadDate: "October 10, 2024",
-    type: "pdf" as const,
-  },
-  {
-    id: "2",
-    name: "History Video.img",
-    subject: "History",
-    uploadDate: "October 10, 2024",
-    type: "img" as const,
-  },
-  {
-    id: "3",
-    name: "History Video.txt",
-    subject: "History",
-    uploadDate: "October 10, 2024",
-    type: "txt" as const,
-  },
-];
+import { fetchResources, getAssignedClasses } from "../services/api.service";
+import { useAuth } from "../hooks/useAuth";
+import { Resource } from "@/types/student";
 
 export default function ResourcePage() {
+  const { getAccessToken, getUser } = useAuth();
+
   const [searchTerm, setSearchTerm] = useState("");
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [classes, setClasses] = useState<any[]>([]); // Store assigned classes
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const storedUser = getUser();
+    if (storedUser) {
+      setUser(storedUser);
+    }
+  }, []);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const token = getAccessToken();
+        if (!token) throw new Error("No token found");
+
+        const [resourceData, classData] = await Promise.all([
+          fetchResources(token),
+          getAssignedClasses(user?.userId, token),
+        ]);
+
+        setResources(resourceData);
+        setClasses(classData);
+      } catch (err) {
+        setError("Failed to load data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user) {
+      loadData();
+    }
+  }, [user]);
 
   const filteredResources = resources.filter(
     (resource) =>
-      resource.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      resource.subject.toLowerCase().includes(searchTerm.toLowerCase())
+      resource.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleNewResourceUpload = (newResource: Resource) => {
+    setResources((prevResources) => [...prevResources, newResource]);
+  };
+
+  const handleResourceDelete = (resourceId: string) => {
+    setResources((prevResources) => prevResources.filter((resource) => resource._id !== resourceId));
+  };
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <div className="flex justify-between items-center p-4">
-          <div>
-            <h1 className="text-xl font-medium mb-1 text-[#2F2F2F]">
+      <div className="space-y-1 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-center p-4 gap-2">
+          <div className="w-full">
+            <h1 className="text-xl font-medium mb-1 text-[#2F2F2F] ">
               Resources
             </h1>
             <p className="text-[#AAAAAA]">Share Your Lessons and Resources</p>
@@ -59,6 +82,8 @@ export default function ResourcePage() {
               <Input
                 className="border-0 shadow-none focus-visible:ring-0 focus:outline-none flex-1"
                 placeholder="Search"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             <Button
@@ -70,16 +95,18 @@ export default function ResourcePage() {
             </Button>
           </div>
         </div>
-        <div className="px-10 ">
-          <ResourcesTable resources={filteredResources} />
+        <div className="px-4">
+          {loading && <p className="text-center">Loading...</p>}
+          {!loading && !error && (
+            <ResourcesTable resources={filteredResources} classes={classes} onResourceDelete={handleResourceDelete} />
+          )}
         </div>
         <UploadModal
           isOpen={isUploadModalOpen}
           onClose={() => setIsUploadModalOpen(false)}
+          onNewResourceUpload={handleNewResourceUpload}
+          // classes={classes}
         />
-        <div>
-          <RowNumber />
-        </div>
       </div>
     </Layout>
   );

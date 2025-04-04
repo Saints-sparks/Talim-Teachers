@@ -5,7 +5,6 @@ import Link from "next/link";
 import { StudentCardProps } from "@/types/student";
 
 export const StudentCard: React.FC<StudentCardProps> = ({ student }) => {
-  console.log("StudentCard props:", student);
 
   return (
     <div className="relative border border-[#F0F0F0] rounded-xl p-4 bg-white w-full max-w-[300px] shadow-none">

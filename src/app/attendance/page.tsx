@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Search } from "lucide-react";
 
 import { Header } from "@/components/HeaderTwo";
-import RowNumber from "@/components/RowNumber";
+import {RowNumber} from "@/components/RowNumber";
 import Timetable from "@/components/Timetable";
 import { DataTable } from "@/components/attendance/data-table";
 import { AbsentReasonDialog } from "@/components/attendance/absent-reason-dialog";

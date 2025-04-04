@@ -6,6 +6,7 @@ import { authService } from '../services/auth.service';
 import { LoginCredentials, User } from '../../types/auth';
 import { API_BASE_URL } from '../lib/api/config';
 import axios from 'axios';
+import { log } from 'console';
 
 export const useAuth = () => {
   const router = useRouter();
@@ -110,54 +111,7 @@ export const useAuth = () => {
     return cookies.refresh_token || null; // Replace with your actual cookie name if different
   };
 
-  const refreshAccessToken = async () => {
-    try {
-      const refreshToken = getRefreshToken();
-      if (!refreshToken) throw new Error("No refresh token found.");
-
-      // Request a new access token using the refresh token
-      const response = await axios.post(`${API_BASE_URL}/auth/refresh-token`, {
-        refreshToken,
-      });
-
-      const { access_token, refresh_token } = response.data;
-
-      // Save the new access token and refresh token
-      nookies.set(null, 'access_token', access_token, {
-        maxAge: 30 * 24 * 60 * 60, // 30 days
-        path: '/',
-      });
-      nookies.set(null, 'refresh_token', refresh_token, {
-        maxAge: 30 * 24 * 60 * 60, // 30 days
-        path: '/',
-      });
-
-      // Return the new access token
-      return access_token;
-    } catch (error) {
-      console.error('Error refreshing token:', error);
-      return null;
-    }
-  };
-
-  // Error handler to intercept 401 and trigger token refresh
-  const handleError = async (error: any) => {
-    if (error.response?.status === 401) {
-      const newAccessToken = await refreshAccessToken();
-      if (newAccessToken) {
-        // Retry the failed request with the new access token
-        error.config.headers['Authorization'] = `Bearer ${newAccessToken}`;
-        return axios(error.config);
-      }
-    }
-    throw error;
-  };
-
-  // Interceptor to handle token refresh automatically on 401
-  axios.interceptors.response.use(
-    response => response,
-    async error => handleError(error)
-  );
+  
 
   return {
     login,

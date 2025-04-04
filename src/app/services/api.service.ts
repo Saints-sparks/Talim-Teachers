@@ -84,4 +84,74 @@ export const getAssignedClasses = async (userId: string, token: string) => {
     }
   }
 
+  export const fetchResources = async (token: string) => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/resources`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data || [];
+    } catch (error) {
+      console.error("Error fetching resources:", error);
+      return [];
+    }
+  };
+
+  export const deleteResource = async (id: string, token: string) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/resources/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return true;
+    } catch (error) {
+      console.error("Error deleting resource:", error);
+      return false;
+    }
+  };
+
+  export const getCurrentTerm = async (token: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/academic-year-term/term/current`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error("Failed to fetch current term");
+      return await response.json();
+    } catch (error) {
+      console.error("Error fetching current term:", error);
+      throw error;
+    }
+  };
+
+  export const uploadResource = async (data: any, token: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/resources`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error("Failed to upload resource");
+      return await response.json();
+    } catch (error) {
+      console.error("Error uploading resource:", error);
+      throw error;
+    }
+  };
+
+  // api.service.ts
+export const updateResource = async (resourceId: string, data: any, token: string) => {
+  const response = await fetch(`${API_BASE_URL}/resources/${resourceId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to update resource');
+  }
+  return response.json();
+};
 

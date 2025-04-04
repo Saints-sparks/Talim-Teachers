@@ -112,6 +112,10 @@ const StudentGrid: React.FC = () => {
       {/* Conditionally render message or student grid */}
       {selectedClass === null ? (
         <div className="text-center text-gray-600">Please select a class</div>
+      ) : students.length === 0 ? (
+        <div className="text-center text-gray-600">
+          No students found for this class
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {students.map((student) => (

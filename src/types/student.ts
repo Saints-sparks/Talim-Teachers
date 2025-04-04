@@ -1,27 +1,20 @@
 export interface StudentContact {
-    phoneNumber: string;
-    emailAddress: string;
-  }
-  
-  export interface Guardian {
-    name: string;
-    contactDetails: string;
-  }
-  
-  export interface Parent {
-    name: string;
-    contactDetails: string;
-  }
-  export interface Resource {
-    id: string
-    name: string
-    subject: string
-    uploadDate: string
-    teacherName: string
-    type: 'pdf' | 'img' | 'vid' | 'txt'
-  }
-  
-  // /src/types/student.ts
+  phoneNumber: string;
+  emailAddress: string;
+}
+
+export interface Guardian {
+  name: string;
+  contactDetails: string;
+}
+
+export interface Parent {
+  name: string;
+  contactDetails: string;
+}
+
+
+// /src/types/student.ts
 
 export interface User {
   _id: string;
@@ -47,10 +40,10 @@ export interface ParentContact {
 
 export interface Student {
   _id: string;
-  userId: User;  // Nested user data
+  userId: User; // Nested user data
   classId: Class; // Nested class data
   gradeLevel: string;
-  parentId: User;  // Nested parent data
+  parentId: User; // Nested parent data
   parentContact: ParentContact; // Nested parent contact data
   isActive: boolean;
 }
@@ -70,6 +63,16 @@ export interface Teacher {
   availableTime: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Resource {
+  _id?: string;
+  name: string;
+  classId: string;
+  termId: string;
+  uploadDate: string;
+  image: string;
+  files: string[];
 }
 
 export interface StudentCardProps {
