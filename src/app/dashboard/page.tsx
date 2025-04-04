@@ -1,8 +1,11 @@
-"use client"
+"use client";
 import { Header } from "@/components/HeaderTwo";
+import Layout from "@/components/Layout";
 import { MetricCard } from "@/components/metric-card";
 
 import { ScheduleTimeline } from "@/components/schedule-timeline";
+import Timetable from "@/components/Timetable";
+import { link } from "fs";
 
 import React from "react";
 
@@ -12,48 +15,70 @@ const schedule = [
   { subject: "C.R.S", startTime: "11:00", endTime: "12:00" },
   { subject: "BREAK - TIME", startTime: "12:00", endTime: "01:00" },
   { subject: "English language", startTime: "01:00", endTime: "02:00" },
-]
+];
 
 const metrics = {
-  subjects: 15,
-  gradeScore: 85,
-  attendancePercentage: 95,
-}
+  assignedSubjects: {value: 15, link: "/subjects"},
+  addedResources: {value: 23, link: "/resources"},
+  recordedAttendance: {value: 95, link: "/attendance"},
+};
 
 const DashboardPage: React.FC = () => {
-
   return (
-    <div className=" bg-[F8F8F8]">
-      <Header/>
-      <div className="p-6 space-y-1">
-      <div className="flex-grow ">
-            <h2 className="text-xl font-semibold mb-4 text-black">Overview</h2>
+    <Layout>
+      <div>
+        <div className="p-6 space-y-1">
+          <div className="flex-grow ">
+            <h2 className="text-xl font-medium mb-4 text-[#2F2F2F]">Overview</h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <MetricCard
-                icon={<img src="/icons/dashboard/subject.svg" width={52} height={52} alt="Subjects Icon" className="h-[52px] w-[52px]" />}
-                value={metrics.subjects}
-                label="Subjects Enrolled"
+                icon={
+                  <img
+                    src="/icons/dashboard/subject.svg"
+                    width={52}
+                    height={52}
+                    alt="Subjects Icon"
+                    className="h-[52px] w-[52px]"
+                  />
+                }
+                value={metrics.assignedSubjects.value}
+                label="Assigned Subjects"
+                link={metrics.assignedSubjects.link}
               />
               <MetricCard
-                icon={<img src="/icons/dashboard/award.svg" alt="Award Icon" className="h-[52px] w-[52px]" />}
-                value={`${metrics.gradeScore}%`}
-                label="Grade Score"
+                icon={
+                  <img
+                    src="/icons/dashboard/award.svg"
+                    alt="Award Icon"
+                    className="h-[52px] w-[52px]"
+                  />
+                }
+                value={metrics.addedResources.value}
+                label="Added Resources"
+                link={metrics.addedResources.link}
               />
               <MetricCard
-                icon={<img src="/icons/dashboard/calendar.svg" alt="Award Icon" className="h-[52px] w-[52px]" />}
-                value={`${metrics.attendancePercentage}%`}
-                label="Attendance Percentage"
+                icon={
+                  <img
+                    src="/icons/dashboard/calendar.svg"
+                    alt="Award Icon"
+                    className="h-[52px] w-[52px]"
+                  />
+                }
+                value={metrics.recordedAttendance.value}
+                label="Recorded Attendance"
+                link={metrics.recordedAttendance.link}
               />
             </div>
           </div>
 
           {/* Schedule */}
-          <div className="flex-grow">
-            <ScheduleTimeline schedule={schedule} currentTime="9:12" />
+          <div>
+            <Timetable  />
           </div>
-  
+        </div>
       </div>
-    </div>
+    </Layout>
   );
 };
 

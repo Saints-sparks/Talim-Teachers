@@ -3,6 +3,7 @@ export interface MetricCardProps {
     icon: ReactNode;
     value: string | number
     label: string
+    link: string
   }
   
   export interface ScheduleItem {

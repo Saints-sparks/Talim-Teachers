@@ -10,7 +10,7 @@ const subjects = [
 
 const SubjectGrid: React.FC = () => {
   return (
-    <div className="px-6 py-4 bg-[#F3F3F3] h-screen">
+    <div className="px-6 py-4 h-full">
         <h2 className="text-xl font-medium mb-4 text-[#030E18]">My Subjects</h2>
     <div className="grid grid-cols-3 gap-6">
       {subjects.map((subject, index) => (

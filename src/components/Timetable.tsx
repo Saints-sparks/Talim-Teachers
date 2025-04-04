@@ -10,17 +10,16 @@ const Timetable = () => {
   // Set your custom time here (use a 24-hour format)
   const [manualTime, setManualTime] = useState("10:32");
 
-
-  const [selectedClass, setSelectedClass] = useState('')
+  const [selectedClass, setSelectedClass] = useState("");
 
   const handleClassChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedClass(event.target.value)
-  }
+    setSelectedClass(event.target.value);
+  };
 
   const handleDownload = () => {
     // Add download logic here
-    alert('Download initiated!')
-  }
+    alert("Download initiated!");
+  };
 
   const [currentTimePosition, setCurrentTimePosition] = useState(0);
 
@@ -44,46 +43,49 @@ const Timetable = () => {
   ];
 
   return (
-    <div className="px-4">
+    <div className="">
       <div className="mx-auto bg-[#F8F8F8] rounded-lg p-6 text-[#030E18]">
         <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-semibold ">Timetable</h1>
-          <div className="flex items-center space-x-4">
-          <select
-            value={selectedClass}
-            onChange={handleClassChange}
-            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Select class</option>
-            <option value="class1">JSS 1</option>
-            <option value="class2">JSS 2</option>
-            <option value="class3">JSS 3</option>
-            <option value="class3">SS 1</option>
-            <option value="class3">SS 2</option>
-            <option value="class3">SS 3</option>
-          </select>
-            <Button onClick={handleDownload} className="w-full sm:w-auto bg-[#003366] hover:bg-blue-800 py-6 text-white">
+          <div className="flex flex-col gap-2">
+            <h1 className="text-xl font-medium">Timetable</h1>
+            <p className="text-[#AAAAAA]">
+              Stay on Track with Your Class Schedule!
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <select
+              value={selectedClass}
+              onChange={handleClassChange}
+              className="px-4 py-2 h-[50px] border border-[#F0F0F0] rounded-xl text-[#898989] focus:outline-none  focus:ring-0"
+            >
+              <option value="">Select class</option>
+              <option value="class1">JSS 1</option>
+              <option value="class2">JSS 2</option>
+              <option value="class3">JSS 3</option>
+              <option value="class3">SS 1</option>
+              <option value="class3">SS 2</option>
+              <option value="class3">SS 3</option>
+            </select>
+            <Button
+              onClick={handleDownload}
+              className="w-full sm:w-auto bg-[#003366] hover:bg-blue-800 h-[48px] rounded-xl text-white"
+            >
               Download <Download className="mr-2 h-7 w-6" />
             </Button>
           </div>
         </div>
-        <p className="text-gray-500 mb-6">
-          Stay on Track with Your Class Schedule!
-        </p>
 
-        <div className="overflow-x-auto border border-gray-300 rounded-t-3xl lg:h-[500px] 2xl:h-[790px] overflow-y-scroll">
+        <div className="overflow-x-auto border border-gray-300 rounded-t-3xl lg:h-[500px] 2xl:h-[790px] overflow-y-scroll scrollbar-hide">
           <div
-            className="grid sticky top-0 z-30"
+            className="grid sticky top-0 z-30 border-[#F0F0F0]"
             style={{ gridTemplateColumns: "103px repeat(5, 1fr)" }}
           >
-            <div className="font-semibold text-center bg-[#FFFFFF] py-6">
-              Time
-            </div>
+            <div className=" text-center bg-[#FFFFFF] py-6 border-b">Time</div>
             {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].map(
               (day, index) => (
                 <div
                   key={index}
-                  className="font-semibold text-center bg-[#FFFFFF] py-6 border-l border-gray-300"
+                  className="text-center bg-[#FFFFFF] py-6 border-l border-b "
                 >
                   {day}
                 </div>
@@ -100,7 +102,7 @@ const Timetable = () => {
                 (time, index) => (
                   <div
                     key={index}
-                    className="flex items-center justify-center border-b border-gray-300"
+                    className="flex items-center justify-center border-b border-[#F0F0F0]"
                     style={{ height: `${hourHeight}px` }}
                   >
                     {time}
@@ -129,7 +131,7 @@ const Timetable = () => {
                   >
                     <div>
                       <div className="font-semibold">{breakTime.name}</div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm text-[#646464]">
                         {breakTime.start}:00 PM - {breakTime.end}:00 PM
                       </div>
                     </div>
