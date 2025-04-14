@@ -15,7 +15,9 @@ const AppContext = createContext<AppContextType>({
   refreshClasses: async () => {},
 });
 
-export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const { getUser, getAccessToken } = useAuth();
 
   const [user, setUser] = useState<any>(null);
@@ -34,7 +36,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!token) return;
     const fetchedClasses = await getAssignedClasses(user.userId, token);
     console.log(fetchedClasses);
-    
+
     setClasses(fetchedClasses);
   };
 
@@ -45,7 +47,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [user]);
 
   return (
-    <AppContext.Provider value={{ user, classes, refreshClasses: fetchClasses }}>
+    <AppContext.Provider
+      value={{ user, classes, refreshClasses: fetchClasses }}
+    >
       {children}
     </AppContext.Provider>
   );

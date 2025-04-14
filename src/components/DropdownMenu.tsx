@@ -16,9 +16,7 @@ export const DropdownMenuTrigger = ({ children }: DropdownMenuProps) => {
   );
 };
 
-export const DropdownMenuContent = ({
-  children,
-}: DropdownMenuProps) => {
+export const DropdownMenuContent = ({ children }: DropdownMenuProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (

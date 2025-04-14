@@ -15,7 +15,7 @@ export default function VideoMessage({
   onClick,
 }: VideoMessageProps) {
   return (
-    <div 
+    <div
       className="flex flex-col max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg bg-white rounded-lg cursor-pointer"
       onClick={onClick}
     >

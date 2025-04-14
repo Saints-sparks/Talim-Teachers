@@ -6,7 +6,9 @@ import TaskRow, { TaskStatus, TaskRowProps } from "./TaskRow";
 import bg from "../../public/image/dash/picstude.png";
 
 const TaskTable: React.FC = () => {
-  const tasks: (Omit<TaskRowProps, 'student'> & { student: string | typeof bg })[] = [
+  const tasks: (Omit<TaskRowProps, "student"> & {
+    student: string | typeof bg;
+  })[] = [
     {
       name: "Further Mathematics",
       student: bg,
@@ -58,12 +60,24 @@ const TaskTable: React.FC = () => {
         <table className="min-w-full table-auto border-collapse">
           <thead>
             <tr className="bg-gray-100">
-              <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">Name</th>
-              <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">Student</th>
-              <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">Class</th>
-              <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">Duration</th>
-              <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">Status</th>
-              <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">Completion rate</th>
+              <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">
+                Name
+              </th>
+              <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">
+                Student
+              </th>
+              <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">
+                Class
+              </th>
+              <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">
+                Duration
+              </th>
+              <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">
+                Status
+              </th>
+              <th className="px-4 py-2 text-left text-sm font-medium text-gray-600">
+                Completion rate
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -71,7 +85,11 @@ const TaskTable: React.FC = () => {
               <TaskRow
                 key={task.name}
                 {...task}
-                student={typeof task.student === 'string' ? task.student : task.student.src}
+                student={
+                  typeof task.student === "string"
+                    ? task.student
+                    : task.student.src
+                }
               />
             ))}
           </tbody>
@@ -82,10 +100,16 @@ const TaskTable: React.FC = () => {
         <span>Row per page: 4</span>
         <span>Showing 1-4 of 40</span>
         <div className="flex space-x-2">
-          <button className="px-2 py-1 border border-gray-300 rounded-md" aria-label="Previous page">
+          <button
+            className="px-2 py-1 border border-gray-300 rounded-md"
+            aria-label="Previous page"
+          >
             &lt;
           </button>
-          <button className="px-2 py-1 border border-gray-300 rounded-md" aria-label="Next page">
+          <button
+            className="px-2 py-1 border border-gray-300 rounded-md"
+            aria-label="Next page"
+          >
             &gt;
           </button>
         </div>
@@ -95,4 +119,3 @@ const TaskTable: React.FC = () => {
 };
 
 export default TaskTable;
-

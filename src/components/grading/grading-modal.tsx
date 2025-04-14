@@ -1,41 +1,45 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { X } from 'lucide-react'
-import Button from '@/components/Button'
+import { useState } from "react";
+import { X } from "lucide-react";
+import Button from "@/components/Button";
 
 interface GradingModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onSubmit: (scores: { subject: string; test: number; exam: number }[]) => void
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (scores: { subject: string; test: number; exam: number }[]) => void;
 }
 
 export function GradingModal({ isOpen, onClose, onSubmit }: GradingModalProps) {
   const [scores, setScores] = useState([
-    { subject: 'Test', test: 21, exam: 100 },
-    { subject: 'English Language', test: 21, exam: 61 },
-    { subject: 'Mathematics', test: 21, exam: 61 }
-  ])
+    { subject: "Test", test: 21, exam: 100 },
+    { subject: "English Language", test: 21, exam: 61 },
+    { subject: "Mathematics", test: 21, exam: 61 },
+  ]);
 
-  const handleScoreChange = (index: number, type: 'test' | 'exam', value: number) => {
-    const newScores = [...scores]
-    newScores[index][type] = value
-    setScores(newScores)
-  }
+  const handleScoreChange = (
+    index: number,
+    type: "test" | "exam",
+    value: number
+  ) => {
+    const newScores = [...scores];
+    newScores[index][type] = value;
+    setScores(newScores);
+  };
 
-  const handleIncrement = (index: number, type: 'test' | 'exam') => {
-    const newScores = [...scores]
-    newScores[index][type] += 1
-    setScores(newScores)
-  }
+  const handleIncrement = (index: number, type: "test" | "exam") => {
+    const newScores = [...scores];
+    newScores[index][type] += 1;
+    setScores(newScores);
+  };
 
-  const handleDecrement = (index: number, type: 'test' | 'exam') => {
-    const newScores = [...scores]
-    newScores[index][type] -= 1
-    setScores(newScores)
-  }
+  const handleDecrement = (index: number, type: "test" | "exam") => {
+    const newScores = [...scores];
+    newScores[index][type] -= 1;
+    setScores(newScores);
+  };
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
@@ -57,18 +61,20 @@ export function GradingModal({ isOpen, onClose, onSubmit }: GradingModalProps) {
                     type="number"
                     className="w-full p-2"
                     value={score.test}
-                    onChange={(e) => handleScoreChange(index, 'test', parseInt(e.target.value))}
+                    onChange={(e) =>
+                      handleScoreChange(index, "test", parseInt(e.target.value))
+                    }
                   />
                   <div className="border-l flex flex-col">
-                    <button 
+                    <button
                       className="px-2 py-1 hover:bg-gray-100"
-                      onClick={() => handleIncrement(index, 'test')}
+                      onClick={() => handleIncrement(index, "test")}
                     >
                       ▲
                     </button>
-                    <button 
+                    <button
                       className="px-2 py-1 hover:bg-gray-100 border-t"
-                      onClick={() => handleDecrement(index, 'test')}
+                      onClick={() => handleDecrement(index, "test")}
                     >
                       ▼
                     </button>
@@ -79,18 +85,20 @@ export function GradingModal({ isOpen, onClose, onSubmit }: GradingModalProps) {
                     type="number"
                     className="w-full p-2"
                     value={score.exam}
-                    onChange={(e) => handleScoreChange(index, 'exam', parseInt(e.target.value))}
+                    onChange={(e) =>
+                      handleScoreChange(index, "exam", parseInt(e.target.value))
+                    }
                   />
                   <div className="border-l flex flex-col">
-                    <button 
+                    <button
                       className="px-2 py-1 hover:bg-gray-100"
-                      onClick={() => handleIncrement(index, 'exam')}
+                      onClick={() => handleIncrement(index, "exam")}
                     >
                       ▲
                     </button>
-                    <button 
+                    <button
                       className="px-2 py-1 hover:bg-gray-100 border-t"
-                      onClick={() => handleDecrement(index, 'exam')}
+                      onClick={() => handleDecrement(index, "exam")}
                     >
                       ▼
                     </button>
@@ -102,15 +110,11 @@ export function GradingModal({ isOpen, onClose, onSubmit }: GradingModalProps) {
         </div>
 
         <div className="mt-6 flex justify-end">
-          <Button 
-            className="bg-[#002147]"
-            onClick={() => onSubmit(scores)}
-          >
+          <Button className="bg-[#002147]" onClick={() => onSubmit(scores)}>
             Grade
           </Button>
         </div>
       </div>
     </div>
-  )
+  );
 }
-

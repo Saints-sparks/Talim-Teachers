@@ -63,10 +63,12 @@ const Profile: React.FC<{ student: Student }> = ({ student }) => {
           <StudentDetails student={student} />
         )}
         {selectedTab === "Parent/Guardian Information" && (
-          <ParentDetails  parent={{
-            ...student.parentId, 
-            relationship: student.parentContact.relationship, 
-          }} />
+          <ParentDetails
+            parent={{
+              ...student.parentId,
+              relationship: student.parentContact.relationship,
+            }}
+          />
         )}
         {selectedTab === "Academic Information" && (
           <AcademicInformation

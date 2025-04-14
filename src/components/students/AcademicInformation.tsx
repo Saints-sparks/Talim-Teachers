@@ -20,7 +20,9 @@ const AcademicInformation: React.FC<AcademicInfoProps> = ({ academicInfo }) => {
         <tbody>
           {academicDetails.map((item, index) => (
             <tr key={index} className="border-t">
-              <td className="py-2 px-3 text-[#909090] whitespace-nowrap">{item.label}</td>
+              <td className="py-2 px-3 text-[#909090] whitespace-nowrap">
+                {item.label}
+              </td>
               <td className="py-2 sm:pr-28 font-medium">{item.value}</td>
             </tr>
           ))}

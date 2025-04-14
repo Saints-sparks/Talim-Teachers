@@ -58,15 +58,17 @@ const StudentGrid: React.FC = () => {
           <p className="text-[#AAAAAA]">View all the students in your class</p>
         </div>
         <div className="flex gap-2 items-center">
-          {selectedClass !== null &&  <div className="flex h-10 sm:h-12 border border-[#F0F0F0] bg-white items-center p-2 rounded-lg text-[#898989]">
-            <Search strokeWidth="1.5" />
-            <Input
-              type="search"
-              placeholder="Search for students"
-              className="flex-1 border-none shadow-none focus:outline-none focus-visible:ring-0"
-            />
-          </div>}
-         
+          {selectedClass !== null && (
+            <div className="flex h-10 sm:h-12 border border-[#F0F0F0] bg-white items-center p-2 rounded-lg text-[#898989]">
+              <Search strokeWidth="1.5" />
+              <Input
+                type="search"
+                placeholder="Search for students"
+                className="flex-1 border-none shadow-none focus:outline-none focus-visible:ring-0"
+              />
+            </div>
+          )}
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -90,7 +92,7 @@ const StudentGrid: React.FC = () => {
                 classes.map((classItem) => (
                   <DropdownMenuItem
                     key={classItem._id}
-                    onClick={() => handleClassSelect(classItem)} 
+                    onClick={() => handleClassSelect(classItem)}
                   >
                     {classItem.name}
                   </DropdownMenuItem>
@@ -103,7 +105,16 @@ const StudentGrid: React.FC = () => {
 
       {/* Conditionally render message or student grid */}
       {selectedClass === null ? (
-        <div className="text-center text-gray-600 flex flex-col items-center"> <Image src="/image/students/noclass.png" alt={""} width={334} height={334} />Please select a class</div>
+        <div className="text-center text-gray-600 flex flex-col items-center">
+          {" "}
+          <Image
+            src="/image/students/noclass.png"
+            alt={""}
+            width={334}
+            height={334}
+          />
+          Please select a class
+        </div>
       ) : students.length === 0 ? (
         <div className="text-center text-gray-600">
           No students found for this class

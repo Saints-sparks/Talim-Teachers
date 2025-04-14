@@ -6,7 +6,7 @@ import { ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Layout from "@/components/Layout";
 import React, { useEffect, useState } from "react";
-import type { Metadata, ResolvingMetadata } from 'next'
+import type { Metadata, ResolvingMetadata } from "next";
 
 interface Notification {
   _id: string;
@@ -22,7 +22,6 @@ interface Notification {
 }
 
 // Use TypeScript's type assertion for Next.js params
-
 
 // Modified interface to match Next.js' expected structure
 interface PageProps {
@@ -81,7 +80,9 @@ const NotificationPage: React.FC<PageProps> = ({ params }) => {
 };
 
 // Sub-components for better organization
-const NotificationContent: React.FC<{ notification: Notification }> = ({ notification }) => (
+const NotificationContent: React.FC<{ notification: Notification }> = ({
+  notification,
+}) => (
   <div className="h-full bg-white rounded-2xl flex flex-col gap-5 p-8 sm:px-10">
     <p className="text-[18px] text-center sm:text-left text-[#030E18]">
       {notification.title}
@@ -94,7 +95,9 @@ const NotificationContent: React.FC<{ notification: Notification }> = ({ notific
   </div>
 );
 
-const SenderInfo: React.FC<{ notification: Notification }> = ({ notification }) => (
+const SenderInfo: React.FC<{ notification: Notification }> = ({
+  notification,
+}) => (
   <div className="flex gap-4">
     <Avatar className="w-10 h-10 rounded-full bg-gray-300">
       <AvatarImage src={notification.avatar} />
@@ -103,9 +106,7 @@ const SenderInfo: React.FC<{ notification: Notification }> = ({ notification }) 
       <p className="text-[#030E18]">
         {`${notification.senderId.firstName} ${notification.senderId.lastName}`}
       </p>
-      <p className="text-sm text-[#7B7B7B]">
-        {notification.senderId.email}
-      </p>
+      <p className="text-sm text-[#7B7B7B]">{notification.senderId.email}</p>
     </div>
   </div>
 );

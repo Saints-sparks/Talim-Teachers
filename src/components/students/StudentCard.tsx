@@ -5,7 +5,6 @@ import Link from "next/link";
 import { StudentCardProps } from "@/types/student";
 
 export const StudentCard: React.FC<StudentCardProps> = ({ student }) => {
-
   return (
     <div className="relative border border-[#F0F0F0] rounded-xl p-4 bg-white w-full max-w-[300px] shadow-none">
       {/* Dropdown Menu */}
@@ -66,9 +65,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({ student }) => {
           <p className=" text-[#030E18] text-center">
             {student.userId.firstName} {student.userId.lastName}
           </p>
-          <p className="text-[#4A4A4A] text-center ">
-            {student.classId.name}
-          </p>
+          <p className="text-[#4A4A4A] text-center ">{student.classId.name}</p>
         </div>
       </div>
 

@@ -33,7 +33,9 @@ const GradingPage: React.FC = () => {
           </div>
         </div>
         <div className="flex flex-col gap-6">
-          <div className="flex items-center gap-1"> <p>Class:</p>
+          <div className="flex items-center gap-1">
+            {" "}
+            <p>Class:</p>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button

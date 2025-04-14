@@ -74,9 +74,7 @@ const Timetable = () => {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Button
-              className="w-full sm:w-auto bg-[#003366] hover:bg-blue-800 h-[48px] rounded-xl text-white"
-            >
+            <Button className="w-full sm:w-auto bg-[#003366] hover:bg-blue-800 h-[48px] rounded-xl text-white">
               Download <Download className="mr-2 h-7 w-6" />
             </Button>
           </div>
@@ -109,23 +107,17 @@ const Timetable = () => {
           >
             {/* Time labels */}
             <div className="bg-white">
-              {[
-                "8 AM",
-                "9 AM",
-                "10 AM",
-                "11 AM",
-                "12 PM",
-                "1 PM",
-                "2 PM",
-              ].map((time, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-center border-b border-[#F0F0F0]"
-                  style={{ height: `${hourHeight}px` }}
-                >
-                  {time}
-                </div>
-              ))}
+              {["8 AM", "9 AM", "10 AM", "11 AM", "12 PM", "1 PM", "2 PM"].map(
+                (time, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-center border-b border-[#F0F0F0]"
+                    style={{ height: `${hourHeight}px` }}
+                  >
+                    {time}
+                  </div>
+                )
+              )}
             </div>
 
             {/* Render timetable entries for each day */}
@@ -152,7 +144,8 @@ const Timetable = () => {
 
                       const startHr = parseTime(entry.startTIme);
                       const endHr = parseTime(entry.endTime);
-                      const topPosition = (startHr - startHour) * hourHeight + 65;
+                      const topPosition =
+                        (startHr - startHour) * hourHeight + 65;
                       const entryHeight = (endHr - startHr) * hourHeight - 16;
 
                       return (

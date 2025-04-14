@@ -10,7 +10,13 @@ const Qualifications = ({
   availableTime,
 }: AvailabilityProps) => {
   const studentDetails = [
-    { label: "Available Days:", value: availableDays.length > 0 ? availableDays.join(", ") : "No days available" },
+    {
+      label: "Available Days:",
+      value:
+        availableDays.length > 0
+          ? availableDays.join(", ")
+          : "No days available",
+    },
     { label: "Available Time:", value: availableTime },
   ];
 

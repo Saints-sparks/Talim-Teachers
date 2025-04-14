@@ -132,7 +132,10 @@ const AttendancePage: React.FC = () => {
       );
 
       if (!response || !response.studentId) {
-        console.error(`Error submitting attendance for ${student.name}:`, response);
+        console.error(
+          `Error submitting attendance for ${student.name}:`,
+          response
+        );
         alert(`Failed to submit attendance for ${student.name}.`);
         return;
       }
@@ -148,56 +151,58 @@ const AttendancePage: React.FC = () => {
 
   // This function handles the submission when a reason is provided for an absent student.
   // This function handles the submission when a reason is provided for an absent student.
-const handleAbsentSubmit = async (absenceReason: string) => {
-  if (!selectedClass || !user || !selectedStudent) return;
+  const handleAbsentSubmit = async (absenceReason: string) => {
+    if (!selectedClass || !user || !selectedStudent) return;
 
-  const token = getAccessToken();
-  if (!token) return;
+    const token = getAccessToken();
+    if (!token) return;
 
-  const classId = classes.find((c) => c.name === selectedClass)?._id;
-  const date = new Date().toISOString();
+    const classId = classes.find((c) => c.name === selectedClass)?._id;
+    const date = new Date().toISOString();
 
-  try {
-    const term = await getCurrentTerm(token);
-    setCurrentTerm(term);
+    try {
+      const term = await getCurrentTerm(token);
+      setCurrentTerm(term);
 
-    const student = data.find((student) => student.id === selectedStudent);
-    if (!student) {
-      alert("Student not found.");
-      return;
+      const student = data.find((student) => student.id === selectedStudent);
+      if (!student) {
+        alert("Student not found.");
+        return;
+      }
+
+      // Construct the payload with additional absenceReason field.
+      const payload = {
+        studentId: student.id,
+        classId,
+        recordedBy: user.userId,
+        date,
+        status: "Absent", // Note: Ensure your API expects "Absent" (capitalized)
+        termId: term._id,
+        absenceReason, // This is the reason supplied from the dialog input
+      };
+
+      const response = await submitAttendance(payload, token);
+
+      if (!response || !response.studentId) {
+        console.error(
+          `Error submitting attendance for ${student.name}:`,
+          response
+        );
+        alert(`Failed to submit attendance for ${student.name}.`);
+        return;
+      }
+
+      // Remove the student from the UI after successful submission.
+      setData((prev) => prev.filter((stud) => stud.id !== response.studentId));
+
+      alert("Attendance submitted successfully ✅");
+
+      alert("Attendance submitted successfully ✅");
+    } catch (error) {
+      console.error("Error submitting attendance:", error);
+      alert("Failed to submit attendance. Please try again.");
     }
-
-    // Construct the payload with additional absenceReason field.
-    const payload = {
-      studentId: student.id,
-      classId,
-      recordedBy: user.userId,
-      date,
-      status: "Absent", // Note: Ensure your API expects "Absent" (capitalized)
-      termId: term._id,
-      absenceReason, // This is the reason supplied from the dialog input
-    };
-
-    const response = await submitAttendance(payload, token);
-
-    if (!response || !response.studentId) {
-      console.error(`Error submitting attendance for ${student.name}:`, response);
-      alert(`Failed to submit attendance for ${student.name}.`);
-      return;
-    }
-
-    // Remove the student from the UI after successful submission.
-    setData((prev) => prev.filter((stud) => stud.id !== response.studentId));
-
-    alert("Attendance submitted successfully ✅");
-
-    alert("Attendance submitted successfully ✅");
-  } catch (error) {
-    console.error("Error submitting attendance:", error);
-    alert("Failed to submit attendance. Please try again.");
-  }
-};
-
+  };
 
   return (
     <Layout>
@@ -229,7 +234,11 @@ const handleAbsentSubmit = async (absenceReason: string) => {
                     variant="outline"
                     className="flex text-[#898989] bg-[#FFFFFF] rounded-lg border-[#F0F0F0] items-center gap-1 h-10 sm:h-12"
                   >
-                    {loading ? "Loading classes..." : selectedClass ? selectedClass : "Select a class"}{" "}
+                    {loading
+                      ? "Loading classes..."
+                      : selectedClass
+                      ? selectedClass
+                      : "Select a class"}{" "}
                     <ChevronDown size={16} />
                   </Button>
                 </DropdownMenuTrigger>

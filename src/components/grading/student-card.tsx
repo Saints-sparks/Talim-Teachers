@@ -1,28 +1,26 @@
-'use client'
+"use client";
 
-import Image from 'next/image'
-import { useRouter } from 'next/navigation'
-import Button from '@/components/Button'
-import { Pencil } from 'lucide-react'
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import Button from "@/components/Button";
+import { Pencil } from "lucide-react";
 
 interface StudentCardProps {
   student: {
-    id: number
-    name: string
-    class: string
-    imageUrl: string
-    isGraded: boolean
-  }
+    id: number;
+    name: string;
+    class: string;
+    imageUrl: string;
+    isGraded: boolean;
+  };
 }
 
-
-
 export function StudentCard({ student }: StudentCardProps) {
-  const router = useRouter()
+  const router = useRouter();
 
   const handleGradeClick = () => {
-    router.push(`/grading/grades/${student.id}`)
-  }
+    router.push(`/grading/grades/${student.id}`);
+  };
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm text-[#030E18]">
@@ -46,7 +44,9 @@ export function StudentCard({ student }: StudentCardProps) {
         </div>
         <Button
           variant={student.isGraded ? "secondary" : "primary"}
-          className={`w-[60%] ${student.isGraded ? 'bg-gray-200 text-gray-700' : 'bg-[#003366]'}`}
+          className={`w-[60%] ${
+            student.isGraded ? "bg-gray-200 text-gray-700" : "bg-[#003366]"
+          }`}
           onClick={handleGradeClick}
         >
           {student.isGraded ? (
@@ -55,14 +55,18 @@ export function StudentCard({ student }: StudentCardProps) {
               Graded
             </>
           ) : (
-            <div className='flex items-center gap-1 '>
-             <Image src="/icons/medal-star.svg" alt="School" width={30.29} height={30.23}/>
+            <div className="flex items-center gap-1 ">
+              <Image
+                src="/icons/medal-star.svg"
+                alt="School"
+                width={30.29}
+                height={30.23}
+              />
               Grade
             </div>
           )}
         </Button>
       </div>
     </div>
-  )
+  );
 }
-

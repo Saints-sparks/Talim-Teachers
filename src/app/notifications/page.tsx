@@ -58,7 +58,9 @@ function Page() {
     return (
       <Layout>
         <div className="flex justify-center items-center min-h-screen">
-          <p className="text-lg text-center text-[#737373]">No notifications available</p>
+          <p className="text-lg text-center text-[#737373]">
+            No notifications available
+          </p>
         </div>
       </Layout>
     );

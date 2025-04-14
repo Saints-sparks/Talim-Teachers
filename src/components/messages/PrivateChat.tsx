@@ -3,10 +3,25 @@ import MessageInput from "./MessageInput";
 import MessageBubble from "./PrivateMessageBubble";
 import ReplyPreview from "./ReplyPreview";
 
-
 const messages = [
-  { sender: "Mrs Yetunde Adebayo", text: "Hi everyone!", time: "3:10pm", type: "text", senderType: "teacher", avatar: "/image/teachers/english.png", color: "blue" },
-  { sender: "me", text: "Got it!", time: "3:12pm", type: "text", senderType: "student", avatar: "/image/students/me.png", color: "green" },
+  {
+    sender: "Mrs Yetunde Adebayo",
+    text: "Hi everyone!",
+    time: "3:10pm",
+    type: "text",
+    senderType: "teacher",
+    avatar: "/image/teachers/english.png",
+    color: "blue",
+  },
+  {
+    sender: "me",
+    text: "Got it!",
+    time: "3:12pm",
+    type: "text",
+    senderType: "student",
+    avatar: "/image/students/me.png",
+    color: "green",
+  },
   {
     sender: "Mrs Yetunde Adebayo",
     text: "/audio/sample-voice-note.mp3",
@@ -66,7 +81,10 @@ export default function PrivateChat({
         ))}
       </div>
       {replyingMessage && (
-        <ReplyPreview replyingMessage={replyingMessage} onCancel={() => setReplyingMessage(null)} />
+        <ReplyPreview
+          replyingMessage={replyingMessage}
+          onCancel={() => setReplyingMessage(null)}
+        />
       )}
       <MessageInput />
     </div>

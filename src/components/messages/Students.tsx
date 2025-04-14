@@ -49,11 +49,11 @@ const Students = () => {
       </div>
       <div className="flex flex-col overflow-y-auto max-h-[320px] scrollbar-hide">
         <div className="flex items-center gap-3 p-3 rounded cursor-pointer hover:bg-gray-200">
-        <Plus />
-        <div className="flex-1">
-              <p className=" text-[16px]">Add Student</p>
-              <p className="text-sm text-[#7B7B7B]">Add student to group</p>
-            </div>
+          <Plus />
+          <div className="flex-1">
+            <p className=" text-[16px]">Add Student</p>
+            <p className="text-sm text-[#7B7B7B]">Add student to group</p>
+          </div>
         </div>
         {members.map((mem, index) => (
           <div

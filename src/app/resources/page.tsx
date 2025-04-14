@@ -27,9 +27,7 @@ export default function ResourcePage() {
         const token = getAccessToken();
         if (!token) throw new Error("No token found");
 
-        const [resourceData] = await Promise.all([
-          fetchResources(token),
-        ]);
+        const [resourceData] = await Promise.all([fetchResources(token)]);
 
         setResources(resourceData);
       } catch (err) {

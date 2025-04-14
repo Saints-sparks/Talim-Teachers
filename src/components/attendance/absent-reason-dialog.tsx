@@ -1,19 +1,19 @@
-"use client"
+"use client";
 
-import { useState } from "react"
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 interface AbsentReasonDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  studentId: string | null
-  onSubmit: (reason: string) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  studentId: string | null;
+  onSubmit: (reason: string) => void;
 }
 
 export function AbsentReasonDialog({
@@ -22,16 +22,16 @@ export function AbsentReasonDialog({
   studentId,
   onSubmit,
 }: AbsentReasonDialogProps) {
-  const [reason, setReason] = useState("")
+  const [reason, setReason] = useState("");
 
   const handleSubmit = () => {
     // Check if the reason is not empty
-    if (!reason.trim()) return
+    if (!reason.trim()) return;
 
-    onSubmit(reason)
-    setReason("")
-    onOpenChange(false)
-  }
+    onSubmit(reason);
+    setReason("");
+    onOpenChange(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -51,9 +51,9 @@ export function AbsentReasonDialog({
           </div>
         </div>
         <div className="flex justify-end">
-          <Button 
-            type="button" 
-            onClick={handleSubmit} 
+          <Button
+            type="button"
+            onClick={handleSubmit}
             disabled={!reason.trim()}
           >
             Send
@@ -61,5 +61,5 @@ export function AbsentReasonDialog({
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

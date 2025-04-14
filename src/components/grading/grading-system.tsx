@@ -1,30 +1,34 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { Search } from 'lucide-react'
-import { StudentCard } from './student-card'
+import { useState } from "react";
+import { Search } from "lucide-react";
+import { StudentCard } from "./student-card";
 
-const students = Array(9).fill(null).map((_, i) => ({
-  id: i + 1,
-  name: 'Emeka Adewale',
-  class: 'SS 3',
-  imageUrl: '/image/dash/ade.png',
-  isGraded: i === 0 // First student is graded, others aren't
-}))
+const students = Array(9)
+  .fill(null)
+  .map((_, i) => ({
+    id: i + 1,
+    name: "Emeka Adewale",
+    class: "SS 3",
+    imageUrl: "/image/dash/ade.png",
+    isGraded: i === 0, // First student is graded, others aren't
+  }));
 
 export function GradingSystem() {
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredStudents = students.filter(student =>
+  const filteredStudents = students.filter((student) =>
     student.name.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  );
 
   return (
     <div className="container mx-auto p-4 space-y-6">
       <div className="flex justify-between items-start text-[#030E18]">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold">Grading System</h1>
-          <p className="text-gray-500">Grade and upload student results effortlessly.</p>
+          <p className="text-gray-500">
+            Grade and upload student results effortlessly.
+          </p>
         </div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -44,6 +48,5 @@ export function GradingSystem() {
         ))}
       </div>
     </div>
-  )
+  );
 }
-

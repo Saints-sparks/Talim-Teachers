@@ -59,7 +59,6 @@ const GroupChat = ({
   toggleSubMenu,
 }: GroupChatProps) => {
   const [chatMessages] = useState(messages);
-  
 
   return (
     <div className="lg:w-3/5 xl:w-2/3  flex flex-col relative">

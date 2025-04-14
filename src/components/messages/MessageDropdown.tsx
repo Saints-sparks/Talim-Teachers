@@ -106,18 +106,10 @@ export default function MessageOptionsDropdown({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex flex-col space-y-2">
-              <button onClick={() => toggleSubMenu(index, "emojis")}>
-                💯
-              </button>
-              <button onClick={() => toggleSubMenu(index, "emojis")}>
-                👍🏻
-              </button>
-              <button onClick={() => toggleSubMenu(index, "emojis")}>
-                ✋🏻
-              </button>
-              <button onClick={() => toggleSubMenu(index, "emojis")}>
-                ☺️
-              </button>
+              <button onClick={() => toggleSubMenu(index, "emojis")}>💯</button>
+              <button onClick={() => toggleSubMenu(index, "emojis")}>👍🏻</button>
+              <button onClick={() => toggleSubMenu(index, "emojis")}>✋🏻</button>
+              <button onClick={() => toggleSubMenu(index, "emojis")}>☺️</button>
               <button onClick={() => toggleSubMenu(index, "emojis")}>
                 <CirclePlus className="text-[#878787]" size={20} />
               </button>
@@ -149,10 +141,7 @@ export default function MessageOptionsDropdown({
                       </Avatar>
                       <span className="text-sm">Mrs. Yetunde Adebayo</span>
                     </div>
-                    <input
-                      type="checkbox"
-                      className="form-checkbox h-4 w-4"
-                    />
+                    <input type="checkbox" className="form-checkbox h-4 w-4" />
                   </div>
                   <div className="flex items-center mb-2">
                     <div className="flex items-center gap-2 flex-1">
@@ -161,10 +150,7 @@ export default function MessageOptionsDropdown({
                       </Avatar>
                       <span className="text-sm">Mr. Chisom Okechukwu</span>
                     </div>
-                    <input
-                      type="checkbox"
-                      className="form-checkbox h-4 w-4"
-                    />
+                    <input type="checkbox" className="form-checkbox h-4 w-4" />
                   </div>
                   <div className="flex items-center mb-2">
                     <div className="flex items-center gap-2 flex-1">
@@ -173,10 +159,7 @@ export default function MessageOptionsDropdown({
                       </Avatar>
                       <span className="text-sm">Fatima Abubakar</span>
                     </div>
-                    <input
-                      type="checkbox"
-                      className="form-checkbox h-4 w-4"
-                    />
+                    <input type="checkbox" className="form-checkbox h-4 w-4" />
                   </div>
                 </div>
               </div>
