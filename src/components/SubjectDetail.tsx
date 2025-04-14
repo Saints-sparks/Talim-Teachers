@@ -14,7 +14,6 @@ import BulletList from "@tiptap/extension-bullet-list";
 import OrderedList from "@tiptap/extension-ordered-list";
 import Heading from "@tiptap/extension-heading";
 import FontSize from "tiptap-extension-font-size";
-import FontFamily from "@tiptap/extension-font-family";
 import {
   FiBold,
   FiItalic,
@@ -26,7 +25,7 @@ import {
   FiSave,
   FiAlignJustify,
 } from "react-icons/fi";
-import TextStyle from "@tiptap/extension-text-style";
+import FontFamily from "@tiptap/extension-font-family";
 import { LuHeading1, LuHeading2, LuHeading3 } from "react-icons/lu";
 import { MdFormatListBulleted } from "react-icons/md";
 import { GoListOrdered } from "react-icons/go";
@@ -51,7 +50,10 @@ const SubjectDetailPage: React.FC = () => {
       ListItem,
       Heading.configure({ levels: [1, 2, 3] }),
       FontSize,
-      TextStyle,
+      TextAlign.configure({ types: ["heading", "paragraph"] }),
+      FontFamily.configure({
+        types: ["textStyle"],
+      }),
       TextAlign.configure({ types: ["heading", "paragraph"] }),
     ],
     content,

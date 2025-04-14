@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Upload } from 'lucide-react'
 import Button from '@/components/Button'
-import { Header } from '@/components/HeaderTwo'
+import Layout from '@/components/Layout'
 
 interface Subject {
   name: string
@@ -40,8 +40,9 @@ export default function GradingTablePage() {
   )
 
   return (
+    <Layout>
     <div className="container mx-auto p-4 space-y-6">
-        <Header/>
+      
       <div className="flex justify-between items-start">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold">Grading System</h1>
@@ -82,6 +83,7 @@ export default function GradingTablePage() {
         </table>
       </div>
     </div>
+    </Layout>
   )
 }
 
