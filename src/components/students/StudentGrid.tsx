@@ -15,32 +15,23 @@ import {
   getStudentsByClass,
 } from "../../app/services/api.service";
 import { Button } from "../ui/button";
+import { useAppContext } from "@/app/context/AppContext";
+import Image from "next/image";
 
 const StudentGrid: React.FC = () => {
-  const { getUser, getAccessToken } = useAuth(); // Get logged-in teacher's info
-  const [classes, setClasses] = useState<any[]>([]); // Store classes here
+  const { user, classes, refreshClasses } = useAppContext();
+  const { getAccessToken } = useAuth(); // Get logged-in teacher's info
   const [loading, setLoading] = useState(true);
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
   const [students, setStudents] = useState<any[]>([]);
-  const [user, setUser] = useState<any>(null); // Store user information locally
   const [loadingStudents, setLoadingStudents] = useState<boolean>(false);
 
   useEffect(() => {
-    const storedUser = getUser();
-    if (storedUser) {
-      setUser(storedUser);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!user) return;
-
     const fetchClasses = async () => {
       setLoading(true);
       const token = getAccessToken();
       if (!token) return;
-      const classDetails = await getAssignedClasses(user.userId, token);
-      setClasses(classDetails);
+      await refreshClasses();
       setLoading(false);
     };
 
@@ -67,14 +58,15 @@ const StudentGrid: React.FC = () => {
           <p className="text-[#AAAAAA]">View all the students in your class</p>
         </div>
         <div className="flex gap-2 items-center">
-          <div className="flex h-10 sm:h-12 border border-[#F0F0F0] bg-white items-center p-2 rounded-lg text-[#898989]">
+          {selectedClass !== null &&  <div className="flex h-10 sm:h-12 border border-[#F0F0F0] bg-white items-center p-2 rounded-lg text-[#898989]">
             <Search strokeWidth="1.5" />
             <Input
               type="search"
               placeholder="Search for students"
               className="flex-1 border-none shadow-none focus:outline-none focus-visible:ring-0"
             />
-          </div>
+          </div>}
+         
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -98,7 +90,7 @@ const StudentGrid: React.FC = () => {
                 classes.map((classItem) => (
                   <DropdownMenuItem
                     key={classItem._id}
-                    onClick={() => handleClassSelect(classItem)} // Assuming class has a 'name' property
+                    onClick={() => handleClassSelect(classItem)} 
                   >
                     {classItem.name}
                   </DropdownMenuItem>
@@ -111,7 +103,7 @@ const StudentGrid: React.FC = () => {
 
       {/* Conditionally render message or student grid */}
       {selectedClass === null ? (
-        <div className="text-center text-gray-600">Please select a class</div>
+        <div className="text-center text-gray-600 flex flex-col items-center"> <Image src="/image/students/noclass.png" alt={""} width={334} height={334} />Please select a class</div>
       ) : students.length === 0 ? (
         <div className="text-center text-gray-600">
           No students found for this class

@@ -63,10 +63,10 @@ export const StudentCard: React.FC<StudentCardProps> = ({ student }) => {
           className="rounded-full object-cover"
         />
         <div>
-          <p className="text-[18px] text-[#030E18]font-medium">
+          <p className=" text-[#030E18] text-center">
             {student.userId.firstName} {student.userId.lastName}
           </p>
-          <p className="text-[18px] text-[#4A4A4A] text-center">
+          <p className="text-[#4A4A4A] text-center ">
             {student.classId.name}
           </p>
         </div>

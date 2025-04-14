@@ -1,84 +1,85 @@
 "use client";
 
-import { useState } from "react";
-import { Search } from "lucide-react";
-
-import { Header } from "@/components/HeaderTwo";
-import {RowNumber} from "@/components/RowNumber";
-import Timetable from "@/components/Timetable";
+import { useEffect, useState } from "react";
+import { ChevronDown, Search } from "lucide-react";
+import { RowNumber } from "@/components/RowNumber";
 import { DataTable } from "@/components/attendance/data-table";
 import { AbsentReasonDialog } from "@/components/attendance/absent-reason-dialog";
 import { columns } from "@/components/attendance/columns";
 import Layout from "@/components/Layout";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useAuth } from "../hooks/useAuth";
+import {
+  getAssignedClasses,
+  getCurrentTerm,
+  getStudentsByClass,
+  submitAttendance,
+} from "../services/api.service";
+import { useAppContext } from "../context/AppContext";
 
 type AttendanceStatus = "present" | "absent";
 
-interface AttendanceRecord {
+export interface AttendanceRecord {
   id: string;
   name: string;
   date: string;
-  examScore: number;
   status: AttendanceStatus;
   isAbsent?: boolean;
   reasonForAbsence?: string;
 }
 
-const initialData: AttendanceRecord[] = [
-    {
-      id: "1",
-      name: "Adebayo Funmilayo",
-      date: "12th Dec 2024",
-      examScore: 56,
-      status: "present"
-    },
-    {
-      id: "2",
-      name: "Adebayo Funmilayo",
-      date: "12th Dec 2024",
-      examScore: 61,
-      status: "present"
-    },
-    {
-      id: "3",
-      name: "Adebayo Funmilayo",
-      date: "12th Dec 2024",
-      examScore: 54,
-      status: "present"
-    },
-    {
-      id: "4",
-      name: "Adebayo Funmilayo",
-      date: "12th Dec 2024",
-      examScore: 65,
-      status: "present"
-    },
-    {
-      id: "5",
-      name: "Adebayo Funmilayo",
-      date: "12th Dec 2024",
-      examScore: 62,
-      status: "present"
-    },
-    {
-      id: "6", 
-      name: "Adebayo Funmilayo",
-      date: "12th Dec 2024",
-      examScore: 59,
-      status: "present"
-    },
-    {
-      id: "7",
-      name: "Adebayo Funmilayo", 
-      date: "12th Dec 2024",
-      examScore: 357,
-      status: "present"
-    }
-  ]
-
 const AttendancePage: React.FC = () => {
-  const [data, setData] = useState<AttendanceRecord[]>(initialData);
+  const { user, classes, refreshClasses } = useAppContext();
+  const [data, setData] = useState<AttendanceRecord[]>([]);
   const [open, setOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
+  const { getAccessToken } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [selectedClass, setSelectedClass] = useState<string | null>(null);
+  const [students, setStudents] = useState<any[]>([]);
+  const [loadingStudents, setLoadingStudents] = useState<boolean>(false);
+  const [currentTerm, setCurrentTerm] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    const fetchClasses = async () => {
+      setLoading(true);
+      const token = getAccessToken();
+      if (!token) return;
+      await refreshClasses();
+      setLoading(false);
+    };
+
+    fetchClasses();
+  }, [user]);
+
+  const handleClassSelect = async (classItem: any) => {
+    setSelectedClass(classItem.name);
+    setLoadingStudents(true);
+
+    const token = getAccessToken();
+    if (!token) return;
+
+    const students = await getStudentsByClass(classItem._id, token);
+
+    const formattedData: AttendanceRecord[] = students.map((student: any) => ({
+      id: student._id,
+      name: `${student.userId.firstName} ${student.userId.lastName}`,
+      date: new Date().toLocaleDateString(),
+      status: "present", // default status
+    }));
+
+    setStudents(students);
+    setData(formattedData);
+    setLoadingStudents(false);
+  };
 
   const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
     setData((prev) =>
@@ -95,65 +96,185 @@ const AttendancePage: React.FC = () => {
     );
   };
 
-  const handleAbsentSubmit = (reason: string) => {
-    if (selectedStudent) {
-      setData(prev => prev.map(student => {
-        if (student.id === selectedStudent) {
-          return {
-            ...student,
-            status: "absent",
-            isAbsent: true,
-            reasonForAbsence: reason
-          }
-        }
-        return student
-      }))
-      setOpen(false)
-      setSelectedStudent(null)
+  // This function will be used when a student’s status is present and the X button is clicked.
+  const handleDirectSubmit = async (studentId: string) => {
+    if (!selectedClass || !user) return;
+
+    const token = getAccessToken();
+    if (!token) return;
+
+    const classId = classes.find((c) => c.name === selectedClass)?._id;
+    const date = new Date().toISOString();
+
+    try {
+      const term = await getCurrentTerm(token);
+      setCurrentTerm(term);
+
+      const student = data.find((student) => student.id === studentId);
+      if (!student) {
+        alert("Student not found.");
+        return;
+      }
+
+      const status = student.status === "present" ? "Present" : "Absent";
+
+      // Submit attendance directly for the student whose status is present.
+      const response = await submitAttendance(
+        {
+          studentId: student.id,
+          classId,
+          recordedBy: user.userId,
+          date,
+          status,
+          termId: term._id,
+        },
+        token
+      );
+
+      if (!response || !response.studentId) {
+        console.error(`Error submitting attendance for ${student.name}:`, response);
+        alert(`Failed to submit attendance for ${student.name}.`);
+        return;
+      }
+
+      setData((prev) => prev.filter((stud) => stud.id !== response.studentId));
+
+      alert("Attendance submitted successfully ✅");
+    } catch (error) {
+      console.error("Error submitting attendance:", error);
+      alert("Failed to submit attendance. Please try again.");
     }
+  };
+
+  // This function handles the submission when a reason is provided for an absent student.
+  // This function handles the submission when a reason is provided for an absent student.
+const handleAbsentSubmit = async (absenceReason: string) => {
+  if (!selectedClass || !user || !selectedStudent) return;
+
+  const token = getAccessToken();
+  if (!token) return;
+
+  const classId = classes.find((c) => c.name === selectedClass)?._id;
+  const date = new Date().toISOString();
+
+  try {
+    const term = await getCurrentTerm(token);
+    setCurrentTerm(term);
+
+    const student = data.find((student) => student.id === selectedStudent);
+    if (!student) {
+      alert("Student not found.");
+      return;
+    }
+
+    // Construct the payload with additional absenceReason field.
+    const payload = {
+      studentId: student.id,
+      classId,
+      recordedBy: user.userId,
+      date,
+      status: "Absent", // Note: Ensure your API expects "Absent" (capitalized)
+      termId: term._id,
+      absenceReason, // This is the reason supplied from the dialog input
+    };
+
+    const response = await submitAttendance(payload, token);
+
+    if (!response || !response.studentId) {
+      console.error(`Error submitting attendance for ${student.name}:`, response);
+      alert(`Failed to submit attendance for ${student.name}.`);
+      return;
+    }
+
+    // Remove the student from the UI after successful submission.
+    setData((prev) => prev.filter((stud) => stud.id !== response.studentId));
+
+    alert("Attendance submitted successfully ✅");
+
+    alert("Attendance submitted successfully ✅");
+  } catch (error) {
+    console.error("Error submitting attendance:", error);
+    alert("Failed to submit attendance. Please try again.");
   }
+};
+
 
   return (
     <Layout>
-      <div className=" space-y-1 bg-[F8F8F8] text-black">
-      
+      <div className="space-y-1 bg-[F8F8F8] text-black">
         <div className="h-full flex-1 flex-col space-y-8 p-8 flex">
           <div className="flex items-center justify-between space-y-2">
             <div>
-              <h2 className="text-2xl font-bold tracking-tight">Attendance</h2>
-              <p className="text-muted-foreground">
+              <div className="flex">
+                <h2 className="font-medium text-[#2F2F2F]">Attendance</h2>
+                <span className="text-[#828282]">(daily)</span>
+              </div>
+              <p className="text-[#AAAAAA]">
                 Grade and upload student results effortlessly.
               </p>
             </div>
-            <div className="flex items-center justify-between">
-              <div className="flex flex-1 items-center space-x-2">
-                <div className="relative w-full max-w-sm">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <input
-                    placeholder="Search for students"
-                    className="w-full pl-8 pr-2 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
+            <div className="flex gap-2">
+              <div className="flex items-center border border-[#F0F0F0] rounded-lg px-3 w-full bg-white">
+                <Search className="text-[#898989]" size={18} />
+                <Input
+                  className="border-0 focus-visible:ring-0 focus:outline-none flex-1"
+                  placeholder="Search"
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
               </div>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="flex text-[#898989] bg-[#FFFFFF] rounded-lg border-[#F0F0F0] items-center gap-1 h-10 sm:h-12"
+                  >
+                    {loading ? "Loading classes..." : selectedClass ? selectedClass : "Select a class"}{" "}
+                    <ChevronDown size={16} />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="font-manrope" align="end">
+                  {loading ? (
+                    <DropdownMenuItem>Loading...</DropdownMenuItem>
+                  ) : classes.length === 0 ? (
+                    <DropdownMenuItem>No classes available</DropdownMenuItem>
+                  ) : (
+                    classes.map((classItem) => (
+                      <DropdownMenuItem
+                        key={classItem._id}
+                        onClick={() => handleClassSelect(classItem)}
+                      >
+                        {classItem.name}
+                      </DropdownMenuItem>
+                    ))
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
           <div className="space-y-4">
-      
             <DataTable
               columns={columns({
                 onCancel: (studentId) => {
+                  // For absent students, open the absent reason dialog.
                   setSelectedStudent(studentId);
                   setOpen(true);
                 },
                 onStatusChange: handleStatusChange,
+                onDirectSubmit: handleDirectSubmit, // For present students, submit directly.
               })}
-              data={data}
+              data={data.filter((student) =>
+                student.name.toLowerCase().includes(searchQuery.toLowerCase())
+              )}
             />
             <AbsentReasonDialog
               open={open}
               onOpenChange={setOpen}
               studentId={selectedStudent}
-              onSubmit={handleAbsentSubmit}
+              onSubmit={(reason: string) => {
+                handleAbsentSubmit(reason);
+                setOpen(false);
+              }}
             />
           </div>
         </div>
@@ -162,4 +283,5 @@ const AttendancePage: React.FC = () => {
     </Layout>
   );
 };
+
 export default AttendancePage;

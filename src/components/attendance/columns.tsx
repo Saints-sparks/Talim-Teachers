@@ -3,6 +3,7 @@
 import { ColumnDef } from "@tanstack/react-table"
 import { X } from 'lucide-react'
 import { Button } from "@/components/ui/button"
+import { AttendanceRecord } from "@/app/attendance/page"
 
 type AttendanceStatus = "present" | "absent"
 
@@ -19,9 +20,10 @@ export type Attendance = {
 interface ColumnsProps {
   onCancel: (studentId: string) => void
   onStatusChange: (studentId: string, status: AttendanceStatus) => void
+  onDirectSubmit: (studentId: string) => void
 }
 
-export const columns = ({ onCancel, onStatusChange }: ColumnsProps): ColumnDef<Attendance>[] => [
+export const columns = ({ onCancel, onStatusChange, onDirectSubmit }: ColumnsProps): ColumnDef<AttendanceRecord, unknown>[] => [
   {
     accessorKey: "name",
     header: "Name",
@@ -29,10 +31,6 @@ export const columns = ({ onCancel, onStatusChange }: ColumnsProps): ColumnDef<A
   {
     accessorKey: "date",
     header: "Date",
-  },
-  {
-    accessorKey: "examScore",
-    header: "Exam Score (70%)",
   },
   {
     accessorKey: "status",
@@ -44,18 +42,25 @@ export const columns = ({ onCancel, onStatusChange }: ColumnsProps): ColumnDef<A
 
       if (isAbsent) {
         return (
-          <div className="text-red-500">Absent</div>
+          <Button
+            variant="ghost"
+            className="text-red-500 border border-[#ECECEC]"
+            onClick={() => {
+              onStatusChange(student.id, "present")
+            }}
+          >
+            Absent
+          </Button>
         )
       }
 
       return (
         <Button
           variant="ghost"
-          className="text-green-500 hover:text-green-600"
+          className="text-[#434343] border border-[#ECECEC] font-medium"
           onClick={() => {
-            onStatusChange(student.id, "present")
+            onStatusChange(student.id, "absent")
           }}
-          disabled={student.reasonForAbsence !== undefined || isPresent}
         >
           {isPresent ? "Present" : "Mark Present"}
         </Button>
@@ -68,15 +73,20 @@ export const columns = ({ onCancel, onStatusChange }: ColumnsProps): ColumnDef<A
       const student = row.original
       const isAbsent = student.status === "absent"
 
-      if (student.reasonForAbsence || isAbsent) {
-        return null
-      }
-
       return (
         <Button 
           variant="ghost" 
+          className="rounded-full border border-[#ECECEC] "
           size="icon"
-          onClick={() => onCancel(student.id)}
+          onClick={() => {
+            // If the student is absent, open the reason dialog.
+            if (isAbsent) {
+              onCancel(student.id)
+            } else {
+              // If present, proceed to submit the attendance to the API directly.
+              onDirectSubmit(student.id)
+            }
+          }}
         >
           <X className="h-4 w-4" />
         </Button>
@@ -84,4 +94,3 @@ export const columns = ({ onCancel, onStatusChange }: ColumnsProps): ColumnDef<A
     },
   },
 ]
-

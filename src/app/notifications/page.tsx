@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { CheckCheck, ChevronDown, Search } from "lucide-react";
 import React from "react";
-import useNotifications from "@/app/hooks/useNotifications"; 
+import useNotifications from "@/app/hooks/useNotifications";
 
 type Notification = {
   id: string;
@@ -28,15 +28,41 @@ type Notification = {
   avatar?: string; // Optional in case you want to add avatars later
 };
 
-
-function page() {
+function Page() {
   const router = useRouter();
 
   // Fetch notifications from the API on component mount
   const { notifications, loading, error } = useNotifications();
 
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p>{error}</p>;
+  if (loading) {
+    return (
+      <Layout>
+        <div className="flex justify-center items-center min-h-screen">
+          <p className="text-lg text-center">Loading notifications...</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error) {
+    return (
+      <Layout>
+        <div className="flex justify-center items-center min-h-screen">
+          <p className="text-lg text-center text-red-600">Error: {error}</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (notifications.length === 0) {
+    return (
+      <Layout>
+        <div className="flex justify-center items-center min-h-screen">
+          <p className="text-lg text-center text-[#737373]">No notifications available</p>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -69,8 +95,6 @@ function page() {
             </div>
           </div>
           <div className="bg-white place-items-center h-full rounded-lg sm:border">
-            {/* <img src="/icons/notifications.svg" />
-            <p className="text-[#525252]">There are no updates for now</p> */}
             <div className="flex justify-between w-full sm:p-6 py-5 px-2 bg-[#F8F8F8] sm:bg-[#FFFFFF] border-b">
               <div className="flex gap-2">
                 <p className="text-[#003366] cursor-pointer">All</p>
@@ -127,4 +151,4 @@ function page() {
   );
 }
 
-export default page;
+export default Page;

@@ -155,3 +155,47 @@ export const updateResource = async (resourceId: string, data: any, token: strin
   return response.json();
 };
 
+export const submitAttendance = async (payload: {
+  studentId: string;
+  classId: string;
+  recordedBy: string;
+  date: string;
+  status: string;
+  termId: string;
+}, token: string) => {
+  const res = await fetch(`${API_BASE_URL}/attendance`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to submit attendance");
+  }
+
+  return await res.json();
+};
+
+export const getTeacherTimetable = async (teacherId: string, token: string) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/timetable/teacher/${teacherId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch timetable");
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching timetable:", error);
+    throw error;
+  }
+};
+

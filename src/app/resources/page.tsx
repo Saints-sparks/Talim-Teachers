@@ -9,24 +9,17 @@ import Layout from "@/components/Layout";
 import { fetchResources, getAssignedClasses } from "../services/api.service";
 import { useAuth } from "../hooks/useAuth";
 import { Resource } from "@/types/student";
+import { useAppContext } from "../context/AppContext";
 
 export default function ResourcePage() {
-  const { getAccessToken, getUser } = useAuth();
+  const { user, classes, refreshClasses } = useAppContext(); // Use AppContext
+  const { getAccessToken } = useAuth();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [resources, setResources] = useState<Resource[]>([]);
-  const [classes, setClasses] = useState<any[]>([]); // Store assigned classes
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [user, setUser] = useState<any>(null);
-
-  useEffect(() => {
-    const storedUser = getUser();
-    if (storedUser) {
-      setUser(storedUser);
-    }
-  }, []);
 
   useEffect(() => {
     const loadData = async () => {
@@ -34,13 +27,11 @@ export default function ResourcePage() {
         const token = getAccessToken();
         if (!token) throw new Error("No token found");
 
-        const [resourceData, classData] = await Promise.all([
+        const [resourceData] = await Promise.all([
           fetchResources(token),
-          getAssignedClasses(user?.userId, token),
         ]);
 
         setResources(resourceData);
-        setClasses(classData);
       } catch (err) {
         setError("Failed to load data");
       } finally {
@@ -53,9 +44,8 @@ export default function ResourcePage() {
     }
   }, [user]);
 
-  const filteredResources = resources.filter(
-    (resource) =>
-      resource.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredResources = resources.filter((resource) =>
+    resource.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleNewResourceUpload = (newResource: Resource) => {
@@ -63,7 +53,9 @@ export default function ResourcePage() {
   };
 
   const handleResourceDelete = (resourceId: string) => {
-    setResources((prevResources) => prevResources.filter((resource) => resource._id !== resourceId));
+    setResources((prevResources) =>
+      prevResources.filter((resource) => resource._id !== resourceId)
+    );
   };
 
   return (
@@ -98,7 +90,11 @@ export default function ResourcePage() {
         <div className="px-4">
           {loading && <p className="text-center">Loading...</p>}
           {!loading && !error && (
-            <ResourcesTable resources={filteredResources} classes={classes} onResourceDelete={handleResourceDelete} />
+            <ResourcesTable
+              resources={filteredResources}
+              classes={classes}
+              onResourceDelete={handleResourceDelete}
+            />
           )}
         </div>
         <UploadModal

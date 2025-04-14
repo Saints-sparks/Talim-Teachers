@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import { Manrope } from "next/font/google";
+import { AppProvider } from "@/app/context/AppContext";
 // import { AuthProvider } from "./contexts/AuthContext";
 // import { Toaster } from "react-hot-toast";
 
@@ -20,7 +21,8 @@ export default function RootLayout({
     <html lang="en">
       <body className={manrope.className}>
         {/* <AuthProvider> */}
-        {children}
+        <AppProvider>{children}</AppProvider>
+
         {/* <Toaster position="top-right" />
         </AuthProvider> */}
       </body>
