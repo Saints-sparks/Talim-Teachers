@@ -1,21 +1,10 @@
 "use client";
-import { Header } from "@/components/HeaderTwo";
 import Layout from "@/components/Layout";
 import { MetricCard } from "@/components/metric-card";
-
-import { ScheduleTimeline } from "@/components/schedule-timeline";
 import Timetable from "@/components/Timetable";
-import { link } from "fs";
 
 import React from "react";
 
-const schedule = [
-  { subject: "Mathematics", startTime: "08:00", endTime: "10:00" },
-  { subject: "Civic Education", startTime: "10:00", endTime: "11:00" },
-  { subject: "C.R.S", startTime: "11:00", endTime: "12:00" },
-  { subject: "BREAK - TIME", startTime: "12:00", endTime: "01:00" },
-  { subject: "English language", startTime: "01:00", endTime: "02:00" },
-];
 
 const metrics = {
   assignedSubjects: {value: 15, link: "/subjects"},

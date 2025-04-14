@@ -1,14 +1,13 @@
-"use client";
-
+"use client"
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { API_BASE_URL } from "@/app/lib/api/config";
 import { ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
+import React, { useEffect, useState } from "react";
 
+// Notification type remains unchanged
 interface Notification {
   _id: string;
   title: string;
@@ -22,34 +21,59 @@ interface Notification {
   time: string;
 }
 
-interface Props {
-  params: { id: string };
-  onClose?: () => void;
-}
-
-const ExpandedNotification = ({ params, onClose }: Props) => {
+export default function Page({ params }: { params: { id: string } }) {
   const [notification, setNotification] = useState<Notification | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const notificationId = params.id;
 
   useEffect(() => {
     const fetchNotification = async () => {
       try {
-        const res = await fetch(
-          `${API_BASE_URL}/notifications/${notificationId}`
-        );
+        const res = await fetch(`${API_BASE_URL}/notifications/${params.id}`);
         if (!res.ok) throw new Error("Failed to fetch notification");
         const data = await res.json();
-        setNotification(data); // Directly set the notification as it's not inside a "data" array
-      } catch (error) {
-        console.error(error);
+        setNotification(data);
+      } catch (err: any) {
+        setError(err.message || "An error occurred");
+        console.error(err);
+      } finally {
+        setLoading(false);
       }
     };
 
-    if (notificationId) fetchNotification();
-  }, [notificationId]);
+    fetchNotification();
+  }, [params.id]);
 
-  if (!notification) return <p>Loading...</p>;
+  if (loading) {
+    return (
+      <Layout>
+        <div className="flex justify-center items-center min-h-screen">
+          <p className="text-lg text-center">Loading notification...</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error) {
+    return (
+      <Layout>
+        <div className="flex justify-center items-center min-h-screen">
+          <p className="text-lg text-center text-red-600">Error: {error}</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!notification) {
+    return (
+      <Layout>
+        <div className="flex justify-center items-center min-h-screen">
+          <p className="text-lg text-center">No notification found.</p>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -57,7 +81,7 @@ const ExpandedNotification = ({ params, onClose }: Props) => {
         <div>
           <Button
             className="bg-transparent shadow-none hover:bg-gray-200"
-            onClick={onClose ? onClose : () => router.back()}
+            onClick={() => router.back()}
           >
             <ChevronLeft className="text-[#6F6F6F]" />
           </Button>
@@ -91,6 +115,4 @@ const ExpandedNotification = ({ params, onClose }: Props) => {
       </div>
     </Layout>
   );
-};
-
-export default ExpandedNotification;
+}
