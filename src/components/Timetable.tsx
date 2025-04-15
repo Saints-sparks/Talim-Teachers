@@ -64,35 +64,34 @@ const Timetable = () => {
   }, [user]);
 
   return (
-    <div className="">
-      <div className="mx-auto bg-[#F8F8F8] rounded-lg p-6 text-[#030E18]">
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex flex-col gap-2">
-            <h1 className="text-xl font-medium">Timetable</h1>
-            <p className="text-[#AAAAAA]">
-              Stay on Track with Your Class Schedule!
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button className="w-full sm:w-auto bg-[#003366] hover:bg-blue-800 h-[48px] rounded-xl text-white">
-              Download <Download className="mr-2 h-7 w-6" />
-            </Button>
-          </div>
+    <div className="sm:px-4 p-3 max-w-[95vw] overflow-hidden">
+      <div className="mx-auto bg-[#F8F8F8] rounded-lg ">
+        <div className="flex justify-between items-center mb-1">
+          <h1 className="text-2xl font-semibold">Timetable</h1>
+          <Button className="py-6 hidden sm:flex bg-[#003366] hover:bg-blue-800 text-white">
+            Download
+            <Download className="mr-2 h-7 w-6" />
+          </Button>
         </div>
+        <p className="text-[#AAAAAA] mb-6">
+          Stay on Track with Your Class Schedule!
+        </p>
 
         {/* Timetable Grid */}
-        <div className="overflow-x-auto border border-gray-300 rounded-t-3xl lg:h-[500px] 2xl:h-[790px] overflow-y-scroll scrollbar-hide">
+        <div className="overflow-x-auto border border-[#F0F0F0] rounded-t-3xl h-screen 2xl:max-h-[full] overflow-y-scroll scrollbar-hide">
           {/* Header Row */}
           <div
-            className="grid sticky top-0 z-30 border-[#F0F0F0]"
+            className="grid sticky top-0 z-30"
             style={{ gridTemplateColumns: "103px repeat(5, 1fr)" }}
           >
-            <div className="text-center bg-[#FFFFFF] py-6 border-b">Time</div>
+            <div className="font-semibold text-center bg-[#FFFFFF] py-6 border-b">
+              Time
+            </div>
             {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].map(
               (day, index) => (
                 <div
                   key={index}
-                  className="text-center bg-[#FFFFFF] py-6 border-l border-b"
+                  className="font-semibold min-w-[114px] text-center bg-[#FFFFFF] py-6 border-l border-[#F0F0F0] border-b"
                 >
                   {day}
                 </div>
@@ -125,7 +124,7 @@ const Timetable = () => {
               (day, dayIndex) => (
                 <div
                   key={dayIndex}
-                  className="col-span-1 border-l border-gray-300 relative"
+                  className="col-span-1 border-l min-w-[114px] border-[#F0F0F0] bg-white relative"
                 >
                   {(timetableEntries[day] || []).map(
                     (entry: TimetableEntry, entryIndex: number) => {
@@ -151,18 +150,18 @@ const Timetable = () => {
                       return (
                         <div
                           key={entryIndex}
-                          className="absolute left-0 right-0 m-1 p-2 rounded shadow-md bg-white flex flex-col items-center justify-center text-center"
+                          className="absolute left-0 right-0 p-2 shadow-orange-800 border-y border-[#F0F0F0] flex items-center justify-center text-center"
                           style={{
                             top: `${topPosition}px`,
                             height: `${entryHeight}px`,
                           }}
                         >
-                          <div className="font-semibold">{entry.course}</div>
-                          <div className="text-sm text-gray-500">
-                            {entry.subject}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {entry.startTIme} - {entry.endTime}
+                          <div>
+                            <div className="font-semibold">{entry.course}</div>
+                            <div className="font-semibold">{entry.subject}</div>
+                            <div className="text-sm text-gray-500">
+                              {entry.startTIme} - {entry.endTime}
+                            </div>
                           </div>
                         </div>
                       );

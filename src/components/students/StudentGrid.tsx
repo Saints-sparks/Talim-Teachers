@@ -120,7 +120,7 @@ const StudentGrid: React.FC = () => {
           No students found for this class
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 place-items-center">
           {students.map((student) => (
             <StudentCard key={student._id} student={student} />
           ))}

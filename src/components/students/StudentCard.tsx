@@ -6,7 +6,7 @@ import { StudentCardProps } from "@/types/student";
 
 export const StudentCard: React.FC<StudentCardProps> = ({ student }) => {
   return (
-    <div className="relative border border-[#F0F0F0] rounded-xl p-4 bg-white w-full max-w-[300px] shadow-none">
+    <div className="relative border border-[#F0F0F0] rounded-xl p-4 bg-white w-full sm:max-w-[300px] shadow-none">
       {/* Dropdown Menu */}
       <Menu as="div" className="absolute top-2 right-2 text-left">
         <Menu.Button className="flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded-full h-8 w-8">
