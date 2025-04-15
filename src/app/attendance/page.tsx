@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { ChevronDown, Search } from "lucide-react";
-import { RowNumber } from "@/components/RowNumber";
 import { DataTable } from "@/components/attendance/data-table";
 import { AbsentReasonDialog } from "@/components/attendance/absent-reason-dialog";
 import { columns } from "@/components/attendance/columns";
@@ -17,12 +16,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "../hooks/useAuth";
 import {
-  getAssignedClasses,
   getCurrentTerm,
   getStudentsByClass,
   submitAttendance,
 } from "../services/api.service";
 import { useAppContext } from "../context/AppContext";
+import Image from "next/image";
 
 type AttendanceStatus = "present" | "absent";
 
@@ -207,26 +206,28 @@ const AttendancePage: React.FC = () => {
   return (
     <Layout>
       <div className="space-y-1 bg-[F8F8F8] text-black">
-        <div className="h-full flex-1 flex-col space-y-8 p-8 flex">
-          <div className="flex items-center justify-between space-y-2">
+        <div className="h-full flex-1 flex-col space-y-8 p-4 sm:p-8 flex">
+          <div className="flex flex-col sm:flex-row items-center justify-between space-y-2">
             <div>
               <div className="flex">
                 <h2 className="font-medium text-[#2F2F2F]">Attendance</h2>
                 <span className="text-[#828282]">(daily)</span>
               </div>
               <p className="text-[#AAAAAA]">
-                Grade and upload student results effortlessly.
+                Record student attendance seamlessly.
               </p>
             </div>
             <div className="flex gap-2">
-              <div className="flex items-center border border-[#F0F0F0] rounded-lg px-3 w-full bg-white">
-                <Search className="text-[#898989]" size={18} />
-                <Input
-                  className="border-0 focus-visible:ring-0 focus:outline-none flex-1"
-                  placeholder="Search"
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
+              {selectedClass !== null && (
+                <div className="flex items-center border border-[#F0F0F0] rounded-lg px-3 w-full bg-white">
+                  <Search className="text-[#898989]" size={18} />
+                  <Input
+                    className="border-0 focus-visible:ring-0 focus:outline-none flex-1"
+                    placeholder="Search"
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+              )}
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -261,21 +262,39 @@ const AttendancePage: React.FC = () => {
               </DropdownMenu>
             </div>
           </div>
+
           <div className="space-y-4">
-            <DataTable
-              columns={columns({
-                onCancel: (studentId) => {
-                  // For absent students, open the absent reason dialog.
-                  setSelectedStudent(studentId);
-                  setOpen(true);
-                },
-                onStatusChange: handleStatusChange,
-                onDirectSubmit: handleDirectSubmit, // For present students, submit directly.
-              })}
-              data={data.filter((student) =>
-                student.name.toLowerCase().includes(searchQuery.toLowerCase())
-              )}
-            />
+            {selectedClass === null ? (
+              <div className="text-center text-gray-600 flex flex-col items-center">
+                {" "}
+                <Image
+                  src="/image/students/noclass.png"
+                  alt={""}
+                  width={334}
+                  height={334}
+                />
+                Please select a class
+              </div>
+            ) : students.length === 0 ? (
+              <div className="text-center text-gray-600">
+                No students found for this class
+              </div>
+            ) : (
+              <DataTable
+                columns={columns({
+                  onCancel: (studentId) => {
+                    // For absent students, open the absent reason dialog.
+                    setSelectedStudent(studentId);
+                    setOpen(true);
+                  },
+                  onStatusChange: handleStatusChange,
+                  onDirectSubmit: handleDirectSubmit, // For present students, submit directly.
+                })}
+                data={data.filter((student) =>
+                  student.name.toLowerCase().includes(searchQuery.toLowerCase())
+                )}
+              />
+            )}
             <AbsentReasonDialog
               open={open}
               onOpenChange={setOpen}
@@ -287,7 +306,6 @@ const AttendancePage: React.FC = () => {
             />
           </div>
         </div>
-        <RowNumber />
       </div>
     </Layout>
   );
