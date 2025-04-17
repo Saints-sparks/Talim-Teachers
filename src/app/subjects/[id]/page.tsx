@@ -5,7 +5,7 @@ import SubjectDetailPage from "@/components/SubjectDetail";
 const SubjectPage: React.FC = () => {
   return (
     // <Layout>
-      <SubjectDetailPage />
+    <SubjectDetailPage />
     // </Layout>
   );
 };

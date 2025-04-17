@@ -1,18 +1,16 @@
-import { Book, Award, Calendar } from 'lucide-react'
-import { Card, CardContent } from "@/components/ui/card"
-import type { MetricCardProps } from "@/types/dashboard"
-import Link from 'next/link'
-
-
-
+import { Book, Award, Calendar } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import type { MetricCardProps } from "@/types/dashboard";
+import Link from "next/link";
 
 export function MetricCard({ icon, value, label, link }: MetricCardProps) {
-
   return (
     <Card className="overflow-hidden bg-white shadow-none border-[#F0F0F0]">
       <CardContent className="p-6">
         <div className="space-y-2 flex mb-6 justify-start items-center gap-2 flex-row">
-        <div className=" flex justify-center items-center text-blue-600">{icon}</div>
+          <div className=" flex justify-center items-center text-blue-600">
+            {icon}
+          </div>
           <div className="space-y-1">
             <div className="text-2xl font-semibold text-gray-900">{value}</div>
             <p className="text-sm text-[#878787]">{label}</p>
@@ -40,6 +38,5 @@ export function MetricCard({ icon, value, label, link }: MetricCardProps) {
         </Link>
       </CardContent>
     </Card>
-  )
+  );
 }
-

@@ -13,7 +13,6 @@ export interface Parent {
   contactDetails: string;
 }
 
-
 // /src/types/student.ts
 
 export interface User {
@@ -46,6 +45,8 @@ export interface Student {
   parentId: User; // Nested parent data
   parentContact: ParentContact; // Nested parent contact data
   isActive: boolean;
+  gender: string;
+  dateOfBirth: string;
 }
 
 export interface Teacher {

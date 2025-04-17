@@ -7,7 +7,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/app/hooks/useAuth";
 import { Folder } from "lucide-react";
@@ -20,8 +26,13 @@ interface UpdateModalProps {
   onResourceUpdate: (updatedResource: any) => void;
 }
 
-export function UpdateModal({ isOpen, onClose, resource, onResourceUpdate }: UpdateModalProps) {
-  const { getAccessToken } = useAuth(); 
+export function UpdateModal({
+  isOpen,
+  onClose,
+  resource,
+  onResourceUpdate,
+}: UpdateModalProps) {
+  const { getAccessToken } = useAuth();
   const [name, setName] = useState(resource?.name || "");
   const [selectedClass, setSelectedClass] = useState(resource?.classId || "");
   const [loading, setLoading] = useState(false);
@@ -55,7 +66,7 @@ export function UpdateModal({ isOpen, onClose, resource, onResourceUpdate }: Upd
         alert("Authentication token is missing.");
         return;
       }
-      
+
       // Call the update API
       await updateResource(resource._id, updatedData, token);
       alert("Update successful!");
@@ -87,9 +98,7 @@ export function UpdateModal({ isOpen, onClose, resource, onResourceUpdate }: Upd
             <Label htmlFor="class">Class</Label>
             <Select value={selectedClass} onValueChange={setSelectedClass}>
               <SelectTrigger>
-                <SelectValue
-                  placeholder="Select class"
-                />
+                <SelectValue placeholder="Select class" />
               </SelectTrigger>
               <SelectContent>
                 {/* Assuming classes are passed down as a prop */}
@@ -101,7 +110,7 @@ export function UpdateModal({ isOpen, onClose, resource, onResourceUpdate }: Upd
               </SelectContent>
             </Select>
           </div>
-          
+
           {/* Non-editable Fields */}
           <div className="grid gap-2">
             <Label>Term</Label>

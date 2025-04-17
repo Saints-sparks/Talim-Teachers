@@ -125,7 +125,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       <div>
         <div className="mb-4 border-b border-2 border-solid border-[#F1F1F1] -mx-4"></div>
 
-        <div className="flex items-center px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-md cursor-pointer" onClick={logout}>
+        <div
+          className="flex items-center px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-md cursor-pointer"
+          onClick={logout}
+        >
           <Image src="/icons/logout.svg" alt="Logout" width={18} height={20} />
           <span className="ml-3 font-medium">Logout Account</span>
         </div>

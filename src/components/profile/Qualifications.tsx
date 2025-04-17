@@ -6,13 +6,14 @@ interface QualififcationsProps {
   specialization: string;
 }
 
-
-
-const Qualifications = ({highestAcademicQualification, yearsOfExperience, specialization} : QualififcationsProps) => {
-
+const Qualifications = ({
+  highestAcademicQualification,
+  yearsOfExperience,
+  specialization,
+}: QualififcationsProps) => {
   const studentDetails = [
     { label: "Highest Degree:", value: highestAcademicQualification },
-    { label: "Years of Experience:", value: yearsOfExperience},
+    { label: "Years of Experience:", value: yearsOfExperience },
     { label: "Subject Expertise:", value: specialization },
   ];
 

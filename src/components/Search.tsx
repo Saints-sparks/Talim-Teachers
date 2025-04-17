@@ -1,5 +1,5 @@
-import React from 'react';
-import { Search as SearchIcon } from 'lucide-react';
+import React from "react";
+import { Search as SearchIcon } from "lucide-react";
 
 interface SearchProps {
   placeholder: string;

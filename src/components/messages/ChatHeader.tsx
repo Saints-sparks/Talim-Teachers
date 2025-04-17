@@ -11,7 +11,6 @@ import {
 import { useState } from "react";
 import GroupInfoModal from "./GroupInfoModal";
 
-
 interface ChatHeaderProps {
   avatar: string;
   name: string;

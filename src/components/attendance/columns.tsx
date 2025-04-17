@@ -1,29 +1,33 @@
-"use client"
+"use client";
 
-import { ColumnDef } from "@tanstack/react-table"
-import { X } from 'lucide-react'
-import { Button } from "@/components/ui/button"
-import { AttendanceRecord } from "@/app/attendance/page"
+import { ColumnDef } from "@tanstack/react-table";
+import { X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AttendanceRecord } from "@/app/attendance/page";
 
-type AttendanceStatus = "present" | "absent"
+type AttendanceStatus = "present" | "absent";
 
 export type Attendance = {
-  id: string
-  name: string
-  date: string
-  examScore: number
-  status: AttendanceStatus
-  isAbsent?: boolean
-  reasonForAbsence?: string
-}
+  id: string;
+  name: string;
+  date: string;
+  examScore: number;
+  status: AttendanceStatus;
+  isAbsent?: boolean;
+  reasonForAbsence?: string;
+};
 
 interface ColumnsProps {
-  onCancel: (studentId: string) => void
-  onStatusChange: (studentId: string, status: AttendanceStatus) => void
-  onDirectSubmit: (studentId: string) => void
+  onCancel: (studentId: string) => void;
+  onStatusChange: (studentId: string, status: AttendanceStatus) => void;
+  onDirectSubmit: (studentId: string) => void;
 }
 
-export const columns = ({ onCancel, onStatusChange, onDirectSubmit }: ColumnsProps): ColumnDef<AttendanceRecord, unknown>[] => [
+export const columns = ({
+  onCancel,
+  onStatusChange,
+  onDirectSubmit,
+}: ColumnsProps): ColumnDef<AttendanceRecord, unknown>[] => [
   {
     accessorKey: "name",
     header: "Name",
@@ -36,9 +40,9 @@ export const columns = ({ onCancel, onStatusChange, onDirectSubmit }: ColumnsPro
     accessorKey: "status",
     header: "Status",
     cell: ({ row }) => {
-      const student = row.original
-      const isAbsent = student.status === "absent"
-      const isPresent = student.status === "present"
+      const student = row.original;
+      const isAbsent = student.status === "absent";
+      const isPresent = student.status === "present";
 
       if (isAbsent) {
         return (
@@ -46,12 +50,12 @@ export const columns = ({ onCancel, onStatusChange, onDirectSubmit }: ColumnsPro
             variant="ghost"
             className="text-red-500 border border-[#ECECEC]"
             onClick={() => {
-              onStatusChange(student.id, "present")
+              onStatusChange(student.id, "present");
             }}
           >
             Absent
           </Button>
-        )
+        );
       }
 
       return (
@@ -59,38 +63,38 @@ export const columns = ({ onCancel, onStatusChange, onDirectSubmit }: ColumnsPro
           variant="ghost"
           className="text-[#434343] border border-[#ECECEC] font-medium"
           onClick={() => {
-            onStatusChange(student.id, "absent")
+            onStatusChange(student.id, "absent");
           }}
         >
           {isPresent ? "Present" : "Mark Present"}
         </Button>
-      )
-    }
+      );
+    },
   },
   {
     id: "actions",
     cell: ({ row }) => {
-      const student = row.original
-      const isAbsent = student.status === "absent"
+      const student = row.original;
+      const isAbsent = student.status === "absent";
 
       return (
-        <Button 
-          variant="ghost" 
+        <Button
+          variant="ghost"
           className="rounded-full border border-[#ECECEC] "
           size="icon"
           onClick={() => {
             // If the student is absent, open the reason dialog.
             if (isAbsent) {
-              onCancel(student.id)
+              onCancel(student.id);
             } else {
               // If present, proceed to submit the attendance to the API directly.
-              onDirectSubmit(student.id)
+              onDirectSubmit(student.id);
             }
           }}
         >
           <X className="h-4 w-4" />
         </Button>
-      )
+      );
     },
   },
-]
+];

@@ -9,7 +9,12 @@ interface HeaderProps {
   SearchComponent: React.ReactNode;
 }
 
-const Header: React.FC<HeaderProps> = ({ greeting, tent, mogi, SearchComponent }) => {
+const Header: React.FC<HeaderProps> = ({
+  greeting,
+  tent,
+  mogi,
+  SearchComponent,
+}) => {
   const [currentDate, setCurrentDate] = useState("");
 
   useEffect(() => {
@@ -32,9 +37,7 @@ const Header: React.FC<HeaderProps> = ({ greeting, tent, mogi, SearchComponent }
       </div>
 
       {/* Search Section */}
-      <div className="flex-grow flex justify-center">
-        {SearchComponent}
-      </div>
+      <div className="flex-grow flex justify-center">{SearchComponent}</div>
 
       {/* Date and Notification Section */}
       <div className="flex items-center space-x-6">

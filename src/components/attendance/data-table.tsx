@@ -43,7 +43,7 @@ export function DataTable<TData, TValue>({
   });
 
   return (
-    <div>
+    <div className="">
       <div className="rounded-md border border-[#F0F0F0] bg-white">
         <Table>
           <TableHeader>
@@ -94,9 +94,7 @@ export function DataTable<TData, TValue>({
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-between space-x-2 py-4">
-
-      </div>
+      <div className="flex items-center justify-between space-x-2 py-4"></div>
     </div>
   );
 }

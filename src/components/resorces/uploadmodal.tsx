@@ -14,7 +14,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getAssignedClasses, getCurrentTerm, uploadResource } from "../../app/services/api.service";
+import {
+  getAssignedClasses,
+  getCurrentTerm,
+  uploadResource,
+} from "../../app/services/api.service";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/app/hooks/useAuth";
 import { Folder } from "lucide-react";
@@ -26,7 +30,11 @@ interface UploadModalProps {
   onNewResourceUpload: (newResource: Resource) => void;
 }
 
-export function UploadModal({ isOpen, onClose, onNewResourceUpload }: UploadModalProps) {
+export function UploadModal({
+  isOpen,
+  onClose,
+  onNewResourceUpload,
+}: UploadModalProps) {
   const { getUser, getAccessToken } = useAuth(); // Get logged-in teacher's info
   const [classes, setClasses] = useState<any[]>([]); // Store classes here
   const [loading, setLoading] = useState(true);
@@ -109,7 +117,7 @@ export function UploadModal({ isOpen, onClose, onNewResourceUpload }: UploadModa
       if (!cloudinaryResponse.ok) {
         throw new Error("Cloudinary upload failed");
       }
-      
+
       const cloudinaryData = await cloudinaryResponse.json();
       const fileUrl = cloudinaryData.secure_url;
 
@@ -131,7 +139,6 @@ export function UploadModal({ isOpen, onClose, onNewResourceUpload }: UploadModa
       // Update the resource list in the parent component
       onNewResourceUpload(resourceData);
       onClose(); // Close modal
-
     } catch (error) {
       console.error("Upload failed:", error);
       alert("Upload failed. Check console for details.");
@@ -194,7 +201,11 @@ export function UploadModal({ isOpen, onClose, onNewResourceUpload }: UploadModa
           </div>
         </div>
         <div className="flex justify-end">
-          <Button className="bg-[#002147] text-white" onClick={handleUpload} disabled={uploading}>
+          <Button
+            className="bg-[#002147] text-white"
+            onClick={handleUpload}
+            disabled={uploading}
+          >
             {uploading ? "Uploading..." : "Send"}
           </Button>
         </div>

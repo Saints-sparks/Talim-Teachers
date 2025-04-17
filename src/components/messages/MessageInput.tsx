@@ -16,15 +16,24 @@ export default function MessageInput() {
       />
       <div className="flex w-full items-center justify-between text-gray-500">
         <div className="flex gap-2">
-          <Button variant="ghost" className="border border-[#F0F0F0] hover:bg-gray-200 transition-all duration-300">
+          <Button
+            variant="ghost"
+            className="border border-[#F0F0F0] hover:bg-gray-200 transition-all duration-300"
+          >
             Document
             <FileText />
           </Button>
-          <Button variant="ghost" className="border border-[#F0F0F0] hover:bg-gray-200 transition-all duration-300">
+          <Button
+            variant="ghost"
+            className="border border-[#F0F0F0] hover:bg-gray-200 transition-all duration-300"
+          >
             Image
             <Image />
           </Button>
-          <Button variant="ghost" className="border border-[#F0F0F0] hover:bg-gray-200 transition-all duration-300">
+          <Button
+            variant="ghost"
+            className="border border-[#F0F0F0] hover:bg-gray-200 transition-all duration-300"
+          >
             Video
             <FileVideo />
           </Button>

@@ -20,7 +20,10 @@ const ReplyPreview = ({ replyingMessage, onCancel }: ReplyPreviewProps) => {
           {replyingMessage.text}
         </p>
       </div>
-      <button onClick={onCancel} className="text-sm text-gray-500 hover:text-gray-700">
+      <button
+        onClick={onCancel}
+        className="text-sm text-gray-500 hover:text-gray-700"
+      >
         ✕
       </button>
     </div>

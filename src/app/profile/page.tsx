@@ -7,11 +7,21 @@ import Availability from "@/components/profile/Availability";
 import ClassAndSubjects from "@/components/profile/ClassAndSubjects";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { BookOpenText, BriefcaseBusiness, ChevronLeft, Clock, Medal, UserRound, UsersRound } from "lucide-react";
+import {
+  BookOpenText,
+  BriefcaseBusiness,
+  ChevronLeft,
+  Clock,
+  Medal,
+  UserRound,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../hooks/useAuth";
-import { fetchTeacherDetails, getAssignedClasses } from "../services/api.service";
+import {
+  fetchTeacherDetails,
+  getAssignedClasses,
+} from "../services/api.service";
 import { Teacher } from "@/types/student";
 
 const tabs = [
@@ -127,9 +137,24 @@ const Profile = () => {
               specialization={teacher?.specialization || ""}
             />
           )}
-          {selectedTab === "Employment Details" && <EmploymentDetails employmentType={teacher?.employmentType || ""} role={teacher?.userId.role || ""} />}
-          {selectedTab === "Class and Subjects" && <ClassAndSubjects assignedClasses={assignedClasses} assignedCourses={teacher?.assignedCourses || []} />}
-          {selectedTab === "Availability" && <Availability availableDays={teacher?.availabilityDays || []} availableTime={teacher?.availableTime || ""} />}
+          {selectedTab === "Employment Details" && (
+            <EmploymentDetails
+              employmentType={teacher?.employmentType || ""}
+              role={teacher?.userId.role || ""}
+            />
+          )}
+          {selectedTab === "Class and Subjects" && (
+            <ClassAndSubjects
+              assignedClasses={assignedClasses}
+              assignedCourses={teacher?.assignedCourses || []}
+            />
+          )}
+          {selectedTab === "Availability" && (
+            <Availability
+              availableDays={teacher?.availabilityDays || []}
+              availableTime={teacher?.availableTime || ""}
+            />
+          )}
         </div>
       </div>
     </Layout>

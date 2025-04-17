@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   Table,
@@ -7,48 +7,47 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import Badge from "../ui/badge"
-
+} from "@/components/ui/table";
+import Badge from "../ui/badge";
 
 const attendanceData = [
   {
     date: "31st December, 2024",
     day: "Monday",
     status: "present",
-    remarks: "-"
+    remarks: "-",
   },
   {
     date: "31st December, 2024",
     day: "Tuesday",
     status: "present",
-    remarks: "Sick leave submitted"
+    remarks: "Sick leave submitted",
   },
   {
     date: "31st December, 2024",
     day: "Tuesday",
     status: "absent",
-    remarks: "-"
+    remarks: "-",
   },
   {
     date: "31st December, 2024",
     day: "Tuesday",
     status: "absent",
-    remarks: "No explanation"
+    remarks: "No explanation",
   },
   {
     date: "31st December, 2024",
     day: "Tuesday",
     status: "present",
-    remarks: "No explanation"
+    remarks: "No explanation",
   },
   {
     date: "31st December, 2024",
     day: "Tuesday",
     status: "absent",
-    remarks: "No explanation"
-  }
-]
+    remarks: "No explanation",
+  },
+];
 
 export function AttendanceTable() {
   return (
@@ -72,8 +71,8 @@ export function AttendanceTable() {
                   text={record.status === "present" ? "Present" : "Absent"}
                   variant="secondary"
                   className={`${
-                    record.status === "present" 
-                      ? "bg-green-100 text-green-800" 
+                    record.status === "present"
+                      ? "bg-green-100 text-green-800"
                       : "bg-red-100 text-red-800"
                   }`}
                 >
@@ -86,6 +85,5 @@ export function AttendanceTable() {
         </TableBody>
       </Table>
     </div>
-  )
+  );
 }
-

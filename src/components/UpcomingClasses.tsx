@@ -28,29 +28,41 @@ const ClassCard: React.FC<ClassCardProps> = ({
     >
       <div className="flex justify-between items-center mb-7">
         <span
-          className={`text-sm font-semibold ${isActive ? "text-white" : "text-black"}`}
+          className={`text-sm font-semibold ${
+            isActive ? "text-white" : "text-black"
+          }`}
         >
           {subject}
         </span>
         <span
-          className={`text-xs ${isActive ? "text-[#A5A5A5]" : "text-gray-600"} bg-[#F8F8F8] px-2 py-1 rounded-lg`}
+          className={`text-xs ${
+            isActive ? "text-[#A5A5A5]" : "text-gray-600"
+          } bg-[#F8F8F8] px-2 py-1 rounded-lg`}
         >
           {duration}
         </span>
       </div>
       <h3
-        className={`mt-6 text-lg font-medium ${isActive ? "text-white" : "text-black"}`}
+        className={`mt-6 text-lg font-medium ${
+          isActive ? "text-white" : "text-black"
+        }`}
       >
         {title}
       </h3>
       <div className="flex justify-between mt-4">
-        <p className={`mt-4 text-sm ${isActive ? "text-[#003366]" : "text-gray-600"}`}>
+        <p
+          className={`mt-4 text-sm ${
+            isActive ? "text-[#003366]" : "text-gray-600"
+          }`}
+        >
           Class {isActive ? "in" : "by"} {time}
         </p>
         <div className="mt-2 flex items-center space-x-2">
           <div className="w-6 h-6 rounded-full bg-gray-300"></div>
           <span
-            className={`text-sm w-6 h-6 rounded-full ${isActive ? "text-white" : "text-gray-600"}`}
+            className={`text-sm w-6 h-6 rounded-full ${
+              isActive ? "text-white" : "text-gray-600"
+            }`}
           >
             +{students}
           </span>
@@ -98,7 +110,9 @@ const UpcomingClasses: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-[24px] font-medium text-[#030E18]">Upcoming Classes</h2>
+          <h2 className="text-[24px] font-medium text-[#030E18]">
+            Upcoming Classes
+          </h2>
           <p className="text-sm text-gray-600">You have 5 classes left today</p>
         </div>
         <div className="flex items-center space-x-4">

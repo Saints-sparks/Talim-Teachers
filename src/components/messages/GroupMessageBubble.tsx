@@ -4,7 +4,6 @@ import MessageOptionsDropdown from "./MessageDropdown";
 import AudioMessage from "./AudioMessage";
 import VideoMessage from "./VideoMessage";
 
-
 interface MessageBubbleProps {
   msg: {
     senderType: string;
@@ -52,15 +51,13 @@ export default function GroupMessageBubble({
                 : "bg-white text-[#030E18]"
             }`}
           >
-           
-              <MessageOptionsDropdown
-                index={index}
-                msg={msg}
-                openSubMenu={openSubMenu}
-                toggleSubMenu={toggleSubMenu}
-                setReplyingMessage={setReplyingMessage}
-              />
-            
+            <MessageOptionsDropdown
+              index={index}
+              msg={msg}
+              openSubMenu={openSubMenu}
+              toggleSubMenu={toggleSubMenu}
+              setReplyingMessage={setReplyingMessage}
+            />
 
             {msg.sender !== "me" && (
               <div className="flex justify-between relative">

@@ -1,5 +1,5 @@
 import React from "react";
-import { Student } from "@/types/student"; 
+import { Student } from "@/types/student";
 
 const StudentDetails: React.FC<{ student: Student }> = ({ student }) => {
   const studentDetails = [

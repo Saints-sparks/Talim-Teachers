@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo } from "react";
 
 interface Subject {
   name: string;
@@ -26,7 +26,9 @@ export function GradingTable({ subjects, onGradeClick }: GradingTableProps) {
   const totalScores = useMemo(() => calculateTotalScores(subjects), [subjects]);
 
   if (subjects.length === 0) {
-    return <div className="text-center text-gray-500">No subjects to display.</div>;
+    return (
+      <div className="text-center text-gray-500">No subjects to display.</div>
+    );
   }
 
   return (

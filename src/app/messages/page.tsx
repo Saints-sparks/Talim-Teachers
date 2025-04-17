@@ -1,11 +1,9 @@
 "use client";
 import { useState } from "react";
-import { Header } from "@/components/HeaderTwo";
 import ChatSidebar from "@/components/messages/ChatSidebar";
 import GroupChat from "@/components/messages/GroupChat";
 import PrivateChat from "@/components/messages/PrivateChat";
-
-
+import Layout from "@/components/Layout";
 
 export default function ChatUI() {
   // Default selected chat is private.
@@ -36,9 +34,8 @@ export default function ChatUI() {
   };
 
   return (
-   
+    <Layout>
       <div className="h-screen font-manrope text-[#030E18] flex flex-col">
-        <Header />
         <div className="flex flex-1 overflow-hidden gap-1 px-8 pt-8 relative">
           <ChatSidebar onSelectChat={setSelectedChat} />
           {selectedChat.type === "group" ? (
@@ -58,6 +55,6 @@ export default function ChatUI() {
           )}
         </div>
       </div>
-
+    </Layout>
   );
 }

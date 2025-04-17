@@ -36,7 +36,10 @@ const useNotifications = () => {
 
         // **Update state & cache**
         setNotifications(formattedNotifications);
-        localStorage.setItem("notifications", JSON.stringify(formattedNotifications));
+        localStorage.setItem(
+          "notifications",
+          JSON.stringify(formattedNotifications)
+        );
       } catch (error) {
         console.error("Failed to fetch notifications:", error);
         setError("Failed to load notifications. Please try again.");

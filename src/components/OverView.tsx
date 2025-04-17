@@ -57,9 +57,7 @@ const Overview = () => {
                   >
                     ↑
                   </span>
-                  <span
-                    className={`text-[16px] font-medium text-[#003366]`}
-                  >
+                  <span className={`text-[16px] font-medium text-[#003366]`}>
                     {item.percentage}
                   </span>
                 </div>

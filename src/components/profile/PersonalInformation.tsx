@@ -7,10 +7,12 @@ interface PersonalInformationProps {
   phoneNumber: string;
 }
 
-
-
-const PersonalInformation = ({firstName, lastName, email, phoneNumber}: PersonalInformationProps) => {
-
+const PersonalInformation = ({
+  firstName,
+  lastName,
+  email,
+  phoneNumber,
+}: PersonalInformationProps) => {
   const studentDetails = [
     { label: "First Name:", value: firstName },
     { label: "Last Name:", value: lastName },
@@ -27,8 +29,12 @@ const PersonalInformation = ({firstName, lastName, email, phoneNumber}: Personal
         <tbody className="w-full">
           {studentDetails.map((item, index) => (
             <tr key={index} className="border-t w-full">
-              <td className="py-2 px-3 text-[#909090]  whitespace-nowrap">{item.label}</td>
-              <td className="py-2 px-30 sm:px-28 font-medium break-words">{item.value}</td>
+              <td className="py-2 px-3 text-[#909090]  whitespace-nowrap">
+                {item.label}
+              </td>
+              <td className="py-2 px-30 sm:px-28 font-medium break-words">
+                {item.value}
+              </td>
             </tr>
           ))}
         </tbody>
