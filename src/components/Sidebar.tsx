@@ -30,12 +30,12 @@ const menuItems: MenuItem[] = [
     iconPath: "/icons/results.svg",
     link: "/grading",
   },
-  // {
-  //   label: "Messages",
-  //   iconPath: "/icons/messages.svg",
-  //   link: "/messages",
-  //   notification: 5,
-  // },
+  {
+    label: "Messages",
+    iconPath: "/icons/messages.svg",
+    link: "/messages",
+    notification: 5,
+  },
 ];
 
 interface SidebarProps {
