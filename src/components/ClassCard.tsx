@@ -20,7 +20,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
   disabled,
 }) => {
   return (
-    <div className="bg-white border-2 border-[#EEEEEE] rounded-2xl p-4 w-full max-w-xs flex flex-col justify-between">
+    <div className="bg-white border-2 border-[#EEEEEE] rounded-2xl p-4 w-full sm:max-w-xs flex flex-col justify-between">
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-gray-700">

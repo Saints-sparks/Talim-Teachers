@@ -29,7 +29,7 @@ const SubjectGrid: React.FC = () => {
   return (
     <div className="px-6 py-4 h-full">
       <h2 className="text-xl font-medium mb-4 text-[#030E18]">My Subjects</h2>
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {subjects.map((subject, index) => (
           <SubjectCard key={index} {...subject} />
         ))}

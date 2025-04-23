@@ -25,11 +25,9 @@ const SubjectCard: React.FC<SubjectCardProps> = ({
         router.push(`/subjects/${subject.toLowerCase().replace(/\s+/g, "-")}`)
       }
     >
-      <img
-        src={subjectImageUrl}
-        alt={subject}
-        className="w-full h-40 object-cover  rounded-2xl mx-auto"
-      />
+      <div className="w-full h-40 bg-[#F5F7FA] rounded-2xl flex items-center justify-center">
+        <p className="text-xl font-semibold text-[#030E18]">{subject}</p>
+      </div>
       <div className="">
         <h3 className="text-base font-medium text-[#030E18]">{subject}</h3>
         <div className="flex items-center gap-2 mt-5 text-[#030E18] text-sm">

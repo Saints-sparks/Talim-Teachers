@@ -42,7 +42,7 @@ const Header: React.FC<HeaderProps> = ({
       {/* Date and Notification Section */}
       <div className="flex items-center space-x-6">
         <div className="flex items-center space-x-2 text-gray-500">
-          <span className="text-sm text-gray-500">{currentDate}</span>
+          <span className="text-sm text-gray-900">{currentDate}</span>
           <FaCalendarAlt className="text-lg" />
         </div>
         <HiOutlineBell className="text-xl text-gray-500 cursor-pointer hover:text-gray-700" />

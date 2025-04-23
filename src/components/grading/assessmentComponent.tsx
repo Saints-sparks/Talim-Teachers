@@ -1,3 +1,4 @@
+"use client";
 import React from "react";
 import {
   Table,
@@ -7,62 +8,131 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Button } from "../ui/button";
-import { Info, Trash2 } from "lucide-react";
 
-const AssessmentComponent = () => {
+const mockAssessments = [
+  {
+    id: 1,
+    name: "Mathematics",
+    test: 30,
+    exam: 70,
+  },
+  // you can add more subjects here
+];
+
+const AssessmentComponent: React.FC = () => {
   return (
-    <div className="bg-white p-3 rounded-xl flex flex-col">
-      <h1 className="text-[#373737] font-medium ">Assessment Component</h1>
-      <div className="py-2">
-        <Table className=" px-5 bg-white">
+    <div className="bg-white p-3 rounded-xl flex flex-col gap-4">
+      <h1 className="text-[#373737] font-medium">Assessment Component</h1>
+
+      {/* ——— Desktop Table ——— */}
+      <div className="hidden md:block">
+        <Table className="px-5 bg-white">
           <TableHeader className="text-[#6B6B6B]">
             <TableRow>
               <TableHead>Name</TableHead>
-              <TableHead>Subject</TableHead>
-              <TableHead>Upload Date</TableHead>
-              <TableHead className="flex justify-center">Actions</TableHead>
+              <TableHead>Test</TableHead>
+              <TableHead>Examination</TableHead>
+              <TableHead>Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableRow>
-              <TableCell></TableCell>
-              <TableCell>hi</TableCell>
-              <TableCell className="text-[#616161]">hey</TableCell>
-              <TableCell className="flex justify-center">
-                <div className="flex items-center gap-2">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <Info />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>View</DropdownMenuItem>
-                      <DropdownMenuItem>Edit</DropdownMenuItem>
-                      <DropdownMenuItem className="text-red-600">
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="border-none shadow-none"
-                >
-                  <Trash2 className="text-[#D92D20]" />
-                </Button>
-              </TableCell>
-            </TableRow>
+            {mockAssessments.map((item) => (
+              <TableRow key={item.id}>
+                <TableCell>
+                  <p className="border py-1 px-2 rounded-md text-[#898989]">
+                    {item.name}
+                  </p>
+                </TableCell>
+                <TableCell>
+                  <input
+                    type="number"
+                    defaultValue={item.test}
+                    min={0}
+                    max={100}
+                    className={`
+                      w-full border rounded px-2 py-1 appearance-auto
+                      [&::-webkit-outer-spin-button]:block
+                      [&::-webkit-inner-spin-button]:block
+                      [&::-webkit-outer-spin-button]:opacity-100
+                      [&::-webkit-inner-spin-button]:opacity-100
+                    `}
+                  />
+                </TableCell>
+                <TableCell>
+                  <input
+                    type="number"
+                    defaultValue={item.exam}
+                    min={0}
+                    max={100}
+                    className={`
+                      w-full border rounded px-2 py-1 appearance-auto
+                      [&::-webkit-outer-spin-button]:block
+                      [&::-webkit-inner-spin-button]:block
+                      [&::-webkit-outer-spin-button]:opacity-100
+                      [&::-webkit-inner-spin-button]:opacity-100
+                    `}
+                  />
+                </TableCell>
+                <TableCell className="flex justify-center">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border border-[#001466] w-full shadow-none bg-transparent hover:bg-gray-100"
+                  >
+                    Remove
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
           </TableBody>
         </Table>
+      </div>
+
+      {/* ——— Mobile Cards ——— */}
+      <div className="flex flex-col gap-4 md:hidden">
+        {mockAssessments.map((item) => (
+          <div
+            key={item.id}
+            className="bg-white p-4 rounded-xl shadow-sm border"
+          >
+            <div className="space-y-1 mb-4">
+              <p className="text-[14px]">Name</p>
+              <p className="border py-1 px-2 rounded-md text-[#898989] mb-4">
+                {item.name}
+              </p>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm mb-1">Test</label>
+              <input
+                type="number"
+                defaultValue={item.test}
+                min={0}
+                max={100}
+                className="w-full border rounded px-2 py-1 appearance-auto"
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm mb-1">Examination</label>
+              <input
+                type="number"
+                defaultValue={item.exam}
+                min={0}
+                max={100}
+                className="w-full border rounded px-2 py-1 appearance-auto"
+              />
+            </div>
+
+            <Button
+              variant="outline"
+              className="w-full border border-[#001466] shadow-none bg-transparent hover:bg-gray-100"
+            >
+              Remove
+            </Button>
+          </div>
+        ))}
       </div>
     </div>
   );
