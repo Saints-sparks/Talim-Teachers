@@ -99,82 +99,132 @@ export function ResourcesTable({
   };
 
   return (
-    <div className="bg-white p-4 border border-[#F0F0F0] rounded-lg">
-      <Table className="text-[#030303] bg-white p-6">
-        <TableHeader className="text-[#030E18]">
-          <TableRow>
-            <TableHead className="flex gap-2 items-center">
-              <Checkbox className="shadow-none pb-1" />
-              Name
-            </TableHead>
-            <TableHead>Class</TableHead>
-            <TableHead>Upload Date</TableHead>
-            <TableHead className="flex justify-center">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {resources.map((resource) => (
-            <TableRow key={resource._id}>
-              <TableCell>
-                <div className="flex items-center gap-2 p-5">
-                  {/* {getFileIcon(resource.type)} */}{" "}
-                  <span className="text-[#030303]">{resource.name}</span>
-                </div>
-              </TableCell>
-              <TableCell>{getClassName(resource.classId)}</TableCell>
-              <TableCell className="text-[#616161]">
-                {formatDate(resource.uploadDate)}
-              </TableCell>
-              <TableCell className="flex justify-center items-center">
-                <div className="flex items-center gap-2">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <Info />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>View</DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => {
-                          setSelectedResource(resource);
-                          setEditModalOpen(true);
-                        }}
-                      >
-                        Edit
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="border-none shadow-none"
-                  onClick={() => resource._id && handleDelete(resource._id)}
-                  disabled={loading === resource._id}
-                >
-                  <Trash2 className="text-[#D92D20]" />
-                </Button>
-              </TableCell>
+    <div>
+      <div className="bg-white p-4 border border-[#F0F0F0] rounded-lg hidden md:block">
+        <Table className="text-[#030303] bg-white p-6 ">
+          <TableHeader className="text-[#030E18]">
+            <TableRow>
+              <TableHead className="flex gap-2 items-center">
+                <Checkbox className="shadow-none pb-1" />
+                Name
+              </TableHead>
+              <TableHead>Class</TableHead>
+              <TableHead>Upload Date</TableHead>
+              <TableHead className="flex justify-center">Actions</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-      {selectedResource && (
-        <UpdateModal
-          isOpen={editModalOpen}
-          onClose={() => setEditModalOpen(false)}
-          resource={{ ...selectedResource, classes }}
-          onResourceUpdate={(updated) => {
-            // Update UI state
-            const updatedList = resourceList.map((res) =>
-              res._id === selectedResource._id ? { ...res, ...updated } : res
-            );
-            setResourceList(updatedList);
-            setEditModalOpen(false);
-          }}
-        />
-      )}
+          </TableHeader>
+          <TableBody>
+            {resources.map((resource) => (
+              <TableRow key={resource._id}>
+                <TableCell>
+                  <div className="flex items-center gap-2 p-5">
+                    {/* {getFileIcon(resource.type)} */}{" "}
+                    <span className="text-[#030303]">{resource.name}</span>
+                  </div>
+                </TableCell>
+                <TableCell>{getClassName(resource.classId)}</TableCell>
+                <TableCell className="text-[#616161]">
+                  {formatDate(resource.uploadDate)}
+                </TableCell>
+                <TableCell className="flex justify-center items-center">
+                  <div className="flex items-center gap-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <Info />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem>View</DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setSelectedResource(resource);
+                            setEditModalOpen(true);
+                          }}
+                        >
+                          Edit
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="border-none shadow-none"
+                    onClick={() => resource._id && handleDelete(resource._id)}
+                    disabled={loading === resource._id}
+                  >
+                    <Trash2 className="text-[#D92D20]" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        {/* Mobile View - Cards */}
+
+        {selectedResource && (
+          <UpdateModal
+            isOpen={editModalOpen}
+            onClose={() => setEditModalOpen(false)}
+            resource={{ ...selectedResource, classes }}
+            onResourceUpdate={(updated) => {
+              // Update UI state
+              const updatedList = resourceList.map((res) =>
+                res._id === selectedResource._id ? { ...res, ...updated } : res
+              );
+              setResourceList(updatedList);
+              setEditModalOpen(false);
+            }}
+          />
+        )}
+      </div>
+      <div className="block md:hidden space-y-4 mt-4">
+        {resources.map((resource) => (
+          <div key={resource._id} className="rounded-lg bg-white p-4 ">
+            <p className="text-[12px] text-black font-medium mb-1">Name</p>
+            <p className="text-[14px] text-[#676767]">{resource.name}</p>
+            <div className="mt-3 grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-[12px] text-black font-medium">Class</p>
+                <p className="text-[14px] text-[#676767]">
+                  {getClassName(resource.classId)}
+                </p>
+              </div>
+              <div>
+                <p className="text-[12px] text-black font-medium">
+                  Upload Date
+                </p>
+                <p className="text-[14px] text-[#676767]">
+                  {formatDate(resource.uploadDate)}
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="p-1"
+                onClick={() => {
+                  setSelectedResource(resource);
+                  setEditModalOpen(true);
+                }}
+              >
+                <Info size={16} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="p-1 text-red-500 hover:bg-red-100"
+                onClick={() => resource._id && handleDelete(resource._id)}
+                disabled={loading === resource._id}
+              >
+                <Trash2 size={16} />
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

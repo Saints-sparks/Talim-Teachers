@@ -66,8 +66,8 @@ const Timetable = () => {
   return (
     <div className="sm:px-4 p-3 max-w-[95vw] overflow-hidden">
       <div className="mx-auto bg-[#F8F8F8] rounded-lg ">
-        <div className="flex justify-between items-center mb-1">
-          <h1 className="text-2xl font-semibold">Timetable</h1>
+        <div className="flex justify-between items-center">
+          <h1 className="text-xl font-medium">Timetable</h1>
           <Button className="py-6 hidden sm:flex bg-[#003366] hover:bg-blue-800 text-white">
             Download
             <Download className="mr-2 h-7 w-6" />

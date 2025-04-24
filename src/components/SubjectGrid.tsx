@@ -1,5 +1,19 @@
 "use client";
+import { useAppContext } from "@/app/context/AppContext";
 import SubjectCard from "./SubjectCard";
+import { useAuth } from "@/app/hooks/useAuth";
+import { useEffect, useState } from "react";
+import {
+  fetchCourseById,
+  fetchTeacherDetails,
+} from "@/app/services/api.service";
+import LoadingCard from "./LoadingCard";
+
+interface Course {
+  _id: string;
+  title: string;
+  // …any other fields your API returns
+}
 
 const subjects = [
   {
@@ -26,6 +40,61 @@ const subjects = [
 ];
 
 const SubjectGrid: React.FC = () => {
+  const { user } = useAppContext();
+  const { getAccessToken } = useAuth();
+  const [subjects, setSubjects] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadSubjects = async () => {
+      if (!user?.userId) return;
+      setLoading(true);
+      setError(null);
+
+      try {
+        const token = getAccessToken();
+        if (!token) throw new Error("No auth token");
+
+        // 1) Fetch teacher, grab assignedCourses (array of course IDs)
+        const teacher = await fetchTeacherDetails(user.userId, token);
+        const courseIds: string[] = teacher.assignedCourses || [];
+
+        if (courseIds.length === 0) {
+          setSubjects([]);
+          return;
+        }
+
+        // 2) Fetch each course in parallel
+        const courses = await Promise.all(
+          courseIds.map((cid) => fetchCourseById(cid, token))
+        );
+
+        setSubjects(courses);
+        console.log(courses);
+      } catch (err: any) {
+        console.error("Failed to load subjects:", err);
+        setError(err.message || "Something went wrong");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSubjects();
+  }, [user]);
+
+  if (loading) {
+    return Array.from({ length: 4 }).map((_, i) => (
+      <LoadingCard key={i} height="h-48" />
+    ));
+  }
+  if (error) {
+    return <p className="p-4 text-center text-red-600">{error}</p>;
+  }
+  if (subjects.length === 0) {
+    return <p className="p-4 text-center">No subjects assigned yet.</p>;
+  }
+
   return (
     <div className="px-6 py-4 h-full">
       <h2 className="text-xl font-medium mb-4 text-[#030E18]">My Subjects</h2>

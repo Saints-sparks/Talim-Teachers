@@ -50,7 +50,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const { user } = useAppContext();
 
   if (!user || !user.schoolId) {
-    return null;  // or return <Spinner/> or some placeholder
+    return null; // or return <Spinner/> or some placeholder
   }
 
   const raw = user.schoolId;

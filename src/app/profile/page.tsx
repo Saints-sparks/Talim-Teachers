@@ -56,7 +56,9 @@ export default function Profile() {
         const classes = await getAssignedClasses(user.userId, token);
         setAssignedClasses(classes);
       } catch (err: any) {
-        setError(err.message || "Please check your internet connection and try again");
+        setError(
+          err.message || "Please check your internet connection and try again"
+        );
       } finally {
         setLoading(false);
       }
@@ -71,7 +73,11 @@ export default function Profile() {
           <div className="p-6 text-center text-red-600">{error}</div>
         ) : (
           <div className="flex justify-center items-center h-full">
-            <Loader2 className="animate-spin text-gray-500" size={32} strokeWidth={1} />
+            <Loader2
+              className="animate-spin text-gray-500"
+              size={32}
+              strokeWidth={1}
+            />
           </div>
         )
       ) : (

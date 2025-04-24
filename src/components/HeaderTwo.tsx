@@ -21,7 +21,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
           {/* Right Side: Date, Notifications, Avatar */}
           <div className="flex items-center gap-4">
             <div className="flex gap-2 items-center text-sm text-[#6F6F6F] p-2 rounded-lg border border-[#F0F0F0] bg-white cursor-pointer hover:bg-gray-100">
-              <p className="text-[16px]">
+              <p className="text-[14px] sm:text-[16px]">
                 {format(new Date(), "dd MMM, yyyy")}
               </p>
               <CalendarRange size={24} />
