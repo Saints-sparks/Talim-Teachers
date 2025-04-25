@@ -216,3 +216,13 @@ export const getTeacherTimetable = async (teacherId: string, token: string) => {
     throw error;
   }
 };
+
+// Fetch a single course (subject) by its ID
+export const fetchCourseById = async (courseId: string, token: string) => {
+  const res = await axios.get(
+    `${API_BASE_URL}/courses/${courseId}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  return res.data.data; // adjust if your API wraps differently
+};
+

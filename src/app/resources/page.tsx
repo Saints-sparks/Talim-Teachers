@@ -66,7 +66,7 @@ export default function ResourcePage() {
             </h1>
             <p className="text-[#AAAAAA]">Share Your Lessons and Resources</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full justify-between">
             <div className="flex items-center border border-[#F0F0F0] shadow-none rounded-lg px-3  bg-white">
               <Search className="text-[#898989]" size={18} />
               <Input

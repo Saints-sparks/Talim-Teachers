@@ -5,6 +5,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation"; // Correct hook for Next.js 13 App Router
 import { ChevronLeft } from "lucide-react";
 import { useAuth } from "@/app/hooks/useAuth";
+import { useAppContext } from "@/app/context/AppContext";
 
 // Type for Menu Item
 type MenuItem = {
@@ -46,9 +47,23 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const { logout } = useAuth();
   const pathname = usePathname(); // usePathname is the correct hook for App Router
+  const { user } = useAppContext();
+
+  if (!user || !user.schoolId) {
+    return null; // or return <Spinner/> or some placeholder
+  }
+
+  const raw = user.schoolId;
+  const nameMatch = raw.match(/name:\s*"([^"]+)"/);
+  const logoMatch = raw.match(/logo:\s*'([^']+)'/);
+
+  const schoolName = nameMatch ? nameMatch[1] : "Your School";
+  const schoolLogo = logoMatch ? logoMatch[1] : "/unity.png";
+
+  console.log("School name:", schoolName);
 
   return (
-    <div className=" w-[266px] font-manrope px-4 h-full  pb-4 bg-[#FBFBFB] flex flex-col justify-between border-r overflow-y-auto scrollbar-hide">
+    <div className=" w-[280px] font-manrope px-4 h-full  pb-4 bg-[#FBFBFB] flex flex-col justify-between border-r overflow-y-auto scrollbar-hide">
       {/* Header */}
       <div>
         <div className="flex items-center py-2 justify-between">
@@ -75,10 +90,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         <div className="mb-4 border-b border-2 border-solid border-[#F1F1F1] -mx-4"></div>
 
         {/* School Selector */}
-        <div className="flex items-center px-2 py-3 border-2 border-solid border-[#F1F1F1] bg-[#FBFBFB] rounded-md mb-4">
-          <Image src="/unity.png" alt="School" width={40} height={40} />
-          <span className="ml-2 font-medium text-base text-gray-700">
-            Unity Secondary S...
+        <div className="flex gap-2 items-center px-2 py-3 border border-[#F1F1F1] bg-[#FBFBFB] rounded-md mb-4">
+          {schoolLogo ? (
+            <Image src="/unity.png" alt={schoolName} width={40} height={40} />
+          ) : (
+            <Image src="/unity.png" alt="School" width={40} height={40} />
+          )}
+          <span className="ml-2 font-medium text-base text-[#030E18]">
+            {schoolName || "Your School"}
           </span>
         </div>
 

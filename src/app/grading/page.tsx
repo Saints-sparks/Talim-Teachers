@@ -1,6 +1,6 @@
 "use client";
 import AssessmentComponent from "@/components/grading/assessmentComponent";
-import { GradingSystem } from "@/components/grading/grading-system";
+import GradingPanel from "@/components/grading/gradingPanel";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,7 +35,7 @@ const GradingPage: React.FC = () => {
         <div className="flex flex-col gap-6">
           <div className="flex items-center gap-1">
             {" "}
-            <p>Class:</p>
+            <p>Course Code:</p>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -52,6 +52,7 @@ const GradingPage: React.FC = () => {
             </DropdownMenu>
           </div>
           <AssessmentComponent />
+          <GradingPanel />
         </div>
       </div>
     </Layout>

@@ -22,6 +22,8 @@ import {
 } from "../services/api.service";
 import { useAppContext } from "../context/AppContext";
 import Image from "next/image";
+import LoadingCard from "@/components/LoadingCard";
+import ClassCard from "@/components/ClassCard";
 
 type AttendanceStatus = "present" | "absent";
 
@@ -208,7 +210,7 @@ const AttendancePage: React.FC = () => {
       <div className="space-y-1 bg-[F8F8F8] text-black">
         <div className="h-full flex-1 flex-col space-y-8 p-4 sm:p-8 flex">
           <div className="flex flex-col sm:flex-row items-center justify-between space-y-2">
-            <div>
+            <div className="w-full">
               <div className="flex">
                 <h2 className="font-medium text-[#2F2F2F]">Attendance</h2>
                 <span className="text-[#828282]">(daily)</span>
@@ -217,7 +219,7 @@ const AttendancePage: React.FC = () => {
                 Record student attendance seamlessly.
               </p>
             </div>
-            <div className="flex gap-2">
+
               {selectedClass !== null && (
                 <div className="flex items-center border border-[#F0F0F0] rounded-lg px-3 w-full bg-white">
                   <Search className="text-[#898989]" size={18} />
@@ -228,52 +230,22 @@ const AttendancePage: React.FC = () => {
                   />
                 </div>
               )}
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="flex text-[#898989] bg-[#FFFFFF] rounded-lg border-[#F0F0F0] items-center gap-1 h-10 sm:h-12"
-                  >
-                    {loading
-                      ? "Loading classes..."
-                      : selectedClass
-                      ? selectedClass
-                      : "Select a class"}{" "}
-                    <ChevronDown size={16} />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="font-manrope" align="end">
-                  {loading ? (
-                    <DropdownMenuItem>Loading...</DropdownMenuItem>
-                  ) : classes.length === 0 ? (
-                    <DropdownMenuItem>No classes available</DropdownMenuItem>
-                  ) : (
-                    classes.map((classItem) => (
-                      <DropdownMenuItem
-                        key={classItem._id}
-                        onClick={() => handleClassSelect(classItem)}
-                      >
-                        {classItem.name}
-                      </DropdownMenuItem>
-                    ))
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
           </div>
 
           <div className="space-y-4">
-            {selectedClass === null ? (
-              <div className="text-center text-gray-600 flex flex-col items-center">
-                {" "}
-                <Image
-                  src="/image/students/noclass.png"
-                  alt={""}
-                  width={334}
-                  height={334}
-                />
-                Please select a class
+            {!selectedClass ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {loading
+                  ? Array.from({ length: 4 }).map((_, i) => (
+                      <LoadingCard key={i} height="h-48" />
+                    ))
+                  : classes.map((c) => (
+                      <ClassCard
+                        key={c._id}
+                        classItem={c}
+                        onView={handleClassSelect}
+                      />
+                    ))}
               </div>
             ) : students.length === 0 ? (
               <div className="text-center text-gray-600">

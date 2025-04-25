@@ -8,7 +8,6 @@ const SubjectPage: React.FC = () => {
     <Layout>
       <div className="flex flex-col justify-between h-full">
         <SubjectGrid />
-        <RowNumber />
       </div>
     </Layout>
   );
