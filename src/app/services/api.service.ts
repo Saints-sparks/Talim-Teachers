@@ -114,20 +114,26 @@ export const deleteResource = async (id: string, token: string) => {
 };
 
 export const getCurrentTerm = async (token: string) => {
-  try {
-    const response = await fetch(
-      `${API_BASE_URL}/academic-year-term/term/current`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/academic-year-term/term/current`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-cache', // Prevent browser caching
+        }
+      );
+      if (response.status === 304) {
+        // Handle 304: Return cached data or retry without caching headers
+        console.log('Resource not modified, using cached data or retrying');
+        return null; // Or fetch from local storage if cached
       }
-    );
-    if (!response.ok) throw new Error("Failed to fetch current term");
-    return await response.json();
-  } catch (error) {
-    console.error("Error fetching current term:", error);
-    throw error;
-  }
-};
+      if (!response.ok) throw new Error(`Failed to fetch current term: ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      console.error("Error fetching current term:", error);
+      throw error;
+    }
+  };
 
 export const uploadResource = async (data: any, token: string) => {
   try {

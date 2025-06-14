@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import nookies from "nookies";
@@ -6,11 +6,30 @@ import { authService } from "../services/auth.service";
 import { LoginCredentials, User } from "../../types/auth";
 import { API_BASE_URL } from "../lib/api/config";
 import axios from "axios";
-import { log } from "console";
 
 export const useAuth = () => {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+
+  // Check authentication status on mount and when cookies change
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = getAccessToken();
+      const userData = getUser();
+      
+      if (token && userData) {
+        setIsAuthenticated(true);
+        setUser(userData);
+      } else {
+        setIsAuthenticated(false);
+        setUser(null);
+      }
+    };
+
+    checkAuth();
+  }, []);
 
   const login = async (credentials: LoginCredentials) => {
     setIsLoading(true);
@@ -39,16 +58,19 @@ export const useAuth = () => {
         throw new Error("Token is invalid");
       }
 
-      const user = introspection.data.user;
+      const userData = introspection.data.user;
 
-      // **Store user data in localStorage**
-      localStorage.setItem("user", JSON.stringify(user));
+      // Store user data in localStorage
+      localStorage.setItem("user", JSON.stringify(userData));
+      
+      // Update state
+      setIsAuthenticated(true);
+      setUser(userData);
 
       toast.success("Login successful!");
 
       // Try multiple navigation approaches
       try {
-        // console.log('Attempting navigation...');
         router.push("/dashboard");
 
         // If router.push doesn't work, try window.location after a short delay
@@ -70,6 +92,11 @@ export const useAuth = () => {
       const errorMessage =
         error instanceof Error ? error.message : "Login failed";
       toast.error(errorMessage);
+      
+      // Update state on login failure
+      setIsAuthenticated(false);
+      setUser(null);
+      
       throw error;
     } finally {
       setIsLoading(false);
@@ -83,6 +110,10 @@ export const useAuth = () => {
 
     // Clear local storage
     localStorage.removeItem("user");
+
+    // Update state
+    setIsAuthenticated(false);
+    setUser(null);
 
     // Use both navigation methods for logout as well
     router.push("/");
@@ -104,12 +135,12 @@ export const useAuth = () => {
 
   const getAccessToken = (): string | null => {
     const cookies = nookies.get(null);
-    return cookies.access_token || null; // Replace with your actual cookie name if different
+    return cookies.access_token || null;
   };
 
   const getRefreshToken = (): string | null => {
     const cookies = nookies.get(null);
-    return cookies.refresh_token || null; // Replace with your actual cookie name if different
+    return cookies.refresh_token || null;
   };
 
   return {
@@ -119,5 +150,7 @@ export const useAuth = () => {
     getAccessToken,
     getRefreshToken,
     isLoading,
+    isAuthenticated,
+    user,
   };
 };

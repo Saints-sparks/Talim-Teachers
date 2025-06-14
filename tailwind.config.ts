@@ -14,7 +14,7 @@ export default {
       },
       fontFamily: {
         sans: ['Poppins', 'Arial', 'Helvetica', 'sans-serif'],
-        manrope: ["Manrope", "sans-serif"], 
+        manrope: ["Manrope", "sans-serif"],
       },
     },
   },
