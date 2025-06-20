@@ -709,7 +709,7 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({ onClose }) => {
             )}
             <button
               onClick={handleSave}
-              className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+              className="flex items-center gap-2 bg-[#003366] text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
               disabled={isLoading || !courseId || !termId || subjectsLoading || termLoading || fileUploading}
             >
               <Save size={16} />
