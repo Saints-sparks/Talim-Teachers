@@ -8,6 +8,12 @@ import { useAuth } from '@/app/hooks/useAuth';
 import { Edit, Trash2, Download } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
+interface ModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  curriculum: any;
+}
+
 const SkeletonLoader = () => (
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
     {[...Array(6)].map((_, index) => (
@@ -28,7 +34,7 @@ const SkeletonLoader = () => (
   </div>
 );
 
-const Modal = ({ isOpen, onClose, curriculum }) => {
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, curriculum }) => {
   const modalRef = useRef(null);
 
   if (!isOpen || !curriculum) return null;
@@ -84,7 +90,7 @@ const Modal = ({ isOpen, onClose, curriculum }) => {
             <div className="mt-4">
               <p className="font-medium mb-2">Attachments:</p>
               <ul className="list-disc list-inside space-y-1">
-                {curriculum.attachments.map((url, index) => (
+                {curriculum.attachments.map((url: string, index: number) => (
                   <li key={index}>
                     <a
                       href={url}
@@ -154,7 +160,7 @@ const CurriculumPage = () => {
     setEditingCurriculumId(null);
   };
 
-  const handleCurriculumClick = (curriculum) => {
+  const handleCurriculumClick = (curriculum: any) => {
     setSelectedCurriculum(curriculum);
     setIsModalOpen(true);
   };
@@ -204,7 +210,6 @@ const CurriculumPage = () => {
       <Layout>
         <CurriculumEditor 
           onClose={handleEditorClose} 
-          curriculumId={editingCurriculumId}
         />
       </Layout>
     );

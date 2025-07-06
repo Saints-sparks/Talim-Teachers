@@ -1,5 +1,5 @@
 "use client";
-import { Download } from "lucide-react";
+import { Download, RefreshCw, AlertCircle, Calendar } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { useAuth } from "@/app/hooks/useAuth";
@@ -8,192 +8,330 @@ import { getTeacherTimetable } from "@/app/services/api.service";
 
 // Define a TypeScript interface for a single timetable entry.
 interface TimetableEntry {
+  id?: string;
   time: string;
-  startTIme: string;
+  startTime: string;
   endTime: string;
   course: string;
   subject: string;
   class: string;
+  day: string;
 }
 
-const Timetable = () => {
-  const hourHeight = 130; // Height for each hour (in pixels)
-  const startHour = 8; // Start of the timetable (8 AM)
-  const [manualTime, setManualTime] = useState("10:32");
-  const [selectedClass, setSelectedClass] = useState("");
-  const [currentTimePosition, setCurrentTimePosition] = useState(0);
-  const { user, classes, refreshClasses } = useAppContext(); // Use AppContext
-  const { getAccessToken } = useAuth(); // Get logged-in teacher's info
+// Error state interface
+interface ErrorState {
+  hasError: boolean;
+  message: string;
+  type: 'network' | 'server' | 'empty' | 'unknown';
+}
 
-  // State to store dynamic timetable entries (by day).
-  const [timetableEntries, setTimetableEntries] = useState<
-    Record<string, TimetableEntry[]>
-  >({});
+// Days of the week
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
-  // Calculate current time indicator position
-  useEffect(() => {
-    const [hours, minutes] = manualTime.split(":").map(Number);
-    const timePosition = (hours - startHour + minutes / 60) * hourHeight + 65;
-    setCurrentTimePosition(timePosition);
-  }, [manualTime, hourHeight]);
+// Time slots (configurable)
+const TIME_SLOTS = [
+  '08:00 - 09:00',
+  '09:00 - 10:00', 
+  '10:00 - 11:00',
+  '11:00 - 12:00',
+  '12:00 - 13:00',
+  '13:00 - 14:00',
+  '14:00 - 15:00',
+  '15:00 - 16:00',
+  '16:00 - 17:00'
+];
 
-  // Handler for select change (for filtering by class, if needed)
-  const handleClassChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedClass(event.target.value);
-    // Optionally filter timetable entries by class here
+const Timetable: React.FC = () => {
+  const { user } = useAuth();
+  const { user: contextUser } = useAppContext();
+  
+  // State management
+  const [timetableData, setTimetableData] = useState<TimetableEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<ErrorState>({
+    hasError: false,
+    message: '',
+    type: 'unknown'
+  });
+  const [retryCount, setRetryCount] = useState(0);
+  
+  // Filter states
+  const [selectedDays, setSelectedDays] = useState<string[]>(DAYS);
+  const [timeRange, setTimeRange] = useState({ start: 0, end: TIME_SLOTS.length - 1 });
+
+  // Fetch timetable data
+  const fetchTimetable = async (showLoading = true) => {
+    if (showLoading) setIsLoading(true);
+    setError({ hasError: false, message: '', type: 'unknown' });
+
+    try {
+      if (!user?.userId || !user?.schoolId?._id) {
+        throw new Error('User or school information not available');
+      }
+
+      const response = await getTeacherTimetable(user.userId, user.schoolId._id);
+      
+      if (response && response.data) {
+        const entries = Array.isArray(response.data) ? response.data : [];
+        setTimetableData(entries);
+        
+        if (entries.length === 0) {
+          setError({
+            hasError: true,
+            message: 'No classes scheduled for this week',
+            type: 'empty'
+          });
+        }
+      } else {
+        throw new Error('Invalid response format');
+      }
+    } catch (err: any) {
+      console.error('Failed to fetch timetable:', err);
+      
+      let errorType: ErrorState['type'] = 'unknown';
+      let errorMessage = 'Failed to load timetable. Please try again.';
+      
+      if (err.code === 'NETWORK_ERROR' || err.message?.includes('network')) {
+        errorType = 'network';
+        errorMessage = 'Network connection error. Please check your internet connection and try again.';
+      } else if (err.response?.status >= 500) {
+        errorType = 'server';
+        errorMessage = 'Server error occurred. Please try again later or contact support.';
+      } else if (err.response?.status === 404) {
+        errorType = 'empty';
+        errorMessage = 'No timetable found for your account.';
+      }
+      
+      setError({
+        hasError: true,
+        message: errorMessage,
+        type: errorType
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // Fetch timetable data from the API for the current teacher
+  // Retry with exponential backoff
+  const retryFetch = () => {
+    const newRetryCount = retryCount + 1;
+    setRetryCount(newRetryCount);
+    
+    // Add delay for retry attempts
+    const delay = Math.min(1000 * Math.pow(2, newRetryCount - 1), 5000);
+    setTimeout(() => fetchTimetable(), delay);
+  };
+
+  // Initial data fetch
   useEffect(() => {
-    const token = getAccessToken();
-    if (!token || !user) return;
+    if (user?.userId && user?.schoolId?._id) {
+      fetchTimetable();
+    }
+  }, [user?.userId, user?.schoolId?._id]);
 
-    const teacherId = user.userId;
+  // Get timetable entry for specific day and time
+  const getTimetableEntry = (day: string, timeSlot: string) => {
+    return timetableData.find(entry => 
+      entry.day === day && 
+      (entry.time === timeSlot || 
+       `${entry.startTime} - ${entry.endTime}` === timeSlot)
+    );
+  };
 
-    const fetchData = async () => {
-      try {
-        const data = await getTeacherTimetable(teacherId, token);
-        console.log(data);
-        setTimetableEntries(data);
-      } catch (error) {
-        console.error("Failed to load timetable:", error);
-      }
-    };
+  // Filter time slots based on range
+  const filteredTimeSlots = TIME_SLOTS.slice(timeRange.start, timeRange.end + 1);
 
-    fetchData();
-  }, [user]);
+  // Export timetable to PDF/CSV (placeholder)
+  const exportTimetable = () => {
+    // Implementation for export functionality
+    console.log('Exporting timetable...');
+  };
 
   return (
-    <div className="sm:px-4 p-3 max-w-[95vw] overflow-hidden">
-      <div className="mx-auto bg-[#F8F8F8] rounded-lg ">
-        <div className="flex justify-between items-center">
-          <h1 className="text-xl font-medium">Timetable</h1>
-          <Button className="py-6 hidden sm:flex bg-[#003366] hover:bg-blue-800 text-white">
-            Download
-            <Download className="mr-2 h-7 w-6" />
-          </Button>
+    <div className="space-y-6">
+      {/* Header with filters and controls */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 p-6 bg-white rounded-lg border border-[#F0F0F0]">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-1">Weekly Timetable</h2>
+          <p className="text-gray-600">Your class schedule for the week</p>
         </div>
-        <p className="text-[#AAAAAA] mb-6">
-          Stay on Track with Your Class Schedule!
-        </p>
-
-        {/* Timetable Grid */}
-        <div className="overflow-x-auto border border-[#F0F0F0] rounded-t-3xl h-screen 2xl:max-h-[full] overflow-y-scroll scrollbar-hide">
-          {/* Header Row */}
-          <div
-            className="grid sticky top-0 z-30"
-            style={{ gridTemplateColumns: "103px repeat(5, 1fr)" }}
-          >
-            <div className="font-semibold text-center bg-[#FFFFFF] py-6 border-b">
-              Time
-            </div>
-            {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].map(
-              (day, index) => (
-                <div
-                  key={index}
-                  className="font-semibold min-w-[114px] text-center bg-[#FFFFFF] py-6 border-l border-[#F0F0F0] border-b"
-                >
-                  {day}
-                </div>
-              )
-            )}
+        
+        <div className="flex flex-col sm:flex-row gap-3">
+          {/* Day filter */}
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700">Days:</label>
+            <select
+              value={selectedDays.length === DAYS.length ? 'all' : 'custom'}
+              onChange={(e) => {
+                if (e.target.value === 'all') {
+                  setSelectedDays(DAYS);
+                }
+              }}
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#003366]"
+            >
+              <option value="all">All Days</option>
+              <option value="custom">Custom</option>
+            </select>
           </div>
 
-          {/* Body Grid */}
-          <div
-            className="grid relative"
-            style={{ gridTemplateColumns: "103px repeat(5, 1fr)" }}
-          >
-            {/* Time labels */}
-            <div className="bg-white">
-              {["8 AM", "9 AM", "10 AM", "11 AM", "12 PM", "1 PM", "2 PM"].map(
-                (time, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-center border-b border-[#F0F0F0]"
-                    style={{ height: `${hourHeight}px` }}
-                  >
-                    {time}
-                  </div>
-                )
-              )}
-            </div>
-
-            {/* Render timetable entries for each day */}
-            {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].map(
-              (day, dayIndex) => (
-                <div
-                  key={dayIndex}
-                  className="col-span-1 border-l min-w-[114px] border-[#F0F0F0] bg-white relative"
-                >
-                  {(timetableEntries[day] || []).map(
-                    (entry: TimetableEntry, entryIndex: number) => {
-                      // Helper function to parse time from a string.
-                      const parseTime = (timeStr: string): number => {
-                        const [time, modifier] = timeStr.split(" ");
-                        let [hours, minutes] = time.split(":").map(Number);
-                        if (modifier === "PM" && hours !== 12) {
-                          hours += 12;
-                        }
-                        if (modifier === "AM" && hours === 12) {
-                          hours = 0;
-                        }
-                        return hours + minutes / 60;
-                      };
-
-                      const startHr = parseTime(entry.startTIme);
-                      const endHr = parseTime(entry.endTime);
-                      const topPosition =
-                        (startHr - startHour) * hourHeight + 65;
-                      const entryHeight = (endHr - startHr) * hourHeight - 16;
-
-                      return (
-                        <div
-                          key={entryIndex}
-                          className="absolute left-0 right-0 p-2 shadow-orange-800 border-y border-[#F0F0F0] flex items-center justify-center text-center"
-                          style={{
-                            top: `${topPosition}px`,
-                            height: `${entryHeight}px`,
-                          }}
-                        >
-                          <div>
-                            <div className="font-semibold">{entry.course}</div>
-                            <div className="font-semibold">{entry.subject}</div>
-                            <div className="text-sm text-gray-500">
-                              {entry.startTIme} - {entry.endTime}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    }
-                  )}
-                </div>
-              )
-            )}
-
-            {/* Dynamic Time Indicator */}
-            <div
-              className="absolute left-[110px] w-[88%] 2xl:w-[93%]"
-              style={{
-                top: `${currentTimePosition - 7}px`,
-                zIndex: 20,
+          {/* Time range filter */}
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700">Time:</label>
+            <select
+              value={`${timeRange.start}-${timeRange.end}`}
+              onChange={(e) => {
+                const [start, end] = e.target.value.split('-').map(Number);
+                setTimeRange({ start, end });
               }}
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#003366]"
             >
-              <div className="absolute top-[-6px] left-[-87px] px-3 py-1 flex items-center justify-center bg-[#002B5B] text-white font-medium rounded-full">
-                {manualTime}
-              </div>
-              <div
-                className="absolute left-[-8px] right-0 h-2 w-2 rounded-full bg-[#002B5B]"
-                style={{ top: "5.4px" }}
-              />
-              <div
-                className="absolute top-2 left-0 right-0 bg-[#002B5B]"
-                style={{ height: "3px" }}
-              />
-            </div>
+              <option value="0-8">Full Day (8:00 - 17:00)</option>
+              <option value="0-4">Morning (8:00 - 13:00)</option>
+              <option value="4-8">Afternoon (13:00 - 17:00)</option>
+            </select>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex gap-2">
+            <Button
+              onClick={() => fetchTimetable(false)}
+              variant="outline"
+              size="sm"
+              disabled={isLoading}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            
+            <Button
+              onClick={exportTimetable}
+              variant="outline"
+              size="sm"
+              disabled={isLoading || error.hasError}
+              className="flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Export
+            </Button>
           </div>
         </div>
       </div>
+
+      {/* Timetable Grid */}
+      {isLoading ? (
+        // Loading State
+        <div className="flex flex-col items-center justify-center py-20 px-6 bg-white rounded-lg border border-[#F0F0F0]">
+          <div className="w-16 h-16 border-4 border-[#003366] border-t-transparent rounded-full animate-spin mb-4"></div>
+          <h3 className="text-xl font-semibold text-gray-700 mb-2">Loading Timetable</h3>
+          <p className="text-gray-500 text-center">
+            Please wait while we fetch your class schedule...
+          </p>
+        </div>
+      ) : error.hasError ? (
+        // Error States
+        <div className="flex flex-col items-center justify-center py-20 px-6 bg-white rounded-lg border-2 border-red-200">
+          <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4">
+            <AlertCircle className="w-8 h-8 text-red-600" />
+          </div>
+          
+          <h3 className="text-xl font-semibold text-red-700 mb-2">
+            {error.type === 'network' ? 'Connection Error' : 
+             error.type === 'server' ? 'Server Error' : 
+             error.type === 'empty' ? 'No Schedule Found' : 'Something went wrong'}
+          </h3>
+          
+          <p className="text-red-600 text-center max-w-md mb-6">
+            {error.message}
+          </p>
+          
+          <div className="flex gap-3">
+            <Button
+              onClick={retryFetch}
+              className="bg-red-600 hover:bg-red-700 text-white"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Retrying...' : 'Try Again'}
+            </Button>
+            
+            {error.type === 'network' && (
+              <Button
+                variant="outline"
+                onClick={() => window.location.reload()}
+              >
+                Reload Page
+              </Button>
+            )}
+          </div>
+        </div>
+      ) : (
+        // Timetable Grid
+        <div className="bg-white rounded-lg border border-[#F0F0F0] overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[800px]">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="px-4 py-3 text-left font-medium text-gray-600 min-w-[120px]">
+                    Time
+                  </th>
+                  {selectedDays.map(day => (
+                    <th key={day} className="px-4 py-3 text-left font-medium text-gray-600">
+                      {day}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredTimeSlots.map((timeSlot, index) => (
+                  <tr key={timeSlot} className={`border-b border-gray-100 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                    <td className="px-4 py-6 font-medium text-gray-700 border-r border-gray-200">
+                      {timeSlot}
+                    </td>
+                    {selectedDays.map(day => {
+                      const entry = getTimetableEntry(day, timeSlot);
+                      return (
+                        <td key={`${day}-${timeSlot}`} className="px-4 py-6 border-r border-gray-200">
+                          {entry ? (
+                            <div className="bg-[#003366] text-white rounded-lg p-3 hover:bg-[#002244] transition-colors cursor-pointer">
+                              <div className="font-semibold text-sm mb-1">{entry.course}</div>
+                              <div className="text-xs opacity-90">{entry.subject}</div>
+                              <div className="text-xs opacity-75 mt-1">{entry.class}</div>
+                            </div>
+                          ) : (
+                            <div className="h-16 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
+                              <span className="text-gray-400 text-xs">Free</span>
+                            </div>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          {/* Summary footer */}
+          <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-2 text-gray-600">
+                <Calendar className="w-5 h-5" />
+                <span className="font-medium">{timetableData.length}</span> classes scheduled this week
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-[#003366] rounded"></div>
+                  <span>Scheduled Class</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-gray-200 rounded"></div>
+                  <span>Free Period</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
