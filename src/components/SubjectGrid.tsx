@@ -12,6 +12,8 @@ import LoadingCard from "./LoadingCard";
 interface Course {
   _id: string;
   title: string;
+    courseCode: string;
+    description: string;
   // …any other fields your API returns
 }
 
@@ -56,22 +58,33 @@ const SubjectGrid: React.FC = () => {
         const token = getAccessToken();
         if (!token) throw new Error("No auth token");
 
-        // 1) Fetch teacher, grab assignedCourses (array of course IDs)
+        // 1) Fetch teacher, grab assignedCourses (array of course objects)
         const teacher = await fetchTeacherDetails(user.userId, token);
-        const courseIds: string[] = teacher.assignedCourses || [];
-
-        if (courseIds.length === 0) {
+        console.log("Fetched teacher details:", teacher);
+        
+        // Check if assignedCourses exists and is an array
+        if (!teacher.assignedCourses || !Array.isArray(teacher.assignedCourses)) {
+          console.log("No assigned courses found");
           setSubjects([]);
           return;
         }
 
-        // 2) Fetch each course in parallel
-        const courses = await Promise.all(
-          courseIds.map((cid) => fetchCourseById(cid, token))
-        );
+        const teachersCourses = teacher.assignedCourses.map((course: any) => ({
+            _id: course._id,
+            title: course.title,
+            courseCode: course.courseCode,
+            description: course.description,
+        }));
 
-        setSubjects(courses);
-        console.log(courses);
+        console.log("Teachers courses:", teachersCourses);
+        
+        if (teachersCourses.length === 0) {
+          setSubjects([]);
+          return;
+        }
+
+        setSubjects(teachersCourses);
+       // console.log(courses);
       } catch (err: any) {
         console.error("Failed to load subjects:", err);
         setError(err.message || "Something went wrong");
@@ -80,9 +93,11 @@ const SubjectGrid: React.FC = () => {
       }
     };
 
+
     loadSubjects();
   }, [user]);
 
+    console.log("Subjects state:", subjects);
   if (loading) {
     return Array.from({ length: 4 }).map((_, i) => (
       <LoadingCard key={i} height="h-48" />
@@ -94,6 +109,7 @@ const SubjectGrid: React.FC = () => {
   if (subjects.length === 0) {
     return <p className="p-4 text-center">No subjects assigned yet.</p>;
   }
+
 
   return (
     <div className="px-6 py-4 h-full">
