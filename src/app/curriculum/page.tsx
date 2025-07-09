@@ -6,8 +6,10 @@ import CurriculumEditor from '@/components/curriculum/CurriculumEditor';
 import EmptyCurriculumPage from '@/components/curriculum/EmptyCurriculumPage';
 import { useCurriculum } from '@/app/hooks/useCurriculum';
 import { useAuth } from '@/app/hooks/useAuth';
+import { useAppContext } from '@/app/context/AppContext';
 import { Edit, Trash2, Download, ArrowLeft, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { fetchTeacherDetails, getCurrentTerm } from '@/app/services/api.service';
 import html2canvas from 'html2canvas';
 
 interface ModalProps {
@@ -126,13 +128,15 @@ const CurriculumPage = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { curricula, isLoading, error, fetchCurricula, fetchCurriculumByCourse, showEditor, setShowEditor, editCurriculum, removeCurriculum, fetchCurriculumById } = useCurriculum();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, getAccessToken } = useAuth();
   const hasInitialized = useRef(false);
   const [selectedCurriculum, setSelectedCurriculum] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCurriculumId, setEditingCurriculumId] = useState<string | null>(null);
   const [courseCurricula, setCourseCurricula] = useState<any[]>([]);
   const [courseInfo, setCourseInfo] = useState<any>(null);
+  const [teacherCourses, setTeacherCourses] = useState<any[]>([]);
+  const [currentTerm, setCurrentTerm] = useState<any>(null);
   
   // Get query parameters
   const courseId = searchParams.get('courseId');
@@ -143,6 +147,9 @@ const CurriculumPage = () => {
   useEffect(() => {
     if (isAuthenticated && !hasInitialized.current) {
       hasInitialized.current = true;
+      
+      // Fetch teacher courses and current term
+      fetchTeacherData();
       
       if (courseId) {
         // If courseId is provided, fetch curricula for this specific course
@@ -166,6 +173,34 @@ const CurriculumPage = () => {
       }
     }
   }, [isAuthenticated, courseId, mode, courseTitle, courseCode]);
+
+  const fetchTeacherData = async () => {
+    try {
+      const token = getAccessToken();
+      if (!token) return;
+
+      // Get user from context
+      const userData = localStorage.getItem('user');
+      if (!userData) return;
+      
+      const user = JSON.parse(userData);
+      if (!user?.userId) return;
+
+      // Fetch teacher details to get assigned courses
+      const teacherDetails = await fetchTeacherDetails(user.userId, token);
+      if (teacherDetails?.assignedCourses) {
+        setTeacherCourses(teacherDetails.assignedCourses);
+      }
+
+      // Fetch current term
+      const term = await getCurrentTerm(token);
+      if (term) {
+        setCurrentTerm(term);
+      }
+    } catch (error) {
+      console.error('Failed to fetch teacher data:', error);
+    }
+  };
 
   const fetchCurriculumForCourse = async (courseId: string) => {
     try {
@@ -267,6 +302,8 @@ const CurriculumPage = () => {
           initialCourseId={courseId}
           courseInfo={courseInfo}
           editingCurriculumId={editingCurriculumId}
+          teacherCourses={teacherCourses}
+          currentTerm={currentTerm}
         />
       </Layout>
     );

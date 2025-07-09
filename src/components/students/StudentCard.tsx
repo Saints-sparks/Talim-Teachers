@@ -6,19 +6,19 @@ import { StudentCardProps } from "@/types/student";
 
 export const StudentCard: React.FC<StudentCardProps> = ({ student }) => {
   return (
-    <div className="relative border border-[#F0F0F0] rounded-xl p-4 bg-white w-full sm:max-w-[300px] shadow-none">
+    <div className="relative border border-[#F0F0F0] rounded-xl p-4 bg-white w-full max-w-[300px] mx-auto shadow-sm hover:shadow-md transition-shadow duration-200">
       {/* Dropdown Menu */}
       <Menu as="div" className="absolute top-2 right-2 text-left">
-        <Menu.Button className="flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded-full h-8 w-8">
+        <Menu.Button className="flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded-full h-8 w-8 transition-colors">
           <MoreVertical className="h-4 w-4" />
           <span className="sr-only">Open menu</span>
         </Menu.Button>
-        <Menu.Items className="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-md py-1 z-10">
+        <Menu.Items className="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-md py-1 z-10 border border-gray-200">
           <Menu.Item>
             {({ active }) => (
               <Link href={`/students/${student._id}`}>
                 <button
-                  className={`block w-full text-left px-4 py-2 text-sm text-[#030E18] ${
+                  className={`block w-full text-left px-4 py-2 text-sm text-[#030E18] transition-colors ${
                     active ? "bg-gray-100" : ""
                   }`}
                 >
@@ -30,7 +30,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({ student }) => {
           <Menu.Item>
             {({ active }) => (
               <button
-                className={`block w-full text-left px-4 py-2 text-sm text-[#030E18] ${
+                className={`block w-full text-left px-4 py-2 text-sm text-[#030E18] transition-colors ${
                   active ? "bg-gray-100" : ""
                 }`}
               >
@@ -41,7 +41,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({ student }) => {
           <Menu.Item>
             {({ active }) => (
               <button
-                className={`block w-full text-left px-4 py-2 text-sm text-red-600 ${
+                className={`block w-full text-left px-4 py-2 text-sm text-red-600 transition-colors ${
                   active ? "bg-gray-100" : ""
                 }`}
               >
@@ -53,31 +53,31 @@ export const StudentCard: React.FC<StudentCardProps> = ({ student }) => {
       </Menu>
 
       {/* Student Details */}
-      <div className="flex flex-col  items-center gap-3">
+      <div className="flex flex-col items-center gap-3">
         <Image
           src="/image/dash/ade.png"
-          alt={student.userId.firstName}
+          alt={`${student.userId.firstName} ${student.userId.lastName}`}
           width={90}
           height={90}
-          className="rounded-full object-cover"
+          className="rounded-full object-cover border-2 border-gray-100"
         />
-        <div>
-          <p className=" text-[#030E18] text-center">
+        <div className="text-center">
+          <p className="font-medium text-[#030E18] text-base">
             {student.userId.firstName} {student.userId.lastName}
           </p>
-          <p className="text-[#4A4A4A] text-center ">{student.classId.name}</p>
+          <p className="text-[#4A4A4A] text-sm mt-1">{student.classId.name}</p>
         </div>
       </div>
 
       {/* Buttons */}
       <div className="flex gap-2 mt-4">
-        <button className="flex-1 bg-white text-[#434343] border border-[#F6F6F6] shadow-none py-2 rounded-md flex items-center justify-center gap-2 rounded-2xl hover:bg-gray-50">
+        <button className="flex-1 bg-white text-[#434343] border border-[#F6F6F6] py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors">
           <Phone className="w-4 h-4 text-[#6F6F6F]" />
-          Call
+          <span className="text-sm">Call</span>
         </button>
-        <button className="flex-1 bg-white text-[#434343] border border-[#F6F6F6] shadow-none  rounded-md flex items-center justify-center gap-2 rounded-2xl hover:bg-gray-50">
+        <button className="flex-1 bg-white text-[#434343] border border-[#F6F6F6] py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors">
           <MessageCircle className="w-4 h-4 text-[#6F6F6F]" />
-          Chat
+          <span className="text-sm">Chat</span>
         </button>
       </div>
     </div>

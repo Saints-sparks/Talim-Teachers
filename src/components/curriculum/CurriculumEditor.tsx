@@ -19,30 +19,33 @@ import {
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
   List, ListOrdered, Quote, Undo, Redo, 
   Type, Palette, Highlighter, Table as TableIcon,
-  ImageIcon, Link as LinkIcon, Plus, Minus, Upload, Trash
+  ImageIcon, Link as LinkIcon, Plus, Minus, Upload, Trash,
+  BookOpen, GraduationCap, FileText, Calendar, Clock,
+  CheckCircle, AlertCircle, X
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useCurriculum } from "../../app/hooks/useCurriculum";
-import { getCurrentTerm } from "../../app/services/api.service";       
 import { useAuth } from "../../app/hooks/useAuth";
-import useSubjects from "../../app/hooks/useSubjects";
 
 interface CurriculumEditorProps {
   onClose?: () => void;
   initialCourseId?: string | null;
   courseInfo?: any;
   editingCurriculumId?: string | null;
+  teacherCourses?: any[];
+  currentTerm?: any;
 }
 
 const CurriculumEditor: React.FC<CurriculumEditorProps> = ({ 
   onClose, 
   initialCourseId,
   courseInfo,
-  editingCurriculumId 
+  editingCurriculumId,
+  teacherCourses = [],
+  currentTerm = null
 }) => {
   const { getAccessToken } = useAuth();
   const { addCurriculum, editCurriculum, fetchCurriculumById, isLoading } = useCurriculum();
-  const { subjects, loading: subjectsLoading, error: subjectsError, getSubjectsBySchool } = useSubjects();
   
   const [courseId, setCourseId] = useState<string>("");
   const [termId, setTermId] = useState<string>("");
@@ -52,8 +55,6 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
   const [fontSize, setFontSize] = useState<number>(14);
   const [showColorPicker, setShowColorPicker] = useState<boolean>(false);
   const [showHighlightPicker, setShowHighlightPicker] = useState<boolean>(false);
-  const [termLoading, setTermLoading] = useState<boolean>(false);
-  const [termError, setTermError] = useState<string | null>(null);
   const [fileUploading, setFileUploading] = useState<boolean>(false);
 
   const fonts = [
@@ -105,40 +106,17 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
     },
   });
 
-  const fetchCurrentTerm = async () => {
-    try {
-      const token = getAccessToken();
-      if (!token) {
-        toast.error("No authentication token found");
-        return;
-      }
-
-      setTermLoading(true);
-      setTermError(null);
-      const currentTerm = await getCurrentTerm(token);
-      console.log("Term data from API:", currentTerm);
-      
-      if (currentTerm?._id) {
-        setTermId(currentTerm._id);
-        console.log("Current TermId set:", currentTerm._id);
-      } else {
-        throw new Error("No term ID returned from API");
-      }
-    } catch (error) {
-      console.error("Error fetching current term:", error);
-      setTermError("Failed to load current term. Please try again.");
-      toast.error("Failed to load current term");
-    } finally {
-      setTermLoading(false);
-    }
-  };
-
   // Initialize with passed props
   useEffect(() => {
     if (initialCourseId) {
       setCourseId(initialCourseId);
     }
-  }, [initialCourseId]);
+    
+    // Set term ID from currentTerm prop
+    if (currentTerm?._id) {
+      setTermId(currentTerm._id);
+    }
+  }, [initialCourseId, currentTerm]);
 
   // Load existing curriculum for editing
   useEffect(() => {
@@ -164,33 +142,6 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
 
     loadCurriculumForEdit();
   }, [editingCurriculumId, editor, fetchCurriculumById]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const fetchData = async () => {
-      if (!termId && !termLoading) {
-        await fetchCurrentTerm();
-      }
-
-      if (subjects.length === 0 && !subjectsLoading) {
-        try {
-          await getSubjectsBySchool();
-        } catch (error) {
-          console.error("Error fetching subjects:", error);
-          toast.error("Failed to load subjects");
-        }
-      }
-    };
-
-    if (isMounted) {
-      fetchData();
-    }
-
-    return () => {
-      isMounted = false;
-    };
-  }, [getAccessToken, termId, termLoading, subjects.length, subjectsLoading, getSubjectsBySchool]);
 
   const applyFont = (font: string) => {
     setSelectedFont(font);
@@ -364,402 +315,595 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
     return <div className="flex justify-center items-center h-screen">Loading editor...</div>;
   }
 
-  const selectedSubject = subjects.find(subject => subject._id === courseId);
+  const selectedCourse = teacherCourses.find(course => course._id === courseId);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-5xl mx-auto bg-white rounded-lg shadow-lg">
-        {/* Header */}
-        <div className="p-6 border-b border-gray-200 flex justify-between items-center">
-          <div className="flex-1">
-            <h2 className="text-2xl font-semibold text-gray-800">
-              {selectedSubject ? `${selectedSubject.name} Curriculum` : "Curriculum Editor"}
-            </h2>
-            
-            {/* Course Selection */}
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Select Course/Subject *
-              </label>
-              <select
-                value={courseId}
-                onChange={(e) => setCourseId(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-                disabled={subjectsLoading}
-              >
-                <option value="">
-                  {subjectsLoading ? "Loading courses..." : "Select a course/subject"}
-                </option>
-                {subjects.map((subject) => (
-                  <option key={subject._id} value={subject._id}>
-                    {subject.name} ({subject.code})
-                  </option>
-                ))}
-              </select>
-              
-              {subjectsError && (
-                <p className="mt-1 text-sm text-red-600">
-                  Error loading subjects: {subjectsError}
-                </p>
-              )}
-            </div>
-  
-            {/* Term Info */}
-            <div className="mt-3">
-              {termLoading ? (
-                <div className="flex items-center">
-                  <span className="inline-block h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mr-2"></span>
-                  <span className="text-sm text-gray-600">Loading term information...</span>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="max-w-7xl mx-auto p-3 md:p-6">
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+          
+          {/* Modern Header */}
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-4 md:p-6 text-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3 md:gap-4">
+                <div className="p-2 md:p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                  <FileText className="w-6 h-6 md:w-8 md:h-8" />
                 </div>
-              ) : termId ? (
-                <p className="text-sm text-gray-600">
-                  Current Term: {termId}
-                </p>
-              ) : (
-                <div className="flex items-center">
-                  <p className="text-sm text-red-600 mr-2">
-                    {termError || "Term information not available"}
+                <div>
+                  <h1 className="text-lg md:text-2xl font-bold">
+                    {editingCurriculumId ? 'Edit Curriculum' : 'Create New Curriculum'}
+                  </h1>
+                  <p className="text-blue-100 mt-1 text-sm md:text-base">
+                    {selectedCourse ? `${selectedCourse.name} - ${selectedCourse.code}` : "Design your course curriculum"}
                   </p>
-                  <button 
-                    onClick={fetchCurrentTerm}
-                    className="text-sm text-blue-600 hover:text-blue-800"
-                  >
-                    Retry
-                  </button>
                 </div>
-              )}
-            </div>
-
-            {/* File Upload */}
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Upload Attachments
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="file"
-                  multiple
-                  onChange={(e) => e.target.files && uploadFilesToCloudinary(e.target.files)}
-                  className="hidden"
-                  id="file-upload"
-                  accept="image/*,application/pdf"
-                />
-                <label
-                  htmlFor="file-upload"
-                  className={`flex items-center gap-2 px-4 py-2 border border-gray-300 rounded text-sm cursor-pointer hover:bg-gray-50 ${fileUploading ? 'opacity-50' : ''}`}
-                >
-                  <Upload size={16} />
-                  {fileUploading ? "Uploading..." : "Choose Files"}
-                </label>
               </div>
               
-              {/* Display Uploaded Files */}
-              {attachments.length > 0 && (
-                <div className="mt-2">
-                  <p className="text-sm font-medium text-gray-700">Uploaded Files:</p>
-                  <ul className="mt-1 space-y-1">
-                    {attachments.map((url, index) => (
-                      <li key={index} className="flex items-center justify-between text-sm text-gray-600">
-                        <a
-                          href={url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline truncate max-w-xs"
-                        >
-                          {url.split('/').pop()}
-                        </a>
-                        <button
-                          onClick={() => removeAttachment(url)}
-                          className="text-red-600 hover:text-red-800"
-                          title="Remove"
-                        >
-                          <Trash size={16} />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+              {onClose && (
+                <button
+                  onClick={handleCancel}
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                  title="Close Editor"
+                >
+                  <X className="w-5 h-5 md:w-6 md:h-6" />
+                </button>
               )}
             </div>
           </div>
-  
-          {/* Close Button */}
-          {onClose && (
-            <button
-              onClick={handleCancel}
-              className="text-gray-500 hover:text-gray-700 text-xl font-bold"
-            >
-              ✕
-            </button>
-          )}
-        </div>
-  
-        {/* Toolbar */}
-        <div className="p-4 border-b border-gray-200 bg-gray-50">
-          <div className="flex flex-wrap gap-2 items-center">
-            <select
-              value={selectedFont}
-              onChange={(e) => applyFont(e.target.value)}
-              className="px-3 py-1 border border-gray-300 rounded text-sm"
-            >
-              {fonts.map(font => (
-                <option key={font} value={font} style={{ fontFamily: font }}>
-                  {font}
-                </option>
-              ))}
-            </select>
-  
-            <input
-              type="number"
-              value={fontSize}
-              onChange={(e) => applyFontSize(Number(e.target.value))}
-              className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
-              min="8"
-              max="72"
-            />
-  
-            <div className="w-px h-6 bg-gray-300 mx-2"></div>
-  
-            <button
-              onClick={() => editor.chain().focus().toggleBold().run()}
-              className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('bold') ? 'bg-gray-300' : ''}`}
-              title="Bold"
-            >
-              <Bold size={16} />
-            </button>
-            
-            <button
-              onClick={() => editor.chain().focus().toggleItalic().run()}
-              className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('italic') ? 'bg-gray-300' : ''}`}
-              title="Italic"
-            >
-              <Italic size={16} />
-            </button>
-            
-            <button
-              onClick={() => editor.chain().focus().toggleUnderline().run()}
-              className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('underline') ? 'bg-gray-300' : ''}`}
-              title="Underline"
-            >
-              <UnderlineIcon size={16} />
-            </button>
-  
-            <div className="w-px h-6 bg-gray-300 mx-2"></div>
-  
-            <div className="relative">
-              <button
-                onClick={() => setShowColorPicker(!showColorPicker)}
-                className="p-2 rounded hover:bg-gray-200"
-                title="Text Color"
-              >
-                <Palette size={16} />
-              </button>
-              {showColorPicker && (
-                <div className="absolute top-10 left-0 bg-white border border-gray-300 rounded p-2 shadow-lg z-10">
-                  <div className="grid grid-cols-5 gap-1">
-                    {colors.map(color => (
-                      <button
-                        key={color}
-                        onClick={() => applyColor(color)}
-                        className="w-6 h-6 rounded border border-gray-300"
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
+
+          {/* Mobile/Tablet Configuration Cards - Top */}
+          <div className="lg:hidden bg-gray-50 border-b border-gray-200 p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              
+              {/* Course Selection Card */}
+              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <BookOpen className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900 text-sm">Course Selection</h3>
+                </div>
+                
+                <select
+                  value={courseId}
+                  onChange={(e) => setCourseId(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  required
+                  disabled={teacherCourses.length === 0}
+                >
+                  <option value="">
+                    {teacherCourses.length === 0 ? "Loading courses..." : "Select a course/subject"}
+                  </option>
+                  {teacherCourses.map((course) => (
+                    <option key={course._id} value={course._id}>
+                      {course.name} ({course.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Term Information Card */}
+              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <Calendar className="w-4 h-4 text-green-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900 text-sm">Term Information</h3>
+                </div>
+                
+                {currentTerm ? (
+                  <div className="flex items-center gap-2 p-2 bg-green-50 rounded-lg">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <div>
+                      <p className="text-xs font-medium text-green-800">Current Term</p>
+                      <p className="text-xs text-green-600">{currentTerm.name}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 p-2 bg-red-50 rounded-lg">
+                    <AlertCircle className="w-4 h-4 text-red-600" />
+                    <span className="text-xs text-red-700">
+                      Term information not available
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Status Indicator */}
+              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 sm:col-span-2">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 bg-orange-100 rounded-lg">
+                    <Clock className="w-4 h-4 text-orange-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900 text-sm">Status</h3>
+                </div>
+                
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-600">Course</span>
+                    {courseId ? (
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <div className="w-4 h-4 rounded-full border-2 border-gray-300"></div>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-600">Term</span>
+                    {termId ? (
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <div className="w-4 h-4 rounded-full border-2 border-gray-300"></div>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-600">Content</span>
+                    {content && content !== '<p>Enter curriculum content here...</p>' ? (
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <div className="w-4 h-4 rounded-full border-2 border-gray-300"></div>
+                    )}
                   </div>
                 </div>
-              )}
+              </div>
             </div>
-  
-            <div className="relative">
-              <button
-                onClick={() => setShowHighlightPicker(!showHighlightPicker)}
-                className="p-2 rounded hover:bg-gray-200"
-                title="Highlight"
-              >
-                <Highlighter size={16} />
-              </button>
-              {showHighlightPicker && (
-                <div className="absolute top-10 left-0 bg-white border border-gray-300 rounded p-2 shadow-lg z-10">
-                  <div className="grid grid-cols-5 gap-1">
-                    {colors.map(color => (
-                      <button
-                        key={color}
-                        onClick={() => applyHighlight(color)}
-                        className="w-6 h-6 rounded border border-gray-300"
-                        style={{ backgroundColor: color }}
-                      />
+          </div>
+
+          <div className="flex flex-col lg:flex-row">
+            {/* Desktop Sidebar - Course Configuration */}
+            <div className="hidden lg:block w-80 bg-gray-50 border-r border-gray-200 p-6 space-y-6">
+              <div className="space-y-4">
+                
+                {/* Course Selection Card */}
+                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <BookOpen className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <h3 className="font-semibold text-gray-900">Course Selection</h3>
+                  </div>
+                  
+                  <select
+                    value={courseId}
+                    onChange={(e) => setCourseId(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    required
+                    disabled={teacherCourses.length === 0}
+                  >
+                    <option value="">
+                      {teacherCourses.length === 0 ? "Loading courses..." : "Select a course/subject"}
+                    </option>
+                    {teacherCourses.map((course) => (
+                      <option key={course._id} value={course._id}>
+                        {course.name} ({course.code})
+                      </option>
                     ))}
+                  </select>
+                </div>
+
+                {/* Term Information Card */}
+                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-green-100 rounded-lg">
+                      <Calendar className="w-5 h-5 text-green-600" />
+                    </div>
+                    <h3 className="font-semibold text-gray-900">Term Information</h3>
+                  </div>
+                  
+                  {currentTerm ? (
+                    <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <div>
+                        <p className="text-sm font-medium text-green-800">Current Term</p>
+                        <p className="text-xs text-green-600">{currentTerm.name}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 p-3 bg-red-50 rounded-lg">
+                        <AlertCircle className="w-5 h-5 text-red-600" />
+                        <span className="text-sm text-red-700">
+                          Term information not available
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* File Attachments Card */}
+                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-purple-100 rounded-lg">
+                      <Upload className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <h3 className="font-semibold text-gray-900">Attachments</h3>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <input
+                      type="file"
+                      multiple
+                      onChange={(e) => e.target.files && uploadFilesToCloudinary(e.target.files)}
+                      className="hidden"
+                      id="file-upload"
+                      accept="image/*,application/pdf"
+                    />
+                    <label
+                      htmlFor="file-upload"
+                      className={`flex items-center justify-center gap-2 w-full p-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-purple-400 hover:bg-purple-50 transition-all ${fileUploading ? 'opacity-50 pointer-events-none' : ''}`}
+                    >
+                      <Upload className="w-5 h-5 text-gray-400" />
+                      <span className="text-sm text-gray-600">
+                        {fileUploading ? "Uploading..." : "Choose Files"}
+                      </span>
+                    </label>
+                    
+                    {/* Display Uploaded Files */}
+                    {attachments.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-gray-700">Uploaded Files ({attachments.length})</p>
+                        <div className="space-y-2 max-h-32 overflow-y-auto">
+                          {attachments.map((url, index) => (
+                            <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:text-blue-800 text-sm truncate flex-1 mr-2"
+                                title={url}
+                              >
+                                📎 {url.split('/').pop()?.slice(0, 20)}...
+                              </a>
+                              <button
+                                onClick={() => removeAttachment(url)}
+                                className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded"
+                                title="Remove"
+                              >
+                                <Trash className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-              )}
+
+                {/* Status Indicator */}
+                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-orange-100 rounded-lg">
+                      <Clock className="w-5 h-5 text-orange-600" />
+                    </div>
+                    <h3 className="font-semibold text-gray-900">Status</h3>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Course Selected</span>
+                      {courseId ? (
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                      ) : (
+                        <div className="w-4 h-4 rounded-full border-2 border-gray-300"></div>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Term Loaded</span>
+                      {termId ? (
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                      ) : (
+                        <div className="w-4 h-4 rounded-full border-2 border-gray-300"></div>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Content Added</span>
+                      {content && content !== '<p>Enter curriculum content here...</p>' ? (
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                      ) : (
+                        <div className="w-4 h-4 rounded-full border-2 border-gray-300"></div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-  
-            <div className="w-px h-6 bg-gray-300 mx-2"></div>
-  
-            <button
-              onClick={() => editor.chain().focus().setTextAlign('left').run()}
-              className={`p-2 rounded hover:bg-gray-200 ${editor.isActive({ textAlign: 'left' }) ? 'bg-gray-300' : ''}`}
-              title="Align Left"
-            >
-              <AlignLeft size={16} />
-            </button>
-            
-            <button
-              onClick={() => editor.chain().focus().setTextAlign('center').run()}
-              className={`p-2 rounded hover:bg-gray-200 ${editor.isActive({ textAlign: 'center' }) ? 'bg-gray-300' : ''}`}
-              title="Align Center"
-            >
-              <AlignCenter size={16} />
-            </button>
-            
-            <button
-              onClick={() => editor.chain().focus().setTextAlign('right').run()}
-              className={`p-2 rounded hover:bg-gray-200 ${editor.isActive({ textAlign: 'right' }) ? 'bg-gray-300' : ''}`}
-              title="Align Right"
-            >
-              <AlignRight size={16} />
-            </button>
-            
-            <button
-              onClick={() => editor.chain().focus().setTextAlign('justify').run()}
-              className={`p-2 rounded hover:bg-gray-200 ${editor.isActive({ textAlign: 'justify' }) ? 'bg-gray-300' : ''}`}
-              title="Justify"
-            >
-              <AlignJustify size={16} />
-            </button>
-  
-            <div className="w-px h-6 bg-gray-300 mx-2"></div>
-  
-            <button
-              onClick={() => editor.chain().focus().toggleBulletList().run()}
-              className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('bulletList') ? 'bg-gray-300' : ''}`}
-              title="Bullet List"
-            >
-              <List size={16} />
-            </button>
-            
-            <button
-              onClick={() => editor.chain().focus().toggleOrderedList().run()}
-              className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('orderedList') ? 'bg-gray-300' : ''}`}
-              title="Numbered List"
-            >
-              <ListOrdered size={16} />
-            </button>
-  
-            <button
-              onClick={() => editor.chain().focus().toggleBlockquote().run()}
-              className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('blockquote') ? 'bg-gray-300' : ''}`}
-              title="Quote"
-            >
-              <Quote size={16} />
-            </button>
-  
-            <div className="w-px h-6 bg-gray-300 mx-2"></div>
-  
-            <button
-              onClick={insertTable}
-              className="p-2 rounded hover:bg-gray-200"
-              title="Insert Table"
-            >
-              <TableIcon size={16} />
-            </button>
-            
-            <button
-              onClick={addImageFromUrl}
-              className="p-2 rounded hover:bg-gray-200"
-              title="Insert Image"
-            >
-              <ImageIcon size={16} />
-            </button>
-            
-            <button
-              onClick={toggleLink}
-              className={`p-2 rounded hover:bg-gray-200 ${editor.isActive('link') ? 'bg-gray-300' : ''}`}
-              title="Insert Link"
-            >
-              <LinkIcon size={16} />
-            </button>
-  
-            <div className="w-px h-6 bg-gray-300 mx-2"></div>
-  
-            <button
-              onClick={() => editor.chain().focus().undo().run()}
-              className="p-2 rounded hover:bg-gray-200"
-              disabled={!editor.can().undo()}
-              title="Undo"
-            >
-              <Undo size={16} />
-            </button>
-            
-            <button
-              onClick={() => editor.chain().focus().redo().run()}
-              className="p-2 rounded hover:bg-gray-200"
-              disabled={!editor.can().redo()}
-              title="Redo"
-            >
-              <Redo size={16} />
-            </button>
-  
-            <div className="w-px h-6 bg-gray-300 mx-2"></div>
-  
-            <select
-              onChange={(e) => {
-                const level = parseInt(e.target.value);
-                if (level === 0) {
-                  editor.chain().focus().setParagraph().run();
-                } else {
-                  editor.chain().focus().toggleHeading({ level: level as 1 | 2 | 3 | 4 | 5 | 6 }).run();
-                }
-              }}
-              className="px-3 py-1 border border-gray-300 rounded text-sm"
-              title="Heading Level"
-            >
-              <option value="0">Normal Text</option>
-              <option value="1">Heading 1</option>
-              <option value="2">Heading 2</option>
-              <option value="3">Heading 3</option>
-              <option value="4">Heading 4</option>
-              <option value="5">Heading 5</option>
-              <option value="6">Heading 6</option>
-            </select>
-          </div>
-        </div>
-  
-        {/* Editor Content */}
-        <div className="p-6">
-          <EditorContent 
-            editor={editor}
-            className="prose max-w-none min-h-[500px] focus:outline-none border border-gray-200 rounded p-4"
-            style={{ 
-              fontFamily: selectedFont,
-              fontSize: `${fontSize}px`
-            }}
-          />
-        </div>
-  
-        {/* Save Button */}
-        <div className="p-6 border-t border-gray-200 flex justify-between items-center">
-          <div className="text-sm text-gray-500">
-            {courseId && termId ? "Ready to save" : "Please select course and ensure term is loaded"}
-          </div>
-          <div className="flex gap-3">
-            {onClose && (
-              <button
-                onClick={handleCancel}
-                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
-              >
-                Cancel
-              </button>
-            )}
-            <button
-              onClick={handleSave}
-              className="flex items-center gap-2 bg-[#003366] text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
-              disabled={isLoading || !courseId || !termId || subjectsLoading || termLoading || fileUploading}
-            >
-              <Save size={16} />
-              {isLoading ? "Saving..." : "Save Curriculum"}
-            </button>
+
+            {/* Main Content Area */}
+            <div className="flex-1 flex flex-col">
+              
+              {/* Enhanced Toolbar */}
+              <div className="p-4 bg-white border-b border-gray-200">
+                <div className="flex flex-wrap gap-1 items-center">
+                  
+                  {/* Font Controls */}
+                  <div className="flex items-center gap-2 pr-3 border-r border-gray-200">
+                    <select
+                      value={selectedFont}
+                      onChange={(e) => applyFont(e.target.value)}
+                      className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {fonts.map(font => (
+                        <option key={font} value={font} style={{ fontFamily: font }}>
+                          {font}
+                        </option>
+                      ))}
+                    </select>
+                    
+                    <input
+                      type="number"
+                      value={fontSize}
+                      onChange={(e) => applyFontSize(Number(e.target.value))}
+                      className="w-16 px-2 py-2 border border-gray-200 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      min="8"
+                      max="72"
+                    />
+                  </div>
+
+                  {/* Format Controls */}
+                  <div className="flex items-center gap-1 px-3 border-r border-gray-200">
+                    <button
+                      onClick={() => editor.chain().focus().toggleBold().run()}
+                      className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${editor.isActive('bold') ? 'bg-blue-100 text-blue-600' : 'text-gray-600'}`}
+                      title="Bold"
+                    >
+                      <Bold className="w-4 h-4" />
+                    </button>
+                    
+                    <button
+                      onClick={() => editor.chain().focus().toggleItalic().run()}
+                      className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${editor.isActive('italic') ? 'bg-blue-100 text-blue-600' : 'text-gray-600'}`}
+                      title="Italic"
+                    >
+                      <Italic className="w-4 h-4" />
+                    </button>
+                    
+                    <button
+                      onClick={() => editor.chain().focus().toggleUnderline().run()}
+                      className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${editor.isActive('underline') ? 'bg-blue-100 text-blue-600' : 'text-gray-600'}`}
+                      title="Underline"
+                    >
+                      <UnderlineIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Color Controls */}
+                  <div className="flex items-center gap-1 px-3 border-r border-gray-200">
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowColorPicker(!showColorPicker)}
+                        className="p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-600"
+                        title="Text Color"
+                      >
+                        <Palette className="w-4 h-4" />
+                      </button>
+                      {showColorPicker && (
+                        <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-lg p-3 shadow-lg z-20">
+                          <div className="grid grid-cols-5 gap-2">
+                            {colors.map(color => (
+                              <button
+                                key={color}
+                                onClick={() => applyColor(color)}
+                                className="w-8 h-8 rounded-lg border-2 border-gray-200 hover:border-gray-400 transition-colors"
+                                style={{ backgroundColor: color }}
+                                title={color}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowHighlightPicker(!showHighlightPicker)}
+                        className="p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-600"
+                        title="Highlight"
+                      >
+                        <Highlighter className="w-4 h-4" />
+                      </button>
+                      {showHighlightPicker && (
+                        <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-lg p-3 shadow-lg z-20">
+                          <div className="grid grid-cols-5 gap-2">
+                            {colors.map(color => (
+                              <button
+                                key={color}
+                                onClick={() => applyHighlight(color)}
+                                className="w-8 h-8 rounded-lg border-2 border-gray-200 hover:border-gray-400 transition-colors"
+                                style={{ backgroundColor: color }}
+                                title={color}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Alignment Controls */}
+                  <div className="flex items-center gap-1 px-3 border-r border-gray-200">
+                    <button
+                      onClick={() => editor.chain().focus().setTextAlign('left').run()}
+                      className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${editor.isActive({ textAlign: 'left' }) ? 'bg-blue-100 text-blue-600' : 'text-gray-600'}`}
+                      title="Align Left"
+                    >
+                      <AlignLeft className="w-4 h-4" />
+                    </button>
+                    
+                    <button
+                      onClick={() => editor.chain().focus().setTextAlign('center').run()}
+                      className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${editor.isActive({ textAlign: 'center' }) ? 'bg-blue-100 text-blue-600' : 'text-gray-600'}`}
+                      title="Align Center"
+                    >
+                      <AlignCenter className="w-4 h-4" />
+                    </button>
+                    
+                    <button
+                      onClick={() => editor.chain().focus().setTextAlign('right').run()}
+                      className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${editor.isActive({ textAlign: 'right' }) ? 'bg-blue-100 text-blue-600' : 'text-gray-600'}`}
+                      title="Align Right"
+                    >
+                      <AlignRight className="w-4 h-4" />
+                    </button>
+                    
+                    <button
+                      onClick={() => editor.chain().focus().setTextAlign('justify').run()}
+                      className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${editor.isActive({ textAlign: 'justify' }) ? 'bg-blue-100 text-blue-600' : 'text-gray-600'}`}
+                      title="Justify"
+                    >
+                      <AlignJustify className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* List Controls */}
+                  <div className="flex items-center gap-1 px-3 border-r border-gray-200">
+                    <button
+                      onClick={() => editor.chain().focus().toggleBulletList().run()}
+                      className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${editor.isActive('bulletList') ? 'bg-blue-100 text-blue-600' : 'text-gray-600'}`}
+                      title="Bullet List"
+                    >
+                      <List className="w-4 h-4" />
+                    </button>
+                    
+                    <button
+                      onClick={() => editor.chain().focus().toggleOrderedList().run()}
+                      className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${editor.isActive('orderedList') ? 'bg-blue-100 text-blue-600' : 'text-gray-600'}`}
+                      title="Numbered List"
+                    >
+                      <ListOrdered className="w-4 h-4" />
+                    </button>
+
+                    <button
+                      onClick={() => editor.chain().focus().toggleBlockquote().run()}
+                      className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${editor.isActive('blockquote') ? 'bg-blue-100 text-blue-600' : 'text-gray-600'}`}
+                      title="Quote"
+                    >
+                      <Quote className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Insert Controls */}
+                  <div className="flex items-center gap-1 px-3 border-r border-gray-200">
+                    <button
+                      onClick={insertTable}
+                      className="p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-600"
+                      title="Insert Table"
+                    >
+                      <TableIcon className="w-4 h-4" />
+                    </button>
+                    
+                    <button
+                      onClick={addImageFromUrl}
+                      className="p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-600"
+                      title="Insert Image"
+                    >
+                      <ImageIcon className="w-4 h-4" />
+                    </button>
+                    
+                    <button
+                      onClick={toggleLink}
+                      className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${editor.isActive('link') ? 'bg-blue-100 text-blue-600' : 'text-gray-600'}`}
+                      title="Insert Link"
+                    >
+                      <LinkIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* History Controls */}
+                  <div className="flex items-center gap-1 px-3 border-r border-gray-200">
+                    <button
+                      onClick={() => editor.chain().focus().undo().run()}
+                      className="p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={!editor.can().undo()}
+                      title="Undo"
+                    >
+                      <Undo className="w-4 h-4" />
+                    </button>
+                    
+                    <button
+                      onClick={() => editor.chain().focus().redo().run()}
+                      className="p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={!editor.can().redo()}
+                      title="Redo"
+                    >
+                      <Redo className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Heading Selector */}
+                  <div className="px-3">
+                    <select
+                      onChange={(e) => {
+                        const level = parseInt(e.target.value);
+                        if (level === 0) {
+                          editor.chain().focus().setParagraph().run();
+                        } else {
+                          editor.chain().focus().toggleHeading({ level: level as 1 | 2 | 3 | 4 | 5 | 6 }).run();
+                        }
+                      }}
+                      className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      title="Heading Level"
+                    >
+                      <option value="0">Normal Text</option>
+                      <option value="1">Heading 1</option>
+                      <option value="2">Heading 2</option>
+                      <option value="3">Heading 3</option>
+                      <option value="4">Heading 4</option>
+                      <option value="5">Heading 5</option>
+                      <option value="6">Heading 6</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Editor Content */}
+              <div className="flex-1 p-6 bg-gray-50">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 min-h-[600px]">
+                  <EditorContent 
+                    editor={editor}
+                    className="prose prose-lg max-w-none p-6 focus:outline-none min-h-[600px]"
+                    style={{ 
+                      fontFamily: selectedFont,
+                      fontSize: `${fontSize}px`
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Action Bar */}
+              <div className="p-6 bg-white border-t border-gray-200 flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  {courseId && termId && content && content !== '<p>Enter curriculum content here...</p>' ? (
+                    <div className="flex items-center gap-2 text-green-600">
+                      <CheckCircle className="w-5 h-5" />
+                      <span className="text-sm font-medium">Ready to save</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-orange-600">
+                      <AlertCircle className="w-5 h-5" />
+                      <span className="text-sm">Complete all required fields</span>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex gap-3">
+                  {onClose && (
+                    <button
+                      onClick={handleCancel}
+                      className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                  <button
+                    onClick={handleSave}
+                    className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-3 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg"
+                    disabled={isLoading || !courseId || !termId || fileUploading}
+                  >
+                    <Save className="w-5 h-5" />
+                    {isLoading ? "Saving..." : editingCurriculumId ? "Update Curriculum" : "Save Curriculum"}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
