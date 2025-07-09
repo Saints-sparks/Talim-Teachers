@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { createCurriculum, getCurricula, getCurriculumById, updateCurriculum, deleteCurriculum } from '../services/curriculum.services';
+import { createCurriculum, getCurricula, getCurriculumById, getCurriculumByCourse, updateCurriculum, deleteCurriculum } from '../services/curriculum.services';
 import { useAuth } from './useAuth';
 
 export function useCurriculum() {
@@ -82,6 +82,26 @@ export function useCurriculum() {
     }
   };
 
+  // Fetch curriculum by course ID
+  const fetchCurriculumByCourse = async (courseId: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const token = getAccessToken();
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+      const data = await getCurriculumByCourse(courseId, token);
+      return data;
+    } catch (error: any) {
+      setError(error.message);
+      console.error('Error fetching curriculum by course:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Update a curriculum
   const editCurriculum = async (id: string, updatedData: any) => {
     setIsLoading(true);
@@ -134,6 +154,7 @@ export function useCurriculum() {
     fetchCurricula,
     addCurriculum,
     fetchCurriculumById,
+    fetchCurriculumByCourse,
     editCurriculum,
     removeCurriculum,
   };

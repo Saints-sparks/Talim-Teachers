@@ -29,11 +29,19 @@ import useSubjects from "../../app/hooks/useSubjects";
 
 interface CurriculumEditorProps {
   onClose?: () => void;
+  initialCourseId?: string | null;
+  courseInfo?: any;
+  editingCurriculumId?: string | null;
 }
 
-const CurriculumEditor: React.FC<CurriculumEditorProps> = ({ onClose }) => {
+const CurriculumEditor: React.FC<CurriculumEditorProps> = ({ 
+  onClose, 
+  initialCourseId,
+  courseInfo,
+  editingCurriculumId 
+}) => {
   const { getAccessToken } = useAuth();
-  const { addCurriculum, isLoading } = useCurriculum();
+  const { addCurriculum, editCurriculum, fetchCurriculumById, isLoading } = useCurriculum();
   const { subjects, loading: subjectsLoading, error: subjectsError, getSubjectsBySchool } = useSubjects();
   
   const [courseId, setCourseId] = useState<string>("");
@@ -124,6 +132,38 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({ onClose }) => {
       setTermLoading(false);
     }
   };
+
+  // Initialize with passed props
+  useEffect(() => {
+    if (initialCourseId) {
+      setCourseId(initialCourseId);
+    }
+  }, [initialCourseId]);
+
+  // Load existing curriculum for editing
+  useEffect(() => {
+    const loadCurriculumForEdit = async () => {
+      if (editingCurriculumId) {
+        try {
+          const curriculum = await fetchCurriculumById(editingCurriculumId);
+          if (curriculum) {
+            setCourseId(curriculum.course._id || curriculum.course);
+            setTermId(curriculum.term._id || curriculum.term);
+            setContent(curriculum.content || '');
+            setAttachments(curriculum.attachments || []);
+            if (editor) {
+              editor.commands.setContent(curriculum.content || '');
+            }
+          }
+        } catch (error) {
+          console.error('Failed to load curriculum for editing:', error);
+          toast.error('Failed to load curriculum for editing');
+        }
+      }
+    };
+
+    loadCurriculumForEdit();
+  }, [editingCurriculumId, editor, fetchCurriculumById]);
 
   useEffect(() => {
     let isMounted = true;
@@ -277,35 +317,40 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({ onClose }) => {
         return;
       }
 
-      console.log("Creating curriculum with:", {
+      const curriculumData = {
         course: courseId,
         term: termId,
         content,
         teacherId: user.userId,
         attachments,
-      });
+      };
 
-      await addCurriculum({
-        course: courseId,
-        term: termId,
-        content,
-        teacherId: user.userId,
-        attachments,
-      });
-      
-      toast.success("Curriculum created successfully");
+      console.log("Curriculum data:", curriculumData);
 
+      if (editingCurriculumId) {
+        // Update existing curriculum
+        await editCurriculum(editingCurriculumId, curriculumData);
+        toast.success("Curriculum updated successfully");
+      } else {
+        // Create new curriculum
+        await addCurriculum(curriculumData);
+        toast.success("Curriculum created successfully");
+      }
+
+      // Clear form
       editor?.commands.clearContent();
       setContent("");
-      setCourseId("");
+      if (!initialCourseId) {
+        setCourseId("");
+      }
       setAttachments([]);
 
       if (onClose) {
         onClose();
       }
     } catch (error: any) {
-      console.error("Error creating curriculum:", error);
-      toast.error(error.message || "Failed to create curriculum");
+      console.error("Error saving curriculum:", error);
+      toast.error(error.message || "Failed to save curriculum");
     }
   };
 

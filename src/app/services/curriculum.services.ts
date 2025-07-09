@@ -109,6 +109,21 @@ export const updateCurriculum = async (id: string, updatedData: any, token: stri
   }
 };
 
+// Fetch curriculum by course ID
+export const getCurriculumByCourse = async (courseId: string, token: string) => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/curriculum/course/${courseId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 404) {
+      return []; // Return empty array if no curriculum found for this course
+    }
+    throw new Error(`Error fetching curriculum by course: ${error.response?.data?.message || error.message}`);
+  }
+};
+
 // Delete a curriculum by its ID
 export const deleteCurriculum = async (id: string, token: string) => {
   try {

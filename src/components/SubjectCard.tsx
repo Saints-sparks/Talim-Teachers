@@ -1,6 +1,10 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { BookOpen, Code, GraduationCap, ChevronRight } from "lucide-react";
+import { useCurriculum } from "@/app/hooks/useCurriculum";
+import { useAuth } from "@/app/hooks/useAuth";
+import { useState } from "react";
+import { toast } from "react-hot-toast";
 
 interface SubjectCardProps {
   _id: string;
@@ -67,17 +71,51 @@ const SubjectCard: React.FC<SubjectCardProps> = ({
   courseCode
 }) => {
   const router = useRouter();
+  const { fetchCurriculumByCourse, isLoading } = useCurriculum();
+  const { getAccessToken } = useAuth();
+  const [isCheckingCurriculum, setIsCheckingCurriculum] = useState(false);
+  
   console.log("SubjectCard props:", { _id, title, description, courseCode });
 
-  const handleCardClick = () => {
-    router.push(`/subjects/${_id}`);
+  const handleCardClick = async () => {
+    setIsCheckingCurriculum(true);
+    try {
+      // First, check if curriculum exists for this course
+      const existingCurricula = await fetchCurriculumByCourse(_id);
+      
+      if (existingCurricula && existingCurricula.length > 0) {
+        // Curriculum exists, navigate to curriculum page in view mode
+        router.push(`/curriculum?courseId=${_id}&mode=view`);
+      } else {
+        // No curriculum found, navigate to curriculum page in create mode
+        router.push(`/curriculum?courseId=${_id}&mode=create&courseTitle=${encodeURIComponent(title)}&courseCode=${encodeURIComponent(courseCode || '')}`);
+      }
+    } catch (error) {
+      console.error('Error checking curriculum:', error);
+      // If error, still allow user to access curriculum page in create mode
+      router.push(`/curriculum?courseId=${_id}&mode=create&courseTitle=${encodeURIComponent(title)}&courseCode=${encodeURIComponent(courseCode || '')}`);
+    } finally {
+      setIsCheckingCurriculum(false);
+    }
+  };
+
+  const handleViewDetails = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
+    await handleCardClick(); // Use the same logic as card click
   };
 
   return (
     <div
-      className="group relative bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-100 overflow-hidden"
+      className={`group relative bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-100 overflow-hidden ${isCheckingCurriculum || isLoading ? 'opacity-75 pointer-events-none' : ''}`}
       onClick={handleCardClick}
     >
+      {/* Loading overlay */}
+      {(isCheckingCurriculum || isLoading) && (
+        <div className="absolute inset-0 bg-white/50 flex items-center justify-center z-10">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      )}
+      
       {/* Header with gradient background */}
       <div className={`relative h-32 bg-gradient-to-br ${getGradientColor(title)} flex items-center justify-center`}>
         <div className="text-6xl opacity-90">
@@ -115,9 +153,12 @@ const SubjectCard: React.FC<SubjectCardProps> = ({
             <span>Course</span>
           </div>
           
-          <div className="flex items-center gap-1 text-sm text-blue-600 group-hover:text-blue-700 transition-colors">
+          <div 
+            className="flex items-center gap-1 text-sm text-blue-600 group-hover:text-blue-700 transition-colors cursor-pointer"
+            onClick={handleViewDetails}
+          >
             <BookOpen className="w-4 h-4" />
-            <span className="font-medium">View Details</span>
+            <span className="font-medium">View Curriculum</span>
           </div>
         </div>
       </div>
