@@ -49,8 +49,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       
       setTeacherData(teacherDetails);
       
-      // Extract classes from teacher data - use classTeacherClasses
-      const teacherClasses = teacherDetails?.classTeacherClasses || [];
+      // Extract classes from teacher data - use classTeacherClasses or assignedClasses
+      const teacherClasses = teacherDetails?.classTeacherClasses || teacherDetails?.assignedClasses || [];
+      console.log("Extracted teacher classes:", teacherClasses);
       setClasses(teacherClasses);
     } catch (error) {
       console.error("Error fetching teacher data:", error);

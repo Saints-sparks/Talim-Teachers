@@ -89,9 +89,14 @@ export const fetchTeacherDetails = async (id: string, token: string) => {
   }
 };
 
-export const fetchResources = async (token: string) => {
+export const fetchResources = async (token: string, teacherId?: string) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/resources`, {
+    // If teacherId is provided, fetch only resources uploaded by that teacher
+    const endpoint = teacherId 
+      ? `${API_BASE_URL}/resources/user/${teacherId}`
+      : `${API_BASE_URL}/resources`;
+      
+    const response = await axios.get(endpoint, {
       headers: { Authorization: `Bearer ${token}` },
     });
     return response.data || [];
@@ -145,10 +150,28 @@ export const uploadResource = async (data: any, token: string) => {
       },
       body: JSON.stringify(data),
     });
-    if (!response.ok) throw new Error("Failed to upload resource");
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to upload resource");
+    }
     return await response.json();
   } catch (error) {
     console.error("Error uploading resource:", error);
+    throw error;
+  }
+};
+
+export const createResource = async (resourceData: any, token: string) => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/resources`, resourceData, {
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error creating resource:", error);
     throw error;
   }
 };
