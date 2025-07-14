@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { Plus, Search, BookOpen, FileText, Upload, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ResourcesTable } from "@/components/resorces/ResourceTable";
@@ -7,14 +7,14 @@ import { UploadModal } from "@/components/resorces/uploadmodal";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Layout from "@/components/Layout";
-import { fetchResources, getAssignedClasses } from "../services/api.service";
+import { fetchResources, fetchTeacherDetails, getAssignedClasses } from "../services/api.service";
 import { useAuth } from "../hooks/useAuth";
 import { Resource } from "@/types/student";
 import { useAppContext } from "../context/AppContext";
 import LoadingCard from "@/components/LoadingCard";
 
 export default function ResourcePage() {
-  const { user, classes, refreshClasses } = useAppContext(); // Use AppContext
+  const { user, classes, teacherData } = useAppContext(); // Use teacherData from context instead
   const { getAccessToken } = useAuth();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -22,94 +22,112 @@ export default function ResourcePage() {
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [hasLoadedData, setHasLoadedData] = useState(false);
+
+  const loadData = useCallback(async () => {
+    if (!user?.userId || hasLoadedData) return;
+    
+    try {
+      setLoading(true);
+      const token = getAccessToken();
+      if (!token) throw new Error("No token found");
+
+      console.log("Fetching resources for teacher:", user.userId);
+      
+      const resourceData = await fetchResources(token, user.userId);
+      console.log("Fetched resources:", resourceData);
+
+      setResources(resourceData);
+      setHasLoadedData(true);
+    } catch (err) {
+      setError("Failed to load data");
+      console.error("Error loading resources:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.userId, getAccessToken, hasLoadedData]);
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const token = getAccessToken();
-        if (!token) throw new Error("No token found");
-
-        // Fetch only resources uploaded by the current teacher
-        const teacherId = user?.teacherId || user?.userId;
-        console.log("Fetching resources for teacher:", teacherId);
-        console.log("User object:", user);
-        console.log("Available classes:", classes);
-        
-        const resourceData = await fetchResources(token, teacherId);
-        console.log("Fetched resources:", resourceData);
-
-        setResources(resourceData);
-      } catch (err) {
-        setError("Failed to load data");
-        console.error("Error loading resources:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (user) {
+    // Load resources data when user is available
+    if (user?.userId && !hasLoadedData) {
       loadData();
     }
-  }, [user, getAccessToken, classes]);
+  }, [user?.userId, hasLoadedData, loadData]);
 
-  // Calculate KPIs with better error handling
-  const totalResources = resources.length;
-  
-  const thisMonthResources = resources.filter(resource => {
-    try {
-      const uploadDate = new Date(resource.uploadDate);
-      const currentDate = new Date();
-      return uploadDate.getMonth() === currentDate.getMonth() && 
-             uploadDate.getFullYear() === currentDate.getFullYear();
-    } catch (error) {
-      console.warn("Error parsing upload date:", resource.uploadDate);
-      return false;
-    }
-  }).length;
-  
-  const uniqueClasses = new Set(
-    resources
-      .map(resource => {
-        try {
-          // Handle both populated and non-populated classId
-          if (typeof resource.classId === 'object' && resource.classId !== null) {
-            return (resource.classId as any)._id || (resource.classId as any).toString();
+  // Calculate KPIs with better error handling - memoized for performance
+  const kpiData = useMemo(() => {
+    const totalResources = resources.length;
+    
+    const thisMonthResources = resources.filter(resource => {
+      try {
+        const uploadDate = new Date(resource.uploadDate);
+        const currentDate = new Date();
+        return uploadDate.getMonth() === currentDate.getMonth() && 
+               uploadDate.getFullYear() === currentDate.getFullYear();
+      } catch (error) {
+        console.warn("Error parsing upload date:", resource.uploadDate);
+        return false;
+      }
+    }).length;
+    
+    // Use teacher's assigned classes from context
+    const assignedClasses = teacherData?.assignedClasses || teacherData?.classTeacherClasses || classes;
+    
+    const uniqueClasses = new Set(
+      resources
+        .map(resource => {
+          try {
+            // Handle both populated and non-populated classId
+            if (typeof resource.classId === 'object' && resource.classId !== null) {
+              return (resource.classId as any)._id || (resource.classId as any).toString();
+            }
+            return resource.classId as string;
+          } catch (error) {
+            console.warn("Error processing classId:", resource.classId);
+            return null;
           }
-          return resource.classId as string;
-        } catch (error) {
-          console.warn("Error processing classId:", resource.classId);
-          return null;
-        }
-      })
-      .filter(Boolean)
-  ).size;
+        })
+        .filter(Boolean)
+    ).size;
 
-  const thisWeekResources = resources.filter(resource => {
-    try {
-      const uploadDate = new Date(resource.uploadDate);
-      const currentDate = new Date();
-      const weekAgo = new Date(currentDate.getTime() - 7 * 24 * 60 * 60 * 1000);
-      return uploadDate >= weekAgo && uploadDate <= currentDate;
-    } catch (error) {
-      console.warn("Error parsing upload date for week calculation:", resource.uploadDate);
-      return false;
-    }
-  }).length;
+    const thisWeekResources = resources.filter(resource => {
+      try {
+        const uploadDate = new Date(resource.uploadDate);
+        const currentDate = new Date();
+        const weekAgo = new Date(currentDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+        return uploadDate >= weekAgo && uploadDate <= currentDate;
+      } catch (error) {
+        console.warn("Error parsing upload date for week calculation:", resource.uploadDate);
+        return false;
+      }
+    }).length;
 
-  // Additional KPIs
-  const recentResources = resources.filter(resource => {
-    try {
-      const uploadDate = new Date(resource.uploadDate);
-      const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
-      return uploadDate >= threeDaysAgo;
-    } catch (error) {
-      return false;
-    }
-  }).length;
+    const recentResources = resources.filter(resource => {
+      try {
+        const uploadDate = new Date(resource.uploadDate);
+        const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+        return uploadDate >= threeDaysAgo;
+      } catch (error) {
+        return false;
+      }
+    }).length;
 
-  const filteredResources = resources.filter((resource) =>
-    resource.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+    return {
+      totalResources,
+      thisMonthResources,
+      uniqueClasses,
+      thisWeekResources,
+      recentResources,
+      totalAssignedClasses: assignedClasses.length
+    };
+  }, [resources, teacherData, classes]);
+
+  // Memoize filtered resources
+  const filteredResources = useMemo(() => {
+    return resources.filter((resource) =>
+      resource.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [resources, searchTerm]);
 
   const handleNewResourceUpload = (newResource: Resource) => {
     setResources((prevResources) => [...prevResources, newResource]);
@@ -120,6 +138,13 @@ export default function ResourcePage() {
       prevResources.filter((resource) => resource._id !== resourceId)
     );
   };
+
+  // Function to manually refresh data
+  const refreshData = useCallback(() => {
+    setHasLoadedData(false);
+    setError("");
+    loadData();
+  }, [loadData]);
 
   return (
     <Layout>
@@ -169,7 +194,7 @@ export default function ResourcePage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-green-700">Total Resources</p>
-                    <p className="text-2xl font-bold text-green-900">{totalResources}</p>
+                    <p className="text-2xl font-bold text-green-900">{kpiData.totalResources}</p>
                     <p className="text-xs text-green-600 mt-1">
                       All time uploads
                     </p>
@@ -186,9 +211,9 @@ export default function ResourcePage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-blue-700">This Week</p>
-                    <p className="text-2xl font-bold text-blue-900">{thisWeekResources}</p>
+                    <p className="text-2xl font-bold text-blue-900">{kpiData.thisWeekResources}</p>
                     <p className="text-xs text-blue-600 mt-1">
-                      {recentResources > 0 ? `${recentResources} in last 3 days` : 'Recent activity'}
+                      {kpiData.recentResources > 0 ? `${kpiData.recentResources} in last 3 days` : 'Recent activity'}
                     </p>
                   </div>
                   <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -203,9 +228,9 @@ export default function ResourcePage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-purple-700">Classes Covered</p>
-                    <p className="text-2xl font-bold text-purple-900">{uniqueClasses}</p>
+                    <p className="text-2xl font-bold text-purple-900">{kpiData.uniqueClasses}</p>
                     <p className="text-xs text-purple-600 mt-1">
-                      {classes.length > 0 ? `out of ${classes.length} assigned` : 'Active classes'}
+                      {kpiData.totalAssignedClasses > 0 ? `out of ${kpiData.totalAssignedClasses} assigned` : 'Active classes'}
                     </p>
                   </div>
                   <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
@@ -235,7 +260,7 @@ export default function ResourcePage() {
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to load resources</h3>
               <p className="text-gray-600 mb-4">{error}</p>
               <Button 
-                onClick={() => window.location.reload()}
+                onClick={refreshData}
                 variant="outline"
               >
                 Try Again
@@ -288,6 +313,8 @@ export default function ResourcePage() {
             <div className="text-xs text-yellow-700 space-y-1">
               <p><strong>User ID:</strong> {user?.userId || 'Not found'}</p>
               <p><strong>Teacher ID:</strong> {user?.teacherId || 'Not found'}</p>
+              <p><strong>Teacher Data Available:</strong> {teacherData ? 'Yes' : 'No'}</p>
+              <p><strong>Assigned Classes:</strong> {teacherData?.assignedClasses?.length || teacherData?.classTeacherClasses?.length || 0} classes</p>
               <p><strong>Classes from Context:</strong> {classes.length} classes</p>
               <p><strong>Resources Loaded:</strong> {resources.length} resources</p>
               <p><strong>Loading State:</strong> {loading ? 'Yes' : 'No'}</p>

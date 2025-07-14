@@ -186,6 +186,16 @@ const LoginPage: React.FC = () => {
             >
               {isLoading ? "Signing in..." : "Sign in"}
             </Button>
+
+            {/* Forgot Password Link */}
+            <div className="text-center">
+              <a
+                href="/forgot-password"
+                className="text-sm text-[#003366] hover:underline"
+              >
+                Forgot your password?
+              </a>
+            </div>
           </form>
         </div>
       </div>
