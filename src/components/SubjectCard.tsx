@@ -2,9 +2,13 @@
 import { useRouter } from "next/navigation";
 import { BookOpen, Code, GraduationCap, ChevronRight } from "lucide-react";
 import { useCurriculum } from "@/app/hooks/useCurriculum";
+import { getCurriculumByCourseAndTerm } from "@/app/services/curriculum.services";
 import { useAuth } from "@/app/hooks/useAuth";
 import { useState } from "react";
+import CurriculumActionModal from "./curriculum/CurriculumActionModal";
 import { toast } from "react-hot-toast";
+import { getCurrentTerm } from "@/app/services/api.service";
+import { get } from "http";
 
 interface SubjectCardProps {
   _id: string;
@@ -74,98 +78,167 @@ const SubjectCard: React.FC<SubjectCardProps> = ({
   const { fetchCurriculumByCourse, isLoading } = useCurriculum();
   const { getAccessToken } = useAuth();
   const [isCheckingCurriculum, setIsCheckingCurriculum] = useState(false);
+  const [showActionModal, setShowActionModal] = useState(false);
+  const [hasCurriculum, setHasCurriculum] = useState<boolean | null>(null);
+  const [curriculumData, setCurriculumData] = useState<any>(null);
   
   console.log("SubjectCard props:", { _id, title, description, courseCode });
 
-  const handleCardClick = async () => {
-    setIsCheckingCurriculum(true);
+  // Show modal on card click
+  // Open the action modal immediately on card click
+  const handleCardClick = () => {
+    setShowActionModal(true);
+  };
+
+  // Handler for modal actions
+  const handleView = async () => {
+    console.log('[SubjectCard] handleView called for courseId:', _id);
+    const token = getAccessToken();
+    if (!token) {
+      console.log('[SubjectCard] No token found');
+      toast.error('You must be logged in to view curriculum.');
+      return;
+    }
     try {
-      // First, check if curriculum exists for this course
-      const existingCurricula = await fetchCurriculumByCourse(_id);
-      
-      if (existingCurricula && existingCurricula.length > 0) {
-        // Curriculum exists, navigate to curriculum page in view mode
-        router.push(`/curriculum?courseId=${_id}&mode=view`);
-      } else {
-        // No curriculum found, navigate to curriculum page in create mode
-        router.push(`/curriculum?courseId=${_id}&mode=create&courseTitle=${encodeURIComponent(title)}&courseCode=${encodeURIComponent(courseCode || '')}`);
+      const term = await getCurrentTerm(token);
+      console.log('[SubjectCard] getCurrentTerm result:', term);
+      if (!term || !term._id) {
+        console.log('[SubjectCard] No current term found');
+        toast.error('No current term selected.');
+        return;
       }
+      // Log the exact parameters being sent to the API
+      console.log('[SubjectCard] Calling getCurriculumByCourseAndTerm with:', {
+        courseId: _id,
+        termId: term._id,
+        token: token ? '***' : 'MISSING'
+      });
+      const curriculum = await getCurriculumByCourseAndTerm({ courseId: _id, termId: term._id, token });
+      console.log('[SubjectCard] getCurriculumByCourseAndTerm result:', curriculum);
+      if (!curriculum) {
+        toast.error('No curriculum found for this course and term.');
+        return;
+      }
+      router.push(`/curriculum?courseId=${_id}&termId=${term._id}&mode=view&curriculumId=${curriculum._id}`);
     } catch (error) {
-      console.error('Error checking curriculum:', error);
-      // If error, still allow user to access curriculum page in create mode
-      router.push(`/curriculum?courseId=${_id}&mode=create&courseTitle=${encodeURIComponent(title)}&courseCode=${encodeURIComponent(courseCode || '')}`);
-    } finally {
-      setIsCheckingCurriculum(false);
+      console.error('[SubjectCard] Error in handleView:', error);
+      const err = error as any;
+      if (err?.response) {
+        console.error('[SubjectCard] API error response:', err.response);
+      }
+      toast.error('Failed to fetch curriculum.');
+    }
+  };
+  const handleEdit = async () => {
+    console.log('[SubjectCard] handleEdit called for courseId:', _id);
+    const token = getAccessToken();
+    if (!token) {
+      console.log('[SubjectCard] No token found');
+      toast.error('You must be logged in to edit curriculum.');
+      return;
+    }
+    try {
+      const term = await getCurrentTerm(token);
+      console.log('[SubjectCard] getCurrentTerm result:', term);
+      if (!term || !term._id) {
+        console.log('[SubjectCard] No current term found');
+        toast.error('No current term selected.');
+        return;
+      }
+      // Log the exact parameters being sent to the API
+      console.log('[SubjectCard] Calling getCurriculumByCourseAndTerm with:', {
+        courseId: _id,
+        termId: term._id,
+        token: token ? '***' : 'MISSING'
+      });
+      const curriculum = await getCurriculumByCourseAndTerm(_id, term._id, token);
+      console.log('[SubjectCard] getCurriculumByCourseAndTerm result:', curriculum);
+      if (!curriculum) {
+        toast.error('No curriculum found for this course and term.');
+        return;
+      }
+      router.push(`/curriculum?courseId=${_id}&termId=${term._id}&mode=edit&curriculumId=${curriculum._id}`);
+    } catch (error) {
+      console.error('[SubjectCard] Error in handleEdit:', error);
+      const err = error as any;
+      if (err?.response) {
+        console.error('[SubjectCard] API error response:', err.response);
+      }
+      toast.error('Failed to fetch curriculum for editing.');
     }
   };
 
-  const handleViewDetails = async (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card click
-    await handleCardClick(); // Use the same logic as card click
+  const handleViewDetails = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowActionModal(true);
   };
 
   return (
-    <div
-      className={`group relative bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-100 overflow-hidden ${isCheckingCurriculum || isLoading ? 'opacity-75 pointer-events-none' : ''}`}
-      onClick={handleCardClick}
-    >
-      {/* Loading overlay */}
-      {(isCheckingCurriculum || isLoading) && (
-        <div className="absolute inset-0 bg-white/50 flex items-center justify-center z-10">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </div>
-      )}
-      
-      {/* Header with gradient background */}
-      <div className={`relative h-32 bg-gradient-to-br ${getGradientColor(title)} flex items-center justify-center`}>
-        <div className="text-6xl opacity-90">
-          {getSubjectIcon(title, courseCode)}
-        </div>
-        {/* Course Code Badge */}
-        {courseCode && (
-          <div className="absolute top-3 right-3 bg-white/20 backdrop-blur-sm text-white text-xs font-medium px-2 py-1 rounded-full">
-            {courseCode}
+    <>
+      <div
+        className={`group relative bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-100 overflow-hidden ${isCheckingCurriculum || isLoading ? 'opacity-75 pointer-events-none' : ''}`}
+        onClick={handleCardClick}
+      >
+        {/* Loading overlay */}
+        {(isCheckingCurriculum || isLoading) && (
+          <div className="absolute inset-0 bg-white/50 flex items-center justify-center z-10">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           </div>
         )}
-        {/* Hover overlay */}
-        <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-      </div>
-
-      {/* Content */}
-      <div className="p-4 space-y-3">
-        <div className="flex items-start justify-between">
-          <h3 className="text-lg font-semibold text-gray-900 line-clamp-2 leading-tight">
-            {title}
-          </h3>
-          <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors flex-shrink-0 ml-2" />
-        </div>
-        
-        {description && (
-          <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
-            {description}
-          </p>
-        )}
-
-        {/* Footer */}
-        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <GraduationCap className="w-4 h-4" />
-            <span>Course</span>
+        {/* Header with gradient background */}
+        <div className={`relative h-32 bg-gradient-to-br ${getGradientColor(title)} flex items-center justify-center`}>
+          <div className="text-6xl opacity-90">
+            {getSubjectIcon(title, courseCode)}
           </div>
-          
-          <div 
-            className="flex items-center gap-1 text-sm text-blue-600 group-hover:text-blue-700 transition-colors cursor-pointer"
-            onClick={handleViewDetails}
-          >
-            <BookOpen className="w-4 h-4" />
-            <span className="font-medium">View Curriculum</span>
+          {/* Course Code Badge */}
+          {courseCode && (
+            <div className="absolute top-3 right-3 bg-white/20 backdrop-blur-sm text-white text-xs font-medium px-2 py-1 rounded-full">
+              {courseCode}
+            </div>
+          )}
+          {/* Hover overlay */}
+          <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        </div>
+
+        {/* Content */}
+        <div className="p-4 space-y-3">
+          <div className="flex items-start justify-between">
+            <h3 className="text-lg font-semibold text-gray-900 line-clamp-2 leading-tight">
+              {title}
+            </h3>
+            <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors flex-shrink-0 ml-2" />
+          </div>
+          {description && (
+            <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
+              {description}
+            </p>
+          )}
+          {/* Footer */}
+          <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <GraduationCap className="w-4 h-4" />
+              <span>Course</span>
+            </div>
+            <div 
+              className="flex items-center gap-1 text-sm text-blue-600 group-hover:text-blue-700 transition-colors cursor-pointer"
+              onClick={handleViewDetails}
+            >
+              <BookOpen className="w-4 h-4" />
+              <span className="font-medium">View Curriculum</span>
+            </div>
           </div>
         </div>
+        {/* Hover effect border */}
+        <div className="absolute inset-0 rounded-xl border-2 border-transparent group-hover:border-blue-200 transition-colors duration-300 pointer-events-none" />
       </div>
-
-      {/* Hover effect border */}
-      <div className="absolute inset-0 rounded-xl border-2 border-transparent group-hover:border-blue-200 transition-colors duration-300 pointer-events-none" />
-    </div>
+      {/* Curriculum Action Modal */}
+      <CurriculumActionModal
+        open={showActionModal}
+        onClose={() => setShowActionModal(false)}
+        onView={handleView}
+        onEdit={handleEdit}
+      />
+    </>
   );
 };
 

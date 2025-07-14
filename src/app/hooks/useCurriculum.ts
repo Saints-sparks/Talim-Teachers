@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
-import { createCurriculum, getCurricula, getCurriculumById, getCurriculumByCourse, updateCurriculum, deleteCurriculum } from '../services/curriculum.services';
+import { createCurriculum, getCurricula, getCurriculumById, getCurriculumByCourse, updateCurriculum, deleteCurriculum, getCurriculumByCourseAndTerm } from '../services/curriculum.services';
 import { useAuth } from './useAuth';
+import { getCurrentTerm } from '../services/api.service';
 
 export function useCurriculum() {
   const { getAccessToken } = useAuth();
@@ -84,6 +85,7 @@ export function useCurriculum() {
 
   // Fetch curriculum by course ID
   const fetchCurriculumByCourse = async (courseId: string) => {
+    
     setIsLoading(true);
     setError(null);
     try {
@@ -91,7 +93,12 @@ export function useCurriculum() {
       if (!token) {
         throw new Error('No authentication token found');
       }
-      const data = await getCurriculumByCourse(courseId, token);
+
+      const term = getCurrentTerm(token);
+      if (!term) {
+        throw new Error('No current term selected');
+      }
+      const data = await getCurriculumByCourseAndTerm({ courseId, termId: term._id, token });
       return data;
     } catch (error: any) {
       setError(error.message);

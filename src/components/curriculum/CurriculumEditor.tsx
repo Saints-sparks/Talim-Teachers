@@ -356,31 +356,39 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               
               {/* Course Selection Card */}
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <div className="flex items-center gap-3 mb-3">
+              {(!initialCourseId) ? (
+                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <BookOpen className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <h3 className="font-semibold text-gray-900 text-sm">Course Selection</h3>
+                  </div>
+                  <select
+                    value={courseId}
+                    onChange={(e) => setCourseId(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    required
+                    disabled={teacherCourses.length === 0}
+                  >
+                    <option value="">
+                      {teacherCourses.length === 0 ? "Loading courses..." : "Select a course/subject"}
+                    </option>
+                    {teacherCourses.map((course) => (
+                      <option key={course._id} value={course._id}>
+                        {course.name} ({course.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center gap-3 mb-3">
                   <div className="p-2 bg-blue-100 rounded-lg">
                     <BookOpen className="w-4 h-4 text-blue-600" />
                   </div>
-                  <h3 className="font-semibold text-gray-900 text-sm">Course Selection</h3>
+                  <span className="font-semibold text-gray-900 text-sm">Course: {courseInfo?.name || 'Selected Course'}</span>
                 </div>
-                
-                <select
-                  value={courseId}
-                  onChange={(e) => setCourseId(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  required
-                  disabled={teacherCourses.length === 0}
-                >
-                  <option value="">
-                    {teacherCourses.length === 0 ? "Loading courses..." : "Select a course/subject"}
-                  </option>
-                  {teacherCourses.map((course) => (
-                    <option key={course._id} value={course._id}>
-                      {course.name} ({course.code})
-                    </option>
-                  ))}
-                </select>
-              </div>
+              )}
 
               {/* Term Information Card */}
               <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
@@ -454,31 +462,39 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
               <div className="space-y-4">
                 
                 {/* Course Selection Card */}
-                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                  <div className="flex items-center gap-3 mb-3">
+                {(!initialCourseId) ? (
+                  <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <BookOpen className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <h3 className="font-semibold text-gray-900">Course Selection</h3>
+                    </div>
+                    <select
+                      value={courseId}
+                      onChange={(e) => setCourseId(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      required
+                      disabled={teacherCourses.length === 0}
+                    >
+                      <option value="">
+                        {teacherCourses.length === 0 ? "Loading courses..." : "Select a course/subject"}
+                      </option>
+                      {teacherCourses.map((course) => (
+                        <option key={course._id} value={course._id}>
+                          {course.name} ({course.code})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center gap-3 mb-3">
                     <div className="p-2 bg-blue-100 rounded-lg">
                       <BookOpen className="w-5 h-5 text-blue-600" />
                     </div>
-                    <h3 className="font-semibold text-gray-900">Course Selection</h3>
+                    <span className="font-semibold text-gray-900">Course: {courseInfo?.name || 'Selected Course'}</span>
                   </div>
-                  
-                  <select
-                    value={courseId}
-                    onChange={(e) => setCourseId(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    required
-                    disabled={teacherCourses.length === 0}
-                  >
-                    <option value="">
-                      {teacherCourses.length === 0 ? "Loading courses..." : "Select a course/subject"}
-                    </option>
-                    {teacherCourses.map((course) => (
-                      <option key={course._id} value={course._id}>
-                        {course.name} ({course.code})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                )}
 
                 {/* Term Information Card */}
                 <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">

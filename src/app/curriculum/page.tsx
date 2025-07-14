@@ -11,6 +11,7 @@ import { Edit, Trash2, Download, ArrowLeft, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { fetchTeacherDetails, getCurrentTerm } from '@/app/services/api.service';
 import html2canvas from 'html2canvas';
+import { getCurriculumByCourseAndTerm } from '../services/curriculum.services';
 
 interface ModalProps {
   isOpen: boolean;
@@ -130,7 +131,7 @@ const CurriculumPage = () => {
   const { curricula, isLoading, error, fetchCurricula, fetchCurriculumByCourse, showEditor, setShowEditor, editCurriculum, removeCurriculum, fetchCurriculumById } = useCurriculum();
   const { isAuthenticated, getAccessToken } = useAuth();
   const hasInitialized = useRef(false);
-  const [selectedCurriculum, setSelectedCurriculum] = useState(null);
+  const [selectedCurriculum, setSelectedCurriculum] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCurriculumId, setEditingCurriculumId] = useState<string | null>(null);
   const [courseCurricula, setCourseCurricula] = useState<any[]>([]);
@@ -143,18 +144,47 @@ const CurriculumPage = () => {
   const mode = searchParams.get('mode'); // 'view' or 'create'
   const courseTitle = searchParams.get('courseTitle');
   const courseCode = searchParams.get('courseCode');
-
+  const curriculumId = searchParams.get('curriculumId');
+  const termId = searchParams.get('termId');
+  const token = getAccessToken();
+  if (!token) {
+    return (
+      <Layout>
+        <div className="min-h-screen bg-gray-50 p-8 flex items-center justify-center">
+          <div className="text-center bg-white p-6 rounded-lg shadow-md">
+            <p className="text-gray-600 text-lg">Please log in to access curriculum.</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
   useEffect(() => {
     if (isAuthenticated && !hasInitialized.current) {
       hasInitialized.current = true;
-      
       // Fetch teacher courses and current term
       fetchTeacherData();
-      
-      if (courseId) {
+
+      // If in view or edit mode and curriculumId, courseId, and termId are present, fetch the curriculum
+      if ((mode === 'view' || mode === 'edit') && curriculumId && courseId && termId) {
+        (async () => {
+          try {
+            const curriculum = await getCurriculumByCourseAndTerm({ courseId, termId, token });
+            setSelectedCurriculum(curriculum);
+            if (mode === 'edit') {
+              setEditingCurriculumId(curriculum?._id || null);
+              setShowEditor(true);
+            }
+          } catch (error) {
+            setSelectedCurriculum(null);
+          }
+        })();
+      } else if (courseId) {
         // If courseId is provided, fetch curricula for this specific course
-        fetchCurriculumForCourse(courseId);
-        // Set course info from query params
+        getCurrentTerm(token).then(term => {
+          if (term) {
+            setCurrentTerm(term);
+          }
+        });
         if (courseTitle) {
           setCourseInfo({
             _id: courseId,
@@ -162,8 +192,6 @@ const CurriculumPage = () => {
             courseCode: courseCode ? decodeURIComponent(courseCode) : ''
           });
         }
-        
-        // If mode is create, open the editor immediately
         if (mode === 'create') {
           setShowEditor(true);
         }
@@ -172,7 +200,7 @@ const CurriculumPage = () => {
         fetchCurricula({});
       }
     }
-  }, [isAuthenticated, courseId, mode, courseTitle, courseCode]);
+  }, [isAuthenticated, courseId, mode, courseTitle, courseCode, curriculumId, termId]);
 
   const fetchTeacherData = async () => {
     try {
@@ -313,13 +341,26 @@ const CurriculumPage = () => {
   const displayCurricula = courseId ? courseCurricula : curricula;
   const isCoursePage = !!courseId;
 
+  // If in view mode and selectedCurriculum is set, show the modal directly
+  if (mode === 'view' && selectedCurriculum) {
+    return (
+      <Layout>
+        <Modal
+          isOpen={true}
+          onClose={() => router.back()}
+          curriculum={selectedCurriculum}
+        />
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div className="min-h-screen bg-gray-50 p-8">
-        <Modal 
-          isOpen={isModalOpen} 
-          onClose={() => setIsModalOpen(false)} 
-          curriculum={selectedCurriculum} 
+        <Modal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          curriculum={selectedCurriculum}
         />
         {displayCurricula.length === 0 && !isCoursePage ? (
           <EmptyCurriculumPage onCreateClick={() => setShowEditor(true)} />
@@ -337,8 +378,8 @@ const CurriculumPage = () => {
                   </button>
                 )}
                 <h1 className="text-3xl font-bold text-gray-900">
-                  {isCoursePage 
-                    ? `${courseInfo?.name || 'Course'} Curriculum` 
+                  {isCoursePage
+                    ? `${courseInfo?.name || 'Course'} Curriculum`
                     : 'Curriculum Management'
                   }
                 </h1>
@@ -351,7 +392,6 @@ const CurriculumPage = () => {
                 {isCoursePage ? 'Create Curriculum' : 'Create New Curriculum'}
               </button>
             </div>
-            
             {displayCurricula.length === 0 && isCoursePage ? (
               <div className="bg-white rounded-xl p-8 text-center shadow-sm">
                 <div className="max-w-md mx-auto">
@@ -373,8 +413,8 @@ const CurriculumPage = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {displayCurricula.map((curriculum) => (
-                  <div 
-                    key={curriculum._id} 
+                  <div
+                    key={curriculum._id}
                     className="bg-white border border-gray-200 rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-200 cursor-pointer"
                     onClick={() => handleCurriculumClick(curriculum)}
                   >

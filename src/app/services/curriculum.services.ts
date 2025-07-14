@@ -1,3 +1,5 @@
+// Fetch curriculum by course and term
+
 import axios from 'axios';
 import { API_BASE_URL } from '../lib/api/config';
 
@@ -137,5 +139,29 @@ export const deleteCurriculum = async (id: string, token: string) => {
     return response.data;
   } catch (error: any) {
     throw new Error(`Error deleting curriculum: ${error.response?.data?.message || error.message}`);
+  }
+};
+
+export const getCurriculumByCourseAndTerm = async ({
+  courseId,
+  termId,
+  token
+}: {
+  courseId: string;
+  termId: string;
+  token: string;
+}) => {
+  try {
+      const response = await axios.post(
+        `${API_BASE_URL}/curriculum/by-course-term`,
+        { courseId, termId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 404) {
+      return null;
+    }
+    throw new Error(`Error fetching curriculum by course and term: ${error.response?.data?.message || error.message}`);
   }
 };
