@@ -22,13 +22,23 @@ import { getCurrentTerm, getStudentsByClass } from '@/app/services/api.service';
 
 interface Student {
   _id: string;
-  name: string;
-  studentId: string;
-  email: string;
+  name?: string; // Legacy field for backward compatibility
+  studentId?: string;
+  email?: string;
   userId?: {
-    name: string;
+    _id: string;
     email: string;
+    firstName: string;
+    lastName: string;
+    phoneNumber?: string;
   };
+  classId?: {
+    _id: string;
+    name: string;
+  };
+  gradeLevel?: string;
+  parentId?: string;
+  isActive?: boolean;
 }
 
 interface ClassInfo {
@@ -150,12 +160,17 @@ const ClassTeacherView: React.FC = () => {
       
       // Validate and filter students data
       const validStudents = Array.isArray(studentsData) 
-        ? studentsData.filter(student => 
-            student && 
-            student._id && 
-            typeof student.name === 'string' && 
-            student.name.trim().length > 0
-          )
+        ? studentsData.filter(student => {
+            if (!student || !student._id) return false;
+            
+            // Check if student has either legacy name or userId with firstName/lastName
+            const hasValidName = (
+              (student.name && typeof student.name === 'string' && student.name.trim().length > 0) ||
+              (student.userId && (student.userId.firstName || student.userId.lastName))
+            );
+            
+            return hasValidName;
+          })
         : [];
       
       console.log('Valid students loaded:', validStudents.length);
@@ -197,7 +212,7 @@ const ClassTeacherView: React.FC = () => {
           }
           return null;
         } catch (error) {
-          console.log(`No cumulative record for student ${student.name}`);
+          console.log(`No cumulative record for student ${getStudentName(student)}`);
           return null;
         }
       });
@@ -281,6 +296,39 @@ const ClassTeacherView: React.FC = () => {
     setSelectedStudent(null);
     setStudentCourseGrades([]);
     setStudentCumulative(null);
+  };
+
+  const getStudentName = (student: Student): string => {
+    // Try legacy name field first
+    if (student.name && typeof student.name === 'string' && student.name.trim().length > 0) {
+      return student.name;
+    }
+    
+    // Try userId with firstName and lastName
+    if (student.userId?.firstName || student.userId?.lastName) {
+      const firstName = student.userId.firstName || '';
+      const lastName = student.userId.lastName || '';
+      const fullName = `${firstName} ${lastName}`.trim();
+      if (fullName.length > 0) {
+        return fullName;
+      }
+    }
+    
+    return 'Unknown Student';
+  };
+
+  const getStudentId = (student: Student): string => {
+    // Try direct studentId field first
+    if (student.studentId && typeof student.studentId === 'string') {
+      return student.studentId;
+    }
+    
+    // Try userId email as fallback
+    if (student.userId?.email) {
+      return student.userId.email;
+    }
+    
+    return 'N/A';
   };
 
   const getGradeColor = (percentage: number) => {
@@ -491,12 +539,12 @@ const ClassTeacherView: React.FC = () => {
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                             <span className="font-medium text-blue-600">
-                              {student.name ? student.name.charAt(0).toUpperCase() : '?'}
+                              {getStudentName(student).charAt(0).toUpperCase()}
                             </span>
                           </div>
                           <div>
-                            <h3 className="font-medium">{student.name || 'Unknown Student'}</h3>
-                            <p className="text-sm text-gray-600">ID: {student.studentId || 'N/A'}</p>
+                            <h3 className="font-medium">{getStudentName(student)}</h3>
+                            <p className="text-sm text-gray-600">ID: {getStudentId(student)}</p>
                           </div>
                         </div>
                         
@@ -554,9 +602,9 @@ const ClassTeacherView: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="w-5 h-5 text-blue-600" />
-                {selectedStudent.name}
+                {getStudentName(selectedStudent)}
               </CardTitle>
-              <p className="text-gray-600">Student ID: {selectedStudent.studentId}</p>
+              <p className="text-gray-600">Student ID: {getStudentId(selectedStudent)}</p>
             </CardHeader>
           </Card>
 

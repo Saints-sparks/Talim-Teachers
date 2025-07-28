@@ -71,6 +71,40 @@ const CourseTeacherView: React.FC = () => {
   const [viewMode, setViewMode] = useState<'overview' | 'assessment-entry' | 'course-grades'>('overview');
   const [error, setError] = useState<string | null>(null);
 
+  // Helper functions to handle new student data structure
+  const getStudentName = (student: any): string => {
+    // Try legacy name field first
+    if (student.name && typeof student.name === 'string' && student.name.trim().length > 0) {
+      return student.name;
+    }
+    
+    // Try userId with firstName and lastName
+    if (student.userId?.firstName || student.userId?.lastName) {
+      const firstName = student.userId.firstName || '';
+      const lastName = student.userId.lastName || '';
+      const fullName = `${firstName} ${lastName}`.trim();
+      if (fullName.length > 0) {
+        return fullName;
+      }
+    }
+    
+    return 'Unknown Student';
+  };
+
+  const getStudentId = (student: any): string => {
+    // Try direct studentId field first
+    if (student.studentId && typeof student.studentId === 'string') {
+      return student.studentId;
+    }
+    
+    // Try userId email as fallback
+    if (student.userId?.email) {
+      return student.userId.email;
+    }
+    
+    return 'N/A';
+  };
+
   // Load teacher's assigned courses on component mount
   useEffect(() => {
     if (user) {
@@ -183,7 +217,23 @@ const CourseTeacherView: React.FC = () => {
 
       // Ensure all data is arrays to prevent undefined errors
       setAssessments(Array.isArray(assessmentsData) ? assessmentsData : []);
-      setStudents(Array.isArray(studentsData) ? studentsData : []);
+      
+      // Validate and filter students data
+      const validStudents = Array.isArray(studentsData) 
+        ? studentsData.filter((student: any) => {
+            if (!student || !student._id) return false;
+            
+            // Check if student has either legacy name or userId with firstName/lastName
+            const hasValidName = (
+              (student.name && typeof student.name === 'string' && student.name.trim().length > 0) ||
+              (student.userId && (student.userId.firstName || student.userId.lastName))
+            );
+            
+            return hasValidName;
+          })
+        : [];
+        
+      setStudents(validStudents);
       setCourseGrades(Array.isArray(courseGradesData) ? courseGradesData : []);
       
     } catch (error) {
@@ -229,8 +279,8 @@ const CourseTeacherView: React.FC = () => {
   };
 
   const filteredStudents = students.filter(student => {
-    const studentName = student.name || '';
-    const studentId = student.studentId || '';
+    const studentName = getStudentName(student);
+    const studentId = getStudentId(student);
     
     return studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
            studentId.toLowerCase().includes(searchTerm.toLowerCase());
@@ -536,11 +586,11 @@ const CourseTeacherView: React.FC = () => {
                                 >
                                   <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white text-xs font-medium">
-                                      {student.name.charAt(0)}
+                                      {getStudentName(student).charAt(0).toUpperCase()}
                                     </div>
                                     <div>
-                                      <h4 className="font-medium text-gray-900 text-sm">{student.name}</h4>
-                                      <p className="text-xs text-gray-600">{student.studentId}</p>
+                                      <h4 className="font-medium text-gray-900 text-sm">{getStudentName(student)}</h4>
+                                      <p className="text-xs text-gray-600">{getStudentId(student)}</p>
                                     </div>
                                   </div>
                                   
@@ -669,11 +719,11 @@ const CourseTeacherView: React.FC = () => {
                       >
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-medium">
-                            {student.name.charAt(0)}
+                            {getStudentName(student).charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <h3 className="font-medium text-gray-900">{student.name}</h3>
-                            <p className="text-sm text-gray-600">{student.studentId}</p>
+                            <h3 className="font-medium text-gray-900">{getStudentName(student)}</h3>
+                            <p className="text-sm text-gray-600">{getStudentId(student)}</p>
                           </div>
                         </div>
                         

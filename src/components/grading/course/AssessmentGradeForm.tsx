@@ -58,6 +58,40 @@ const AssessmentGradeForm: React.FC<AssessmentGradeFormProps> = ({
   const [defaultMaxScore, setDefaultMaxScore] = useState<number>(100);
   const [errors, setErrors] = useState<{ [studentId: string]: string }>({});
 
+  // Helper functions to handle new student data structure
+  const getStudentName = (student: any): string => {
+    // Try legacy name field first
+    if (student.name && typeof student.name === 'string' && student.name.trim().length > 0) {
+      return student.name;
+    }
+    
+    // Try userId with firstName and lastName
+    if (student.userId?.firstName || student.userId?.lastName) {
+      const firstName = student.userId.firstName || '';
+      const lastName = student.userId.lastName || '';
+      const fullName = `${firstName} ${lastName}`.trim();
+      if (fullName.length > 0) {
+        return fullName;
+      }
+    }
+    
+    return 'Unknown Student';
+  };
+
+  const getStudentId = (student: any): string => {
+    // Try direct studentId field first
+    if (student.studentId && typeof student.studentId === 'string') {
+      return student.studentId;
+    }
+    
+    // Try userId email as fallback
+    if (student.userId?.email) {
+      return student.userId.email;
+    }
+    
+    return 'N/A';
+  };
+
   // Load existing grades and initialize form
   useEffect(() => {
     loadExistingGrades();
@@ -266,11 +300,11 @@ const AssessmentGradeForm: React.FC<AssessmentGradeFormProps> = ({
                   {/* Student Info */}
                   <div className="flex items-center gap-4 flex-1">
                     <div className="w-10 h-10 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-medium">
-                      {student.name.charAt(0)}
+                      {getStudentName(student).charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <h3 className="font-medium text-gray-900">{student.name}</h3>
-                      <p className="text-sm text-gray-600">{student.studentId}</p>
+                      <h3 className="font-medium text-gray-900">{getStudentName(student)}</h3>
+                      <p className="text-sm text-gray-600">{getStudentId(student)}</p>
                     </div>
                   </div>
 
