@@ -24,6 +24,7 @@ export interface Course {
   schoolId: string;
   createdAt?: string;
   updatedAt?: string;
+  className?: string; // Optional class name for display
 }
 
 // Response message DTO for success/error messages

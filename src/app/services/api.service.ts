@@ -255,3 +255,19 @@ export const fetchCourseById = async (courseId: string, token: string) => {
   return res.data.data; // adjust if your API wraps differently
 };
 
+// Get active assessments by term
+export const getActiveAssessmentsByTerm = async (termId: string, token: string) => {
+  try {
+    const response = await axios.get(
+      `${API_BASE_URL}/assessments/term/${termId}/active`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    return response.data || [];
+  } catch (error) {
+    console.error("Error fetching active assessments:", error);
+    return [];
+  }
+};
+

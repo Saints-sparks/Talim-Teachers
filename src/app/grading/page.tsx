@@ -1,61 +1,80 @@
-"use client";
-import AssessmentComponent from "@/components/grading/assessmentComponent";
-import GradingPanel from "@/components/grading/gradingPanel";
-import Layout from "@/components/Layout";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { ChevronDown, Search } from "lucide-react";
+'use client';
+
+import React, { useState } from 'react';
+import Layout from '@/components/Layout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { 
+  BookOpen, 
+  Users, 
+  GraduationCap, 
+  BarChart3,
+  PenTool,
+  Trophy
+} from 'lucide-react';
+import CourseTeacherView from '@/components/grading/CourseTeacherView-new';
+import ClassTeacherView from '@/components/grading/ClassTeacherView-lean';
+
+type TeacherRole = 'course' | 'class';
 
 const GradingPage: React.FC = () => {
+  const [activeRole, setActiveRole] = useState<TeacherRole>('course');
+
   return (
     <Layout>
-      <div className="p-4 h-full flex flex-col gap-10">
-        <div className="flex justify-between items-center">
-          <div className="flex flex-col gap-2">
-            <h1 className="text-[#2F2F2F] font-medium">Grading System</h1>
-            <p className="text-[#AAAAAA]">
-              Grade and upload student results effortlessly
-            </p>
+      <div className="p-6 space-y-6">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg">
+                <GraduationCap className="h-6 w-6 text-white" />
+              </div>
+              Grading System
+            </h1>
+            <p className="text-gray-600 mt-1">Manage assessments and track student performance</p>
           </div>
-          <div className="flex  h-10 sm:h-12 border border-[#F0F0F0] bg-white items-center p-2 rounded-lg text-[#898989]">
-            <Search strokeWidth="1.5" />
-            <Input
-              type="search"
-              placeholder="Search for students"
-              className="flex-1 border-none shadow-none focus:outline-none focus-visible:ring-0"
-            />
+          
+          {/* Role Selector */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant={activeRole === 'course' ? 'default' : 'outline'}
+              onClick={() => setActiveRole('course')}
+              className={`flex items-center gap-2 ${
+                activeRole === 'course' 
+                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700' 
+                  : 'border-blue-200 text-blue-600 hover:bg-blue-50'
+              }`}
+            >
+              <BookOpen className="h-4 w-4" />
+              Course Teacher
+            </Button>
+            <Button
+              variant={activeRole === 'class' ? 'default' : 'outline'}
+              onClick={() => setActiveRole('class')}
+              className={`flex items-center gap-2 ${
+                activeRole === 'class' 
+                  ? 'bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700' 
+                  : 'border-purple-200 text-purple-600 hover:bg-purple-50'
+              }`}
+            >
+              <Users className="h-4 w-4" />
+              Class Teacher
+            </Button>
           </div>
         </div>
-        <div className="flex flex-col gap-6">
-          <div className="flex items-center gap-1">
-            {" "}
-            <p>Course Code:</p>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="flex text-[#898989] bg-[#FFFFFF] rounded-lg shadow-none border-[#F0F0F0] items-center gap-1"
-                >
-                  Mth103 <ChevronDown size={16} />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="font-manrope" align="end">
-                <DropdownMenuItem>Mth111</DropdownMenuItem>
-                <DropdownMenuItem>Mth112</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-          <AssessmentComponent />
-          <GradingPanel />
+
+        {/* Main Content */}
+        <div className="bg-white rounded-lg shadow-sm border">
+          {activeRole === 'course' ? (
+            <CourseTeacherView />
+          ) : (
+            <ClassTeacherView />
+          )}
         </div>
       </div>
     </Layout>
   );
 };
+
 export default GradingPage;
