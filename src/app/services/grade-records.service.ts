@@ -54,17 +54,38 @@ export class GradeRecordsApiService {
    */
   async getAssessmentGrades(
     assessmentId: string, 
-    token: string
+    token: string,
+    courseId:string
   ): Promise<AssessmentGradeRecordWithDetails[]> {
     try {
       const response = await axios.get(
-        `${API_BASE_URL}/grade-records/assessment/${assessmentId}`,
+        `${API_BASE_URL}/grade-records/assessment/${assessmentId}/course/${courseId}`,
         this.getAuthHeaders(token)
       );
-      return response.data.data;
+      // Handle both wrapped and direct response formats
+      return response.data.data || response.data || [];
     } catch (error: any) {
       console.error('Error fetching assessment grades:', error);
       throw new Error(error.response?.data?.message || 'Failed to fetch assessment grades');
+    }
+  }
+
+  /**
+   * Get all assessment grades for a course
+   */
+  async getAssessmentGradesByCourse(
+    courseId: string, 
+    token: string
+  ): Promise<AssessmentGradeRecord[]> {
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/grade-records/course/${courseId}`,
+        this.getAuthHeaders(token)
+      );
+      return response.data.data || response.data || [];
+    } catch (error: any) {
+      console.error('Error fetching course assessment grades:', error);
+      throw new Error(error.response?.data?.message || 'Failed to fetch course assessment grades');
     }
   }
 

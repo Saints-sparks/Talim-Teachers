@@ -659,6 +659,7 @@ const CourseTeacherView: React.FC = () => {
             courseId={selectedCourse._id}
             classId={selectedCourse.classId}
             schoolId={selectedCourse.schoolId}
+            termId={selectedTerm}
             token={getAccessToken() || ''}
             onSave={() => {
               // Reload course grades after saving
