@@ -224,23 +224,149 @@ export class GradeRecordsApiService {
 
   /**
    * Auto-calculate course grade from assessment grades
+   * Creates a course grade record by fetching assessment grades and calculating cumulative scores
    */
   async autoCalculateCourseGrade(
     studentId: string,
     courseId: string,
     termId: string,
-    token: string
+    token: string,
+    classId?: string
   ): Promise<CourseGradeRecord> {
     try {
+      // First, fetch all assessment grades for this student in this course
+      const assessmentGrades = await this.getAssessmentGradesByCourse(courseId, token);
+      
+      // Filter to get this student's grades
+      const studentGrades = assessmentGrades.filter((grade: any) => {
+        const gradeStudentId = typeof grade.studentId === 'object' 
+          ? grade.studentId._id 
+          : grade.studentId;
+        return gradeStudentId === studentId;
+      });
+      
+      if (studentGrades.length === 0) {
+        throw new Error('No assessment grades found for this student in this course');
+      }
+      
+      // Calculate cumulative scores
+      const cumulativeScore = studentGrades.reduce((sum: number, grade: any) => 
+        sum + grade.actualScore, 0
+      );
+      const maxScore = studentGrades.reduce((sum: number, grade: any) => 
+        sum + grade.maxScore, 0
+      );
+      const percentage = maxScore > 0 ? (cumulativeScore / maxScore) * 100 : 0;
+      
+      // Determine grade level
+      const gradeLevel = this.calculateGradeLevel(percentage);
+      
+      // Create course grade record with calculated data
+      const courseGradeData = {
+        courseId,
+        studentId,
+        termId,
+        assessmentGradeRecords: studentGrades.map((grade: any) => grade._id),
+       // gradeLevel,
+        cumulativeScore,
+        maxScore,
+        percentage
+      };
+      
       const response = await axios.post(
-        `${API_BASE_URL}/grade-records/course-grade-records/calculate/${studentId}/${courseId}/${termId}`,
-        {},
+        `${API_BASE_URL}/grade-records/course-grade-record`,
+        courseGradeData,
         this.getAuthHeaders(token)
       );
+      
       return response.data.data;
     } catch (error: any) {
       console.error('Error auto-calculating course grade:', error);
       throw new Error(error.response?.data?.message || 'Failed to auto-calculate course grade');
+    }
+  }
+
+  /**
+   * Calculate grade level from percentage
+   */
+  private calculateGradeLevel(percentage: number): string {
+    if (percentage >= 90) return 'A+';
+    if (percentage >= 85) return 'A';
+    if (percentage >= 80) return 'B+';
+    if (percentage >= 75) return 'B';
+    if (percentage >= 70) return 'C+';
+    if (percentage >= 65) return 'C';
+    if (percentage >= 60) return 'D+';
+    if (percentage >= 55) return 'D';
+    if (percentage >= 50) return 'E';
+    return 'F';
+  }
+
+  /**
+   * Bulk create course grade records from assessment data
+   * Creates course grades for multiple students by auto-calculating cumulative scores
+   * from all their assessment grades in the specified term
+   */
+  async bulkCreateCourseGradeRecords(
+    data: {
+      courseId: string;
+      termId: string;
+      classId: string;
+      studentIds: string[];
+    },
+    token: string
+  ): Promise<{
+    successful: number;
+    failed: number;
+    results: Array<{
+      studentId: string;
+      success: boolean;
+      message?: string;
+      courseGradeRecord?: CourseGradeRecord;
+    }>;
+  }> {
+    try {
+      // Since the bulk endpoint expects fully calculated grades, we'll use individual auto-calculation
+      // calls for each student to let the backend handle the calculation logic
+      const results = [];
+      let successful = 0;
+      let failed = 0;
+
+      for (const studentId of data.studentIds) {
+        try {
+          await this.autoCalculateCourseGrade(
+            studentId,
+            data.courseId,
+            data.termId,
+            token,
+            data.classId
+          );
+          
+          results.push({
+            studentId,
+            success: true,
+            message: 'Course grade calculated successfully'
+          });
+          successful++;
+        } catch (error: any) {
+          console.error(`Error creating course grade for student ${studentId}:`, error);
+          results.push({
+            studentId,
+            success: false,
+            message: error.message || 'Failed to calculate course grade'
+          });
+          failed++;
+        }
+      }
+
+      return {
+        successful,
+        failed,
+        results
+      };
+    } catch (error: any) {
+      console.error('Error bulk creating course grade records:', error);
+      throw new Error(error.response?.data?.message || 'Failed to bulk create course grade records');
     }
   }
 

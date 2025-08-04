@@ -310,7 +310,8 @@ const CourseTeacherView: React.FC = () => {
         gradingSession.student._id,
         selectedCourse._id,
         selectedTerm,
-        token
+        token,
+        selectedCourse.classId
       );
 
       // Move to next student

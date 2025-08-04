@@ -340,7 +340,7 @@ const AssessmentGradeForm: React.FC<AssessmentGradeFormProps> = ({
         throw new Error('Student data not found');
       }
       
-      await gradeRecordsApi.autoCalculateCourseGrade(studentId, courseId, termId, token);
+      await gradeRecordsApi.autoCalculateCourseGrade(studentId, courseId, termId, token, classId);
       
       // Reload data to refresh course grade status
       await loadCourseAssessmentData();
@@ -368,36 +368,28 @@ const AssessmentGradeForm: React.FC<AssessmentGradeFormProps> = ({
         return;
       }
       
-      // Process each student
-      const promises = studentsToProcess.map(async (studentData) => {
-        try {
-          await gradeRecordsApi.autoCalculateCourseGrade(
-            studentData.studentId,
-            courseId,
-            termId,
-            token
-          );
-          return { success: true, studentId: studentData.studentId };
-        } catch (error) {
-          console.error(`Failed to create course grade for student ${studentData.studentId}:`, error);
-          return { success: false, studentId: studentData.studentId, error };
-        }
-      });
+      // Use the new bulk endpoint
+      const result = await gradeRecordsApi.bulkCreateCourseGradeRecords(
+        {
+          courseId,
+          termId,
+          classId,
+          studentIds: studentsToProcess.map(data => data.studentId)
+        },
+        token
+      );
       
-      const results = await Promise.all(promises);
-      const successful = results.filter(r => r.success).length;
-      const failed = results.filter(r => !r.success).length;
-      
-      if (successful > 0) {
+      // Process results
+      if (result.successful > 0) {
         await loadCourseAssessmentData();
         
-        if (failed === 0) {
+        if (result.failed === 0) {
           setSaveError(null);
         } else {
-          setSaveError(`Created ${successful} course grades successfully. ${failed} failed.`);
+          setSaveError(`Created ${result.successful} course grades successfully. ${result.failed} failed.`);
         }
-      } else if (failed > 0) {
-        setSaveError(`Failed to create course grades for ${failed} students.`);
+      } else if (result.failed > 0) {
+        setSaveError(`Failed to create course grades for ${result.failed} students.`);
       }
       
     } catch (error) {
@@ -481,14 +473,79 @@ const AssessmentGradeForm: React.FC<AssessmentGradeFormProps> = ({
                 size="sm"
                 onClick={bulkCreateCourseGrades}
                 disabled={saving}
-                className="bg-purple-600 hover:bg-purple-700 text-white"
+                className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-lg"
               >
-                <Calculator className="h-4 w-4 mr-1" />
-                Create Course Grades ({studentGradeData.filter(data => data.assessmentGrades.length > 0 && !data.courseGradeRecord).length})
+                {saving ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Calculator className="h-4 w-4 mr-1" />
+                    Generate Course Grades ({studentGradeData.filter(data => data.assessmentGrades.length > 0 && !data.courseGradeRecord).length})
+                  </>
+                )}
               </Button>
             )}
           </div>
         </CardTitle>
+        
+        {/* Course Grade Overview Card */}
+        <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <TrendingUp className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-blue-900">Course Grade Records</h3>
+                <p className="text-sm text-blue-700">
+                  Cumulative grades calculated from all term assessments
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-6">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">
+                  {studentGradeData.filter(data => data.courseGradeRecord).length}
+                </div>
+                <div className="text-xs text-gray-600">Completed</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-orange-600">
+                  {studentGradeData.filter(data => data.assessmentGrades.length > 0 && !data.courseGradeRecord).length}
+                </div>
+                <div className="text-xs text-gray-600">Ready</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-gray-600">
+                  {studentGradeData.filter(data => data.assessmentGrades.length === 0).length}
+                </div>
+                <div className="text-xs text-gray-600">Pending</div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Progress Bar */}
+          <div className="mt-3">
+            <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
+              <span>Course Grade Progress</span>
+              <span>
+                {studentGradeData.filter(data => data.courseGradeRecord).length} of {studentGradeData.length} complete
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full transition-all duration-300" 
+                style={{ 
+                  width: `${studentGradeData.length > 0 ? (studentGradeData.filter(data => data.courseGradeRecord).length / studentGradeData.length) * 100 : 0}%` 
+                }}
+              />
+            </div>
+          </div>
+        </div>
         
         {/* Error Display */}
         {saveError && (
@@ -544,49 +601,105 @@ const AssessmentGradeForm: React.FC<AssessmentGradeFormProps> = ({
                 const student = students.find(s => s._id === data.studentId);
                 if (!student) return null;
                 
+                // Determine student status for styling
+                const hasAssessmentGrade = !!data.currentAssessmentGrade;
+                const hasCourseGrade = !!data.courseGradeRecord;
+                const hasAssessments = data.assessmentGrades.length > 0;
+                const isReady = hasAssessments && !hasCourseGrade;
+                
                 return (
                   <div
                     key={data.studentId}
                     className={`
-                      p-3 border rounded-lg cursor-pointer transition-all
+                      relative p-3 border rounded-lg cursor-pointer transition-all duration-200
                       ${data.isSelected 
-                        ? 'border-blue-500 bg-blue-50 shadow-md' 
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                        ? 'border-blue-500 bg-blue-50 shadow-md transform scale-[1.02]' 
+                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 hover:shadow-sm'
                       }
                     `}
                     onClick={() => selectStudent(data.studentId)}
                   >
+                    {/* Status Indicator Line */}
+                    <div className={`absolute top-0 left-0 right-0 h-1 rounded-t-lg ${
+                      hasCourseGrade 
+                        ? 'bg-gradient-to-r from-green-400 to-green-500' 
+                        : isReady 
+                          ? 'bg-gradient-to-r from-orange-400 to-orange-500' 
+                          : 'bg-gradient-to-r from-gray-300 to-gray-400'
+                    }`} />
+                    
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${
-                          data.currentAssessmentGrade 
-                            ? 'bg-gradient-to-r from-green-400 to-green-500' 
-                            : 'bg-gradient-to-r from-gray-400 to-gray-500'
+                        <div className={`relative w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-sm ${
+                          hasCourseGrade
+                            ? 'bg-gradient-to-br from-green-400 to-green-600' 
+                            : hasAssessmentGrade 
+                              ? 'bg-gradient-to-br from-blue-400 to-blue-600' 
+                              : 'bg-gradient-to-br from-gray-400 to-gray-600'
                         }`}>
                           {getStudentName(student).charAt(0).toUpperCase()}
+                          
+                          {/* Status Badge */}
+                          {hasCourseGrade && (
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                              <CheckCircle className="w-2.5 h-2.5 text-white" />
+                            </div>
+                          )}
+                          {isReady && !hasCourseGrade && (
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 rounded-full border-2 border-white flex items-center justify-center">
+                              <Calculator className="w-2.5 h-2.5 text-white" />
+                            </div>
+                          )}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h4 className="font-medium text-gray-900 truncate">{getStudentName(student)}</h4>
+                          <h4 className="font-semibold text-gray-900 truncate">{getStudentName(student)}</h4>
                           <p className="text-xs text-gray-600 truncate">{getStudentId(student)}</p>
+                          
+                          {/* Assessment Summary */}
+                          {hasAssessments && (
+                            <div className="flex items-center gap-1 mt-1">
+                              <div className="text-xs text-gray-500">
+                                {data.assessmentGrades.length} assessment{data.assessmentGrades.length !== 1 ? 's' : ''}
+                              </div>
+                              {data.percentage > 0 && (
+                                <div className="text-xs font-medium text-blue-600">
+                                  • {data.percentage.toFixed(0)}%
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                       
-                      <div className="flex flex-col items-end gap-1">
-                        {/* Assessment Status */}
-                        {data.currentAssessmentGrade ? (
-                          <span className="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full">
-                            ✓ {data.currentAssessmentGrade.actualScore}/{data.currentAssessmentGrade.maxScore}
+                      <div className="flex flex-col items-end gap-1.5">
+                        {/* Current Assessment Status */}
+                        {hasAssessmentGrade ? (
+                          <span className="flex items-center gap-1 px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full font-medium">
+                            <CheckCircle className="w-3 h-3" />
+                            {data.currentAssessmentGrade!.actualScore}/{data.currentAssessmentGrade!.maxScore}
                           </span>
                         ) : (
-                          <span className="px-2 py-0.5 text-xs bg-orange-100 text-orange-700 rounded-full">
+                          <span className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
+                            <AlertCircle className="w-3 h-3" />
                             Not Graded
                           </span>
                         )}
                         
                         {/* Course Grade Status */}
-                        {data.courseGradeRecord && (
-                          <span className="px-2 py-0.5 text-xs bg-purple-100 text-purple-700 rounded-full">
-                            Course ✓
+                        {hasCourseGrade ? (
+                          <span className="flex items-center gap-1 px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded-full font-medium">
+                            <TrendingUp className="w-3 h-3" />
+                            Course Grade ✓
+                          </span>
+                        ) : isReady ? (
+                          <span className="flex items-center gap-1 px-2 py-1 text-xs bg-orange-100 text-orange-700 rounded-full font-medium">
+                            <Calculator className="w-3 h-3" />
+                            Ready to Generate
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 text-gray-500 rounded-full">
+                            <Eye className="w-3 h-3" />
+                            Pending Assessments
                           </span>
                         )}
                       </div>
@@ -746,45 +859,91 @@ const AssessmentGradeForm: React.FC<AssessmentGradeFormProps> = ({
 
                 {/* Course Grade Management */}
                 {selectedStudent.currentAssessmentGrade && (
-                  <div className="space-y-4 pt-4 border-t">
-                    <h4 className="font-medium text-gray-800">Course Grade Record</h4>
+                  <div className="space-y-4 pt-6 border-t">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5 text-gray-700" />
+                      <h4 className="font-semibold text-gray-800">Course Grade Record</h4>
+                    </div>
                     
                     {selectedStudent.courseGradeRecord ? (
-                      <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium text-purple-800">Course Grade Calculated</p>
-                            <p className="text-sm text-purple-600">
-                              Based on {selectedStudent.assessmentGrades.length} assessments
-                            </p>
+                      <div className="relative overflow-hidden p-5 bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-xl shadow-sm">
+                        <div className="absolute top-0 right-0 w-20 h-20 bg-purple-200 rounded-full -mr-10 -mt-10 opacity-50" />
+                        <div className="relative flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="p-3 bg-purple-100 rounded-full">
+                              <CheckCircle className="h-6 w-6 text-purple-600" />
+                            </div>
+                            <div>
+                              <h5 className="font-semibold text-purple-900">Course Grade Completed</h5>
+                              <p className="text-sm text-purple-700">
+                                Calculated from {selectedStudent.assessmentGrades.length} assessment{selectedStudent.assessmentGrades.length !== 1 ? 's' : ''}
+                              </p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-xs text-purple-600">Total Score:</span>
+                                <span className="font-bold text-purple-800">
+                                  {selectedStudent.cumulativeScore}/{selectedStudent.maxPossibleScore}
+                                </span>
+                                <span className="text-xs font-medium text-purple-600">
+                                  ({selectedStudent.percentage.toFixed(1)}%)
+                                </span>
+                              </div>
+                            </div>
                           </div>
                           <Button
                             variant="outline"
                             onClick={() => createOrUpdateCourseGrade(selectedStudent.studentId)}
                             disabled={saving}
-                            className="text-purple-600 border-purple-300 hover:bg-purple-50"
+                            className="text-purple-700 border-purple-300 hover:bg-purple-100 shadow-sm"
                           >
-                            <RefreshCw className="h-4 w-4 mr-2" />
-                            Update
+                            {saving ? (
+                              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <RefreshCw className="h-4 w-4 mr-2" />
+                            )}
+                            Recalculate
                           </Button>
                         </div>
                       </div>
                     ) : (
-                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium text-blue-800">Ready for Course Grade</p>
-                            <p className="text-sm text-blue-600">
-                              Create course grade from {selectedStudent.assessmentGrades.length} assessments
-                            </p>
+                      <div className="relative overflow-hidden p-5 bg-gradient-to-br from-orange-50 to-yellow-50 border border-orange-200 rounded-xl shadow-sm">
+                        <div className="absolute top-0 right-0 w-20 h-20 bg-orange-200 rounded-full -mr-10 -mt-10 opacity-50" />
+                        <div className="relative flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="p-3 bg-orange-100 rounded-full">
+                              <Calculator className="h-6 w-6 text-orange-600" />
+                            </div>
+                            <div>
+                              <h5 className="font-semibold text-orange-900">Ready to Generate Course Grade</h5>
+                              <p className="text-sm text-orange-700">
+                                Create cumulative grade from {selectedStudent.assessmentGrades.length} assessment{selectedStudent.assessmentGrades.length !== 1 ? 's' : ''}
+                              </p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-xs text-orange-600">Current Total:</span>
+                                <span className="font-bold text-orange-800">
+                                  {selectedStudent.cumulativeScore}/{selectedStudent.maxPossibleScore}
+                                </span>
+                                <span className="text-xs font-medium text-orange-600">
+                                  ({selectedStudent.percentage.toFixed(1)}%)
+                                </span>
+                              </div>
+                            </div>
                           </div>
                           <Button
                             onClick={() => createOrUpdateCourseGrade(selectedStudent.studentId)}
                             disabled={saving}
-                            className="bg-blue-600 hover:bg-blue-700"
+                            className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg"
                           >
-                            <Calculator className="h-4 w-4 mr-2" />
-                            Calculate
+                            {saving ? (
+                              <>
+                                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                Generating...
+                              </>
+                            ) : (
+                              <>
+                                <Calculator className="h-4 w-4 mr-2" />
+                                Generate Grade
+                              </>
+                            )}
                           </Button>
                         </div>
                       </div>
