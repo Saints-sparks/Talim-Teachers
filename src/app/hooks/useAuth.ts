@@ -19,12 +19,24 @@ export const useAuth = () => {
       const token = getAccessToken();
       const userData = getUser();
       
+      console.log('🔍 Auth checkAuth:', { 
+        hasToken: !!token, 
+        hasUserData: !!userData, 
+        userData: userData 
+      });
+      
       if (token && userData) {
         setIsAuthenticated(true);
         setUser(userData);
+        console.log('🔍 Auth state set:', { 
+          isAuthenticated: true, 
+          userId: userData._id,
+          userObject: userData 
+        });
       } else {
         setIsAuthenticated(false);
         setUser(null);
+        console.log('🔍 Auth state cleared - missing token or userData');
       }
     };
 
@@ -60,12 +72,20 @@ export const useAuth = () => {
 
       const userData = introspection.data.user;
 
+      console.log('🔍 Login - userData from introspection:', userData);
+
       // Store user data in localStorage
       localStorage.setItem("user", JSON.stringify(userData));
       
       // Update state
       setIsAuthenticated(true);
       setUser(userData);
+
+      console.log('🔍 Login - Auth state updated:', { 
+        isAuthenticated: true, 
+        userId: userData._id,
+        userObject: userData 
+      });
 
       toast.success("Login successful!");
 

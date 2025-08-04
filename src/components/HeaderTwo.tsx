@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "./ui/button";
 import { format } from "date-fns";
+import { WebSocketStatus } from "./WebSocketStatus";
 
 export function Header({ onMenuClick }: { onMenuClick: () => void }) {
   return (
@@ -25,6 +26,10 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
                 {format(new Date(), "dd MMM, yyyy")}
               </p>
               <CalendarRange size={24} />
+            </div>
+            {/* WebSocket Status - Always visible but compact on mobile */}
+            <div className="flex items-center">
+              <WebSocketStatus />
             </div>
             <Link href="/notifications">
               <Button className="bg-white shadow-none border border-[#F0F0F0] hover:bg-gray-200 h-full rounded-lg p-3">
