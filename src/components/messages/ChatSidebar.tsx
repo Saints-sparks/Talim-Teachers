@@ -1,7 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage } from "@radix-ui/react-avatar";
-import { Search, ChevronDown, CheckCheck } from "lucide-react";
+import { Search, ChevronDown, CheckCheck, Loader2, Users, MessageCircle } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,107 +9,104 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Image from "next/image";
-
-const conversations = [
-  {
-    name: "Mrs. Yetunde Adebayo",
-    lastMessage: "typing...",
-    time: "4:00pm",
-    avatar: "/image/teachers/english.png",
-    unread: true,
-    online: true,
-  },
-  {
-    name: "JSS 1",
-    lastMessage: "Good evening everyone.",
-    type: "group",
-    time: "6:00pm",
-    avatar: "/image/teachers/mathematics.png",
-    unread: false,
-    lastSender: "me",
-  },
-  {
-    name: "Mrs Chisom Okechukwu",
-    lastMessage: "Brilliant",
-    time: "6:00pm",
-    avatar: "/image/teachers/civic.png",
-    unread: false,
-    lastSender: "me",
-    online: "false",
-  },
-  {
-    name: "Fatima Abubakar",
-    lastMessage: "typing...",
-    time: "6:00pm",
-    avatar: "/image/teachers/mathematics.png",
-    unread: false,
-    lastSender: "other",
-    online: true,
-  },
-  {
-    name: "Mrs. Yetunde Adebayo",
-    lastMessage: "I'm happy you understand",
-    time: "4:00pm",
-    avatar: "/image/teachers/english.png",
-    unread: true,
-    online: "false",
-  },
-  {
-    name: "Mrs Chisom Okechukwu",
-    lastMessage: "I'm waiting for the question",
-    time: "6:00pm",
-    avatar: "/image/teachers/civic.png",
-    unread: false,
-    lastSender: "me",
-    online: "false",
-  },
-  {
-    name: "Maryan yusuf",
-    lastMessage: "typing...",
-    time: "5:00pm",
-    avatar: "/image/teachers/english.png",
-    unread: true,
-    online: "true",
-  },
-  {
-    name: "Mrs. Yetunde Adebayo",
-    lastMessage: "typing...",
-    time: "5:00pm",
-    avatar: "/image/teachers/civic.png",
-    unread: true,
-    online: "true",
-  },
-  {
-    name: "Mrs. Yetunde Adebayo",
-    lastMessage: "typing...",
-    time: "5:00pm",
-    avatar: "/image/teachers/english.png",
-    unread: true,
-    online: "true",
-  },
-  {
-    name: "Mrs. Yetunde Adebayo",
-    lastMessage: "typing...",
-    time: "5:00pm",
-    avatar: "/image/teachers/english.png",
-    unread: true,
-    online: "true",
-  },
-  {
-    name: "Mrs. Yetunde Adebayo",
-    lastMessage: "typing...",
-    time: "5:00pm",
-    avatar: "/image/teachers/english.png",
-    unread: true,
-    online: "true",
-  },
-];
+import { useState, useEffect } from "react";
+import CreateGroupModal from "./CreateGroupModal";
+import { useChat } from "@/app/hooks/useChat";
+import { ChatRoomType } from "@/types/chat";
+import { useAppContext } from "@/app/context/AppContext";
 
 interface ChatSidebarProps {
-  onSelectChat: (chat: { type: "private" | "group" }) => void;
+  onSelectChat: (chat: { type: "private" | "group"; room?: any }) => void;
 }
 
 export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
+  const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState<"all" | "teachers" | "students">("all");
+  
+  const { chatRooms, isLoading, error, refreshChatRooms, getFilteredChatRooms } = useChat();
+  const { classes, courses } = useAppContext();
+
+  // Function to get display name for chat room
+  const getRoomDisplayName = (room: any) => {
+    if (room.name) return room.name;
+    
+    if (room.type === ChatRoomType.CLASS_GROUP) {
+      const classInfo = classes?.find(c => c._id === room.classId || c.id === room.classId);
+      return classInfo?.name || `Class Group`;
+    }
+    
+    if (room.type === ChatRoomType.COURSE_GROUP) {
+      const courseInfo = courses?.find(c => c._id === room.courseId || c.id === room.courseId);
+      return courseInfo?.title || courseInfo?.name || `Course Group`;
+    }
+    
+    if (room.type === ChatRoomType.ONE_TO_ONE) {
+      // For one-to-one chats, you might want to show the other participant's name
+      return "Direct Message";
+    }
+    
+    return "Chat Room";
+  };
+
+  // Function to get room avatar
+  const getRoomAvatar = (room: any) => {
+    if (room.type === ChatRoomType.ONE_TO_ONE) {
+      const otherParticipant = room.participants?.find((p: any) => p.id !== room.currentUserId);
+      if (otherParticipant?.avatar) {
+        return otherParticipant.avatar;
+      }
+      const initials = otherParticipant?.name
+        ? otherParticipant.name.split(" ").map((n: string) => n[0]).join("")
+        : "DM";
+      const bgColor = `#${Math.floor(Math.random() * 16777215).toString(16)}`;
+      return { initials, bgColor };
+    }
+
+    if (room.type === ChatRoomType.CLASS_GROUP || room.type === ChatRoomType.COURSE_GROUP) {
+      if (room.avatar) {
+        return room.avatar;
+      }
+      const initials = room.name
+        ? room.name.split(" ").map((n: string) => n[0]).join("")
+        : "GC";
+      const bgColor = `#${Math.floor(Math.random() * 16777215).toString(16)}`;
+      return { initials, bgColor };
+    }
+
+    return "/icons/chat.svg";
+  };
+
+  // Filter chat rooms based on search and filter type
+  const getFilteredRooms = () => {
+    let filtered = chatRooms;
+
+    // Apply search filter
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(room => 
+        getRoomDisplayName(room).toLowerCase().includes(term)
+      );
+    }
+
+    // Apply type filter
+    if (filterType === "teachers") {
+      filtered = filtered.filter(room => room.type === ChatRoomType.ONE_TO_ONE);
+    } else if (filterType === "students") {
+      filtered = filtered.filter(room => 
+        room.type === ChatRoomType.CLASS_GROUP || room.type === ChatRoomType.COURSE_GROUP
+      );
+    }
+
+    return filtered;
+  };
+
+  const filteredRooms = getFilteredRooms();
+
+  const handleSelectChat = (room: any) => {
+    onSelectChat({ type: room.type === ChatRoomType.ONE_TO_ONE ? "private" : "group", room });
+  };
+
   return (
     <div className="lg:w-2/5 xl:w-1/3 border-r p-4 bg-white rounded-tl-lg flex flex-col">
       <div className="flex items-center justify-between mb-4">
@@ -139,7 +136,10 @@ export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
         </DropdownMenu>
       </div>
       <div className="flex-1 overflow-y-auto scrollbar-hide">
-        <div className="flex gap-4 p-3 px-5 hover:bg-gray-200 rounded cursor-pointer">
+        <div 
+          className="flex gap-4 p-3 px-5 hover:bg-gray-200 rounded cursor-pointer"
+          onClick={() => setIsCreateGroupModalOpen(true)}
+        >
           <Image
             src="/icons/student.svg"
             alt="Students"
@@ -151,42 +151,55 @@ export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
             <p className="text-[#7B7B7B] text-sm">Add students in one place</p>
           </div>
         </div>
-        {conversations.map((conv, index) => (
+        {filteredRooms.map((room) => (
           <div
-            key={index}
+            key={room._id || room.id}
             className="flex items-start gap-3 p-3 hover:bg-gray-200 rounded cursor-pointer"
-            onClick={() =>
-              onSelectChat({ type: conv.type as "private" | "group" })
-            }
+            onClick={() => handleSelectChat(room)}
           >
             <div className="relative w-10 h-10">
-              <Avatar className="w-10 h-10 rounded-full bg-gray-300">
-                <AvatarImage src={conv.avatar} />
-              </Avatar>
-              {conv.online === true && (
+              {typeof getRoomAvatar(room) === "string" ? (
+                <Avatar className="w-10 h-10 rounded-full bg-gray-300">
+                  <AvatarImage src={getRoomAvatar(room)} />
+                </Avatar>
+              ) : (
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
+                  style={{ backgroundColor: getRoomAvatar(room).bgColor }}
+                >
+                  {getRoomAvatar(room).initials}
+                </div>
+              )}
+              {room.type === ChatRoomType.ONE_TO_ONE && (
                 <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></span>
               )}
             </div>
             <div className="flex-1">
-              <p className="font-medium text-[#030E18] ">{conv.name}</p>
+              <p className="font-medium text-[#030E18] ">{getRoomDisplayName(room)}</p>
               <div className="flex items-center gap-1 max-w-[155px] truncate">
-                {conv.lastSender === "me" && (
-                  <CheckCheck className="w-4 h-4 text-[#7B7B7B]" />
-                )}
                 <p className="text-sm text-[#7B7B7B] truncate">
-                  {conv.lastMessage}
+                  {(typeof room.lastMessage === 'string' ? room.lastMessage : (room.lastMessage?.content || '')) || "No messages yet"}
                 </p>
               </div>
             </div>
             <div className="flex flex-col justify-between gap-2 items-end">
-              <span className="text-xs text-[#646464]">{conv.time}</span>
-              {conv.unread && (
-                <span className="w-3 h-[12px] bg-[#003366] rounded-full" />
+              <span className="text-xs text-[#646464]">
+                {room.lastMessage ? new Date(room.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+              </span>
+              {room.unreadCount && room.unreadCount > 0 && (
+                <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-medium text-white bg-blue-600 rounded-full">
+                  {room.unreadCount}
+                </span>
               )}
             </div>
           </div>
         ))}
       </div>
+
+      <CreateGroupModal
+        open={isCreateGroupModalOpen}
+        onOpenChange={setIsCreateGroupModalOpen}
+      />
     </div>
   );
 }

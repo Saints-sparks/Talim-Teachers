@@ -9,6 +9,7 @@ type AppContextType = {
   classes: any[];
   refreshClasses: () => Promise<void>;
   isLoading: boolean;
+  courses: any[];
 };
 
 const AppContext = createContext<AppContextType>({
@@ -17,6 +18,8 @@ const AppContext = createContext<AppContextType>({
   classes: [],
   refreshClasses: async () => {},
   isLoading: false,
+  courses: [],
+  
 });
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -28,6 +31,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const [teacherData, setTeacherData] = useState<any>(null);
   const [classes, setClasses] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [courses, setCourses] = useState<any[]>([]);
 
   useEffect(() => {
     const storedUser = getUser();
@@ -53,6 +57,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       const teacherClasses = teacherDetails?.classTeacherClasses || teacherDetails?.assignedClasses || [];
       console.log("Extracted teacher classes:", teacherClasses);
       setClasses(teacherClasses);
+
+      // Extract courses from teacher data - use assignedCourses first, then fallback to classTeacherCourses
+      const teacherCourses = teacherDetails?.assignedCourses || teacherDetails?.classTeacherCourses || [];
+      console.log("Extracted teacher courses:", teacherCourses);
+      console.log("Raw teacher details for courses:", teacherDetails);
+      setCourses(teacherCourses);
     } catch (error) {
       console.error("Error fetching teacher data:", error);
     } finally {
@@ -73,7 +83,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         teacherData, 
         classes, 
         refreshClasses: fetchTeacherAndClasses,
-        isLoading
+        isLoading,
+        courses
       }}
     >
       {children}

@@ -3,12 +3,11 @@ import { useAuth } from "@/app/hooks/useAuth";
 import { useWebSocketContext } from "@/app/contexts/WebSocketContext";
 import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
-import GroupMessageBubble from "./GroupMessageBubble";
+import MessageBubble from "./PrivateMessageBubble";
 import ReplyPreview from "./ReplyPreview";
 import { Loader2 } from "lucide-react";
 import { getChatMessages } from "@/app/services/chat.service";
 import { ChatMessage as WebSocketChatMessage } from "@/app/hooks/useWebSocket";
-import { useAppContext } from "@/app/context/AppContext";
 
 // Define the message structure for our UI
 interface Message {
@@ -27,11 +26,9 @@ interface Message {
   color?: string;
   roomId?: string;
   replyTo?: string;
-  videoThumbnail?: string;
-  duration?: string;
 }
 
-interface GroupChatProps {
+interface PrivateChatProps {
   replyingMessage: { sender: string; text: string } | null;
   setReplyingMessage: (msg: any) => void;
   openSubMenu: { index: number; type: string } | null;
@@ -39,13 +36,13 @@ interface GroupChatProps {
   room?: any; // The selected chat room
 }
 
-export default function GroupChat({
+export default function PrivateChat({
   replyingMessage,
   setReplyingMessage,
   openSubMenu,
   toggleSubMenu,
   room,
-}: GroupChatProps) {
+}: PrivateChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,43 +59,10 @@ export default function GroupChat({
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   
   const { getAccessToken, user } = useAuth();
-  const { classes, courses } = useAppContext();
   const webSocket = useWebSocketContext();
   
   // Cleanup function reference
   const cleanupRef = useRef<(() => void) | null>(null);
-
-  // Helper to get color based on sender
-  const getColorForUser = (senderId: string): string => {
-    // Create a consistent color based on user ID
-    const colorOptions = [
-      "text-[#F39C12]",
-      "text-[#3498DB]",
-      "text-[#9B59B6]",
-      "text-[#2ECC71]",
-      "text-[#1ABC9C]",
-      "text-[#E74C3C]",
-      "text-[#34495E]"
-    ];
-    
-    // Use a hash function to get a consistent index
-    const hash = senderId.split('').reduce((acc, char) => {
-      return acc + char.charCodeAt(0);
-    }, 0);
-    
-    return colorOptions[hash % colorOptions.length];
-  };
-
-  // Helper to get user role
-  const getUserRole = (senderId: string): "teacher" | "student" | "other" => {
-    // Here you would check if the user is a teacher based on your data model
-    // For this example, let's assume they're a teacher if they have a specific role
-    if (senderId === user?.userId) return "teacher";
-    
-    // Check if they're in a teacher list or have teacher role
-    // This is placeholder logic - adjust based on your data structure
-    return "student";
-  };
   
   // Fetch initial messages and join the chat room when a room is selected
   useEffect(() => {
@@ -107,47 +71,29 @@ export default function GroupChat({
     const roomId = room._id || room.id;
     let isMounted = true;
     
-    setIsLoading(true);
-    setError(null);
-    
-    // Join the chat room via WebSocket
-    const joinChatRoom = () => {
-      if (!webSocket.isConnected) {
-        console.log('⚠️ WebSocket not connected. Will join room when connected.');
-        return { messageListener: null, roomJoinedListener: null };
-      }
+    const fetchMessages = async () => {
+      setIsLoading(true);
+      setError(null);
       
-      console.log(`🚪 Joining chat room: ${roomId}`);
-      
-      // Set up room history listener to receive initial messages
-      const roomHistoryListener = (data: any) => {
-        console.log('📥 Room history received:', data);
+      try {
+        const token = getAccessToken();
+        if (!token) throw new Error("Authentication required");
         
-        if (!isMounted || data.roomId !== roomId) return;
+        // Fetch messages using REST API
+        const data = await getChatMessages(roomId, token);
+        console.log('📥 Fetched messages:', data);
         
-        if (data.messages && Array.isArray(data.messages)) {
-          const formattedMessages = data.messages.map((msg: any) => {
-            // Handle different message structures
-            const sender = msg.senderId && typeof msg.senderId === 'object' 
-              ? `${msg.senderId.firstName || ''} ${msg.senderId.lastName || ''}`.trim() 
-              : msg.senderName || 'Unknown';
-              
-            const senderId = msg.senderId && typeof msg.senderId === 'object'
-              ? msg.senderId._id
-              : msg.senderId;
-              
-            return {
-              _id: msg._id || msg.id,
-              sender: sender,
-              senderId: senderId,
-              text: msg.text || msg.content,
-              time: new Date(msg.createdAt || msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              type: msg.type || 'text',
-              senderType: senderId === user?.userId ? "self" : getUserRole(senderId),
-              color: getColorForUser(senderId),
-              avatar: '/image/teachers/mathematics.png', // Default avatar
-            };
-          });
+        if (isMounted && data && Array.isArray(data.messages)) {
+          const formattedMessages = data.messages.map((msg: any) => ({
+            _id: msg._id || msg.id,
+            sender: msg.senderName || 'Unknown',
+            senderId: msg.senderId,
+            text: msg.content,
+            time: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            type: msg.type || 'text',
+            senderType: msg.senderId === user?.userId ? 'me' : 'other',
+            color: msg.senderId === user?.userId ? 'green' : 'blue',
+          }));
           
           setMessages(formattedMessages);
           
@@ -159,31 +105,39 @@ export default function GroupChat({
           // Check if there are more messages to load
           setHasMore(data.hasMore || false);
         }
-        
-        setIsLoading(false);
-      };
+      } catch (err: any) {
+        console.error('Error fetching messages:', err);
+        if (isMounted) {
+          setError(`Failed to load messages: ${err.message}`);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+    
+    // Join the chat room via WebSocket
+    const joinChatRoom = () => {
+      if (!webSocket.isConnected) {
+        console.log('⚠️ WebSocket not connected. Will join room when connected.');
+        return null;
+      }
       
-      // Register room history listener
-      webSocket.socket?.on('chat-room-history', roomHistoryListener);
+      console.log(`🚪 Joining chat room: ${roomId}`);
       
       // Join chat room using the WebSocketContextType method
       webSocket.joinChatRoom(roomId);
       
       // Set up chat message listener
-      const messageListener = webSocket.onChatMessage(handleNewMessage);
-      
-      return { 
-        messageListener, 
-        roomHistoryListener: () => {
-          webSocket.socket?.off('chat-room-history', roomHistoryListener);
-        }
-      };
+      return webSocket.onChatMessage(handleNewMessage);
     };
     
-    const listeners = joinChatRoom();
+    fetchMessages();
+    const unsubscribe = joinChatRoom();
     
-    if (listeners.messageListener) {
-      cleanupRef.current = listeners.messageListener;
+    if (unsubscribe) {
+      cleanupRef.current = unsubscribe;
     }
     
     // Clean up event listeners when component unmounts or room changes
@@ -196,11 +150,6 @@ export default function GroupChat({
         if (cleanupRef.current) {
           cleanupRef.current();
           cleanupRef.current = null;
-        }
-        
-        // Clean up room history listener
-        if (listeners.roomHistoryListener) {
-          listeners.roomHistoryListener();
         }
       }
     };
@@ -234,11 +183,6 @@ export default function GroupChat({
   const handleNewMessage = (newMessage: WebSocketChatMessage) => {
     console.log('📨 New message received:', newMessage);
     
-    // Only process messages for the current room
-    if (newMessage.roomId !== (room?._id || room?.id)) {
-      return;
-    }
-    
     // Format the incoming message
     const formattedMessage: Message = {
       _id: newMessage._id,
@@ -247,9 +191,8 @@ export default function GroupChat({
       text: newMessage.content,
       time: new Date(newMessage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       type: newMessage.type || 'text',
-      senderType: newMessage.senderId === user?.userId ? "self" : getUserRole(newMessage.senderId),
-      color: getColorForUser(newMessage.senderId),
-      avatar: '/image/teachers/mathematics.png', // Default avatar, should be replaced with actual user avatar
+      senderType: newMessage.senderId === user?.userId ? 'me' : 'other',
+      color: newMessage.senderId === user?.userId ? 'green' : 'blue',
     };
     
     setMessages(prevMessages => [...prevMessages, formattedMessage]);
@@ -267,7 +210,7 @@ export default function GroupChat({
       const messagePayload = {
         content: messageInput.trim(),
         roomId,
-        senderName: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown User' : 'Unknown User',
+        senderName: user?.fullName || user?.email || 'Unknown User',
         type: 'text' as const
       };
       
@@ -286,82 +229,71 @@ export default function GroupChat({
     }
   };
   
-  // Load older messages with pagination using WebSockets
+  // Load older messages with pagination
   const loadMoreMessages = async () => {
     if (!room || !oldestMessageId || !hasMore || isLoadingMore) return;
     
+    // We'll implement this using the REST API for now since the WebSocket method 
+    // would need more complex state management for callbacks
     setIsLoadingMore(true);
     
     try {
+      const token = getAccessToken();
+      if (!token) throw new Error("Authentication required");
+      
       const roomId = room._id || room.id;
       
       // Store scroll position
       const scrollContainer = messagesContainerRef.current;
       const scrollHeight = scrollContainer?.scrollHeight;
       
-      // Create a unique listener for this fetch operation
-      const fetchMessagesListener = (data: any) => {
-        console.log('📥 Fetched older messages:', data);
+      // API call with cursor parameter (implementation may vary)
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/chat/rooms/${roomId}/messages?cursor=${oldestMessageId}&limit=20&direction=before`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      
+      const data = await response.json();
+      
+      if (data && Array.isArray(data.messages) && data.messages.length > 0) {
+        const formattedMessages = data.messages.map((msg: any) => ({
+          _id: msg._id || msg.id,
+          sender: msg.senderName || 'Unknown',
+          senderId: msg.senderId,
+          text: msg.content,
+          time: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          type: msg.type || 'text',
+          senderType: msg.senderId === user?.userId ? 'me' : 'other',
+          color: msg.senderId === user?.userId ? 'green' : 'blue',
+        }));
         
-        if (data && Array.isArray(data.messages) && data.messages.length > 0) {
-          const formattedMessages = data.messages.map((msg: any) => ({
-            _id: msg._id || msg.id,
-            sender: msg.senderName || 'Unknown',
-            senderId: msg.senderId,
-            text: msg.content,
-            time: new Date(msg.createdAt || msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            type: msg.type || 'text',
-            senderType: msg.senderId === user?.userId ? "self" : getUserRole(msg.senderId),
-            color: getColorForUser(msg.senderId),
-            avatar: '/image/teachers/mathematics.png', // Default avatar
-          }));
-          
-          // Update oldest message ID for next pagination
-          if (formattedMessages.length > 0) {
-            setOldestMessageId(formattedMessages[0]._id);
-          }
-          
-          // Prepend older messages
-          setMessages(prevMessages => [...formattedMessages, ...prevMessages]);
-          
-          // Check if there are more messages to load
-          setHasMore(data.hasMore || false);
-          
-          // Restore scroll position
-          if (scrollContainer && scrollHeight) {
-            setTimeout(() => {
-              scrollContainer.scrollTop = scrollContainer.scrollHeight - scrollHeight;
-            }, 0);
-          }
-        } else {
-          setHasMore(false);
+        // Update oldest message ID for next pagination
+        if (formattedMessages.length > 0) {
+          setOldestMessageId(formattedMessages[0]._id);
         }
         
-        setIsLoadingMore(false);
+        // Prepend older messages
+        setMessages(prevMessages => [...formattedMessages, ...prevMessages]);
         
-        // Remove the listener after we receive the response
-        webSocket.socket?.off('messages-fetched', fetchMessagesListener);
-      };
-      
-      // Register the listener
-      webSocket.socket?.on('messages-fetched', fetchMessagesListener);
-      
-      // Emit fetch-messages event with cursor
-      webSocket.socket?.emit('fetch-messages', {
-        roomId,
-        cursor: oldestMessageId,
-        direction: 'before',
-        limit: 20
-      });
-      
-      // Set a timeout to clean up the listener if no response is received
-      setTimeout(() => {
-        webSocket.socket?.off('messages-fetched', fetchMessagesListener);
-        setIsLoadingMore(false);
-      }, 10000);
-      
+        // Check if there are more messages to load
+        setHasMore(data.hasMore || false);
+        
+        // Restore scroll position
+        if (scrollContainer && scrollHeight) {
+          setTimeout(() => {
+            scrollContainer.scrollTop = scrollContainer.scrollHeight - scrollHeight;
+          }, 0);
+        }
+      } else {
+        setHasMore(false);
+      }
     } catch (err: any) {
       console.error('Error loading more messages:', err);
+    } finally {
       setIsLoadingMore(false);
     }
   };
@@ -374,70 +306,44 @@ export default function GroupChat({
     }
   };
   
-  // Format the group name and participants for display
-  const getRoomName = () => {
-    if (room?.name) return room.name;
-    
-    if (room?.type === "class_group" && room?.classId && classes) {
-      const classInfo = classes.find((c: any) => c._id === room.classId || c.id === room.classId);
-      return classInfo?.name || "Class Group";
+  // Get the other participant's name and avatar
+  const getOtherParticipant = () => {
+    // For private chat, find the other user in the participants
+    if (room?.participants && Array.isArray(room.participants)) {
+      const otherUser = room.participants.find(
+        (p: any) => p.userId !== user?.userId || p.id !== user?.userId
+      );
+      
+      if (otherUser) {
+        return {
+          name: otherUser.name || 'Private Chat',
+          avatar: otherUser.avatar || '/icons/direct-message.svg',
+          status: room.status || ''
+        };
+      }
     }
     
-    if (room?.type === "course_group" && room?.courseId && courses) {
-      const courseInfo = courses.find((c: any) => c._id === room.courseId || c.id === room.courseId);
-      return courseInfo?.title || courseInfo?.name || "Course Group";
-    }
-    
-    return "Group Chat";
+    return {
+      name: room?.name || 'Private Chat',
+      avatar: '/icons/direct-message.svg',
+      status: ''
+    };
   };
   
-  const getParticipantsText = () => {
-    if (!room?.participants || !Array.isArray(room.participants)) {
-      return "";
-    }
-    
-    const participants = room.participants
-      .filter((p: any) => {
-        const participantId = p.userId || p._id;
-        return participantId !== user?.userId;
-      })
-      .map((p: any) => {
-        // Handle different participant data structures
-        if (p.firstName || p.lastName) {
-          return `${p.firstName || ''} ${p.lastName || ''}`.trim();
-        } else if (p.name) {
-          return p.name;
-        } else {
-          return "Unknown";
-        }
-      });
-    
-    // Return formatted text based on number of participants
-    const participantCount = participants.length;
-    if (participantCount === 0) {
-      return "No other participants";
-    } else if (participantCount <= 3) {
-      return participants.join(", ");
-    } else {
-      return `${participants.slice(0, 2).join(", ")} and ${participantCount - 2} others`;
-    }
-  };
-  
-  const roomName = getRoomName();
-  const participantsText = getParticipantsText();
+  const otherParticipant = getOtherParticipant();
   
   return (
-    <div className="lg:w-3/5 xl:w-2/3 flex flex-col relative">
+    <div className="w-2/3 flex flex-col">
       <div className="flex items-center rounded-tr-lg p-4 border-b bg-white">
         <ChatHeader
-          avatar={room?.avatar || "/icons/chat.svg"}
-          name={roomName}
-          subtext={participantsText}
+          avatar={otherParticipant.avatar}
+          name={otherParticipant.name}
+          status={otherParticipant.status}
         />
+        {/* Additional action icons can be added here if needed */}
       </div>
-      
       <div 
-        className="flex-1 overflow-y-auto p-4 space-y-2 bg-[#F8F9FA]"
+        className="flex-1 overflow-y-auto scrollbar-hide p-4"
         ref={messagesContainerRef}
         onScroll={handleScroll}
       >
@@ -469,12 +375,6 @@ export default function GroupChat({
               Retry
             </button>
           </div>
-        ) : !room ? (
-          <div className="flex flex-col items-center justify-center h-full">
-            <div className="text-center p-8">
-              <p className="text-sm text-gray-500 mb-2">Select a chat to start messaging</p>
-            </div>
-          </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48">
             <p className="text-sm text-gray-500 mb-2">No messages yet</p>
@@ -482,7 +382,7 @@ export default function GroupChat({
           </div>
         ) : (
           messages.map((msg, index) => (
-            <GroupMessageBubble
+            <MessageBubble
               key={msg._id || index}
               msg={{
                 sender: msg.sender,
@@ -491,7 +391,7 @@ export default function GroupChat({
                 type: msg.type,
                 senderType: msg.senderType,
                 avatar: msg.avatar || '/icons/user-placeholder.svg',
-                color: msg.color || 'text-[#F39C12]',
+                color: msg.color || 'blue',
               }}
               index={index}
               openSubMenu={openSubMenu}
@@ -504,14 +404,14 @@ export default function GroupChat({
         {/* Invisible element to scroll to */}
         <div ref={messagesEndRef} />
       </div>
-
+      
       {replyingMessage && (
         <ReplyPreview
           replyingMessage={replyingMessage}
           onCancel={() => setReplyingMessage(null)}
         />
       )}
-
+      
       <MessageInput 
         value={messageInput}
         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMessageInput(e.target.value)}
