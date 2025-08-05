@@ -34,6 +34,7 @@ interface PrivateChatProps {
   openSubMenu: { index: number; type: string } | null;
   toggleSubMenu: (index: number, type: string) => void;
   room?: any; // The selected chat room
+  onBack?: () => void; // Navigation back to chat list
 }
 
 export default function PrivateChat({
@@ -42,6 +43,7 @@ export default function PrivateChat({
   openSubMenu,
   toggleSubMenu,
   room,
+  onBack,
 }: PrivateChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -439,16 +441,16 @@ export default function PrivateChat({
   const otherParticipant = getOtherParticipant();
   
   return (
-    <div className="lg:w-3/5 xl:w-2/3 flex flex-col relative">
-      <div className="flex items-center rounded-tr-lg p-4 border-b bg-white">
-        <ChatHeader
-          avatar={room?.avatarInfo?.type === 'image' ? room.avatarInfo.value : '/icons/chat.svg'}
-          name={otherParticipant.name}
-          subtext={otherParticipant.status}
-        />
-      </div>
+    <div className="w-full h-full flex flex-col relative bg-white">
+      <ChatHeader
+        avatar={room?.avatarInfo?.type === 'image' ? room.avatarInfo.value : '/icons/chat.svg'}
+        name={otherParticipant.name}
+        subtext={otherParticipant.status}
+        onBack={onBack}
+        showBackButton={true}
+      />
       <div 
-        className="flex-1 overflow-y-auto p-4 space-y-2 bg-[#F8F9FA]"
+        className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-2 sm:space-y-3 bg-gray-50"
         ref={messagesContainerRef}
         onScroll={handleScroll}
       >

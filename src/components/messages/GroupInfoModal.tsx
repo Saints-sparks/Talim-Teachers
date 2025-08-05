@@ -32,6 +32,7 @@ interface GroupInfoModalProps {
   avatar: string;
   name: string;
   description: string;
+  participants?: any[]; // Real participants data
 }
 
 export default function GroupInfoModal({
@@ -40,6 +41,7 @@ export default function GroupInfoModal({
   avatar,
   name,
   description,
+  participants = [],
 }: GroupInfoModalProps) {
   const [selectedMenu, setSelectedMenu] = useState("");
 
@@ -130,7 +132,7 @@ export default function GroupInfoModal({
               {/* <p className="text-sm text-gray-500 mt-2">No content available yet.</p> */}
             </div>
           )}
-          {selectedMenu === "Students" && <Students />}
+          {selectedMenu === "Students" && <Students participants={participants} />}
           {selectedMenu === "Images" && <Images />}
           {selectedMenu === "Videos" && <Videos />}
           {selectedMenu === "Links" && <Links />}

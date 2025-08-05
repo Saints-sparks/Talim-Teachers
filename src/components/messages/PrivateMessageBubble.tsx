@@ -1,8 +1,9 @@
 import { Card } from "@/components/ui/card";
-import { Avatar, AvatarImage } from "@radix-ui/react-avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { CheckCheck } from "lucide-react";
 import MessageOptionsDropdown from "./MessageDropdown";
 import AudioMessage from "./AudioMessage";
+import { generateColorFromString, getUserInitials } from "@/lib/colorUtils";
 
 interface MessageBubbleProps {
   msg: {
@@ -29,24 +30,43 @@ export default function MessageBubble({
   toggleSubMenu,
   setReplyingMessage,
 }: MessageBubbleProps) {
+  const initials = getUserInitials(msg.sender);
+  const bgColor = msg.color || generateColorFromString(msg.sender);
+
   return (
     <div
-      className={`flex items-end ${
+      className={`relative flex items-end ${
         msg.sender === "me" ? "justify-end" : "justify-start"
-      } mb-2 gap-2`}
+      } gap-2 px-2 sm:px-0 mb-3`}
     >
-      <div className="flex flex-col">
-        <div className="flex items-end gap-2">
-          {msg.sender !== "me" && (
+      <div className={`flex gap-2 max-w-[85%] sm:max-w-md ${
+        msg.sender === "me" ? "flex-row-reverse" : "flex-row"
+      }`}>
+        {/* Avatar - only show for other users, not self */}
+        {msg.sender !== "me" && (
+          <div className="relative w-8 h-8 flex-shrink-0 self-end mb-1">
             <Avatar className="w-8 h-8 rounded-full">
-              <AvatarImage src="/image/teachers/english.png" />
+              <AvatarImage src={msg.avatar} />
+              <AvatarFallback 
+                className="text-white font-medium text-xs"
+                style={{ backgroundColor: bgColor }}
+              >
+                {initials}
+              </AvatarFallback>
             </Avatar>
-          )}
+          </div>
+        )}
+
+        {/* Message Content */}
+        <div className={`flex flex-col ${
+          msg.sender === "me" ? "items-end" : "items-start"
+        }`}>
+          {/* Message Bubble */}
           <Card
-            className={`p-3 font-normal border-none shadow-none max-w-md ${
+            className={`px-3 py-2 sm:px-4 sm:py-3 border-none shadow-sm relative ${
               msg.sender === "me"
-                ? "bg-[#ADBECE] text-white"
-                : "bg-white text-[#030E18]"
+                ? "bg-blue-500 text-white rounded-2xl rounded-br-md"
+                : "bg-white text-gray-900 border border-gray-200 rounded-2xl rounded-bl-md"
             }`}
           >
             <MessageOptionsDropdown
@@ -56,15 +76,25 @@ export default function MessageBubble({
               toggleSubMenu={toggleSubMenu}
               setReplyingMessage={setReplyingMessage}
             />
+
             {msg.type === "text" ? (
-              msg.text
+              <p className="text-sm sm:text-base leading-relaxed break-words">
+                {msg.text}
+              </p>
             ) : (
               <AudioMessage sender={msg.sender} />
             )}
           </Card>
-        </div>
-        <div className="flex gap-1 text-xs text-[#ADADAD] self-end mt-1">
-          {msg.time} {msg.sender === "me" && <CheckCheck size={16} />}
+
+          {/* Time and Status */}
+          <div className={`flex items-center gap-1 text-xs text-gray-400 mt-1 px-1 ${
+            msg.sender === "me" ? "flex-row-reverse" : "flex-row"
+          }`}>
+            <span>{msg.time}</span>
+            {msg.sender === "me" && (
+              <CheckCheck size={12} className="text-blue-400" />
+            )}
+          </div>
         </div>
       </div>
     </div>

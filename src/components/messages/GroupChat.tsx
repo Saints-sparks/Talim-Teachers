@@ -37,6 +37,7 @@ interface GroupChatProps {
   openSubMenu: { index: number; type: string } | null;
   toggleSubMenu: (index: number, type: string) => void;
   room?: any; // The selected chat room
+  onBack?: () => void; // Navigation back to chat list
 }
 
 export default function GroupChat({
@@ -45,12 +46,14 @@ export default function GroupChat({
   openSubMenu,
   toggleSubMenu,
   room,
+  onBack,
 }: GroupChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [messageInput, setMessageInput] = useState<string>('');
   const [isSending, setIsSending] = useState<boolean>(false);
+  const [isRoomLoaded, setIsRoomLoaded] = useState<boolean>(false);
   
   // For cursor-based pagination
   const [hasMore, setHasMore] = useState<boolean>(true);
@@ -68,25 +71,16 @@ export default function GroupChat({
   // Cleanup function reference
   const cleanupRef = useRef<(() => void) | null>(null);
 
-  // Helper to get color based on sender
-  const getColorForUser = (senderId: string): string => {
-    // Create a consistent color based on user ID
-    const colorOptions = [
-      "text-[#F39C12]",
-      "text-[#3498DB]",
-      "text-[#9B59B6]",
-      "text-[#2ECC71]",
-      "text-[#1ABC9C]",
-      "text-[#E74C3C]",
-      "text-[#34495E]"
-    ];
-    
-    // Use a hash function to get a consistent index
-    const hash = senderId.split('').reduce((acc, char) => {
-      return acc + char.charCodeAt(0);
-    }, 0);
-    
-    return colorOptions[hash % colorOptions.length];
+  // Helper to get color based on sender - now consistent with sidebar
+  const getColorForUser = (senderId: string, senderName: string = ''): string => {
+    // Use the same color generation as ChatSidebar for consistency
+    const nameForColor = senderName || senderId || 'unknown';
+    let hash = 0;
+    for (let i = 0; i < nameForColor.length; i++) {
+      hash = nameForColor.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const hue = Math.abs(hash) % 360;
+    return `hsl(${hue}, 65%, 55%)`;
   };
 
   // Helper to get user role
@@ -180,11 +174,14 @@ export default function GroupChat({
     const roomId = room.roomId;
     let isMounted = true;
     
+    console.log('🏠 Setting up room for:', roomId);
+    
     setIsLoading(true);
     setError(null);
     setMessages([]); // Clear previous messages
     setHasMore(true);
     setOldestMessageId(null);
+    setIsRoomLoaded(false); // Mark room as not loaded yet
     
     // Set up room joined listener to receive initial messages and room data
     const roomJoinedListener = (data: any) => {
@@ -221,7 +218,7 @@ export default function GroupChat({
             time: new Date(msg.createdAt || msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             type: msg.type || 'text',
             senderType: senderId === (user?.userId || user?._id) ? "self" : getUserRole(senderId),
-            color: getColorForUser(senderId),
+            color: getColorForUser(senderId, sender),
             avatar: '/image/teachers/mathematics.png', // Default avatar
           };
         });
@@ -242,6 +239,7 @@ export default function GroupChat({
       }
       
       setIsLoading(false);
+      setIsRoomLoaded(true); // Mark room as fully loaded
     };
     
     // Register room joined listener for initial messages
@@ -255,6 +253,7 @@ export default function GroupChat({
     return () => {
       console.log('🧹 Cleaning up room listeners for:', roomId);
       isMounted = false;
+      setIsRoomLoaded(false); // Reset room loaded state
       webSocket.leaveChatRoom(roomId);
       webSocket.socket?.off('chat-room-joined', roomJoinedListener);
     };
@@ -284,6 +283,12 @@ export default function GroupChat({
   const handleNewMessage = useCallback((newMessage: WebSocketChatMessage) => {
     console.log('📨 New message received:', newMessage);
     
+    // Don't process real-time messages until room is fully loaded
+    if (!isRoomLoaded) {
+      console.log('⏳ Room not fully loaded yet, skipping real-time message');
+      return;
+    }
+    
     // Get room ID from either roomId or chatRoomId (backend inconsistency)
     const messageRoomId = newMessage.roomId || (newMessage as any).chatRoomId;
     
@@ -307,7 +312,7 @@ export default function GroupChat({
       time: new Date(newMessage.timestamp || (newMessage as any).createdAt || new Date()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       type: newMessage.type || 'text',
       senderType: senderId === (user?.userId || user?._id) ? "self" : getUserRole(senderId),
-      color: getColorForUser(senderId),
+      color: getColorForUser(senderId, senderName),
       avatar: '/image/teachers/mathematics.png', // Default avatar, should be replaced with actual user avatar
     };
     
@@ -316,7 +321,15 @@ export default function GroupChat({
     // Add new message to the end (newest messages at bottom)
     setMessages(prevMessages => {
       // Check if message already exists to prevent duplicates
-      const messageExists = prevMessages.some(msg => msg._id === formattedMessage._id);
+      // Check by both _id and content+timestamp for better duplicate detection
+      const messageExists = prevMessages.some(msg => 
+        (msg._id && formattedMessage._id && msg._id === formattedMessage._id) ||
+        (msg.senderId === formattedMessage.senderId && 
+         msg.text === formattedMessage.text && 
+         msg.time && formattedMessage.time &&
+         Math.abs(new Date(msg.time).getTime() - new Date(formattedMessage.time).getTime()) < 1000)
+      );
+      
       if (messageExists) {
         console.log('⚠️ Message already exists, skipping duplicate');
         return prevMessages;
@@ -327,21 +340,23 @@ export default function GroupChat({
       console.log('📝 Updated messages count:', updatedMessages.length);
       return updatedMessages;
     });
-  }, [room?.roomId, user?.userId, user?._id]);
+  }, [room?.roomId, user?.userId, user?._id, isRoomLoaded]);
 
   // Set up message listener for real-time messages (separate from room joining)
   useEffect(() => {
-    if (!webSocket.isConnected) {
-      console.log('⚠️ WebSocket not connected, skipping message listener setup');
+    if (!webSocket.isConnected || !room?.roomId) {
+      console.log('⚠️ WebSocket not connected or no room, skipping message listener setup');
       return;
     }
 
-    console.log('🔄 Setting up message listener');
+    console.log('🔄 Setting up message listener for room:', room.roomId);
+    
+    // Only set up listener if we don't already have one for this room
     const unsubscribe = webSocket.onChatMessage(handleNewMessage);
     cleanupRef.current = unsubscribe;
 
     return () => {
-      console.log('🧹 Cleaning up message listener');
+      console.log('🧹 Cleaning up message listener for room:', room?.roomId);
       if (cleanupRef.current) {
         cleanupRef.current();
         cleanupRef.current = null;
@@ -584,18 +599,47 @@ export default function GroupChat({
   const roomName = getRoomName();
   const participantsText = getParticipantsText();
   
+  // Calculate online status for group
+  const getOnlineStatus = () => {
+    if (!room?.participants || !Array.isArray(room.participants)) {
+      return "Group chat";
+    }
+    
+    const onlineCount = room.participants.filter((p: any) => {
+      const participantData = p._doc || p;
+      return participantData.isOnline || p.isOnline;
+    }).length;
+    
+    const totalCount = room.participants.length;
+    
+    if (onlineCount === 0) {
+      return "Group chat";
+    } else if (onlineCount === 1) {
+      return "1 member online";
+    } else if (onlineCount === totalCount) {
+      return "All members online";
+    } else {
+      return `${onlineCount} members online`;
+    }
+  };
+  
+  const onlineStatus = getOnlineStatus();
+  
   return (
-    <div className="lg:w-3/5 xl:w-2/3 flex flex-col relative">
-      <div className="flex items-center rounded-tr-lg p-4 border-b bg-white">
-        <ChatHeader
-          avatar={room?.avatarInfo?.type === 'image' ? room.avatarInfo.value : '/icons/chat.svg'}
-          name={roomName}
-          subtext={participantsText}
-        />
-      </div>
+    <div className="w-full h-full flex flex-col relative bg-white">
+      <ChatHeader
+        avatar={room?.avatarInfo?.type === 'image' ? room.avatarInfo.value : '/icons/chat.svg'}
+        name={roomName}
+        status={onlineStatus}
+        subtext={participantsText}
+        participants={room?.participants || []}
+        currentUserId={user?.userId || user?._id}
+        onBack={onBack}
+        showBackButton={true}
+      />
       
       <div 
-        className="flex-1 overflow-y-auto p-4 space-y-2 bg-[#F8F9FA]"
+        className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-2 sm:space-y-3 bg-gray-50"
         ref={messagesContainerRef}
         onScroll={handleScroll}
       >

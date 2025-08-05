@@ -1,7 +1,15 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Mic, SendHorizontal, FileText, Image, FileVideo } from "lucide-react";
+import { 
+  Mic, 
+  SendHorizontal, 
+  FileText, 
+  Image, 
+  FileVideo, 
+  Plus,
+  Paperclip
+} from "lucide-react";
 
 interface MessageInputProps {
   value?: string;
@@ -19,6 +27,7 @@ export default function MessageInput({
   placeholder = "Type something here..."
 }: MessageInputProps) {
   const [message, setMessage] = useState(value || "");
+  const [showAttachments, setShowAttachments] = useState(false);
   
   // Handle internal state changes if not controlled
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -39,53 +48,105 @@ export default function MessageInput({
     }
   };
 
+  const currentMessage = value !== undefined ? value : message;
+
   return (
-    <div className="p-3 flex-col mx-4 mb-4 bg-white rounded-lg flex items-center gap-3">
-      <Input
-        placeholder={placeholder}
-        className="flex-1 border-none shadow-none focus:outline-none focus-visible:ring-0 mb-2"
-        value={value !== undefined ? value : message}
-        onChange={handleChange}
-        disabled={disabled}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSend();
-          }
-        }}
-      />
-      <div className="flex w-full items-center justify-between text-gray-500">
-        <div className="flex gap-2">
+    <div className="bg-white border-t border-gray-200 p-3 sm:p-4">
+      {/* Attachment options - Mobile */}
+      {showAttachments && (
+        <div className="flex sm:hidden gap-2 mb-3 overflow-x-auto pb-2">
           <Button
-            variant="ghost"
-            className="border border-[#F0F0F0] hover:bg-gray-200 transition-all duration-300"
+            variant="outline"
+            size="sm"
+            className="flex-shrink-0 h-8 px-3 text-xs"
           >
-            Document
-            <FileText />
+            <FileText size={14} className="mr-1" />
+            Doc
           </Button>
           <Button
-            variant="ghost"
-            className="border border-[#F0F0F0] hover:bg-gray-200 transition-all duration-300"
+            variant="outline"
+            size="sm"
+            className="flex-shrink-0 h-8 px-3 text-xs"
           >
-            Image
-            <Image />
+            <Image size={14} className="mr-1" />
+            Photo
           </Button>
           <Button
-            variant="ghost"
-            className="border border-[#F0F0F0] hover:bg-gray-200 transition-all duration-300"
+            variant="outline"
+            size="sm"
+            className="flex-shrink-0 h-8 px-3 text-xs"
           >
+            <FileVideo size={14} className="mr-1" />
             Video
-            <FileVideo />
           </Button>
         </div>
+      )}
+
+      <div className="flex items-end gap-2 sm:gap-3">
+        {/* Attachment button - Mobile */}
         <Button
-          className={`border w-[52px] h-[42px] shadow-none rounded-lg ${
-            message.trim() ? "bg-[#003366] hover:bg-[#002244]" : "bg-[#C7C7C7]"
+          variant="ghost"
+          size="sm"
+          className="flex sm:hidden w-8 h-8 p-0 rounded-full"
+          onClick={() => setShowAttachments(!showAttachments)}
+        >
+          <Plus size={18} className="text-gray-500" />
+        </Button>
+
+        {/* Message Input */}
+        <div className="flex-1 relative">
+          <Input
+            placeholder={placeholder}
+            className="pr-12 border border-gray-300 rounded-full bg-gray-50 focus:bg-white focus:border-blue-500 transition-colors"
+            value={currentMessage}
+            onChange={handleChange}
+            disabled={disabled}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+          />
+          
+          {/* Voice note button - when no text */}
+          {!currentMessage.trim() && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 p-0 rounded-full hover:bg-gray-200"
+            >
+              <Mic size={16} className="text-gray-500" />
+            </Button>
+          )}
+        </div>
+
+        {/* Desktop attachment options */}
+        <div className="hidden sm:flex gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-8 h-8 p-0 rounded-full hover:bg-gray-100"
+            title="Attach file"
+          >
+            <Paperclip size={16} className="text-gray-500" />
+          </Button>
+        </div>
+
+        {/* Send button */}
+        <Button
+          className={`w-8 h-8 sm:w-10 sm:h-10 p-0 rounded-full transition-all ${
+            currentMessage.trim() 
+              ? "bg-blue-500 hover:bg-blue-600 shadow-md" 
+              : "bg-gray-300 cursor-not-allowed"
           }`}
           onClick={handleSend}
-          disabled={disabled || !message.trim()}
+          disabled={disabled || !currentMessage.trim()}
         >
-          <SendHorizontal color="white" size={30} />
+          <SendHorizontal 
+            size={16} 
+            className={currentMessage.trim() ? "text-white" : "text-gray-500"} 
+          />
         </Button>
       </div>
     </div>

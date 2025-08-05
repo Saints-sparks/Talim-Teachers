@@ -1,21 +1,73 @@
 "use client";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import {
-  ChevronLeft,
-  ChevronRight,
+  ArrowLeft,
+  MoreVertical,
   Phone,
   Search,
   Video,
   X,
+  Info,
 } from "lucide-react";
 import { useState } from "react";
 import GroupInfoModal from "./GroupInfoModal";
+
+// Utility function to generate consistent colors from strings
+function generateColorFromString(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  
+  const hue = Math.abs(hash) % 360;
+  return `hsl(${hue}, 65%, 55%)`;
+}
+
+// Utility function to get user initials
+function getUserInitials(firstName?: string, lastName?: string, name?: string): string {
+  if (firstName || lastName) {
+    return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
+  }
+  if (name) {
+    const parts = name.split(' ');
+    return parts.length > 1 
+      ? `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+      : name.slice(0, 2).toUpperCase();
+  }
+  return 'U';
+}
+
+// Utility function to process participants data (handle Mongoose documents)
+function processParticipants(participants: any[], currentUserId?: string) {
+  return participants
+    .map((p: any) => {
+      // Handle Mongoose documents - data might be in _doc property
+      const participantData = p._doc || p;
+      const participantId = participantData.userId || participantData._id || p.userId || p._id;
+      
+      return {
+        id: participantId,
+        firstName: participantData.firstName || p.firstName,
+        lastName: participantData.lastName || p.lastName,
+        name: participantData.name || p.name,
+        email: participantData.email || p.email,
+        avatar: participantData.userAvatar || participantData.avatar || p.userAvatar || p.avatar,
+        role: participantData.role || p.role,
+        isOnline: participantData.isOnline || p.isOnline || false,
+      };
+    })
+    .filter((p: any) => p.id !== currentUserId); // Filter out current user
+}
 
 interface ChatHeaderProps {
   avatar: string;
   name: string;
   status?: string;
   subtext?: string; // For group members
+  participants?: any[]; // Real participants data
+  currentUserId?: string; // Current user ID to filter out
+  onBack?: () => void; // Navigation back to chat list
+  showBackButton?: boolean; // Whether to show back button (mobile)
 }
 
 export default function ChatHeader({
@@ -23,89 +75,118 @@ export default function ChatHeader({
   name,
   status,
   subtext,
+  participants = [],
+  currentUserId,
+  onBack,
+  showBackButton = true,
 }: ChatHeaderProps) {
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  return (
-    <div className="flex w-full items-center rounded-tr-lg bg-white ">
-      <div className="flex w-full justify-between items-center gap-3">
-        {/* Avatar & Name / Search Bar */}
-        <div className="flex items-center gap-3 flex-1">
-          <Avatar className="w-10 h-10 rounded-full">
-            <AvatarImage src={avatar} />
-          </Avatar>
+  // Process participants to get clean data
+  const processedParticipants = processParticipants(participants, currentUserId);
 
-          <div
-            className="max-w-lg cursor-pointer"
-            onClick={() => setIsModalOpen(true)}
+  return (
+    <div className="flex w-full items-center bg-white border-b border-gray-200 px-3 py-2 sm:px-4 sm:py-3">
+      <div className="flex w-full items-center gap-2 sm:gap-3">
+        {/* Back Button - Mobile Only */}
+        {showBackButton && onBack && (
+          <button
+            onClick={onBack}
+            className="flex lg:hidden items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 transition-colors"
+            aria-label="Back to chats"
           >
-            <p className="font-medium">{name}</p>
-            {!isSearching && status && (
-              <p className="text-xs text-gray-500">{status}</p>
-            )}
-            {!isSearching && subtext && (
-              <p className="text-xs text-[#7B7B7B] truncate ">{subtext}</p>
-            )}
+            <ArrowLeft size={20} className="text-gray-600" />
+          </button>
+        )}
+
+        {/* Avatar */}
+        <Avatar className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex-shrink-0">
+          <AvatarImage src={avatar} />
+        </Avatar>
+
+        {/* Chat Info */}
+        <div
+          className="flex-1 min-w-0 cursor-pointer"
+          onClick={() => setIsModalOpen(true)}
+        >
+          <div className="flex items-center gap-1">
+            <p className="font-medium text-sm sm:text-base text-gray-900 truncate">
+              {name}
+            </p>
+            <Info size={14} className="text-gray-400 flex-shrink-0 hidden sm:block" />
           </div>
-          <GroupInfoModal
-            isOpen={isModalOpen}
-            onClose={() => setIsModalOpen(false)}
-            avatar={avatar}
-            name={name}
-            description={`Welcome to the Class Group! \n
-            This is your space to collaborate, share ideas, ask questions, and stay connected with your classmates. Whether you need help with an assignment, want to share resources, or just discuss what’s going on in class, feel free to engage here.`}
-          />
+          {!isSearching && status && (
+            <p className="text-xs text-gray-500 truncate">{status}</p>
+          )}
+          {!isSearching && subtext && (
+            <p className="text-xs text-[#7B7B7B] truncate hidden sm:block">{subtext}</p>
+          )}
         </div>
 
         {/* Action Icons */}
-        <div className="flex items-center gap-4 text-[#878787]">
-          <Phone
-            className="cursor-pointer hover:text-gray-800"
-            strokeWidth="1.5px"
-            size={20}
-          />
-          <Video
-            className="cursor-pointer hover:text-gray-800"
-            strokeWidth="1.5px"
-            size={20}
-          />
-
+        <div className="flex items-center gap-1 sm:gap-3">
+          {/* Search */}
           {isSearching ? (
-            <>
-              <div className="relative flex text-[#878787] items-center border px-2 py-1 rounded-md w-44">
-                <Search strokeWidth="1px" size={20} />
+            <div className="flex items-center gap-1 sm:gap-2">
+              <div className="relative flex items-center border border-gray-300 rounded-full px-2 py-1 bg-gray-50 w-32 sm:w-44">
+                <Search size={16} className="text-gray-400" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search"
                   className="w-full bg-transparent pl-2 text-sm focus:outline-none"
+                  autoFocus
                 />
-                <X
-                  className=" cursor-pointer ml-2"
-                  size={16}
+                <button
                   onClick={() => {
                     setIsSearching(false);
-                    setSearchQuery(""); // Clear search when closing
+                    setSearchQuery("");
                   }}
-                />
+                  className="ml-1 text-gray-400 hover:text-gray-600"
+                >
+                  <X size={14} />
+                </button>
               </div>
-              <div className="flex">
-                <ChevronLeft strokeWidth="1px" />
-                <ChevronRight strokeWidth="1px" />
-              </div>
-            </>
+            </div>
           ) : (
-            <Search
-              className="cursor-pointer hover:text-gray-800"
-              strokeWidth="1.5px"
-              size={20}
-              onClick={() => setIsSearching(true)}
-            />
+            <>
+              {/* Call Icons - Hidden on very small screens */}
+              <button className="hidden sm:flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 transition-colors">
+                <Phone size={18} className="text-gray-600" />
+              </button>
+              <button className="hidden sm:flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 transition-colors">
+                <Video size={18} className="text-gray-600" />
+              </button>
+              
+              {/* Search Button */}
+              <button
+                onClick={() => setIsSearching(true)}
+                className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <Search size={18} className="text-gray-600" />
+              </button>
+              
+              {/* More Options - Mobile */}
+              <button className="flex sm:hidden items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 transition-colors">
+                <MoreVertical size={18} className="text-gray-600" />
+              </button>
+            </>
           )}
         </div>
+
+        {/* Group Info Modal */}
+        <GroupInfoModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          avatar={avatar}
+          name={name}
+          description={`Welcome to the Class Group! \n
+          This is your space to collaborate, share ideas, ask questions, and stay connected with your classmates. Whether you need help with an assignment, want to share resources, or just discuss what's going on in class, feel free to engage here.`}
+          participants={processedParticipants}
+        />
       </div>
     </div>
   );

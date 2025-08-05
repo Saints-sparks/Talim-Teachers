@@ -169,11 +169,26 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
       }
     }
 
+    // Transform lastMessage to match expected format
+    let transformedLastMessage = room.lastMessage;
+    if (room.lastMessage && (room.lastMessage as any).text) {
+      // Backend sends 'text' field instead of 'content'
+      transformedLastMessage = {
+        ...room.lastMessage,
+        content: (room.lastMessage as any).text || room.lastMessage.content,
+        timestamp: room.lastMessage.timestamp || (room.lastMessage as any).createdAt,
+        senderId: room.lastMessage.senderId || (room.lastMessage as any).senderId,
+        senderName: room.lastMessage.senderName || 'Unknown',
+        type: room.lastMessage.type || 'text'
+      };
+    }
+
     return {
       ...room,
       displayName,
       avatarInfo,
       isOnline,
+      lastMessage: transformedLastMessage,
     };
   }, [user?.userId, user?._id]);
 
@@ -184,13 +199,26 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     const unsubscribe = onChatRoomsUpdate((data: ChatRoomsUpdateData) => {
       if (!mountedRef.current) return;
 
+      console.log('📨 Chat rooms data received:', {
+        roomsCount: data?.rooms?.length || 0,
+        firstRoom: data?.rooms?.[0],
+        firstRoomLastMessage: data?.rooms?.[0]?.lastMessage
+      });
+
       if (!data || !data.rooms || !Array.isArray(data.rooms)) {
+        console.log('⚠️ Invalid chat rooms data format:', data);
         setError('Invalid chat rooms data received');
         setIsLoading(false);
         return;
       }
 
       const transformedRooms = data.rooms.map(transformChatRoom);
+      
+      console.log('📝 Transformed rooms:', {
+        count: transformedRooms.length,
+        firstRoomData: transformedRooms[0],
+        hasLastMessage: !!transformedRooms[0]?.lastMessage
+      });
       
       // Sort rooms by last message time (newest first)
       transformedRooms.sort((a, b) => {
@@ -214,6 +242,13 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     const unsubscribe = onChatMessage((message: ChatMessage) => {
       if (!mountedRef.current) return;
 
+      console.log('📨 Real-time message received:', {
+        roomId: message.roomId,
+        senderId: message.senderId,
+        content: message.content,
+        timestamp: message.timestamp
+      });
+
       // Show notification for messages not from current user
       if (message.senderId !== (user?.userId || user?._id)) {
         toast.success(`New message from ${message.senderName}`, {
@@ -224,8 +259,11 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
 
       // Update chat rooms to reflect new message
       setChatRooms(prevRooms => {
+        console.log('🔄 Updating chat rooms with new message...');
+        
         const updatedRooms = prevRooms.map(room => {
           if (room.roomId === message.roomId) {
+            console.log('✅ Found matching room, updating last message:', room.displayName);
             return {
               ...room,
               lastMessage: {
@@ -244,11 +282,14 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
         });
 
         // Re-sort rooms by last message time
-        return updatedRooms.sort((a, b) => {
+        const sortedRooms = updatedRooms.sort((a, b) => {
           const timeA = a.lastMessage?.timestamp ? new Date(a.lastMessage.timestamp).getTime() : new Date(a.updatedAt).getTime();
           const timeB = b.lastMessage?.timestamp ? new Date(b.lastMessage.timestamp).getTime() : new Date(b.updatedAt).getTime();
           return timeB - timeA;
         });
+        
+        console.log('📝 Chat rooms updated, new order:', sortedRooms.map(r => ({ name: r.displayName, lastMsg: r.lastMessage?.content })));
+        return sortedRooms;
       });
     });
 
