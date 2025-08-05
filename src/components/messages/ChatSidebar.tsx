@@ -1,7 +1,9 @@
+"use client";
+
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage } from "@radix-ui/react-avatar";
-import { Search, ChevronDown, CheckCheck, Loader2, Users, MessageCircle } from "lucide-react";
+import { Search, ChevronDown, CheckCheck, Loader2, Users, MessageCircle, Wifi, WifiOff } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,130 +13,128 @@ import {
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import CreateGroupModal from "./CreateGroupModal";
-import { useChat } from "@/app/hooks/useChat";
-import { ChatRoomType } from "@/types/chat";
-import { useAppContext } from "@/app/context/AppContext";
+import { useChat } from "@/app/context/ChatContext";
+import { RealtimeChatRoom } from "@/app/hooks/useRealtimeChat";
 
 interface ChatSidebarProps {
-  onSelectChat: (chat: { type: "private" | "group"; room?: any }) => void;
+  onSelectChat: (chat: { type: "private" | "group"; room?: RealtimeChatRoom }) => void;
 }
 
 export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterType, setFilterType] = useState<"all" | "teachers" | "students">("all");
+  const [filterType, setFilterType] = useState<"all" | "teachers" | "groups">("all");
   
-  const { chatRooms, isLoading, error, refreshChatRooms, getFilteredChatRooms } = useChat();
-  const { classes, courses } = useAppContext();
+  const { 
+    chatRooms, 
+    isLoading, 
+    isConnected, 
+    error, 
+    refreshChatRooms, 
+    searchChatRooms, 
+    getFilteredChatRooms,
+    selectRoom,
+    selectedRoomId
+  } = useChat();
 
-  // Function to get display name for chat room
-  const getRoomDisplayName = (room: any) => {
-    if (room.name) return room.name;
+  // Get filtered and searched rooms
+  const getDisplayRooms = (): RealtimeChatRoom[] => {
+    let rooms = getFilteredChatRooms(filterType);
     
-    if (room.type === ChatRoomType.CLASS_GROUP) {
-      const classInfo = classes?.find(c => c._id === room.classId || c.id === room.classId);
-      return classInfo?.name || `Class Group`;
-    }
-    
-    if (room.type === ChatRoomType.COURSE_GROUP) {
-      const courseInfo = courses?.find(c => c._id === room.courseId || c.id === room.courseId);
-      return courseInfo?.title || courseInfo?.name || `Course Group`;
-    }
-    
-    if (room.type === ChatRoomType.ONE_TO_ONE) {
-      // For one-to-one chats, you might want to show the other participant's name
-      return "Direct Message";
-    }
-    
-    return "Chat Room";
-  };
-
-  // Function to get room avatar
-  const getRoomAvatar = (room: any) => {
-    if (room.type === ChatRoomType.ONE_TO_ONE) {
-      const otherParticipant = room.participants?.find((p: any) => p.id !== room.currentUserId);
-      if (otherParticipant?.avatar) {
-        return otherParticipant.avatar;
-      }
-      const initials = otherParticipant?.name
-        ? otherParticipant.name.split(" ").map((n: string) => n[0]).join("")
-        : "DM";
-      const bgColor = `#${Math.floor(Math.random() * 16777215).toString(16)}`;
-      return { initials, bgColor };
-    }
-
-    if (room.type === ChatRoomType.CLASS_GROUP || room.type === ChatRoomType.COURSE_GROUP) {
-      if (room.avatar) {
-        return room.avatar;
-      }
-      const initials = room.name
-        ? room.name.split(" ").map((n: string) => n[0]).join("")
-        : "GC";
-      const bgColor = `#${Math.floor(Math.random() * 16777215).toString(16)}`;
-      return { initials, bgColor };
-    }
-
-    return "/icons/chat.svg";
-  };
-
-  // Filter chat rooms based on search and filter type
-  const getFilteredRooms = () => {
-    let filtered = chatRooms;
-
-    // Apply search filter
     if (searchTerm.trim()) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(room => 
-        getRoomDisplayName(room).toLowerCase().includes(term)
-      );
+      rooms = searchChatRooms(searchTerm);
     }
-
-    // Apply type filter
-    if (filterType === "teachers") {
-      filtered = filtered.filter(room => room.type === ChatRoomType.ONE_TO_ONE);
-    } else if (filterType === "students") {
-      filtered = filtered.filter(room => 
-        room.type === ChatRoomType.CLASS_GROUP || room.type === ChatRoomType.COURSE_GROUP
-      );
-    }
-
-    return filtered;
+    
+    return rooms;
   };
 
-  const filteredRooms = getFilteredRooms();
+  const displayRooms = getDisplayRooms();
 
-  const handleSelectChat = (room: any) => {
-    onSelectChat({ type: room.type === ChatRoomType.ONE_TO_ONE ? "private" : "group", room });
+  const handleSelectChat = (room: RealtimeChatRoom) => {
+    selectRoom(room.roomId);
+    onSelectChat({ 
+      type: room.type === 'one_to_one' ? "private" : "group", 
+      room 
+    });
+  };
+
+  const handleFilterChange = (newFilter: "all" | "teachers" | "groups") => {
+    setFilterType(newFilter);
+  };
+
+  const formatTime = (timestamp: Date | string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+
+    if (diffInHours < 24) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else if (diffInHours < 24 * 7) {
+      return date.toLocaleDateString([], { weekday: 'short' });
+    } else {
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    }
   };
 
   return (
     <div className="lg:w-2/5 xl:w-1/3 border-r p-4 bg-white rounded-tl-lg flex flex-col">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg text-[#030E18]">Messages</h2>
+        <h2 className="text-lg text-[#030E18] flex items-center gap-2">
+          Messages
+          {isConnected ? (
+            <Wifi className="w-4 h-4 text-green-500" />
+          ) : (
+            <WifiOff className="w-4 h-4 text-red-500" />
+          )}
+        </h2>
+        {isLoading && <Loader2 className="w-4 h-4 animate-spin text-gray-500" />}
       </div>
+
+      {error && (
+        <div className="mb-4 p-2 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-sm text-red-600">{error}</p>
+          <button 
+            onClick={refreshChatRooms}
+            className="text-xs text-red-700 underline mt-1"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       <div className="flex items-center gap-2 mb-4">
         <div className="flex items-center border border-[#F0F0F0] shadow-none rounded-lg px-3 w-full bg-white">
           <Search className="text-[#898989]" size={18} />
           <Input
             className="border-0 shadow-none focus-visible:ring-0 focus:outline-none flex-1"
-            placeholder="Search"
+            placeholder="Search messages..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="outline"
-              className="flex text-[#595959] h-full rounded-lg shadow-none border-[#F0F0F0] hover:bg-[#F0F0F0] bg-transparent items-center gap-1"
+              className="flex text-[#595959] h-full rounded-lg shadow-none border-[#F0F0F0] hover:bg-[#F0F0F0] bg-transparent items-center gap-1 capitalize"
             >
-              All <ChevronDown size={16} />
+              {filterType} <ChevronDown size={16} />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="font-manrope" align="end">
-            <DropdownMenuItem>Teachers</DropdownMenuItem>
-            <DropdownMenuItem>Students</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleFilterChange('all')}>
+              All
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleFilterChange('teachers')}>
+              Teachers
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleFilterChange('groups')}>
+              Groups
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
       <div className="flex-1 overflow-y-auto scrollbar-hide">
         <div 
           className="flex gap-4 p-3 px-5 hover:bg-gray-200 rounded cursor-pointer"
@@ -147,50 +147,79 @@ export default function ChatSidebar({ onSelectChat }: ChatSidebarProps) {
             height={20}
           />
           <div className="flex flex-col">
-            <p className="font-medium ">Create Group</p>
+            <p className="font-medium">Create Group</p>
             <p className="text-[#7B7B7B] text-sm">Add students in one place</p>
           </div>
         </div>
-        {filteredRooms.map((room) => (
+
+        {!isConnected && (
+          <div className="flex items-center justify-center p-4 text-gray-500">
+            <div className="text-center">
+              <WifiOff className="w-8 h-8 mx-auto mb-2" />
+              <p className="text-sm">Connecting to chat...</p>
+            </div>
+          </div>
+        )}
+
+        {isConnected && displayRooms.length === 0 && !isLoading && (
+          <div className="flex items-center justify-center p-4 text-gray-500">
+            <div className="text-center">
+              <MessageCircle className="w-8 h-8 mx-auto mb-2" />
+              <p className="text-sm">
+                {searchTerm ? 'No chats found' : 'No chats yet'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {displayRooms.map((room) => (
           <div
-            key={room._id || room.id}
-            className="flex items-start gap-3 p-3 hover:bg-gray-200 rounded cursor-pointer"
+            key={room.roomId}
+            className={`flex items-start gap-3 p-3 hover:bg-gray-200 rounded cursor-pointer transition-colors ${
+              selectedRoomId === room.roomId ? 'bg-blue-50 border-l-4 border-blue-500' : ''
+            }`}
             onClick={() => handleSelectChat(room)}
           >
-            <div className="relative w-10 h-10">
-              {typeof getRoomAvatar(room) === "string" ? (
+            <div className="relative w-10 h-10 flex-shrink-0">
+              {room.avatarInfo.type === 'image' ? (
                 <Avatar className="w-10 h-10 rounded-full bg-gray-300">
-                  <AvatarImage src={getRoomAvatar(room)} />
+                  <AvatarImage src={room.avatarInfo.value} />
                 </Avatar>
               ) : (
                 <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
-                  style={{ backgroundColor: getRoomAvatar(room).bgColor }}
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
+                  style={{ backgroundColor: room.avatarInfo.bgColor }}
                 >
-                  {getRoomAvatar(room).initials}
+                  {room.avatarInfo.value}
                 </div>
               )}
-              {room.type === ChatRoomType.ONE_TO_ONE && (
-                <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></span>
+              {room.type === 'one_to_one' && (
+                <span 
+                  className={`absolute bottom-0 right-0 w-3 h-3 border-2 border-white rounded-full ${
+                    room.isOnline ? 'bg-green-500' : 'bg-gray-400'
+                  }`}
+                />
               )}
             </div>
-            <div className="flex-1">
-              <p className="font-medium text-[#030E18] ">{getRoomDisplayName(room)}</p>
-              <div className="flex items-center gap-1 max-w-[155px] truncate">
-                <p className="text-sm text-[#7B7B7B] truncate">
-                  {(typeof room.lastMessage === 'string' ? room.lastMessage : (room.lastMessage?.content || '')) || "No messages yet"}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between">
+                <p className="font-medium text-[#030E18] truncate">
+                  {room.displayName}
                 </p>
-              </div>
-            </div>
-            <div className="flex flex-col justify-between gap-2 items-end">
-              <span className="text-xs text-[#646464]">
-                {room.lastMessage ? new Date(room.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-              </span>
-              {room.unreadCount && room.unreadCount > 0 && (
-                <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-medium text-white bg-blue-600 rounded-full">
-                  {room.unreadCount}
+                <span className="text-xs text-[#646464] flex-shrink-0 ml-2">
+                  {room.lastMessage?.timestamp && formatTime(room.lastMessage.timestamp)}
                 </span>
-              )}
+              </div>
+              <div className="flex items-center justify-between mt-1">
+                <p className="text-sm text-[#7B7B7B] truncate">
+                  {room.lastMessage?.content || "No messages yet"}
+                </p>
+                {room.unreadCount > 0 && (
+                  <span className="inline-flex items-center justify-center min-w-5 h-5 px-1 text-xs font-medium text-white bg-blue-600 rounded-full ml-2">
+                    {room.unreadCount > 99 ? '99+' : room.unreadCount}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         ))}

@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
@@ -73,6 +75,11 @@ export const useAuth = () => {
       const userData = introspection.data.user;
 
       console.log('🔍 Login - userData from introspection:', userData);
+      console.log('🔍 Login - User ID fields:', {
+        _id: userData._id,
+        userId: userData.userId,
+        preferredId: userData.userId || userData._id
+      });
 
       // Store user data in localStorage
       localStorage.setItem("user", JSON.stringify(userData));

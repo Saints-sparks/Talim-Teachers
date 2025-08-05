@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { toast } from 'react-hot-toast';
@@ -33,6 +35,66 @@ export interface NotificationData {
   read: boolean;
 }
 
+export interface ChatRoomData {
+  roomId: string;
+  name: string;
+  type: string;
+  participants: Array<{
+    _id: string;
+    userId: string;
+    firstName?: string;
+    lastName?: string;
+    role?: string;
+    userAvatar?: string | null;
+    isActive?: boolean;
+    isOnline: boolean;
+  }>;
+  lastMessage?: {
+    content: string;
+    senderId: string;
+    senderName: string;
+    timestamp: Date;
+    type: string;
+  };
+  unreadCount: number;
+  updatedAt: Date;
+  classId?: string;
+  courseId?: string;
+}
+
+export interface ChatRoomsUpdateData {
+  rooms: ChatRoomData[];
+  totalRooms: number;
+}
+
+export interface ChatRoomJoinedData {
+  roomId: string;
+  roomName: string;
+  roomType: string;
+  participants: Array<{
+    _id: string;
+    userId: string;
+    firstName?: string;
+    lastName?: string;
+    role?: string;
+    userAvatar?: string | null;
+    isActive?: boolean;
+    isOnline: boolean;
+  }>;
+  messages: ChatMessage[];
+  hasMore: boolean;
+  nextCursor?: string;
+  totalParticipants: number;
+}
+
+export interface FetchMessagesData {
+  roomId: string;
+  messages: ChatMessage[];
+  hasMore: boolean;
+  nextCursor?: string;
+  direction: 'before' | 'after';
+}
+
 export interface WebSocketContextType {
   socket: Socket | null;
   isConnected: boolean;
@@ -43,11 +105,16 @@ export interface WebSocketContextType {
   leaveChatRoom: (roomId: string) => void;
   sendChatMessage: (message: Omit<ChatMessage, '_id' | 'senderId' | 'timestamp' | 'readBy'>) => void;
   markMessageAsRead: (messageId: string) => void;
+  fetchChatRooms: () => void;
+  fetchMessages: (data: { roomId: string; cursor?: string; direction?: 'before' | 'after'; limit?: number }) => void;
   
   // Event listeners
   onChatMessage: (callback: (message: ChatMessage) => void) => () => void;
   onNotification: (callback: (notification: NotificationData) => void) => () => void;
-  onChatRoomHistory: (callback: (data: { roomId: string; messages: ChatMessage[] }) => void) => () => void;
+  onChatRoomHistory: (callback: (data: { roomId: string; messages: any[] }) => void) => () => void;
+  onChatRoomsUpdate: (callback: (data: ChatRoomsUpdateData) => void) => () => void;
+  onChatRoomJoined: (callback: (data: ChatRoomJoinedData) => void) => () => void;
+  onMessagesUpdate: (callback: (data: FetchMessagesData) => void) => () => void;
   
   // Connection management
   connect: (userId: string) => void;
@@ -64,28 +131,20 @@ export const useWebSocket = (): WebSocketContextType => {
 
   // Debug state changes
   useEffect(() => {
-    console.log('🔍 WebSocket state changed:', { isConnected, connectionStatus });
+    // Removed debug logging for production
   }, [isConnected, connectionStatus]);
 
   // Connect to WebSocket
   const connect = useCallback((userId: string) => {
     // Prevent multiple connections
     if (socketRef.current?.connected) {
-      console.log('WebSocket already connected, skipping connection attempt');
       return;
     }
 
     // Prevent multiple connection attempts while connecting
     if (connectionStatus === 'connecting') {
-      console.log('WebSocket connection in progress, skipping duplicate attempt');
       return;
     }
-
-    console.log('🔌 Attempting to connect to WebSocket...', { 
-      url: WEBSOCKET_URL, 
-      userId,
-      env: process.env.NEXT_PUBLIC_WEBSOCKET_URL 
-    });
 
     setConnectionStatus('connecting');
     userIdRef.current = userId;
@@ -102,8 +161,6 @@ export const useWebSocket = (): WebSocketContextType => {
 
       // Connection successful
       socket.on('connect', () => {
-        console.log('🔌 WebSocket connected:', socket.id);
-        console.log('🔌 Setting state: isConnected=true, connectionStatus=connected');
         setIsConnected(true);
         setConnectionStatus('connected');
         toast.success('Connected to real-time services');
@@ -113,11 +170,17 @@ export const useWebSocket = (): WebSocketContextType => {
           clearTimeout(reconnectTimeoutRef.current);
           reconnectTimeoutRef.current = null;
         }
+        
+        // Auto-fetch chat rooms after connection
+        setTimeout(() => {
+          if (socket.connected) {
+            socket.emit('fetch-chat-rooms');
+          }
+        }, 1000);
       });
 
       // Connection failed
       socket.on('connect_error', (error) => {
-        console.error('🔌 WebSocket connection error:', error);
         setIsConnected(false);
         setConnectionStatus('error');
         toast.error('Failed to connect to real-time services');
@@ -125,7 +188,6 @@ export const useWebSocket = (): WebSocketContextType => {
 
       // Disconnection
       socket.on('disconnect', (reason) => {
-        console.log('🔌 WebSocket disconnected:', reason);
         setIsConnected(false);
         setConnectionStatus('disconnected');
         
@@ -136,7 +198,6 @@ export const useWebSocket = (): WebSocketContextType => {
           // Attempt to reconnect after a delay
           if (userIdRef.current && reason !== 'io server disconnect') {
             reconnectTimeoutRef.current = setTimeout(() => {
-              console.log('🔄 Attempting to reconnect...');
               reconnect();
             }, 3000);
           }
@@ -145,33 +206,29 @@ export const useWebSocket = (): WebSocketContextType => {
 
       // Error handling
       socket.on('error', (error) => {
-        console.error('🔌 WebSocket error:', error);
         toast.error('WebSocket error occurred');
       });
 
       // Reconnection events
       socket.on('reconnect', (attemptNumber) => {
-        console.log(`🔄 WebSocket reconnected after ${attemptNumber} attempts`);
         toast.success('Reconnected to real-time services');
       });
 
       socket.on('reconnect_error', (error) => {
-        console.error('🔄 WebSocket reconnection failed:', error);
+        // Silent error handling
       });
 
       socket.on('reconnect_failed', () => {
-        console.error('🔄 WebSocket reconnection failed after max attempts');
         toast.error('Unable to reconnect. Please refresh the page.');
         setConnectionStatus('error');
       });
 
       socketRef.current = socket;
     } catch (error) {
-      console.error('Failed to create WebSocket connection:', error);
       setConnectionStatus('error');
       toast.error('Failed to initialize WebSocket connection');
     }
-  }, [connectionStatus]); // Add connectionStatus as dependency
+  }, [connectionStatus]);
 
   // Disconnect from WebSocket
   const disconnect = useCallback(() => {
@@ -188,7 +245,6 @@ export const useWebSocket = (): WebSocketContextType => {
     setIsConnected(false);
     setConnectionStatus('disconnected');
     userIdRef.current = null;
-    console.log('🔌 WebSocket manually disconnected');
   }, []);
 
   // Reconnect to WebSocket
@@ -205,7 +261,6 @@ export const useWebSocket = (): WebSocketContextType => {
   const joinChatRoom = useCallback((roomId: string) => {
     if (socketRef.current?.connected) {
       socketRef.current.emit('join-chat-room', { roomId });
-      console.log(`📨 Joined chat room: ${roomId}`);
     } else {
       toast.error('Not connected to chat service');
     }
@@ -214,14 +269,12 @@ export const useWebSocket = (): WebSocketContextType => {
   const leaveChatRoom = useCallback((roomId: string) => {
     if (socketRef.current?.connected) {
       socketRef.current.emit('leave-chat-room', { roomId });
-      console.log(`📨 Left chat room: ${roomId}`);
     }
   }, []);
 
   const sendChatMessage = useCallback((message: Omit<ChatMessage, '_id' | 'senderId' | 'timestamp' | 'readBy'>) => {
     if (socketRef.current?.connected) {
       socketRef.current.emit('send-chat-message', message);
-      console.log(`📨 Sent message to room: ${message.roomId}`);
     } else {
       toast.error('Not connected to chat service');
     }
@@ -230,6 +283,22 @@ export const useWebSocket = (): WebSocketContextType => {
   const markMessageAsRead = useCallback((messageId: string) => {
     if (socketRef.current?.connected) {
       socketRef.current.emit('mark-message-read', { messageId });
+    }
+  }, []);
+
+  const fetchChatRooms = useCallback(() => {
+    if (socketRef.current?.connected) {
+      socketRef.current.emit('fetch-chat-rooms');
+    } else {
+      toast.error('Not connected to chat service');
+    }
+  }, []);
+
+  const fetchMessages = useCallback((data: { roomId: string; cursor?: string; direction?: 'before' | 'after'; limit?: number }) => {
+    if (socketRef.current?.connected) {
+      socketRef.current.emit('fetch-messages', data);
+    } else {
+      toast.error('Not connected to chat service');
     }
   }, []);
 
@@ -270,6 +339,42 @@ export const useWebSocket = (): WebSocketContextType => {
     };
   }, []);
 
+  const onChatRoomsUpdate = useCallback((callback: (data: ChatRoomsUpdateData) => void) => {
+    if (!socketRef.current) return () => {};
+
+    socketRef.current.on('chat-rooms-update', (data: ChatRoomsUpdateData) => {
+      callback(data);
+    });
+
+    return () => {
+      socketRef.current?.off('chat-rooms-update', callback);
+    };
+  }, []);
+
+  const onChatRoomJoined = useCallback((callback: (data: ChatRoomJoinedData) => void) => {
+    if (!socketRef.current) return () => {};
+
+    socketRef.current.on('chat-room-joined', (data: ChatRoomJoinedData) => {
+      callback(data);
+    });
+
+    return () => {
+      socketRef.current?.off('chat-room-joined', callback);
+    };
+  }, []);
+
+  const onMessagesUpdate = useCallback((callback: (data: FetchMessagesData) => void) => {
+    if (!socketRef.current) return () => {};
+
+    socketRef.current.on('messages-fetched', (data: FetchMessagesData) => {
+      callback(data);
+    });
+
+    return () => {
+      socketRef.current?.off('messages-fetched', callback);
+    };
+  }, []);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -287,11 +392,16 @@ export const useWebSocket = (): WebSocketContextType => {
     leaveChatRoom,
     sendChatMessage,
     markMessageAsRead,
+    fetchChatRooms,
+    fetchMessages,
     
     // Event listeners
     onChatMessage,
     onNotification,
     onChatRoomHistory,
+    onChatRoomsUpdate,
+    onChatRoomJoined,
+    onMessagesUpdate,
     
     // Connection management
     connect,

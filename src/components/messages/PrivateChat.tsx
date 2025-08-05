@@ -63,12 +63,45 @@ export default function PrivateChat({
   
   // Cleanup function reference
   const cleanupRef = useRef<(() => void) | null>(null);
+
+  // Helper to resolve sender name from various sources
+  const resolveSenderName = (msgSenderId: any, msgSenderName?: string): { name: string; id: string } => {
+    let senderName = 'Unknown';
+    let senderId = '';
+    
+    // If senderId is an object (populated), extract name and ID
+    if (msgSenderId && typeof msgSenderId === 'object') {
+      const firstName = msgSenderId.firstName || '';
+      const lastName = msgSenderId.lastName || '';
+      senderName = `${firstName} ${lastName}`.trim() || msgSenderId.name || msgSenderId.email || 'Unknown';
+      senderId = msgSenderId._id || msgSenderId.userId || msgSenderId.id;
+    } 
+    // If senderId is a string, try to get name from senderName or participants
+    else if (typeof msgSenderId === 'string') {
+      senderId = msgSenderId;
+      if (msgSenderName && msgSenderName.trim()) {
+        senderName = msgSenderName;
+      } else if (room?.participants) {
+        // Try to find the sender in participants
+        const participant = room.participants.find((p: any) => 
+          p.userId === senderId || p._id === senderId || p.id === senderId
+        );
+        if (participant) {
+          const firstName = participant.firstName || '';
+          const lastName = participant.lastName || '';
+          senderName = `${firstName} ${lastName}`.trim() || participant.name || participant.email || 'Unknown';
+        }
+      }
+    }
+    
+    return { name: senderName, id: senderId };
+  };
   
   // Fetch initial messages and join the chat room when a room is selected
   useEffect(() => {
-    if (!room?._id && !room?.id) return;
+    if (!room?.roomId) return;
     
-    const roomId = room._id || room.id;
+    const roomId = room.roomId;
     let isMounted = true;
     
     setIsLoading(true);
@@ -77,29 +110,45 @@ export default function PrivateChat({
     // Join the chat room via WebSocket
     const joinChatRoom = () => {
       if (!webSocket.isConnected) {
-        console.log('⚠️ WebSocket not connected. Will join room when connected.');
         return { messageListener: null, roomJoinedListener: null };
       }
       
-      console.log(`🚪 Joining chat room: ${roomId}`);
-      
       // Set up room history listener to receive initial messages
       const roomHistoryListener = (data: any) => {
-        console.log('📥 Room history received:', data);
         
         if (!isMounted || data.roomId !== roomId) return;
         
         if (data.messages && Array.isArray(data.messages)) {
           const formattedMessages = data.messages.map((msg: any) => {
-            // Handle different message structures
-            const sender = msg.senderId && typeof msg.senderId === 'object' 
-              ? `${msg.senderId.firstName || ''} ${msg.senderId.lastName || ''}`.trim() 
-              : msg.senderName || 'Unknown';
-              
-            const senderId = msg.senderId && typeof msg.senderId === 'object'
-              ? msg.senderId._id
-              : msg.senderId;
-              
+            // Handle different message structures for sender name
+            let sender = 'Unknown';
+            let senderId = msg.senderId;
+            
+            // If senderId is an object (populated), extract name and ID
+            if (msg.senderId && typeof msg.senderId === 'object') {
+              const firstName = msg.senderId.firstName || '';
+              const lastName = msg.senderId.lastName || '';
+              sender = `${firstName} ${lastName}`.trim() || msg.senderId.name || msg.senderId.email || 'Unknown';
+              senderId = msg.senderId._id || msg.senderId.userId || msg.senderId.id;
+            } 
+            // If senderId is a string, try to get name from senderName or participants
+            else if (typeof msg.senderId === 'string') {
+              senderId = msg.senderId;
+              if (msg.senderName) {
+                sender = msg.senderName;
+              } else if (room?.participants) {
+                // Try to find the sender in participants
+                const participant = room.participants.find((p: any) => 
+                  p.userId === senderId || p._id === senderId || p.id === senderId
+                );
+                if (participant) {
+                  const firstName = participant.firstName || '';
+                  const lastName = participant.lastName || '';
+                  sender = `${firstName} ${lastName}`.trim() || participant.name || participant.email || 'Unknown';
+                }
+              }
+            }
+            
             return {
               _id: msg._id || msg.id,
               sender: sender,
@@ -107,8 +156,8 @@ export default function PrivateChat({
               text: msg.text || msg.content,
               time: new Date(msg.createdAt || msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
               type: msg.type || 'text',
-              senderType: senderId === user?.userId ? 'me' : 'other',
-              color: senderId === user?.userId ? 'green' : 'blue',
+              senderType: senderId === (user?.userId || user?._id) ? 'me' : 'other',
+              color: senderId === (user?.userId || user?._id) ? 'green' : 'blue',
             };
           });
           
@@ -153,7 +202,6 @@ export default function PrivateChat({
     return () => {
       isMounted = false;
       if (webSocket.isConnected && roomId) {
-        console.log(`🚪 Leaving chat room: ${roomId}`);
         webSocket.leaveChatRoom(roomId);
         
         if (cleanupRef.current) {
@@ -179,8 +227,7 @@ export default function PrivateChat({
   // Handle WebSocket connection changes
   useEffect(() => {
     if (webSocket.isConnected && room) {
-      const roomId = room._id || room.id;
-      console.log(`🔄 WebSocket reconnected, rejoining room: ${roomId}`);
+      const roomId = room.roomId;
       
       webSocket.joinChatRoom(roomId);
       
@@ -195,28 +242,31 @@ export default function PrivateChat({
   
   // Handle new incoming messages via WebSocket
   const handleNewMessage = (newMessage: WebSocketChatMessage) => {
-    console.log('📨 New message received:', newMessage);
-    
-    // Format the incoming message
+    if (!newMessage || !room) return;
+
+    const currentUserId = user?.userId || user?._id;
     const formattedMessage: Message = {
-      _id: newMessage._id,
-      sender: newMessage.senderName || 'Unknown',
-      senderId: newMessage.senderId,
-      text: newMessage.content,
-      time: new Date(newMessage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      type: newMessage.type || 'text',
-      senderType: newMessage.senderId === user?.userId ? 'me' : 'other',
-      color: newMessage.senderId === user?.userId ? 'green' : 'blue',
+        _id: newMessage._id,
+        sender: newMessage.senderName || 'Unknown',
+        senderId: newMessage.senderId,
+        text: newMessage.content,
+        time: newMessage.timestamp ? new Date(newMessage.timestamp).toISOString() : new Date().toISOString(),
+        type: newMessage.type || 'text',
+        senderType: newMessage.senderId === currentUserId ? 'me' : 'other',
+        color: newMessage.senderId === currentUserId ? 'green' : 'blue',
     };
-    
-    setMessages(prevMessages => [...prevMessages, formattedMessage]);
+
+    setMessages(prevMessages => {
+        const updatedMessages = [...prevMessages, formattedMessage];
+        return updatedMessages.sort((a, b) => new Date(a.time || '').getTime() - new Date(b.time || '').getTime());
+    });
   };
   
   // Handle sending a new message
   const handleSendMessage = () => {
     if (!messageInput.trim() || !room || isSending) return;
     
-    const roomId = room._id || room.id;
+    const roomId = room.roomId;
     setIsSending(true);
     
     try {
@@ -227,8 +277,6 @@ export default function PrivateChat({
         senderName: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown User' : 'Unknown User',
         type: 'text' as const
       };
-      
-      console.log('📤 Sending message:', messagePayload);
       
       // Send via WebSocket
       webSocket.sendChatMessage(messagePayload);
@@ -250,7 +298,7 @@ export default function PrivateChat({
     setIsLoadingMore(true);
     
     try {
-      const roomId = room._id || room.id;
+      const roomId = room.roomId;
       
       // Store scroll position
       const scrollContainer = messagesContainerRef.current;
@@ -258,19 +306,45 @@ export default function PrivateChat({
       
       // Create a unique listener for this fetch operation
       const fetchMessagesListener = (data: any) => {
-        console.log('📥 Fetched older messages:', data);
         
         if (data && Array.isArray(data.messages) && data.messages.length > 0) {
-          const formattedMessages = data.messages.map((msg: any) => ({
-            _id: msg._id || msg.id,
-            sender: msg.senderName || 'Unknown',
-            senderId: msg.senderId,
-            text: msg.content,
-            time: new Date(msg.createdAt || msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            type: msg.type || 'text',
-            senderType: msg.senderId === user?.userId ? 'me' : 'other',
-            color: msg.senderId === user?.userId ? 'green' : 'blue',
-          }));
+          const formattedMessages = data.messages.map((msg: any) => {
+            // Improve sender name resolution for fetched messages
+            let sender = 'Unknown';
+            let senderId = msg.senderId;
+            
+            if (msg.senderId && typeof msg.senderId === 'object') {
+              const firstName = msg.senderId.firstName || '';
+              const lastName = msg.senderId.lastName || '';
+              sender = `${firstName} ${lastName}`.trim() || msg.senderId.name || msg.senderId.email || 'Unknown';
+              senderId = msg.senderId._id || msg.senderId.userId || msg.senderId.id;
+            } else if (typeof msg.senderId === 'string') {
+              senderId = msg.senderId;
+              if (msg.senderName) {
+                sender = msg.senderName;
+              } else if (room?.participants) {
+                const participant = room.participants.find((p: any) => 
+                  p.userId === senderId || p._id === senderId || p.id === senderId
+                );
+                if (participant) {
+                  const firstName = participant.firstName || '';
+                  const lastName = participant.lastName || '';
+                  sender = `${firstName} ${lastName}`.trim() || participant.name || participant.email || 'Unknown';
+                }
+              }
+            }
+            
+            return {
+              _id: msg._id || msg.id,
+              sender: sender,
+              senderId: senderId,
+              text: msg.content,
+              time: new Date(msg.createdAt || msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              type: msg.type || 'text',
+              senderType: senderId === (user?.userId || user?._id) ? 'me' : 'other',
+              color: senderId === (user?.userId || user?._id) ? 'green' : 'blue',
+            };
+          });
           
           // Update oldest message ID for next pagination
           if (formattedMessages.length > 0) {
@@ -334,21 +408,29 @@ export default function PrivateChat({
   const getOtherParticipant = () => {
     // For private chat, find the other user in the participants
     if (room?.participants && Array.isArray(room.participants)) {
+      const currentUserId = user?.userId || user?._id;
       const otherUser = room.participants.find(
-        (p: any) => p.userId !== user?.userId || p.id !== user?.userId
+        (p: any) => {
+          const participantId = p.userId || p._id || p.id;
+          return participantId !== currentUserId;
+        }
       );
       
       if (otherUser) {
+        const name = otherUser.firstName && otherUser.lastName 
+          ? `${otherUser.firstName} ${otherUser.lastName}`.trim()
+          : otherUser.name || 'Unknown User';
+          
         return {
-          name: otherUser.name || 'Private Chat',
-          avatar: otherUser.avatar || '/icons/direct-message.svg',
-          status: room.status || ''
+          name,
+          avatar: otherUser.userAvatar || otherUser.avatar || '/icons/direct-message.svg',
+          status: otherUser.isOnline ? 'Online' : 'Offline'
         };
       }
     }
     
     return {
-      name: room?.name || 'Private Chat',
+      name: room?.displayName || room?.name || 'Private Chat',
       avatar: '/icons/direct-message.svg',
       status: ''
     };
@@ -360,9 +442,9 @@ export default function PrivateChat({
     <div className="lg:w-3/5 xl:w-2/3 flex flex-col relative">
       <div className="flex items-center rounded-tr-lg p-4 border-b bg-white">
         <ChatHeader
-          avatar={otherParticipant.avatar}
+          avatar={room?.avatarInfo?.type === 'image' ? room.avatarInfo.value : '/icons/chat.svg'}
           name={otherParticipant.name}
-          status={otherParticipant.status}
+          subtext={otherParticipant.status}
         />
       </div>
       <div 

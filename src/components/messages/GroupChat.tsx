@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/app/hooks/useAuth";
 import { useWebSocketContext } from "@/app/contexts/WebSocketContext";
 import ChatHeader from "./ChatHeader";
@@ -99,201 +99,310 @@ export default function GroupChat({
     // This is placeholder logic - adjust based on your data structure
     return "student";
   };
+
+  // Utility function to resolve sender name and ID
+  function resolveSenderName(senderId: any, senderName?: string) {
+    if (typeof senderId === 'object' && senderId !== null) {
+      // Handle populated sender object (might be Mongoose document)
+      const senderData = senderId._doc || senderId;
+      const firstName = senderData.firstName || '';
+      const lastName = senderData.lastName || '';
+      const fullName = `${firstName} ${lastName}`.trim();
+      const name = fullName || senderData.name || senderData.email || 'Unknown';
+      const id = senderData._id || senderData.userId || senderData.id || '';
+      return { name, id };
+    } else if (typeof senderId === 'string') {
+      // Handle string sender ID - try to get name from senderName parameter or participants
+      let name = 'Unknown';
+      
+      if (senderName && senderName.trim()) {
+        name = senderName.trim();
+      } else if (room?.participants) {
+        // Try to find the sender in participants
+        const participant = room.participants.find((p: any) => {
+          const participantData = p._doc || p;
+          const participantId = participantData.userId || participantData._id || p.userId || p._id;
+          return participantId === senderId;
+        });
+        
+        if (participant) {
+          const participantData = participant._doc || participant;
+          const firstName = participantData.firstName || '';
+          const lastName = participantData.lastName || '';
+          const fullName = `${firstName} ${lastName}`.trim();
+          name = fullName || participantData.name || participantData.email || 'Unknown';
+        }
+      }
+      
+      return { name, id: senderId };
+    }
+    
+    return { name: senderName || 'Unknown', id: '' };
+  }
+
+  // Helper to resolve sender name from various sources
+  const resolveSenderNameFull = (msgSenderId: any, msgSenderName?: string): { name: string; id: string } => {
+    let senderName = 'Unknown';
+    let senderId = '';
+    
+    // If senderId is an object (populated), extract name and ID
+    if (msgSenderId && typeof msgSenderId === 'object') {
+      const firstName = msgSenderId.firstName || '';
+      const lastName = msgSenderId.lastName || '';
+      senderName = `${firstName} ${lastName}`.trim() || msgSenderId.name || msgSenderId.email || 'Unknown';
+      senderId = msgSenderId._id || msgSenderId.userId || msgSenderId.id;
+    } 
+    // If senderId is a string, try to get name from senderName or participants
+    else if (typeof msgSenderId === 'string') {
+      senderId = msgSenderId;
+      if (msgSenderName && msgSenderName.trim()) {
+        senderName = msgSenderName;
+      } else if (room?.participants) {
+        // Try to find the sender in participants
+        const participant = room.participants.find((p: any) => 
+          p.userId === senderId || p._id === senderId || p.id === senderId
+        );
+        if (participant) {
+          const firstName = participant.firstName || '';
+          const lastName = participant.lastName || '';
+          senderName = `${firstName} ${lastName}`.trim() || participant.name || participant.email || 'Unknown';
+        }
+      }
+    }
+    
+    return { name: senderName, id: senderId };
+  };
   
   // Fetch initial messages and join the chat room when a room is selected
   useEffect(() => {
-    if (!room?._id && !room?.id) return;
+    if (!room?.roomId || !webSocket.isConnected) return;
     
-    const roomId = room._id || room.id;
+    const roomId = room.roomId;
     let isMounted = true;
     
     setIsLoading(true);
     setError(null);
+    setMessages([]); // Clear previous messages
+    setHasMore(true);
+    setOldestMessageId(null);
     
-    // Join the chat room via WebSocket
-    const joinChatRoom = () => {
-      if (!webSocket.isConnected) {
-        console.log('⚠️ WebSocket not connected. Will join room when connected.');
-        return { messageListener: null, roomJoinedListener: null };
+    // Set up room joined listener to receive initial messages and room data
+    const roomJoinedListener = (data: any) => {
+      console.log('📨 Room joined data received:', data);
+      
+      if (!isMounted || data.roomId !== roomId) {
+        console.log('🚫 Ignoring room data - not current room or unmounted');
+        return;
       }
       
-      console.log(`🚪 Joining chat room: ${roomId}`);
-      
-      // Set up room history listener to receive initial messages
-      const roomHistoryListener = (data: any) => {
-        console.log('📥 Room history received:', data);
+      if (data.messages && Array.isArray(data.messages)) {
+        // Sort messages by timestamp (oldest first, newest last)
+        const sortedMessages = data.messages.sort((a: any, b: any) => {
+          const timeA = new Date(a.createdAt || a.timestamp).getTime();
+          const timeB = new Date(b.createdAt || b.timestamp).getTime();
+          return timeA - timeB;
+        });
         
-        if (!isMounted || data.roomId !== roomId) return;
-        
-        if (data.messages && Array.isArray(data.messages)) {
-          const formattedMessages = data.messages.map((msg: any) => {
-            // Handle different message structures
-            const sender = msg.senderId && typeof msg.senderId === 'object' 
-              ? `${msg.senderId.firstName || ''} ${msg.senderId.lastName || ''}`.trim() 
-              : msg.senderName || 'Unknown';
-              
-            const senderId = msg.senderId && typeof msg.senderId === 'object'
-              ? msg.senderId._id
-              : msg.senderId;
-              
-            return {
-              _id: msg._id || msg.id,
-              sender: sender,
-              senderId: senderId,
-              text: msg.text || msg.content,
-              time: new Date(msg.createdAt || msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              type: msg.type || 'text',
-              senderType: senderId === user?.userId ? "self" : getUserRole(senderId),
-              color: getColorForUser(senderId),
-              avatar: '/image/teachers/mathematics.png', // Default avatar
-            };
+        const formattedMessages = sortedMessages.map((msg: any) => {
+          const { name: sender, id: senderId } = resolveSenderName(msg.senderId, msg.senderName);
+          
+          console.log('🔍 Message sender info:', {
+            msgSenderId: msg.senderId,
+            msgSenderName: msg.senderName,
+            resolvedName: sender,
+            resolvedId: senderId
           });
           
-          setMessages(formattedMessages);
-          
-          // Set oldest message ID for pagination
-          if (formattedMessages.length > 0) {
-            setOldestMessageId(formattedMessages[0]._id);
-          }
-          
-          // Check if there are more messages to load
-          setHasMore(data.hasMore || false);
+          return {
+            _id: msg._id || msg.id,
+            sender: sender,
+            senderId: senderId,
+            text: msg.text || msg.content,
+            time: new Date(msg.createdAt || msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            type: msg.type || 'text',
+            senderType: senderId === (user?.userId || user?._id) ? "self" : getUserRole(senderId),
+            color: getColorForUser(senderId),
+            avatar: '/image/teachers/mathematics.png', // Default avatar
+          };
+        });
+        
+        console.log('💬 Setting initial messages:', formattedMessages.length);
+        setMessages(formattedMessages);
+        
+        // Set oldest message ID for pagination (first in chronological order)
+        if (formattedMessages.length > 0) {
+          setOldestMessageId(formattedMessages[0]._id);
         }
         
-        setIsLoading(false);
-      };
+        // Check if there are more messages to load
+        setHasMore(data.hasMore || false);
+      } else {
+        console.log('📭 No messages in room data');
+        setMessages([]);
+      }
       
-      // Register room history listener
-      webSocket.socket?.on('chat-room-history', roomHistoryListener);
-      
-      // Join chat room using the WebSocketContextType method
-      webSocket.joinChatRoom(roomId);
-      
-      // Set up chat message listener
-      const messageListener = webSocket.onChatMessage(handleNewMessage);
-      
-      return { 
-        messageListener, 
-        roomHistoryListener: () => {
-          webSocket.socket?.off('chat-room-history', roomHistoryListener);
-        }
-      };
+      setIsLoading(false);
     };
     
-    const listeners = joinChatRoom();
+    // Register room joined listener for initial messages
+    webSocket.socket?.on('chat-room-joined', roomJoinedListener);
     
-    if (listeners.messageListener) {
-      cleanupRef.current = listeners.messageListener;
-    }
+    // Join chat room using the WebSocketContextType method
+    console.log('🏠 Joining chat room:', roomId);
+    webSocket.joinChatRoom(roomId);
     
     // Clean up event listeners when component unmounts or room changes
     return () => {
+      console.log('🧹 Cleaning up room listeners for:', roomId);
       isMounted = false;
-      if (webSocket.isConnected && roomId) {
-        console.log(`🚪 Leaving chat room: ${roomId}`);
-        webSocket.leaveChatRoom(roomId);
-        
-        if (cleanupRef.current) {
-          cleanupRef.current();
-          cleanupRef.current = null;
-        }
-        
-        // Clean up room history listener
-        if (listeners.roomHistoryListener) {
-          listeners.roomHistoryListener();
-        }
-      }
+      webSocket.leaveChatRoom(roomId);
+      webSocket.socket?.off('chat-room-joined', roomJoinedListener);
     };
-  }, [room, webSocket.isConnected]);
+  }, [room?.roomId, webSocket.isConnected]);
   
-  // Scroll to bottom when messages change
+  // Scroll to bottom when messages change (but only for new messages, not when loading old ones)
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (messagesEndRef.current && !isLoadingMore) {
+      // Small delay to ensure DOM has updated
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
     }
-  }, [messages]);
+  }, [messages, isLoadingMore]);
   
-  // Handle WebSocket connection changes
+  // Debug WebSocket connection status
   useEffect(() => {
-    if (webSocket.isConnected && room) {
-      const roomId = room._id || room.id;
-      console.log(`🔄 WebSocket reconnected, rejoining room: ${roomId}`);
-      
-      webSocket.joinChatRoom(roomId);
-      
-      // Set up chat message listener and store cleanup function
-      const unsubscribe = webSocket.onChatMessage(handleNewMessage);
-      cleanupRef.current = unsubscribe;
-      
-      // Return cleanup function
-      return unsubscribe;
-    }
-  }, [webSocket.isConnected]);
-  
+    console.log('🔌 WebSocket status changed:', {
+      isConnected: webSocket.isConnected,
+      connectionStatus: webSocket.connectionStatus,
+      hasSocket: !!webSocket.socket,
+      socketConnected: webSocket.socket?.connected
+    });
+  }, [webSocket.isConnected, webSocket.connectionStatus]);
+
   // Handle new incoming messages via WebSocket
-  const handleNewMessage = (newMessage: WebSocketChatMessage) => {
+  const handleNewMessage = useCallback((newMessage: WebSocketChatMessage) => {
     console.log('📨 New message received:', newMessage);
     
+    // Get room ID from either roomId or chatRoomId (backend inconsistency)
+    const messageRoomId = newMessage.roomId || (newMessage as any).chatRoomId;
+    
     // Only process messages for the current room
-    if (newMessage.roomId !== (room?._id || room?.id)) {
+    if (messageRoomId !== room?.roomId) {
+      console.log('🚫 Message not for current room:', messageRoomId, 'vs', room?.roomId);
       return;
     }
     
+    console.log('✅ Message is for current room, processing...');
+    
+    // Resolve sender name using helper function
+    const { name: senderName, id: senderId } = resolveSenderName(newMessage.senderId, newMessage.senderName);
+    
     // Format the incoming message
     const formattedMessage: Message = {
-      _id: newMessage._id,
-      sender: newMessage.senderName || 'Unknown',
-      senderId: newMessage.senderId,
-      text: newMessage.content,
-      time: new Date(newMessage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      _id: newMessage._id || (newMessage as any).id,
+      sender: senderName,
+      senderId: senderId,
+      text: newMessage.content || (newMessage as any).text,
+      time: new Date(newMessage.timestamp || (newMessage as any).createdAt || new Date()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       type: newMessage.type || 'text',
-      senderType: newMessage.senderId === user?.userId ? "self" : getUserRole(newMessage.senderId),
-      color: getColorForUser(newMessage.senderId),
+      senderType: senderId === (user?.userId || user?._id) ? "self" : getUserRole(senderId),
+      color: getColorForUser(senderId),
       avatar: '/image/teachers/mathematics.png', // Default avatar, should be replaced with actual user avatar
     };
     
-    setMessages(prevMessages => [...prevMessages, formattedMessage]);
-  };
+    console.log('✅ Adding new message to state:', formattedMessage);
+    
+    // Add new message to the end (newest messages at bottom)
+    setMessages(prevMessages => {
+      // Check if message already exists to prevent duplicates
+      const messageExists = prevMessages.some(msg => msg._id === formattedMessage._id);
+      if (messageExists) {
+        console.log('⚠️ Message already exists, skipping duplicate');
+        return prevMessages;
+      }
+      
+      // Add new message at the end
+      const updatedMessages = [...prevMessages, formattedMessage];
+      console.log('📝 Updated messages count:', updatedMessages.length);
+      return updatedMessages;
+    });
+  }, [room?.roomId, user?.userId, user?._id]);
+
+  // Set up message listener for real-time messages (separate from room joining)
+  useEffect(() => {
+    if (!webSocket.isConnected) {
+      console.log('⚠️ WebSocket not connected, skipping message listener setup');
+      return;
+    }
+
+    console.log('🔄 Setting up message listener');
+    const unsubscribe = webSocket.onChatMessage(handleNewMessage);
+    cleanupRef.current = unsubscribe;
+
+    return () => {
+      console.log('🧹 Cleaning up message listener');
+      if (cleanupRef.current) {
+        cleanupRef.current();
+        cleanupRef.current = null;
+      }
+    };
+  }, [webSocket.isConnected, room?.roomId, handleNewMessage]);
   
   // Handle sending a new message
-  const handleSendMessage = () => {
-    if (!messageInput.trim() || !room || isSending) return;
+  const handleSendMessage = useCallback(() => {
+    if (!messageInput.trim() || !room || isSending || !webSocket.isConnected) {
+      console.log('❌ Cannot send message:', {
+        hasInput: !!messageInput.trim(),
+        hasRoom: !!room,
+        isSending,
+        isConnected: webSocket.isConnected
+      });
+      return;
+    }
     
-    const roomId = room._id || room.id;
+    const roomId = room.roomId;
+    const messageContent = messageInput.trim();
+    
+    console.log('📤 Sending message:', messageContent);
     setIsSending(true);
     
     try {
       // Create message payload
       const messagePayload = {
-        content: messageInput.trim(),
+        content: messageContent,
         roomId,
         senderName: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown User' : 'Unknown User',
         type: 'text' as const
       };
       
-      console.log('📤 Sending message:', messagePayload);
+      console.log('📦 Message payload:', messagePayload);
       
       // Send via WebSocket
       webSocket.sendChatMessage(messagePayload);
       
-      // Clear input field
+      // Clear input field immediately for better UX
       setMessageInput('');
+      
+      console.log('✅ Message sent successfully');
     } catch (err: any) {
-      console.error('Error sending message:', err);
-      // Display error toast/notification
+      console.error('❌ Error sending message:', err);
+      // Show error to user - you could add a toast notification here
+      setError('Failed to send message. Please try again.');
     } finally {
       setIsSending(false);
     }
-  };
+  }, [messageInput, room, isSending, webSocket.isConnected, webSocket.sendChatMessage, user]);
   
   // Load older messages with pagination using WebSockets
   const loadMoreMessages = async () => {
     if (!room || !oldestMessageId || !hasMore || isLoadingMore) return;
     
+    console.log('📚 Loading more messages, cursor:', oldestMessageId);
     setIsLoadingMore(true);
     
     try {
-      const roomId = room._id || room.id;
+      const roomId = room.roomId;
       
       // Store scroll position
       const scrollContainer = messagesContainerRef.current;
@@ -301,27 +410,38 @@ export default function GroupChat({
       
       // Create a unique listener for this fetch operation
       const fetchMessagesListener = (data: any) => {
-        console.log('📥 Fetched older messages:', data);
+        console.log('📨 Received paginated messages:', data);
         
         if (data && Array.isArray(data.messages) && data.messages.length > 0) {
-          const formattedMessages = data.messages.map((msg: any) => ({
-            _id: msg._id || msg.id,
-            sender: msg.senderName || 'Unknown',
-            senderId: msg.senderId,
-            text: msg.content,
-            time: new Date(msg.createdAt || msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            type: msg.type || 'text',
-            senderType: msg.senderId === user?.userId ? "self" : getUserRole(msg.senderId),
-            color: getColorForUser(msg.senderId),
-            avatar: '/image/teachers/mathematics.png', // Default avatar
-          }));
+          // Sort messages by timestamp (oldest first)
+          const sortedMessages = data.messages.sort((a: any, b: any) => {
+            const timeA = new Date(a.createdAt || a.timestamp).getTime();
+            const timeB = new Date(b.createdAt || b.timestamp).getTime();
+            return timeA - timeB;
+          });
+          
+          const formattedMessages = sortedMessages.map((msg: any) => {
+            const { name: sender, id: senderId } = resolveSenderName(msg.senderId, msg.senderName);
+            
+            return {
+              _id: msg._id || msg.id,
+              sender: sender,
+              senderId: senderId,
+              text: msg.content,
+              time: new Date(msg.createdAt || msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              type: msg.type || 'text',
+              senderType: senderId === (user?.userId || user?._id) ? "self" : getUserRole(senderId),
+              color: getColorForUser(senderId),
+              avatar: '/image/teachers/mathematics.png', // Default avatar
+            };
+          });
           
           // Update oldest message ID for next pagination
           if (formattedMessages.length > 0) {
             setOldestMessageId(formattedMessages[0]._id);
           }
           
-          // Prepend older messages
+          // Prepend older messages (they go at the beginning)
           setMessages(prevMessages => [...formattedMessages, ...prevMessages]);
           
           // Check if there are more messages to load
@@ -333,7 +453,10 @@ export default function GroupChat({
               scrollContainer.scrollTop = scrollContainer.scrollHeight - scrollHeight;
             }, 0);
           }
+          
+          console.log('📝 Added', formattedMessages.length, 'older messages');
         } else {
+          console.log('📭 No more messages to load');
           setHasMore(false);
         }
         
@@ -358,10 +481,11 @@ export default function GroupChat({
       setTimeout(() => {
         webSocket.socket?.off('messages-fetched', fetchMessagesListener);
         setIsLoadingMore(false);
+        console.log('⏰ Timeout: cleaning up fetch messages listener');
       }, 10000);
       
     } catch (err: any) {
-      console.error('Error loading more messages:', err);
+      console.error('❌ Error loading more messages:', err);
       setIsLoadingMore(false);
     }
   };
@@ -393,26 +517,60 @@ export default function GroupChat({
   
   const getParticipantsText = () => {
     if (!room?.participants || !Array.isArray(room.participants)) {
+      console.log('⚠️ No participants found in room:', room);
       return "";
     }
-    
+
+    console.log('👥 Processing participants:', room.participants);
+    const currentUserId = user?.userId || user?._id;
+    console.log('🔍 Current user ID:', currentUserId);
+
     const participants = room.participants
       .filter((p: any) => {
-        const participantId = p.userId || p._id;
-        return participantId !== user?.userId;
+        // Handle Mongoose documents - data might be in _doc property
+        const participantData = p._doc || p;
+        const participantId = participantData.userId || participantData._id || p.userId || p._id;
+        const isNotCurrent = participantId !== currentUserId;
+        console.log('🔍 Participant filter:', { 
+          participantId, 
+          currentUserId, 
+          isNotCurrent, 
+          participant: p,
+          participantData 
+        });
+        return isNotCurrent;
       })
       .map((p: any) => {
-        // Handle different participant data structures
-        if (p.firstName || p.lastName) {
-          return `${p.firstName || ''} ${p.lastName || ''}`.trim();
+        // Handle Mongoose documents - data might be in _doc property
+        const participantData = p._doc || p;
+        
+        // Extract participant name properly
+        let name = 'Unknown User';
+        if (participantData.firstName || participantData.lastName) {
+          name = `${participantData.firstName || ''} ${participantData.lastName || ''}`.trim();
+        } else if (participantData.name) {
+          name = participantData.name;
+        } else if (participantData.email) {
+          name = participantData.email;
+        } else if (p.firstName || p.lastName) {
+          // Fallback to direct properties
+          name = `${p.firstName || ''} ${p.lastName || ''}`.trim();
         } else if (p.name) {
-          return p.name;
-        } else {
-          return "Unknown";
+          name = p.name;
+        } else if (p.email) {
+          name = p.email;
         }
+        
+        console.log('👤 Mapped participant:', { 
+          original: p, 
+          participantData, 
+          mappedName: name 
+        });
+        return name;
       });
-    
-    // Return formatted text based on number of participants
+
+    console.log('📝 Final participants list:', participants);
+
     const participantCount = participants.length;
     if (participantCount === 0) {
       return "No other participants";
@@ -430,7 +588,7 @@ export default function GroupChat({
     <div className="lg:w-3/5 xl:w-2/3 flex flex-col relative">
       <div className="flex items-center rounded-tr-lg p-4 border-b bg-white">
         <ChatHeader
-          avatar={room?.avatar || "/icons/chat.svg"}
+          avatar={room?.avatarInfo?.type === 'image' ? room.avatarInfo.value : '/icons/chat.svg'}
           name={roomName}
           subtext={participantsText}
         />
@@ -501,6 +659,16 @@ export default function GroupChat({
           ))
         )}
         
+        {/* Sending indicator */}
+        {isSending && (
+          <div className="flex justify-end">
+            <div className="bg-blue-100 text-blue-600 px-3 py-2 rounded-lg max-w-xs flex items-center space-x-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-sm">Sending...</span>
+            </div>
+          </div>
+        )}
+        
         {/* Invisible element to scroll to */}
         <div ref={messagesEndRef} />
       </div>
@@ -519,10 +687,12 @@ export default function GroupChat({
         disabled={!room || isSending || !webSocket.isConnected}
         placeholder={
           !webSocket.isConnected 
-            ? "Connecting..." 
+            ? "Connecting to chat..." 
             : !room 
               ? "Select a chat to start messaging" 
-              : "Type a message..."
+              : isSending
+                ? "Sending message..."
+                : "Type a message..."
         }
       />
     </div>

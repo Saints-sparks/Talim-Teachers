@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Manrope } from "next/font/google";
 import { AppProvider } from "@/app/context/AppContext";
 import { WebSocketProvider } from "@/app/contexts/WebSocketContext";
+import { ChatProvider } from "@/app/context/ChatContext";
 import { Toaster } from "react-hot-toast";
 
 const manrope = Manrope({ subsets: ["latin"] });
@@ -22,8 +23,10 @@ export default function RootLayout({
       <body className={manrope.className}>
         <AppProvider>
           <WebSocketProvider>
-            {children}
-            <Toaster position="top-right" />
+            <ChatProvider>
+              {children}
+              <Toaster position="top-right" />
+            </ChatProvider>
           </WebSocketProvider>
         </AppProvider>
       </body>
