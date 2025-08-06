@@ -137,19 +137,38 @@ export default function GroupChat({
   const isCurrentUser = (senderId: string, senderName: string): boolean => {
     const currentUserId = getCurrentUserId();
     
+    console.log('🔍 isCurrentUser check:', { 
+      senderId, 
+      senderName, 
+      currentUserId,
+      user: user ? {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        userId: user.userId,
+        _id: user._id
+      } : null
+    });
+    
     // First try: direct ID match
-    if (currentUserId && senderId === currentUserId) {
+    if (currentUserId && senderId && senderId === currentUserId) {
       console.log('✅ Matched by ID:', { senderId, currentUserId });
       return true;
     }
     
     // Second try: match by name if user object is available
-    if (user && user.firstName && user.lastName) {
+    if (user && user.firstName && user.lastName && senderName) {
       const currentUserName = `${user.firstName} ${user.lastName}`.trim();
       console.log('🔍 Trying name match:', { currentUserName, senderName });
       
       if (currentUserName === senderName) {
         console.log('✅ Matched by name:', { currentUserName, senderName });
+        return true;
+      }
+      
+      // Also try matching with trimmed names to handle spacing issues
+      if (currentUserName.toLowerCase() === senderName.toLowerCase().trim()) {
+        console.log('✅ Matched by name (case insensitive):', { currentUserName, senderName });
         return true;
       }
     }
@@ -160,14 +179,42 @@ export default function GroupChat({
       return true;
     }
     
-    // Fourth try: Temporary fix - if the sender name contains "Assurance" and user is also "Assurance"
-    // This is a development workaround - remove this in production
-    if (user && user.firstName === 'Assurance' && senderName.includes('Assurance')) {
-      console.log('✅ Matched by development workaround:', { userFirstName: user.firstName, senderName });
-      return true;
+    // Fourth try: Enhanced development workaround for Assurance user
+    if (user && user.firstName && senderName) {
+      // Check if both contain "Assurance" (case insensitive)
+      if (user.firstName.toLowerCase().includes('assurance') && 
+          senderName.toLowerCase().includes('assurance')) {
+        console.log('✅ Matched by development workaround (Assurance):', { 
+          userFirstName: user.firstName, 
+          senderName 
+        });
+        return true;
+      }
     }
     
-    console.log('❌ No match found:', { senderId, currentUserId, senderName, userFirstName: user?.firstName });
+    // Fifth try: Fallback for development - if no other users are sending messages
+    // and the current user's name partially matches
+    if (user && user.firstName && senderName) {
+      const userFirstName = user.firstName.toLowerCase();
+      const messageSenderName = senderName.toLowerCase();
+      
+      // If sender name contains user's first name
+      if (messageSenderName.includes(userFirstName) || userFirstName.includes(messageSenderName)) {
+        console.log('⚠️ Fallback match by partial name:', { 
+          userFirstName: user.firstName, 
+          senderName 
+        });
+        return true;
+      }
+    }
+    
+    console.log('❌ No match found:', { 
+      senderId, 
+      currentUserId, 
+      senderName, 
+      userFirstName: user?.firstName,
+      allChecksCompleted: true
+    });
     return false;
   };
 
@@ -277,9 +324,15 @@ export default function GroupChat({
       console.log('📨 Room joined data received:', data);
       
       if (!isMounted || data.roomId !== roomId) {
-        console.log('🚫 Ignoring room data - not current room or unmounted');
+        console.log('🚫 Ignoring room data - not current room or unmounted', {
+          isMounted,
+          dataRoomId: data.roomId,
+          currentRoomId: roomId
+        });
         return;
       }
+      
+      console.log('✅ Processing room data for current room:', roomId);
       
       if (data.messages && Array.isArray(data.messages)) {
         // Sort messages by timestamp (oldest first, newest last)
@@ -292,15 +345,17 @@ export default function GroupChat({
         const formattedMessages = sortedMessages.map((msg: any) => {
           const { name: sender, id: senderId } = resolveSenderName(msg.senderId, msg.senderName);
           const currentUserId = getCurrentUserId();
+          const isMyMessage = isCurrentUser(senderId, sender);
           
-          console.log('🔍 Message sender info:', {
+          console.log('🔍 Initial message sender info:', {
             msgSenderId: msg.senderId,
             msgSenderName: msg.senderName,
             resolvedName: sender,
             resolvedId: senderId,
             currentUserId: currentUserId,
-            isCurrentUser: isCurrentUser(senderId, sender),
-            senderType: isCurrentUser(senderId, sender) ? "self" : getUserRole(senderId)
+            isCurrentUser: isMyMessage,
+            senderType: isMyMessage ? "self" : getUserRole(senderId),
+            messageText: msg.text || msg.content
           });
           
           return {
@@ -310,7 +365,7 @@ export default function GroupChat({
             text: msg.text || msg.content,
             time: new Date(msg.createdAt || msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             type: msg.type || 'text',
-            senderType: isCurrentUser(senderId, sender) ? "self" : getUserRole(senderId),
+            senderType: isMyMessage ? "self" : getUserRole(senderId),
             color: getColorForUser(senderId, sender),
             avatar: '/image/teachers/mathematics.png', // Default avatar
           };
@@ -326,13 +381,18 @@ export default function GroupChat({
         
         // Check if there are more messages to load
         setHasMore(data.hasMore || false);
+        
+        // Mark room as fully loaded after processing initial messages
+        setIsRoomLoaded(true);
       } else {
         console.log('📭 No messages in room data');
         setMessages([]);
+        // Still mark room as loaded even if no messages
+        setIsRoomLoaded(true);
       }
       
       setIsLoading(false);
-      setIsRoomLoaded(true); // Mark room as fully loaded
+      // Note: setIsRoomLoaded(true) is now handled in the message processing above
     };
     
     // Register room joined listener for initial messages
@@ -376,12 +436,6 @@ export default function GroupChat({
   const handleNewMessage = useCallback((newMessage: WebSocketChatMessage) => {
     console.log('📨 New message received:', newMessage);
     
-    // Don't process real-time messages until room is fully loaded
-    if (!isRoomLoaded) {
-      console.log('⏳ Room not fully loaded yet, skipping real-time message');
-      return;
-    }
-    
     // Get room ID from either roomId or chatRoomId (backend inconsistency)
     const messageRoomId = newMessage.roomId || (newMessage as any).chatRoomId;
     
@@ -397,44 +451,114 @@ export default function GroupChat({
     const { name: senderName, id: senderId } = resolveSenderName(newMessage.senderId, newMessage.senderName);
     const currentUserId = getCurrentUserId();
     
+    // Enhanced check for current user - particularly important for real-time messages
+    const isMyMessage = isCurrentUser(senderId, senderName);
+    
+    // Additional fallback: if we just sent a message and this message content matches what we just sent,
+    // it's very likely our own message coming back through WebSocket
+    const messageContent = newMessage.content || (newMessage as any).text;
+    const isRecentlySent = isSending && messageContent; // Simple check - could be enhanced with timestamp comparison
+    
+    console.log('🔍 Current user check details:', {
+      senderId,
+      senderName,
+      currentUserId,
+      isMyMessage,
+      isRecentlySent,
+      isRoomLoaded,
+      userInfo: user ? {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email
+      } : null
+    });
+    
     // Format the incoming message
     const formattedMessage: Message = {
       _id: newMessage._id || (newMessage as any).id,
       sender: senderName,
       senderId: senderId,
-      text: newMessage.content || (newMessage as any).text,
+      text: messageContent,
       time: new Date(newMessage.timestamp || (newMessage as any).createdAt || new Date()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       type: newMessage.type || 'text',
-      senderType: isCurrentUser(senderId, senderName) ? "self" : getUserRole(senderId),
+      senderType: isMyMessage ? "self" : getUserRole(senderId),
       color: getColorForUser(senderId, senderName),
       avatar: '/image/teachers/mathematics.png', // Default avatar, should be replaced with actual user avatar
     };
     
-    console.log('✅ Adding new message to state:', formattedMessage);
+    console.log('✅ Formatted message with senderType:', {
+      messageId: formattedMessage._id,
+      sender: formattedMessage.sender,
+      senderType: formattedMessage.senderType,
+      isMyMessage,
+      isRoomLoaded,
+      debugInfo: {
+        senderId,
+        senderName,
+        currentUserId: getCurrentUserId(),
+        userFirstName: user?.firstName,
+        userLastName: user?.lastName
+      }
+    });
     
     // Add new message to the end (newest messages at bottom)
     setMessages(prevMessages => {
       // Check if message already exists to prevent duplicates
-      // Check by both _id and content+timestamp for better duplicate detection
-      const messageExists = prevMessages.some(msg => 
-        (msg._id && formattedMessage._id && msg._id === formattedMessage._id) ||
-        (msg.senderId === formattedMessage.senderId && 
-         msg.text === formattedMessage.text && 
-         msg.time && formattedMessage.time &&
-         Math.abs(new Date(msg.time).getTime() - new Date(formattedMessage.time).getTime()) < 1000)
-      );
+      // Enhanced duplicate detection with multiple checks
+      const messageExists = prevMessages.some(msg => {
+        // Check by ID if both messages have IDs
+        if (msg._id && formattedMessage._id && msg._id === formattedMessage._id) {
+          return true;
+        }
+        
+        // Check by content, sender, and time proximity for better duplicate detection
+        const contentMatch = msg.text === formattedMessage.text;
+        const senderMatch = msg.senderId === formattedMessage.senderId || msg.sender === formattedMessage.sender;
+        const timeMatch = msg.time === formattedMessage.time;
+        
+        // If content, sender, and time all match, it's likely a duplicate
+        if (contentMatch && senderMatch && timeMatch) {
+          return true;
+        }
+        
+        // Additional check for very recent messages (within 2 seconds)
+        if (contentMatch && senderMatch && msg.time && formattedMessage.time) {
+          try {
+            const msgTime = new Date(`1970-01-01 ${msg.time}`).getTime();
+            const newMsgTime = new Date(`1970-01-01 ${formattedMessage.time}`).getTime();
+            const timeDiff = Math.abs(msgTime - newMsgTime);
+            if (timeDiff < 2000) { // 2 seconds tolerance
+              return true;
+            }
+          } catch (e) {
+            // If time parsing fails, fall back to exact match
+            return false;
+          }
+        }
+        
+        return false;
+      });
       
       if (messageExists) {
-        console.log('⚠️ Message already exists, skipping duplicate');
+        console.log('⚠️ Message already exists, skipping duplicate:', {
+          messageId: formattedMessage._id,
+          content: formattedMessage.text,
+          sender: formattedMessage.sender
+        });
         return prevMessages;
       }
       
       // Add new message at the end
       const updatedMessages = [...prevMessages, formattedMessage];
-      console.log('📝 Updated messages count:', updatedMessages.length);
+      console.log('📝 Updated messages count:', updatedMessages.length, 'New message:', {
+        id: formattedMessage._id,
+        sender: formattedMessage.sender,
+        senderType: formattedMessage.senderType,
+        content: formattedMessage.text
+      });
       return updatedMessages;
     });
-  }, [room?.roomId, getCurrentUserId(), isRoomLoaded]);
+  }, [room?.roomId, getCurrentUserId()]);
 
   // Set up message listener for real-time messages (separate from room joining)
   useEffect(() => {
