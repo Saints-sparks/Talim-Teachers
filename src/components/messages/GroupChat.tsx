@@ -5,7 +5,7 @@ import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
 import GroupMessageBubble from "./GroupMessageBubble";
 import ReplyPreview from "./ReplyPreview";
-import { Loader2 } from "lucide-react";
+import { Loader2, MessageCircle } from "lucide-react";
 import { getChatMessages } from "@/app/services/chat.service";
 import { ChatMessage as WebSocketChatMessage } from "@/app/hooks/useWebSocket";
 import { useAppContext } from "@/app/context/AppContext";
@@ -69,7 +69,7 @@ export default function GroupChat({
   const { classes, courses } = useAppContext();
   const webSocket = useWebSocketContext();
   
-  // Debug user object to understand its structure
+  // Debug user object to understand its structure and force re-render when user loads
   useEffect(() => {
     console.log('🔍 User object from useAuth:', {
       user,
@@ -80,6 +80,15 @@ export default function GroupChat({
       firstName: user?.firstName,
       lastName: user?.lastName
     });
+    
+    // When user authentication state changes from null to a user object,
+    // the component will automatically re-render and message positioning will be corrected
+    if (user) {
+      console.log('✅ User authenticated, message positioning should now work correctly:', {
+        userId: user.userId || user._id,
+        fullName: `${user.firstName} ${user.lastName}`.trim()
+      });
+    }
   }, [user]);
   
   // Cleanup function reference
@@ -88,11 +97,11 @@ export default function GroupChat({
   // Helper to get current user ID with fallback options
   const getCurrentUserId = (): string | undefined => {
     if (!user) {
-      console.log('⚠️ No user object available');
+      console.log('⚠️ No user object available yet (still loading)');
       return undefined;
     }
     
-    // Try different possible ID fields
+    // Try different possible ID fields - prioritize userId over _id for Teachers app
     const possibleIds = [
       user.userId,
       user._id,
@@ -107,22 +116,12 @@ export default function GroupChat({
       userKeys: Object.keys(user)
     });
     
-    // If we have a possible ID, return it
+    // Return the first available ID
     if (possibleIds.length > 0) {
       return possibleIds[0];
     }
     
-    // Last resort: try to get ID from user's name matching
-    // This is a temporary workaround until we fix the auth issue
-    if (user.firstName && user.lastName) {
-      const userFullName = `${user.firstName} ${user.lastName}`.trim();
-      console.log('🔍 Trying to match by name:', userFullName);
-      
-      // For development: if the user's name matches the message sender name, 
-      // we can infer they are the current user
-      return undefined; // We'll handle this in the senderType logic below
-    }
-    
+    console.log('⚠️ No valid user ID found in user object');
     return undefined;
   };
 
@@ -136,6 +135,13 @@ export default function GroupChat({
   // Helper to determine if a message is from the current user
   const isCurrentUser = (senderId: string, senderName: string): boolean => {
     const currentUserId = getCurrentUserId();
+    
+    // If we don't have a current user ID yet, we can't determine ownership
+    // Return false for now, this will be re-evaluated when user loads
+    if (!currentUserId) {
+      console.log('⚠️ Cannot determine message ownership - user not loaded yet');
+      return false;
+    }
     
     console.log('🔍 isCurrentUser check:', { 
       senderId, 
@@ -896,9 +902,13 @@ export default function GroupChat({
             </div>
           </div>
         ) : messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-48">
-            <p className="text-sm text-gray-500 mb-2">No messages yet</p>
-            <p className="text-xs text-gray-400">Send a message to start the conversation</p>
+          <div className="flex flex-col items-center justify-center h-full">
+            <div className="text-center p-8">
+              <MessageCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Start a conversation</h3>
+              <p className="text-gray-500 mb-4">This is the beginning of your conversation in this chat room.</p>
+              <p className="text-sm text-gray-400">Send a message below to get started.</p>
+            </div>
           </div>
         ) : (
           messages.map((msg, index) => (
@@ -927,6 +937,16 @@ export default function GroupChat({
             <div className="bg-blue-100 text-blue-600 px-3 py-2 rounded-lg max-w-xs flex items-center space-x-2">
               <Loader2 className="h-4 w-4 animate-spin" />
               <span className="text-sm">Sending...</span>
+            </div>
+          </div>
+        )}
+        
+        {/* User authentication loading indicator */}
+        {!user && messages.length > 0 && (
+          <div className="flex justify-center">
+            <div className="bg-yellow-50 text-yellow-700 px-3 py-2 rounded-lg text-xs flex items-center space-x-2 border border-yellow-200">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span>Loading user profile...</span>
             </div>
           </div>
         )}
