@@ -28,15 +28,13 @@ export default function ChatUI() {
 
   return (
     <Layout>
-      <div className="h-screen font-manrope text-[#030E18] flex flex-col bg-gray-50">
-        <div className="flex-1 overflow-hidden">
-          <MessagesLayout
-            replyingMessage={replyingMessage}
-            setReplyingMessage={setReplyingMessage}
-            openSubMenu={openSubMenu}
-            toggleSubMenu={toggleSubMenu}
-          />
-        </div>
+      <div className="h-full font-manrope text-[#030E18] flex flex-col bg-gray-50">
+        <MessagesLayout
+          replyingMessage={replyingMessage}
+          setReplyingMessage={setReplyingMessage}
+          openSubMenu={openSubMenu}
+          toggleSubMenu={toggleSubMenu}
+        />
       </div>
     </Layout>
   );

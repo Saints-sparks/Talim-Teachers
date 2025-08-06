@@ -47,34 +47,30 @@ export default function MessagesLayout({
   };
 
   return (
-    <div className="flex h-full w-full bg-gray-50 relative overflow-hidden">
-      {/* Sidebar - Mobile: Full screen when shown, Desktop: Fixed width panel */}
+    <div className="flex h-full w-full bg-gray-50 relative">
+      {/* Sidebar - Mobile: Take full container, Desktop: Fixed width panel */}
       <div className={`${
         isMobile 
           ? selectedChat 
             ? 'hidden' 
-            : 'fixed inset-0 z-50'
-          : 'relative'
-      } ${
-        isMobile ? 'w-full' : 'w-96 xl:w-80'
+            : 'block w-full'
+          : 'relative w-96 xl:w-80'
       } bg-white ${
         !isMobile ? 'border-r border-gray-200' : ''
-      } flex flex-col`}>
+      } flex flex-col h-full`}>
         <ChatSidebar onSelectChat={handleSelectChat} />
       </div>
 
-      {/* Chat Area - Mobile: Full screen when chat selected, Desktop: Flexible width */}
+      {/* Chat Area - Mobile: Take full container when shown, Desktop: Flexible width */}
       <div className={`${
         isMobile 
           ? selectedChat 
-            ? 'fixed inset-0 z-40' 
+            ? 'block w-full' 
             : 'hidden'
           : selectedChat 
-            ? 'flex' 
-            : 'hidden lg:flex'
-      } ${
-        isMobile ? 'w-full' : 'flex-1'
-      } flex-col bg-white`}>
+            ? 'flex flex-1' 
+            : 'hidden lg:flex lg:flex-1'
+      } flex-col bg-white h-full`}>
         {selectedChat ? (
           selectedChat.type === "group" ? (
             <GroupChat
