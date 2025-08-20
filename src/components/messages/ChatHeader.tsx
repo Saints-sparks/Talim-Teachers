@@ -1,5 +1,5 @@
 "use client";
-import { Avatar, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   ArrowLeft,
   MoreVertical,
@@ -11,31 +11,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import GroupInfoModal from "./GroupInfoModal";
-
-// Utility function to generate consistent colors from strings
-function generateColorFromString(str: string): string {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  
-  const hue = Math.abs(hash) % 360;
-  return `hsl(${hue}, 65%, 55%)`;
-}
-
-// Utility function to get user initials
-function getUserInitials(firstName?: string, lastName?: string, name?: string): string {
-  if (firstName || lastName) {
-    return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
-  }
-  if (name) {
-    const parts = name.split(' ');
-    return parts.length > 1 
-      ? `${parts[0][0]}${parts[1][0]}`.toUpperCase()
-      : name.slice(0, 2).toUpperCase();
-  }
-  return 'U';
-}
+import { generateColorFromString, getUserInitials } from "@/lib/colorUtils";
 
 // Utility function to process participants data (handle Mongoose documents)
 function processParticipants(participants: any[], currentUserId?: string) {
@@ -104,6 +80,12 @@ export default function ChatHeader({
         {/* Avatar */}
         <Avatar className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex-shrink-0">
           <AvatarImage src={avatar} />
+          <AvatarFallback 
+            className="text-white font-medium text-sm"
+            style={{ backgroundColor: generateColorFromString(name) }}
+          >
+            {getUserInitials(name)}
+          </AvatarFallback>
         </Avatar>
 
         {/* Chat Info */}
