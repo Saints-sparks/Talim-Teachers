@@ -1,7 +1,13 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import StudentCard from "./StudentCard";
-import { ChevronDown, Search, ArrowLeft, Users, GraduationCap } from "lucide-react";
+import {
+  ChevronDown,
+  Search,
+  ArrowLeft,
+  Users,
+  GraduationCap,
+} from "lucide-react";
 import { Input } from "../ui/input";
 import { useAuth } from "../../app/hooks/useAuth";
 import { getStudentsByClass } from "../../app/services/api.service";
@@ -11,7 +17,12 @@ import ClassCard from "@/components/ClassCard";
 import LoadingCard from "../LoadingCard";
 
 const StudentGrid: React.FC = () => {
-  const { user, classes, refreshClasses, isLoading: contextLoading } = useAppContext();
+  const {
+    user,
+    classes,
+    refreshClasses,
+    isLoading: contextLoading,
+  } = useAppContext();
   const { getAccessToken } = useAuth();
   const [selectedClass, setSelectedClass] = useState<any>(null);
   const [students, setStudents] = useState<any[]>([]);
@@ -64,9 +75,13 @@ const StudentGrid: React.FC = () => {
 
   if (error && !selectedClass) {
     return (
-      <div className="flex flex-col items-center justify-center h-60 space-y-4 text-center text-red-600">
+      <div className="flex flex-col items-center justify-center h-60 space-y-4 text-center text-[#878787]">
         <p>{error}</p>
-        <Button variant="outline" onClick={() => refreshClasses()}>
+        <Button
+          variant="outline"
+          onClick={() => refreshClasses()}
+          className="border-[#F0F0F0] text-[#030E18] hover:bg-[#F0F0F0]"
+        >
           Retry
         </Button>
       </div>
@@ -78,44 +93,48 @@ const StudentGrid: React.FC = () => {
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
         <div className="flex items-center gap-4 w-full sm:w-auto">
-          {selectedClass && (
-            <Button
-              variant="ghost"
-              onClick={handleBackToClasses}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-800 p-2"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Classes
-            </Button>
-          )}
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              {selectedClass ? (
-                <>
-                  <Users className="w-5 h-5 text-blue-600" />
-                  <h1 className="text-xl font-medium text-[#2F2F2F]">
-                    {selectedClass.name} Students
-                  </h1>
-                </>
-              ) : (
-                <>
-                  <GraduationCap className="w-5 h-5 text-blue-600" />
-                  <h1 className="text-xl font-medium text-[#2F2F2F]">My Classes</h1>
-                </>
-              )}
-            </div>
-            <p className="text-[#AAAAAA]">
-              {selectedClass 
-                ? `View all students in ${selectedClass.name}` 
-                : "View all the classes you teach"
-              }
-            </p>
+          <div className="flex gap-2 items-start">
+            {selectedClass && (
+              <Button
+                variant="ghost"
+                onClick={handleBackToClasses}
+                className="flex items-start gap-2 text-[#6F6F6F] hover:text-[#030E18] py-1 px-2 hover:bg-[#F0F0F0]"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+            )}
+            <div className="flex flex-col gap-1">
+              <div className="">
+                <div className="flex items-center gap-2">
+                  {selectedClass ? (
+                    <>
+                      <Users className="w-5 h-5 text-[#003366]" />
+                      <h1 className="text-[15px] font-medium text-[#030E18]">
+                        {selectedClass.name} Students
+                      </h1>
+                    </>
+                  ) : (
+                    <>
+                      <GraduationCap className="w-5 h-5 text-[#003366]" />
+                      <h1 className="text-xl font-medium text-[#030E18]">
+                        My Classes
+                      </h1>
+                    </>
+                  )}
+                </div>
+                          </div>
+                            <p className="text-[#6F6F6F]">
+                {selectedClass
+                  ? `View all students in ${selectedClass.name}`
+                  : "View all the classes you teach"}
+                            </p>
+              </div>
           </div>
         </div>
-        
+
         {/* Search Bar - Only show when viewing students */}
         {selectedClass && (
-          <div className="flex h-10 sm:h-12 border border-[#F0F0F0] bg-white items-center p-2 rounded-lg text-[#898989] w-full sm:w-auto sm:min-w-[300px]">
+          <div className="flex h-10 sm:h-12 border border-[#F0F0F0] bg-white items-center p-2 rounded-lg text-[#878787] w-full sm:w-auto sm:min-w-[300px]">
             <Search strokeWidth="1.5" className="w-4 h-4" />
             <Input
               type="search"
@@ -140,10 +159,18 @@ const StudentGrid: React.FC = () => {
             </div>
           ) : classes.length === 0 ? (
             <div className="text-center py-12">
-              <GraduationCap className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No Classes Found</h3>
-              <p className="text-gray-600 mb-4">You haven't been assigned to any classes yet.</p>
-              <Button variant="outline" onClick={() => refreshClasses()}>
+              <GraduationCap className="w-16 h-16 text-[#F0F0F0] mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-[#030E18] mb-2">
+                No Classes Found
+              </h3>
+              <p className="text-[#6F6F6F] mb-4">
+                You haven't been assigned to any classes yet.
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => refreshClasses()}
+                className="border-[#F0F0F0] text-[#030E18] hover:bg-[#F0F0F0]"
+              >
                 Refresh Classes
               </Button>
             </div>
@@ -163,22 +190,26 @@ const StudentGrid: React.FC = () => {
         // Display Students
         <div className="space-y-4">
           {/* Class Info Banner */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
+          <div className="bg-white border border-[#F0F0F0] rounded-xl p-4 shadow-none">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <GraduationCap className="w-5 h-5 text-blue-600" />
+                <div className="p-2 bg-[#F0F0F0] rounded-lg">
+                  <GraduationCap className="w-5 h-5 text-[#003366]" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900">{selectedClass.name}</h3>
-                  <p className="text-sm text-gray-600">
+                  <h3 className="font-medium text-[#030E18]">
+                    {selectedClass.name}
+                  </h3>
+                  <p className="text-sm text-[#6F6F6F]">
                     {selectedClass.classDescription || "Class Description"}
                   </p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-sm text-gray-600">Capacity</p>
-                <p className="font-semibold text-gray-900">{selectedClass.classCapacity} students</p>
+                <p className="text-sm text-[#6F6F6F]">Capacity</p>
+                <p className="font-medium text-[#030E18]">
+                  {selectedClass.classCapacity} students
+                </p>
               </div>
             </div>
           </div>
@@ -192,26 +223,29 @@ const StudentGrid: React.FC = () => {
             </div>
           ) : error ? (
             <div className="text-center py-12">
-              <div className="text-red-500 mb-4">
+              <div className="text-[#878787] mb-4">
                 <Users className="w-16 h-16 mx-auto mb-2 opacity-50" />
                 <p className="text-lg font-medium">Failed to Load Students</p>
                 <p className="text-sm">{error}</p>
               </div>
-              <Button variant="outline" onClick={() => handleClassSelect(selectedClass)}>
+              <Button
+                variant="outline"
+                onClick={() => handleClassSelect(selectedClass)}
+                className="border-[#F0F0F0] text-[#030E18] hover:bg-[#F0F0F0]"
+              >
                 Try Again
               </Button>
             </div>
           ) : filteredStudents.length === 0 ? (
             <div className="text-center py-12">
-              <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
+              <Users className="w-16 h-16 text-[#F0F0F0] mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-[#030E18] mb-2">
                 {searchQuery ? "No Students Found" : "No Students in Class"}
               </h3>
-              <p className="text-gray-600">
-                {searchQuery 
-                  ? `No students match "${searchQuery}"` 
-                  : `${selectedClass.name} doesn't have any students yet.`
-                }
+              <p className="text-[#6F6F6F]">
+                {searchQuery
+                  ? `No students match "${searchQuery}"`
+                  : `${selectedClass.name} doesn't have any students yet.`}
               </p>
             </div>
           ) : (

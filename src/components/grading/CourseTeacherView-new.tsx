@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { 
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
   Search,
   Filter,
   Edit3,
@@ -20,21 +20,25 @@ import {
   GraduationCap,
   Target,
   ArrowLeft,
-  BarChart3
-} from 'lucide-react';
-import { Course } from '@/types/types';
-import { Student } from '@/types/grading';
-import { 
+  BarChart3,
+  RefreshCw,
+} from "lucide-react";
+import { Course } from "@/types/types";
+import { Student } from "@/types/grading";
+import {
   AssessmentGradeRecordWithDetails,
-  CourseGradeRecordWithDetails
-} from '@/types/grade-records';
-import { useAppContext } from '@/app/context/AppContext';
-import { useAuth } from '@/app/hooks/useAuth';
-import { fetchTeacherDetails, getCurrentTerm } from '@/app/services/api.service';
-import { gradeRecordsApi } from '@/app/services/grade-records.service';
-import TermSelector from '@/components/grading/shared/TermSelector';
-import AssessmentGradeForm from '@/components/grading/course/AssessmentGradeForm';
-import { getStudentsByClass } from '@/app/services/api.service';
+  CourseGradeRecordWithDetails,
+} from "@/types/grade-records";
+import { useAppContext } from "@/app/context/AppContext";
+import { useAuth } from "@/app/hooks/useAuth";
+import {
+  fetchTeacherDetails,
+  getCurrentTerm,
+} from "@/app/services/api.service";
+import { gradeRecordsApi } from "@/app/services/grade-records.service";
+import TermSelector from "@/components/grading/shared/TermSelector";
+import AssessmentGradeForm from "@/components/grading/course/AssessmentGradeForm";
+import { getStudentsByClass } from "@/app/services/api.service";
 interface Assessment {
   _id: string;
   name: string;
@@ -42,7 +46,7 @@ interface Assessment {
   termId: string;
   startDate: string;
   endDate: string;
-  status: 'PENDING' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+  status: "PENDING" | "ACTIVE" | "COMPLETED" | "CANCELLED";
 }
 
 interface Term {
@@ -56,53 +60,62 @@ interface Term {
 const CourseTeacherView: React.FC = () => {
   const { user } = useAppContext();
   const { getAccessToken } = useAuth();
-  
+
   const [teacherCourses, setTeacherCourses] = useState<Course[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
-  const [selectedTerm, setSelectedTerm] = useState<string>('');
-  const [selectedAssessment, setSelectedAssessment] = useState<Assessment | null>(null);
+  const [selectedTerm, setSelectedTerm] = useState<string>("");
+  const [selectedAssessment, setSelectedAssessment] =
+    useState<Assessment | null>(null);
   const [terms, setTerms] = useState<Term[]>([]);
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
-  const [courseGrades, setCourseGrades] = useState<CourseGradeRecordWithDetails[]>([]);
+  const [courseGrades, setCourseGrades] = useState<
+    CourseGradeRecordWithDetails[]
+  >([]);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState<'overview' | 'assessment-entry' | 'course-grades'>('overview');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [viewMode, setViewMode] = useState<
+    "overview" | "assessment-entry" | "course-grades"
+  >("overview");
   const [error, setError] = useState<string | null>(null);
 
   // Helper functions to handle new student data structure
   const getStudentName = (student: any): string => {
     // Try legacy name field first
-    if (student.name && typeof student.name === 'string' && student.name.trim().length > 0) {
+    if (
+      student.name &&
+      typeof student.name === "string" &&
+      student.name.trim().length > 0
+    ) {
       return student.name;
     }
-    
+
     // Try userId with firstName and lastName
     if (student.userId?.firstName || student.userId?.lastName) {
-      const firstName = student.userId.firstName || '';
-      const lastName = student.userId.lastName || '';
+      const firstName = student.userId.firstName || "";
+      const lastName = student.userId.lastName || "";
       const fullName = `${firstName} ${lastName}`.trim();
       if (fullName.length > 0) {
         return fullName;
       }
     }
-    
-    return 'Unknown Student';
+
+    return "Unknown Student";
   };
 
   const getStudentId = (student: any): string => {
     // Try direct studentId field first
-    if (student.studentId && typeof student.studentId === 'string') {
+    if (student.studentId && typeof student.studentId === "string") {
       return student.studentId;
     }
-    
+
     // Try userId email as fallback
     if (student.userId?.email) {
       return student.userId.email;
     }
-    
-    return 'N/A';
+
+    return "N/A";
   };
 
   // Load teacher's assigned courses on component mount
@@ -122,24 +135,27 @@ const CourseTeacherView: React.FC = () => {
   const loadInitialData = async () => {
     setInitialLoading(true);
     setError(null);
-    
+
     try {
       const token = getAccessToken();
       if (!token) throw new Error("No auth token");
 
-      console.log('Loading initial data for user:', user.userId);
+      console.log("Loading initial data for user:", user.userId);
 
       // Load teacher courses and terms in parallel
       const [teacherData, currentTerm] = await Promise.all([
         fetchTeacherDetails(user.userId, token),
-        getCurrentTerm(token)
+        getCurrentTerm(token),
       ]);
 
-      console.log('Teacher data:', teacherData);
-      console.log('Current term:', currentTerm);
+      console.log("Teacher data:", teacherData);
+      console.log("Current term:", currentTerm);
 
       // Set courses
-      if (teacherData.assignedCourses && Array.isArray(teacherData.assignedCourses)) {
+      if (
+        teacherData.assignedCourses &&
+        Array.isArray(teacherData.assignedCourses)
+      ) {
         const courses = teacherData.assignedCourses.map((course: any) => ({
           _id: course._id,
           title: course.title,
@@ -147,13 +163,13 @@ const CourseTeacherView: React.FC = () => {
           description: course.description,
           classId: course.classId,
           teacherId: course.teacherId,
-          teacherRole: course.teacherRole || 'Academic',
+          teacherRole: course.teacherRole || "Academic",
           schoolId: course.schoolId,
           subjectId: course.subjectId,
-          className: course.class?.name || course.className
+          className: course.class?.name || course.className,
         }));
         setTeacherCourses(courses);
-        console.log('Set courses:', courses);
+        console.log("Set courses:", courses);
       }
 
       // Set terms - handle both single term and array responses
@@ -166,21 +182,20 @@ const CourseTeacherView: React.FC = () => {
         } else if (currentTerm._id) {
           termsData = [currentTerm];
         }
-        
+
         setTerms(termsData);
-        console.log('Set terms:', termsData);
-        
+        console.log("Set terms:", termsData);
+
         // Set current term as default if we have terms
         if (termsData.length > 0) {
           const termId = termsData[0]._id;
           setSelectedTerm(termId);
-          console.log('Set selected term:', termId);
+          console.log("Set selected term:", termId);
         }
       }
-      
     } catch (error) {
-      console.error('Error loading initial data:', error);
-      setError('Failed to load data. Please try again.');
+      console.error("Error loading initial data:", error);
+      setError("Failed to load data. Please try again.");
     } finally {
       setInitialLoading(false);
     }
@@ -188,58 +203,72 @@ const CourseTeacherView: React.FC = () => {
 
   const loadTermData = async () => {
     if (!selectedTerm || !selectedCourse) {
-      console.log('Missing required data:', { selectedTerm, selectedCourse: selectedCourse?._id });
+      console.log("Missing required data:", {
+        selectedTerm,
+        selectedCourse: selectedCourse?._id,
+      });
       return;
     }
-    
+
     setLoading(true);
     setError(null);
-    
+
     try {
       const token = getAccessToken();
       if (!token) throw new Error("No auth token");
 
-      console.log('Loading term data for course:', selectedCourse._id, 'term:', selectedTerm);
-      console.log('Selected course details:', selectedCourse);
+      console.log(
+        "Loading term data for course:",
+        selectedCourse._id,
+        "term:",
+        selectedTerm
+      );
+      console.log("Selected course details:", selectedCourse);
 
       // Load assessments, students, and course grades in parallel
-      const [assessmentsData, studentsData, courseGradesData] = await Promise.all([
-        gradeRecordsApi.getAssessmentsForTerm(selectedTerm, token),
-        getStudentsByClass(selectedCourse.classId, token),
-        gradeRecordsApi.getCourseGrades(selectedCourse._id, selectedTerm, token)
-      ]);
+      const [assessmentsData, studentsData, courseGradesData] =
+        await Promise.all([
+          gradeRecordsApi.getAssessmentsForTerm(selectedTerm, token),
+          getStudentsByClass(selectedCourse.classId, token),
+          gradeRecordsApi.getCourseGrades(
+            selectedCourse._id,
+            selectedTerm,
+            token
+          ),
+        ]);
 
-      console.log('Loaded data:', {
+      console.log("Loaded data:", {
         assessments: assessmentsData,
         students: studentsData,
-        courseGrades: courseGradesData
+        courseGrades: courseGradesData,
       });
 
       // Ensure all data is arrays to prevent undefined errors
       setAssessments(Array.isArray(assessmentsData) ? assessmentsData : []);
-      
+
       // Validate and filter students data
-      const validStudents = Array.isArray(studentsData) 
+      const validStudents = Array.isArray(studentsData)
         ? studentsData.filter((student: any) => {
             if (!student || !student._id) return false;
-            
+
             // Check if student has either legacy name or userId with firstName/lastName
-            const hasValidName = (
-              (student.name && typeof student.name === 'string' && student.name.trim().length > 0) ||
-              (student.userId && (student.userId.firstName || student.userId.lastName))
-            );
-            
+            const hasValidName =
+              (student.name &&
+                typeof student.name === "string" &&
+                student.name.trim().length > 0) ||
+              (student.userId &&
+                (student.userId.firstName || student.userId.lastName));
+
             return hasValidName;
           })
         : [];
-        
+
       setStudents(validStudents);
       setCourseGrades(Array.isArray(courseGradesData) ? courseGradesData : []);
-      
     } catch (error) {
-      console.error('Error loading term data:', error);
-      setError('Failed to load term data. Please try again.');
-      
+      console.error("Error loading term data:", error);
+      setError("Failed to load term data. Please try again.");
+
       // Set empty arrays on error to prevent crashes
       setAssessments([]);
       setStudents([]);
@@ -251,39 +280,61 @@ const CourseTeacherView: React.FC = () => {
 
   const handleAssessmentSelect = (assessment: Assessment) => {
     setSelectedAssessment(assessment);
-    setViewMode('assessment-entry');
+    setViewMode("assessment-entry");
   };
 
   const handleViewCourseGrades = () => {
-    setViewMode('course-grades');
+    setViewMode("course-grades");
   };
 
   const handleBackToOverview = () => {
-    setViewMode('overview');
+    setViewMode("overview");
     setSelectedAssessment(null);
   };
 
-  const getAssessmentStatusBadge = (status: Assessment['status']) => {
+  const getAssessmentStatusBadge = (status: Assessment["status"]) => {
     switch (status) {
-      case 'COMPLETED':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Completed</span>;
-      case 'ACTIVE':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Active</span>;
-      case 'PENDING':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Pending</span>;
-      case 'CANCELLED':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Cancelled</span>;
+      case "COMPLETED":
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            Completed
+          </span>
+        );
+      case "ACTIVE":
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+            Active
+          </span>
+        );
+      case "PENDING":
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+            Pending
+          </span>
+        );
+      case "CANCELLED":
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+            Cancelled
+          </span>
+        );
       default:
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Unknown</span>;
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+            Unknown
+          </span>
+        );
     }
   };
 
-  const filteredStudents = students.filter(student => {
+  const filteredStudents = students.filter((student) => {
     const studentName = getStudentName(student);
     const studentId = getStudentId(student);
-    
-    return studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           studentId.toLowerCase().includes(searchTerm.toLowerCase());
+
+    return (
+      studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      studentId.toLowerCase().includes(searchTerm.toLowerCase())
+    );
   });
 
   if (initialLoading) {
@@ -291,7 +342,7 @@ const CourseTeacherView: React.FC = () => {
       <div className="p-6">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading course data...</p>
+          <p className="text-[#6F6F6F]">Loading course data...</p>
         </div>
       </div>
     );
@@ -300,13 +351,18 @@ const CourseTeacherView: React.FC = () => {
   if (error) {
     return (
       <div className="p-6">
-        <Card>
+        <Card className="bg-white shadow-none border-[#F0F0F0]">
           <CardContent className="p-6">
             <div className="text-center">
               <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Data</h3>
-              <p className="text-gray-600 mb-4">{error}</p>
-              <Button onClick={loadInitialData}>
+              <h3 className="text-lg font-medium text-[#030E18] mb-2">
+                Error Loading Data
+              </h3>
+              <p className="text-[#6F6F6F] mb-4">{error}</p>
+              <Button
+                onClick={loadInitialData}
+                className="bg-blue-600 hover:bg-blue-700 text-white shadow-none"
+              >
                 Try Again
               </Button>
             </div>
@@ -317,51 +373,53 @@ const CourseTeacherView: React.FC = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+          <h2 className="text-xl font-medium text-[#030E18] flex items-center gap-2">
             <BookOpen className="h-6 w-6 text-blue-600" />
             Course Teacher Dashboard
           </h2>
-          <p className="text-gray-600 mt-1">Manage assessments and course grades</p>
+          <p className="text-sm text-[#6F6F6F] mt-1">
+            Manage assessments and course grades
+          </p>
         </div>
-        
+
         <div className="flex items-center gap-2">
-          {viewMode !== 'overview' && (
+          {viewMode !== "overview" && (
             <Button
               variant="outline"
               onClick={handleBackToOverview}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 shadow-none border-[#F0F0F0] text-[#6F6F6F] hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"
             >
               <ArrowLeft className="h-4 w-4" />
               Back to Overview
             </Button>
           )}
-          
+
           <Button
             variant="outline"
             onClick={loadInitialData}
             disabled={initialLoading}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 shadow-none border-[#F0F0F0] text-[#6F6F6F] hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"
           >
             {initialLoading ? (
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
             ) : (
-              <BookOpen className="h-4 w-4" />
+              <RefreshCw className="h-4 w-4" />
             )}
             Refresh
           </Button>
         </div>
       </div>
 
-      {viewMode === 'overview' && (
-        <>
+      {viewMode === "overview" && (
+        <div className="space-y-6">
           {/* Course Selection */}
-          <Card>
+          <Card className="bg-white shadow-none border-[#F0F0F0]">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-[#030E18] font-medium">
                 <GraduationCap className="h-5 w-5" />
                 Select Course
               </CardTitle>
@@ -371,29 +429,35 @@ const CourseTeacherView: React.FC = () => {
                 {teacherCourses.length === 0 ? (
                   <div className="text-center py-8">
                     <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600">No courses assigned</p>
+                    <p className="text-[#6F6F6F]">No courses assigned</p>
                   </div>
                 ) : (
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {teacherCourses.map(course => (
+                    {teacherCourses.map((course) => (
                       <Card
                         key={course._id}
-                        className={`cursor-pointer transition-all hover:shadow-md ${
-                          selectedCourse?._id === course._id 
-                            ? 'ring-2 ring-blue-500 bg-blue-50' 
-                            : 'hover:border-blue-300'
+                        className={`cursor-pointer transition-all shadow-none ${
+                          selectedCourse?._id === course._id
+                            ? "ring-2 ring-blue-500 bg-blue-50 border-blue-200"
+                            : "border-[#F0F0F0] hover:border-blue-300"
                         }`}
                         onClick={() => setSelectedCourse(course)}
                       >
                         <CardContent className="p-4">
                           <div className="flex items-start gap-3">
-                            <div className="p-2 bg-blue-100 rounded-lg">
+                            <div className="p-2 bg-blue-50 rounded-lg">
                               <BookOpen className="h-5 w-5 text-blue-600" />
                             </div>
                             <div className="flex-1">
-                              <h3 className="font-medium text-gray-900">{course.title}</h3>
-                              <p className="text-sm text-gray-600">{course.courseCode}</p>
-                              <p className="text-xs text-gray-500 mt-1">{course.className}</p>
+                              <h3 className="font-medium text-[#030E18]">
+                                {course.title}
+                              </h3>
+                              <p className="text-sm text-[#6F6F6F]">
+                                {course.courseCode}
+                              </p>
+                              <p className="text-xs text-[#878787] mt-1">
+                                {course.className}
+                              </p>
                             </div>
                           </div>
                         </CardContent>
@@ -406,22 +470,24 @@ const CourseTeacherView: React.FC = () => {
           </Card>
 
           {selectedCourse && (
-            <>
+            <div className="space-y-6">
               {/* Term Selection */}
-              <Card>
+              <Card className="bg-white shadow-none border-[#F0F0F0]">
                 <CardHeader>
-                  <CardTitle>Academic Term</CardTitle>
+                  <CardTitle className="text-[#030E18]">
+                    Academic Term
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   {terms.length === 0 ? (
                     <div className="text-center py-4">
-                      <p className="text-gray-600">No terms available</p>
+                      <p className="text-[#6F6F6F]">No terms available</p>
                     </div>
                   ) : (
                     <select
                       value={selectedTerm}
                       onChange={(e) => setSelectedTerm(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-[#F0F0F0] rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       disabled={loading}
                     >
                       <option value="">Select a term...</option>
@@ -432,28 +498,36 @@ const CourseTeacherView: React.FC = () => {
                       ))}
                     </select>
                   )}
-                  
+
                   {selectedTerm && (
-                    <div className="mt-2 text-sm text-gray-600">
-                      Selected: {terms.find(t => t._id === selectedTerm)?.name}
+                    <div className="mt-2 text-sm text-[#6F6F6F]">
+                      Selected:{" "}
+                      {terms.find((t) => t._id === selectedTerm)?.name}
                     </div>
                   )}
                 </CardContent>
               </Card>
 
               {selectedTerm && (
-                <>
+                <div className="space-y-6">
                   {/* Quick Actions */}
                   <div className="grid md:grid-cols-2 gap-4">
-                    <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={handleViewCourseGrades}>
+                    <Card
+                      className="shadow-none border-[#F0F0F0] hover:border-blue-300 transition-colors cursor-pointer"
+                      onClick={handleViewCourseGrades}
+                    >
                       <CardContent className="p-6">
                         <div className="flex items-center gap-4">
-                          <div className="p-3 bg-green-100 rounded-lg">
+                          <div className="p-3 bg-green-50 rounded-lg">
                             <BarChart3 className="h-6 w-6 text-green-600" />
                           </div>
                           <div>
-                            <h3 className="font-medium text-gray-900">Course Grades Overview</h3>
-                            <p className="text-sm text-gray-600">View and manage course grades</p>
+                            <h3 className="font-medium text-[#030E18]">
+                              Course Grades Overview
+                            </h3>
+                            <p className="text-sm text-[#6F6F6F]">
+                              View and manage course grades
+                            </p>
                             <p className="text-xs text-green-600 mt-1">
                               {courseGrades?.length || 0} students graded
                             </p>
@@ -462,17 +536,23 @@ const CourseTeacherView: React.FC = () => {
                       </CardContent>
                     </Card>
 
-                    <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+                    <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200 shadow-none">
                       <CardContent className="p-6">
                         <div className="flex items-center gap-4">
-                          <div className="p-3 bg-blue-100 rounded-lg">
+                          <div className="p-3 bg-blue-50 rounded-lg">
                             <Target className="h-6 w-6 text-blue-600" />
                           </div>
                           <div>
-                            <h3 className="font-medium text-gray-900">Active Assessments</h3>
-                            <p className="text-sm text-gray-600">Ready for grade entry</p>
+                            <h3 className="font-medium text-[#030E18]">
+                              Active Assessments
+                            </h3>
+                            <p className="text-sm text-[#6F6F6F]">
+                              Ready for grade entry
+                            </p>
                             <p className="text-xs text-blue-600 mt-1">
-                              {assessments?.filter(a => a.status === 'ACTIVE').length || 0} active • {students?.length || 0} students
+                              {assessments?.filter((a) => a.status === "ACTIVE")
+                                .length || 0}{" "}
+                              active • {students?.length || 0} students
                             </p>
                           </div>
                         </div>
@@ -481,10 +561,12 @@ const CourseTeacherView: React.FC = () => {
                   </div>
 
                   {/* Debug Information */}
-                  {process.env.NODE_ENV === 'development' && (
-                    <Card className="bg-yellow-50 border-yellow-200">
+                  {process.env.NODE_ENV === "development" && (
+                    <Card className="bg-yellow-50 border-yellow-200 shadow-none">
                       <CardContent className="p-4">
-                        <h4 className="font-medium text-yellow-800 mb-2">Debug Info</h4>
+                        <h4 className="font-medium text-yellow-800 mb-2">
+                          Debug Info
+                        </h4>
                         <div className="text-xs text-yellow-700 space-y-1">
                           <div>Course ID: {selectedCourse._id}</div>
                           <div>Class ID: {selectedCourse.classId}</div>
@@ -500,9 +582,9 @@ const CourseTeacherView: React.FC = () => {
                   {/* Assessments and Students */}
                   <div className="grid md:grid-cols-2 gap-6">
                     {/* Assessments List */}
-                    <Card>
+                    <Card className="bg-white shadow-none border-[#F0F0F0]">
                       <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
+                        <CardTitle className="flex items-center gap-2 text-[#030E18]">
                           <Calendar className="h-5 w-5" />
                           Assessments
                         </CardTitle>
@@ -511,39 +593,51 @@ const CourseTeacherView: React.FC = () => {
                         {loading ? (
                           <div className="text-center py-8">
                             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto mb-2"></div>
-                            <p className="text-gray-600">Loading assessments...</p>
+                            <p className="text-[#6F6F6F]">
+                              Loading assessments...
+                            </p>
                           </div>
                         ) : (assessments?.length || 0) === 0 ? (
                           <div className="text-center py-8">
                             <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                            <p className="text-gray-600">No assessments found for this term</p>
-                            <p className="text-sm text-gray-500 mt-2">Contact admin to create assessments</p>
+                            <p className="text-[#6F6F6F]">
+                              No assessments found for this term
+                            </p>
+                            <p className="text-sm text-[#878787] mt-2">
+                              Contact admin to create assessments
+                            </p>
                           </div>
                         ) : (
                           <div className="space-y-3">
-                            {assessments.map(assessment => (
+                            {assessments.map((assessment) => (
                               <div
                                 key={assessment._id}
-                                className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:border-blue-300 transition-colors"
+                                className="flex items-center justify-between p-3 border border-[#F0F0F0] rounded-lg hover:border-blue-300 transition-colors"
                               >
                                 <div className="flex items-center gap-3">
-                                  <div className="p-2 bg-blue-100 rounded-lg">
+                                  <div className="p-2 bg-blue-50 rounded-lg">
                                     <Calendar className="h-4 w-4 text-blue-600" />
                                   </div>
                                   <div>
-                                    <h4 className="font-medium text-gray-900 text-sm">{assessment.name}</h4>
-                                    <p className="text-xs text-gray-500">
-                                      {new Date(assessment.endDate).toLocaleDateString()}
+                                    <h4 className="font-medium text-[#030E18] text-sm">
+                                      {assessment.name}
+                                    </h4>
+                                    <p className="text-xs text-[#878787]">
+                                      {new Date(
+                                        assessment.endDate
+                                      ).toLocaleDateString()}
                                     </p>
                                   </div>
                                 </div>
-                                
+
                                 <div className="flex items-center gap-2">
                                   {getAssessmentStatusBadge(assessment.status)}
                                   <Button
                                     size="sm"
-                                    onClick={() => handleAssessmentSelect(assessment)}
-                                    className="text-xs"
+                                    onClick={() =>
+                                      handleAssessmentSelect(assessment)
+                                    }
+                                    className="text-xs bg-blue-600 hover:bg-blue-700 text-white shadow-none"
                                   >
                                     Grade
                                   </Button>
@@ -556,9 +650,9 @@ const CourseTeacherView: React.FC = () => {
                     </Card>
 
                     {/* Students List */}
-                    <Card>
+                    <Card className="bg-white shadow-none border-[#F0F0F0]">
                       <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
+                        <CardTitle className="flex items-center gap-2 text-[#030E18]">
                           <Users className="h-5 w-5" />
                           Students ({students?.length || 0})
                         </CardTitle>
@@ -567,45 +661,59 @@ const CourseTeacherView: React.FC = () => {
                         {loading ? (
                           <div className="text-center py-8">
                             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto mb-2"></div>
-                            <p className="text-gray-600">Loading students...</p>
+                            <p className="text-[#6F6F6F]">
+                              Loading students...
+                            </p>
                           </div>
                         ) : (students?.length || 0) === 0 ? (
                           <div className="text-center py-8">
                             <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                            <p className="text-gray-600">No students found</p>
-                            <p className="text-sm text-gray-500 mt-2">Check class assignment</p>
+                            <p className="text-[#6F6F6F]">No students found</p>
+                            <p className="text-sm text-[#878787] mt-2">
+                              Check class assignment
+                            </p>
                           </div>
                         ) : (
                           <div className="space-y-2 max-h-64 overflow-y-auto">
-                            {students.slice(0, 10).map(student => {
-                              const studentGrade = courseGrades?.find(g => g.studentId === student._id);
+                            {students.slice(0, 10).map((student) => {
+                              const studentGrade = courseGrades?.find(
+                                (g) => g.studentId === student._id
+                              );
                               return (
                                 <div
                                   key={student._id}
-                                  className="flex items-center justify-between p-3 border border-gray-200 rounded-lg"
+                                  className="flex items-center justify-between p-3 border border-[#F0F0F0] rounded-lg"
                                 >
                                   <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white text-xs font-medium">
-                                      {getStudentName(student).charAt(0).toUpperCase()}
+                                      {getStudentName(student)
+                                        .charAt(0)
+                                        .toUpperCase()}
                                     </div>
                                     <div>
-                                      <h4 className="font-medium text-gray-900 text-sm">{getStudentName(student)}</h4>
-                                      <p className="text-xs text-gray-600">{getStudentId(student)}</p>
+                                      <h4 className="font-medium text-[#030E18] text-sm">
+                                        {getStudentName(student)}
+                                      </h4>
+                                      <p className="text-xs text-[#6F6F6F]">
+                                        {getStudentId(student)}
+                                      </p>
                                     </div>
                                   </div>
-                                  
+
                                   <div className="text-right">
                                     {studentGrade ? (
                                       <div>
-                                        <p className="text-sm font-medium text-gray-900">
+                                        <p className="text-sm font-medium text-[#030E18]">
                                           {studentGrade.percentage.toFixed(1)}%
                                         </p>
-                                        <p className="text-xs text-gray-600">
+                                        <p className="text-xs text-[#6F6F6F]">
                                           {studentGrade.gradeLevel}
                                         </p>
                                       </div>
                                     ) : (
-                                      <p className="text-xs text-gray-500">No grade</p>
+                                      <p className="text-xs text-[#878787]">
+                                        No grade
+                                      </p>
                                     )}
                                   </div>
                                 </div>
@@ -613,14 +721,14 @@ const CourseTeacherView: React.FC = () => {
                             })}
                             {students.length > 10 && (
                               <div className="text-center py-2">
-                                <p className="text-sm text-gray-500">
+                                <p className="text-sm text-[#878787]">
                                   and {students.length - 10} more students...
                                 </p>
                                 <Button
                                   variant="outline"
                                   size="sm"
                                   onClick={handleViewCourseGrades}
-                                  className="mt-2"
+                                  className="mt-2 shadow-none border-[#F0F0F0] text-[#6F6F6F] hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"
                                 >
                                   View All Students
                                 </Button>
@@ -631,52 +739,54 @@ const CourseTeacherView: React.FC = () => {
                       </CardContent>
                     </Card>
                   </div>
-                </>
+                </div>
               )}
-            </>
+            </div>
           )}
-        </>
-      )}
-
-      {/* Assessment Grade Entry */}
-      {viewMode === 'assessment-entry' && selectedAssessment && selectedCourse && (
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Edit3 className="h-5 w-5" />
-                Enter Grades: {selectedAssessment.name}
-              </CardTitle>
-              <p className="text-sm text-gray-600">
-                Course: {selectedCourse.title} ({selectedCourse.courseCode})
-              </p>
-            </CardHeader>
-          </Card>
-
-          <AssessmentGradeForm
-            students={students}
-            assessmentId={selectedAssessment._id}
-            courseId={selectedCourse._id}
-            classId={selectedCourse.classId}
-            schoolId={selectedCourse.schoolId}
-            termId={selectedTerm}
-            token={getAccessToken() || ''}
-            onSave={() => {
-              // Reload course grades after saving
-              loadTermData();
-              handleBackToOverview();
-            }}
-            onCancel={handleBackToOverview}
-          />
         </div>
       )}
 
+      {/* Assessment Grade Entry */}
+      {viewMode === "assessment-entry" &&
+        selectedAssessment &&
+        selectedCourse && (
+          <div className="space-y-6">
+            <Card className="bg-white shadow-none border-[#F0F0F0]">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-[#030E18]">
+                  <Edit3 className="h-5 w-5" />
+                  Enter Grades: {selectedAssessment.name}
+                </CardTitle>
+                <p className="text-sm text-[#6F6F6F]">
+                  Course: {selectedCourse.title} ({selectedCourse.courseCode})
+                </p>
+              </CardHeader>
+            </Card>
+
+            <AssessmentGradeForm
+              students={students}
+              assessmentId={selectedAssessment._id}
+              courseId={selectedCourse._id}
+              classId={selectedCourse.classId}
+              schoolId={selectedCourse.schoolId}
+              termId={selectedTerm}
+              token={getAccessToken() || ""}
+              onSave={() => {
+                // Reload course grades after saving
+                loadTermData();
+                handleBackToOverview();
+              }}
+              onCancel={handleBackToOverview}
+            />
+          </div>
+        )}
+
       {/* Course Grades Overview */}
-      {viewMode === 'course-grades' && selectedCourse && (
+      {viewMode === "course-grades" && selectedCourse && (
         <div className="space-y-6">
-          <Card>
+          <Card className="bg-white shadow-none border-[#F0F0F0]">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-[#030E18]">
                 <BarChart3 className="h-5 w-5" />
                 Course Grades: {selectedCourse.title}
               </CardTitle>
@@ -686,12 +796,16 @@ const CourseTeacherView: React.FC = () => {
                   <input
                     type="text"
                     placeholder="Search students..."
-                    className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="pl-10 pr-4 py-2 border border-[#F0F0F0] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
-                <Button variant="outline" size="sm">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="shadow-none border-[#F0F0F0] text-[#6F6F6F] hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"
+                >
                   <Download className="h-4 w-4 mr-1" />
                   Export
                 </Button>
@@ -701,69 +815,79 @@ const CourseTeacherView: React.FC = () => {
               {loading ? (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto mb-2"></div>
-                  <p className="text-gray-600">Loading course grades...</p>
+                  <p className="text-[#6F6F6F]">Loading course grades...</p>
                 </div>
               ) : filteredStudents.length === 0 ? (
                 <div className="text-center py-8">
                   <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">No students found</p>
+                  <p className="text-[#6F6F6F]">No students found</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {filteredStudents.map(student => {
-                    const studentGrade = courseGrades.find(g => g.studentId === student._id);
-                    
+                  {filteredStudents.map((student) => {
+                    const studentGrade = courseGrades.find(
+                      (g) => g.studentId === student._id
+                    );
+
                     return (
                       <div
                         key={student._id}
-                        className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-blue-300 transition-colors"
+                        className="flex items-center justify-between p-4 border border-[#F0F0F0] rounded-lg hover:border-blue-300 transition-colors"
                       >
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-medium">
                             {getStudentName(student).charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <h3 className="font-medium text-gray-900">{getStudentName(student)}</h3>
-                            <p className="text-sm text-gray-600">{getStudentId(student)}</p>
+                            <h3 className="font-medium text-[#030E18]">
+                              {getStudentName(student)}
+                            </h3>
+                            <p className="text-sm text-[#6F6F6F]">
+                              {getStudentId(student)}
+                            </p>
                           </div>
                         </div>
-                        
+
                         <div className="flex items-center gap-4">
                           {studentGrade ? (
                             <div className="text-right">
-                              <p className="text-sm font-medium text-gray-900">
+                              <p className="text-sm font-medium text-[#030E18]">
                                 {studentGrade.percentage.toFixed(1)}%
                               </p>
-                              <p className="text-xs text-gray-600">
+                              <p className="text-xs text-[#6F6F6F]">
                                 Grade: {studentGrade.gradeLevel}
                               </p>
                             </div>
                           ) : (
                             <div className="text-right">
-                              <p className="text-sm text-gray-500">No grade</p>
+                              <p className="text-sm text-[#878787]">No grade</p>
                               <Button
                                 size="sm"
                                 variant="outline"
                                 onClick={() => {
                                   // Auto-calculate course grade
-                                  gradeRecordsApi.autoCalculateCourseGrade(
-                                    student._id,
-                                    selectedCourse._id,
-                                    selectedTerm,
-                                    getAccessToken() || ''
-                                  ).then(() => {
-                                    loadTermData();
-                                  });
+                                  gradeRecordsApi
+                                    .autoCalculateCourseGrade(
+                                      student._id,
+                                      selectedCourse._id,
+                                      selectedTerm,
+                                      getAccessToken() || ""
+                                    )
+                                    .then(() => {
+                                      loadTermData();
+                                    });
                                 }}
+                                className="shadow-none border-[#F0F0F0] text-[#6F6F6F] hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"
                               >
                                 Calculate
                               </Button>
                             </div>
                           )}
-                          
+
                           <Button
                             size="sm"
                             variant="outline"
+                            className="shadow-none border-[#F0F0F0] text-[#6F6F6F] hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"
                           >
                             <Eye className="h-4 w-4 mr-1" />
                             Details

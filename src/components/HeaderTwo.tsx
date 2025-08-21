@@ -8,9 +8,9 @@ import { WebSocketStatus } from "./WebSocketStatus";
 
 export function Header({ onMenuClick }: { onMenuClick: () => void }) {
   return (
-    <header className="font-manrope px-5 border-b sm:border-b-2 border-b-[#F0F0F0] pb-4 bg-[#F8F8F8">
+    <header className="font-manrope px-5 border-b sm:border-b-2 border-b-[#F0F0F0] py-2 ">
       {/* Top row: Menu, Date, Notifications, Avatar */}
-      <div className="flex flex-col  sm:flex-row items-center w-full justify-between gap-4 py-3">
+      <div className="flex flex-col  sm:flex-row items-center w-full justify-end gap-4 py-3">
         {/* Menu Button (Only on Mobile) */}
         <div className="flex items-center w-full sm:w-auto justify-between">
           <div
@@ -45,14 +45,14 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
           </div>
         </div>
         {/* Search Bar: Below on Mobile, Left-Aligned on Larger Screens */}
-        <div className="relative w-full sm:w-[40%] max-w-md sm:order-first">
+        {/* <div className="relative w-full sm:w-[40%] max-w-md sm:order-first">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
           <Input
             type="search"
             placeholder="Search"
             className="pl-10 py-5 rounded-lg bg-white"
           />
-        </div>
+        </div> */}
       </div>
     </header>
   );

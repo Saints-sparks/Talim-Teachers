@@ -2,6 +2,16 @@ import axios from "axios";
 import { API_BASE_URL } from "../lib/api/config";
 import { Student } from "@/types/student";
 
+// Simple cache for current term to prevent repeated requests
+let currentTermCache: { data: any; timestamp: number } | null = null;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+// Function to clear the current term cache
+export const clearCurrentTermCache = () => {
+  currentTermCache = null;
+  console.log("Current term cache cleared");
+};
+
 // Fetch classes assigned to a teacher
 export const getAssignedClasses = async (userId: string, token: string) => {
   try {
@@ -92,10 +102,10 @@ export const fetchTeacherDetails = async (id: string, token: string) => {
 export const fetchResources = async (token: string, teacherId?: string) => {
   try {
     // If teacherId is provided, fetch only resources uploaded by that teacher
-    const endpoint = teacherId 
+    const endpoint = teacherId
       ? `${API_BASE_URL}/resources/user/${teacherId}`
       : `${API_BASE_URL}/resources`;
-      
+
     const response = await axios.get(endpoint, {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -119,26 +129,53 @@ export const deleteResource = async (id: string, token: string) => {
 };
 
 export const getCurrentTerm = async (token: string) => {
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/academic-year-term/term/current`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          cache: 'no-cache', // Prevent browser caching
-        }
-      );
-      if (response.status === 304) {
-        // Handle 304: Return cached data or retry without caching headers
-        console.log('Resource not modified, using cached data or retrying');
-        return null; // Or fetch from local storage if cached
-      }
-      if (!response.ok) throw new Error(`Failed to fetch current term: ${response.status}`);
-      return await response.json();
-    } catch (error) {
-      console.error("Error fetching current term:", error);
-      throw error;
+  try {
+    // Check cache first
+    if (
+      currentTermCache &&
+      Date.now() - currentTermCache.timestamp < CACHE_DURATION
+    ) {
+      console.log("Using cached current term data");
+      return currentTermCache.data;
     }
-  };
+
+    const response = await fetch(
+      `${API_BASE_URL}/academic-year-term/term/current`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-cache", // Prevent browser caching
+      }
+    );
+
+    if (response.status === 304) {
+      // Handle 304: Return cached data or retry without caching headers
+      console.log("Resource not modified, using cached data or retrying");
+      return currentTermCache?.data || null;
+    }
+
+    if (!response.ok)
+      throw new Error(`Failed to fetch current term: ${response.status}`);
+
+    const data = await response.json();
+
+    // Update cache
+    currentTermCache = {
+      data,
+      timestamp: Date.now(),
+    };
+
+    console.log("Fetched and cached new current term data");
+    return data;
+  } catch (error) {
+    console.error("Error fetching current term:", error);
+    // Return cached data if available, even if expired
+    if (currentTermCache) {
+      console.log("Using expired cache due to error");
+      return currentTermCache.data;
+    }
+    throw error;
+  }
+};
 
 export const uploadResource = async (data: any, token: string) => {
   try {
@@ -163,12 +200,16 @@ export const uploadResource = async (data: any, token: string) => {
 
 export const createResource = async (resourceData: any, token: string) => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/resources`, resourceData, {
-      headers: { 
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-    });
+    const response = await axios.post(
+      `${API_BASE_URL}/resources`,
+      resourceData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
     return response.data;
   } catch (error) {
     console.error("Error creating resource:", error);
@@ -248,15 +289,17 @@ export const getTeacherTimetable = async (teacherId: string, token: string) => {
 
 // Fetch a single course (subject) by its ID
 export const fetchCourseById = async (courseId: string, token: string) => {
-  const res = await axios.get(
-    `${API_BASE_URL}/courses/${courseId}`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
+  const res = await axios.get(`${API_BASE_URL}/courses/${courseId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
   return res.data.data; // adjust if your API wraps differently
 };
 
 // Get active assessments by term
-export const getActiveAssessmentsByTerm = async (termId: string, token: string) => {
+export const getActiveAssessmentsByTerm = async (
+  termId: string,
+  token: string
+) => {
   try {
     const response = await axios.get(
       `${API_BASE_URL}/assessments/term/${termId}/active`,
@@ -270,4 +313,3 @@ export const getActiveAssessmentsByTerm = async (termId: string, token: string) 
     return [];
   }
 };
-

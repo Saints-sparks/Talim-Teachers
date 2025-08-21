@@ -1,17 +1,20 @@
-'use client';
-import React, { useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
-import Layout from '@/components/Layout';
-import CurriculumEditor from '@/components/curriculum/CurriculumEditor';
-import EmptyCurriculumPage from '@/components/curriculum/EmptyCurriculumPage';
-import { useCurriculum } from '@/app/hooks/useCurriculum';
-import { useAuth } from '@/app/hooks/useAuth';
-import { useAppContext } from '@/app/context/AppContext';
-import { Edit, Trash2, Download, ArrowLeft, Plus } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { fetchTeacherDetails, getCurrentTerm } from '@/app/services/api.service';
-import html2canvas from 'html2canvas';
-import { getCurriculumByCourseAndTerm } from '../services/curriculum.services';
+"use client";
+import React, { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import Layout from "@/components/Layout";
+import CurriculumEditor from "@/components/curriculum/CurriculumEditor";
+import EmptyCurriculumPage from "@/components/curriculum/EmptyCurriculumPage";
+import { useCurriculum } from "@/app/hooks/useCurriculum";
+import { useAuth } from "@/app/hooks/useAuth";
+import { useAppContext } from "@/app/context/AppContext";
+import { Edit, Trash2, Download, ArrowLeft, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import {
+  fetchTeacherDetails,
+  getCurrentTerm,
+} from "@/app/services/api.service";
+import html2canvas from "html2canvas";
+import { getCurriculumByCourseAndTerm } from "../services/curriculum.services";
 
 interface ModalProps {
   isOpen: boolean;
@@ -22,7 +25,10 @@ interface ModalProps {
 const SkeletonLoader = () => (
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
     {[...Array(6)].map((_, index) => (
-      <div key={index} className="bg-white border border-gray-200 rounded-lg p-6">
+      <div
+        key={index}
+        className="bg-white border border-gray-200 rounded-lg p-6"
+      >
         <div className="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
         <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
         <div className="space-y-2">
@@ -48,50 +54,78 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, curriculum }) => {
     if (modalRef.current) {
       try {
         const canvas = await html2canvas(modalRef.current, {
-          backgroundColor: '#ffffff',
+          backgroundColor: "#ffffff",
           scale: 2, // Increase resolution for better quality
         });
-        const imgData = canvas.toDataURL('image/png');
-        const a = document.createElement('a');
+        const imgData = canvas.toDataURL("image/png");
+        const a = document.createElement("a");
         a.href = imgData;
-        a.download = `${curriculum.course?.name || 'curriculum'}.png`;
+        a.download = `${curriculum.course?.name || "curriculum"}.png`;
         a.click();
       } catch (error) {
-        console.error('Failed to generate image:', error);
+        console.error("Failed to generate image:", error);
       }
     }
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div ref={modalRef} className="bg-white rounded-xl p-8 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+      <div
+        ref={modalRef}
+        className="bg-white rounded-xl p-8 max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+      >
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">
-            {curriculum.course?.name || 'Untitled Course'}
+          <h2 className="text-2xl font-bold text-[#030E18]">
+            {curriculum.course?.name || "Untitled Course"}
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
+            className="text-[#6F6F6F] hover:text-[#030E18] transition-colors"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
-        <div className="space-y-4 text-gray-600">
-          <p><span className="font-medium">Term:</span> {curriculum.term?.name || 'N/A'}</p>
-          <p><span className="font-medium">Teacher:</span> {curriculum.teacherId?.name || 'Unknown'}</p>
-          <p><span className="font-medium">School:</span> {curriculum.schoolId?.name || 'Unknown'}</p>
-          <p><span className="font-medium">Created:</span> {new Date(curriculum.createdAt).toLocaleDateString()}</p>
-          <p><span className="font-medium">Updated:</span> {new Date(curriculum.updatedAt).toLocaleDateString()}</p>
+        <div className="space-y-4 text-[#6F6F6F]">
+          <p>
+            <span className="font-medium">Term:</span>{" "}
+            {curriculum.term?.name || "N/A"}
+          </p>
+          <p>
+            <span className="font-medium">Teacher:</span>{" "}
+            {curriculum.teacherId?.name || "Unknown"}
+          </p>
+          <p>
+            <span className="font-medium">School:</span>{" "}
+            {curriculum.schoolId?.name || "Unknown"}
+          </p>
+          <p>
+            <span className="font-medium">Created:</span>{" "}
+            {new Date(curriculum.createdAt).toLocaleDateString()}
+          </p>
+          <p>
+            <span className="font-medium">Updated:</span>{" "}
+            {new Date(curriculum.updatedAt).toLocaleDateString()}
+          </p>
           <div className="mt-4">
             <p className="font-medium mb-2">Content:</p>
-            <div 
-              className="prose max-w-none break-words text-gray-600"
+            <div
+              className="prose max-w-none break-words text-[#6F6F6F]"
               dangerouslySetInnerHTML={{ __html: curriculum.content }}
             />
           </div>
-          {curriculum.attachments.length > 0 && (
+          {curriculum.attachments && curriculum.attachments.length > 0 && (
             <div className="mt-4">
               <p className="font-medium mb-2">Attachments:</p>
               <ul className="list-disc list-inside space-y-1">
@@ -101,9 +135,9 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, curriculum }) => {
                       href={url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
+                      className="text-[#003366] hover:underline"
                     >
-                      {url.split('/').pop() || `Attachment ${index + 1}`}
+                      {url.split("/").pop() || `Attachment ${index + 1}`}
                     </a>
                   </li>
                 ))}
@@ -114,7 +148,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, curriculum }) => {
         <div className="mt-6 flex justify-end gap-4">
           <button
             onClick={handleDownload}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-sm flex items-center gap-2"
+            className="bg-[#003366] text-white px-6 py-2 rounded-lg hover:bg-[#002244] transition-colors duration-200 shadow-none flex items-center gap-2"
           >
             <Download size={16} />
             Download Image
@@ -128,31 +162,46 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, curriculum }) => {
 const CurriculumPage = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { curricula, isLoading, error, fetchCurricula, fetchCurriculumByCourse, showEditor, setShowEditor, editCurriculum, removeCurriculum, fetchCurriculumById } = useCurriculum();
+  const {
+    curricula,
+    isLoading,
+    error,
+    fetchCurricula,
+    fetchCurriculumByCourse,
+    showEditor,
+    setShowEditor,
+    editCurriculum,
+    removeCurriculum,
+    fetchCurriculumById,
+  } = useCurriculum();
   const { isAuthenticated, getAccessToken } = useAuth();
   const hasInitialized = useRef(false);
   const [selectedCurriculum, setSelectedCurriculum] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCurriculumId, setEditingCurriculumId] = useState<string | null>(null);
+  const [editingCurriculumId, setEditingCurriculumId] = useState<string | null>(
+    null
+  );
   const [courseCurricula, setCourseCurricula] = useState<any[]>([]);
   const [courseInfo, setCourseInfo] = useState<any>(null);
   const [teacherCourses, setTeacherCourses] = useState<any[]>([]);
   const [currentTerm, setCurrentTerm] = useState<any>(null);
-  
+
   // Get query parameters
-  const courseId = searchParams.get('courseId');
-  const mode = searchParams.get('mode'); // 'view' or 'create'
-  const courseTitle = searchParams.get('courseTitle');
-  const courseCode = searchParams.get('courseCode');
-  const curriculumId = searchParams.get('curriculumId');
-  const termId = searchParams.get('termId');
+  const courseId = searchParams.get("courseId");
+  const mode = searchParams.get("mode"); // 'view' or 'create'
+  const courseTitle = searchParams.get("courseTitle");
+  const courseCode = searchParams.get("courseCode");
+  const curriculumId = searchParams.get("curriculumId");
+  const termId = searchParams.get("termId");
   const token = getAccessToken();
   if (!token) {
     return (
       <Layout>
         <div className="min-h-screen bg-gray-50 p-8 flex items-center justify-center">
-          <div className="text-center bg-white p-6 rounded-lg shadow-md">
-            <p className="text-gray-600 text-lg">Please log in to access curriculum.</p>
+          <div className="text-center bg-white p-6 rounded-lg shadow-none border border-[#F0F0F0]">
+            <p className="text-[#6F6F6F] text-lg">
+              Please log in to access curriculum.
+            </p>
           </div>
         </div>
       </Layout>
@@ -165,12 +214,21 @@ const CurriculumPage = () => {
       fetchTeacherData();
 
       // If in view or edit mode and curriculumId, courseId, and termId are present, fetch the curriculum
-      if ((mode === 'view' || mode === 'edit') && curriculumId && courseId && termId) {
+      if (
+        (mode === "view" || mode === "edit") &&
+        curriculumId &&
+        courseId &&
+        termId
+      ) {
         (async () => {
           try {
-            const curriculum = await getCurriculumByCourseAndTerm({ courseId, termId, token });
+            const curriculum = await getCurriculumByCourseAndTerm({
+              courseId,
+              termId,
+              token,
+            });
             setSelectedCurriculum(curriculum);
-            if (mode === 'edit') {
+            if (mode === "edit") {
               setEditingCurriculumId(curriculum?._id || null);
               setShowEditor(true);
             }
@@ -180,7 +238,7 @@ const CurriculumPage = () => {
         })();
       } else if (courseId) {
         // If courseId is provided, fetch curricula for this specific course
-        getCurrentTerm(token).then(term => {
+        getCurrentTerm(token).then((term) => {
           if (term) {
             setCurrentTerm(term);
           }
@@ -189,10 +247,10 @@ const CurriculumPage = () => {
           setCourseInfo({
             _id: courseId,
             name: decodeURIComponent(courseTitle),
-            courseCode: courseCode ? decodeURIComponent(courseCode) : ''
+            courseCode: courseCode ? decodeURIComponent(courseCode) : "",
           });
         }
-        if (mode === 'create') {
+        if (mode === "create") {
           setShowEditor(true);
         }
       } else {
@@ -200,7 +258,15 @@ const CurriculumPage = () => {
         fetchCurricula({});
       }
     }
-  }, [isAuthenticated, courseId, mode, courseTitle, courseCode, curriculumId, termId]);
+  }, [
+    isAuthenticated,
+    courseId,
+    mode,
+    courseTitle,
+    courseCode,
+    curriculumId,
+    termId,
+  ]);
 
   const fetchTeacherData = async () => {
     try {
@@ -208,9 +274,9 @@ const CurriculumPage = () => {
       if (!token) return;
 
       // Get user from context
-      const userData = localStorage.getItem('user');
+      const userData = localStorage.getItem("user");
       if (!userData) return;
-      
+
       const user = JSON.parse(userData);
       if (!user?.userId) return;
 
@@ -226,7 +292,7 @@ const CurriculumPage = () => {
         setCurrentTerm(term);
       }
     } catch (error) {
-      console.error('Failed to fetch teacher data:', error);
+      console.error("Failed to fetch teacher data:", error);
     }
   };
 
@@ -235,7 +301,7 @@ const CurriculumPage = () => {
       const curricula = await fetchCurriculumByCourse(courseId);
       setCourseCurricula(curricula || []);
     } catch (error) {
-      console.error('Failed to fetch course curricula:', error);
+      console.error("Failed to fetch course curricula:", error);
       setCourseCurricula([]);
     }
   };
@@ -246,16 +312,16 @@ const CurriculumPage = () => {
       setEditingCurriculumId(id);
       setShowEditor(true);
     } catch (error) {
-      console.error('Failed to fetch curriculum for editing:', error);
+      console.error("Failed to fetch curriculum for editing:", error);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this curriculum?')) {
+    if (window.confirm("Are you sure you want to delete this curriculum?")) {
       try {
         await removeCurriculum(id);
       } catch (error) {
-        console.error('Failed to delete curriculum:', error);
+        console.error("Failed to delete curriculum:", error);
       }
     }
   };
@@ -263,7 +329,7 @@ const CurriculumPage = () => {
   const handleEditorClose = () => {
     setShowEditor(false);
     setEditingCurriculumId(null);
-    
+
     // If we came from a specific course, refresh course curricula
     if (courseId) {
       fetchCurriculumForCourse(courseId);
@@ -274,7 +340,7 @@ const CurriculumPage = () => {
   };
 
   const handleBackToSubjects = () => {
-    router.push('/dashboard'); // or wherever your subjects are displayed
+    router.push("/dashboard"); // or wherever your subjects are displayed
   };
 
   const handleCurriculumClick = (curriculum: any) => {
@@ -286,8 +352,10 @@ const CurriculumPage = () => {
     return (
       <Layout>
         <div className="min-h-screen bg-gray-50 p-8 flex items-center justify-center">
-          <div className="text-center bg-white p-6 rounded-lg shadow-md">
-            <p className="text-gray-600 text-lg">Please log in to access curriculum.</p>
+          <div className="text-center bg-white p-6 rounded-lg shadow-none border border-[#F0F0F0]">
+            <p className="text-[#6F6F6F] text-lg">
+              Please log in to access curriculum.
+            </p>
           </div>
         </div>
       </Layout>
@@ -308,11 +376,11 @@ const CurriculumPage = () => {
     return (
       <Layout>
         <div className="min-h-screen bg-gray-50 p-8 flex items-center justify-center">
-          <div className="text-center bg-white p-6 rounded-lg shadow-md">
-            <p className="text-red-500 text-lg mb-4">Error: {error}</p>
-            <button 
+          <div className="text-center bg-white p-6 rounded-lg shadow-none border border-[#F0F0F0]">
+            <p className="text-[#878787] text-lg mb-4">Error: {error}</p>
+            <button
               onClick={() => fetchCurricula({})}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+              className="px-4 py-2 bg-[#003366] text-white rounded-lg hover:bg-[#002244] transition-colors duration-200"
             >
               Retry
             </button>
@@ -325,7 +393,7 @@ const CurriculumPage = () => {
   if (showEditor) {
     return (
       <Layout>
-        <CurriculumEditor 
+        <CurriculumEditor
           onClose={handleEditorClose}
           initialCourseId={courseId}
           courseInfo={courseInfo}
@@ -342,7 +410,7 @@ const CurriculumPage = () => {
   const isCoursePage = !!courseId;
 
   // If in view mode and selectedCurriculum is set, show the modal directly
-  if (mode === 'view' && selectedCurriculum) {
+  if (mode === "view" && selectedCurriculum) {
     return (
       <Layout>
         <Modal
@@ -371,39 +439,39 @@ const CurriculumPage = () => {
                 {isCoursePage && (
                   <button
                     onClick={handleBackToSubjects}
-                    className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
+                    className="flex items-center gap-2 text-[#6F6F6F] hover:text-[#030E18] transition-colors"
                   >
                     <ArrowLeft className="w-5 h-5" />
                     Back to Subjects
                   </button>
                 )}
-                <h1 className="text-3xl font-bold text-gray-900">
+                <h1 className="text-3xl font-bold text-[#030E18]">
                   {isCoursePage
-                    ? `${courseInfo?.name || 'Course'} Curriculum`
-                    : 'Curriculum Management'
-                  }
+                    ? `${courseInfo?.name || "Course"} Curriculum`
+                    : "Curriculum Management"}
                 </h1>
               </div>
               <button
                 onClick={() => setShowEditor(true)}
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-sm flex items-center gap-2"
+                className="bg-[#003366] text-white px-6 py-2 rounded-lg hover:bg-[#002244] transition-colors duration-200 shadow-none flex items-center gap-2"
               >
                 <Plus className="w-5 h-5" />
-                {isCoursePage ? 'Create Curriculum' : 'Create New Curriculum'}
+                {isCoursePage ? "Create Curriculum" : "Create New Curriculum"}
               </button>
             </div>
             {displayCurricula.length === 0 && isCoursePage ? (
-              <div className="bg-white rounded-xl p-8 text-center shadow-sm">
+              <div className="bg-white rounded-xl p-8 text-center shadow-none border border-[#F0F0F0]">
                 <div className="max-w-md mx-auto">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  <h3 className="text-xl font-semibold text-[#030E18] mb-2">
                     No Curriculum Found
                   </h3>
-                  <p className="text-gray-600 mb-6">
-                    This course doesn't have any curriculum yet. Create one to get started.
+                  <p className="text-[#6F6F6F] mb-6">
+                    This course doesn't have any curriculum yet. Create one to
+                    get started.
                   </p>
                   <button
                     onClick={() => setShowEditor(true)}
-                    className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-sm flex items-center gap-2 mx-auto"
+                    className="bg-[#003366] text-white px-6 py-3 rounded-lg hover:bg-[#002244] transition-colors duration-200 shadow-none flex items-center gap-2 mx-auto"
                   >
                     <Plus className="w-5 h-5" />
                     Create First Curriculum
@@ -415,20 +483,34 @@ const CurriculumPage = () => {
                 {displayCurricula.map((curriculum) => (
                   <div
                     key={curriculum._id}
-                    className="bg-white border border-gray-200 rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-200 cursor-pointer"
+                    className="bg-white border border-[#F0F0F0] rounded-xl p-6 shadow-none hover:shadow-none transition-colors duration-200 cursor-pointer"
                     onClick={() => handleCurriculumClick(curriculum)}
                   >
                     <h3 className="text-xl font-semibold text-gray-900 mb-3">
-                      {curriculum.course?.name || courseInfo?.name || 'Untitled Course'}
+                      {curriculum.course?.name ||
+                        courseInfo?.name ||
+                        "Untitled Course"}
                     </h3>
                     <p className="text-sm text-gray-500 mb-4">
-                      Term: {curriculum.term?.name || 'N/A'}
+                      Term: {curriculum.term?.name || "N/A"}
                     </p>
                     <div className="space-y-3 text-sm text-gray-600">
-                      <p><span className="font-medium">Teacher:</span> {curriculum.teacherId?.name || 'Unknown'}</p>
-                      <p><span className="font-medium">School:</span> {curriculum.schoolId?.name || 'Unknown'}</p>
-                      <p><span className="font-medium">Created:</span> {new Date(curriculum.createdAt).toLocaleDateString()}</p>
-                      <p><span className="font-medium">Updated:</span> {new Date(curriculum.updatedAt).toLocaleDateString()}</p>
+                      <p>
+                        <span className="font-medium">Teacher:</span>{" "}
+                        {curriculum.teacherId?.name || "Unknown"}
+                      </p>
+                      <p>
+                        <span className="font-medium">School:</span>{" "}
+                        {curriculum.schoolId?.name || "Unknown"}
+                      </p>
+                      <p>
+                        <span className="font-medium">Created:</span>{" "}
+                        {new Date(curriculum.createdAt).toLocaleDateString()}
+                      </p>
+                      <p>
+                        <span className="font-medium">Updated:</span>{" "}
+                        {new Date(curriculum.updatedAt).toLocaleDateString()}
+                      </p>
                     </div>
                     <div className="mt-6 flex justify-between items-center">
                       <div className="flex gap-2">
@@ -437,7 +519,7 @@ const CurriculumPage = () => {
                             e.stopPropagation();
                             handleEdit(curriculum._id);
                           }}
-                          className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-2 font-medium"
+                          className="text-[#003366] hover:text-[#002244] text-sm flex items-center gap-2 font-medium"
                         >
                           <Edit size={16} />
                           Edit
@@ -447,7 +529,7 @@ const CurriculumPage = () => {
                             e.stopPropagation();
                             handleDelete(curriculum._id);
                           }}
-                          className="text-red-600 hover:text-red-800 text-sm flex items-center gap-2 font-medium"
+                          className="text-[#878787] hover:text-[#6F6F6F] text-sm flex items-center gap-2 font-medium"
                         >
                           <Trash2 size={16} />
                           Delete

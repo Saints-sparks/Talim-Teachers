@@ -19,7 +19,6 @@ const AppContext = createContext<AppContextType>({
   refreshClasses: async () => {},
   isLoading: false,
   courses: [],
-  
 });
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -41,27 +40,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const fetchTeacherAndClasses = async () => {
-    if (!user) return;
-    
+    if (!user || isLoading) return; // Prevent duplicate calls if already loading
+
     setIsLoading(true);
     try {
       const token = getAccessToken();
       if (!token) return;
-      
+
       const teacherDetails = await fetchTeacherDetails(user.userId, token);
-      console.log("Teacher details:", teacherDetails);
-      
+      console.log("Teacher details fetched:", teacherDetails?.firstName);
+
       setTeacherData(teacherDetails);
-      
+
       // Extract classes from teacher data - use classTeacherClasses or assignedClasses
-      const teacherClasses = teacherDetails?.classTeacherClasses || teacherDetails?.assignedClasses || [];
-      console.log("Extracted teacher classes:", teacherClasses);
+      const teacherClasses =
+        teacherDetails?.classTeacherClasses ||
+        teacherDetails?.assignedClasses ||
+        [];
+      console.log(
+        "Extracted teacher classes count:",
+        teacherClasses?.length || 0
+      );
       setClasses(teacherClasses);
 
       // Extract courses from teacher data - use assignedCourses first, then fallback to classTeacherCourses
-      const teacherCourses = teacherDetails?.assignedCourses || teacherDetails?.classTeacherCourses || [];
-      console.log("Extracted teacher courses:", teacherCourses);
-      console.log("Raw teacher details for courses:", teacherDetails);
+      const teacherCourses =
+        teacherDetails?.assignedCourses ||
+        teacherDetails?.classTeacherCourses ||
+        [];
+      console.log(
+        "Extracted teacher courses count:",
+        teacherCourses?.length || 0
+      );
       setCourses(teacherCourses);
     } catch (error) {
       console.error("Error fetching teacher data:", error);
@@ -71,20 +81,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   useEffect(() => {
-    if (user) {
+    if (user && !teacherData && !isLoading) {
       fetchTeacherAndClasses();
     }
-  }, [user]);
+  }, [user?.userId]); // Only depend on user ID
 
   return (
     <AppContext.Provider
-      value={{ 
-        user, 
-        teacherData, 
-        classes, 
+      value={{
+        user,
+        teacherData,
+        classes,
         refreshClasses: fetchTeacherAndClasses,
         isLoading,
-        courses
+        courses,
       }}
     >
       {children}

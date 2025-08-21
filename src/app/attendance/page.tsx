@@ -1,18 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronDown, Search, ArrowLeft, CheckCircle, Clock, Eye, Calendar } from "lucide-react";
+import { Search, ArrowLeft, Eye } from "lucide-react";
 import { DataTable } from "@/components/attendance/data-table";
 import { AbsentReasonDialog } from "@/components/attendance/absent-reason-dialog";
 import { AttendanceActionModal } from "@/components/attendance/AttendanceActionModal";
 import { columns } from "@/components/attendance/columns";
 import Layout from "@/components/Layout";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,14 +17,16 @@ import {
   submitAttendance,
 } from "../services/api.service";
 import { useAppContext } from "../context/AppContext";
-import Image from "next/image";
 import LoadingCard from "@/components/LoadingCard";
 import ClassCard from "@/components/ClassCard";
-import StudentCard from "@/components/students/StudentCard";
 import { useRouter } from "next/navigation";
 
 type AttendanceStatus = "present" | "absent";
-type ViewMode = "classes" | "action-modal" | "mark-attendance" | "view-attendance";
+type ViewMode =
+  | "classes"
+  | "action-modal"
+  | "mark-attendance"
+  | "view-attendance";
 
 export interface AttendanceRecord {
   id: string;
@@ -56,7 +52,9 @@ const AttendancePage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("classes");
   const [actionModalOpen, setActionModalOpen] = useState(false);
-  const [submittedStudents, setSubmittedStudents] = useState<Set<string>>(new Set());
+  const [submittedStudents, setSubmittedStudents] = useState<Set<string>>(
+    new Set()
+  );
   const router = useRouter();
 
   useEffect(() => {
@@ -73,25 +71,25 @@ const AttendancePage: React.FC = () => {
 
   const handleClassSelect = async (classItem: any) => {
     console.log("Class selected:", classItem.name);
-    
+
     // Reset all states to ensure clean modal flow
     setViewMode("classes");
     setStudents([]);
     setData([]);
     setSubmittedStudents(new Set());
     setLoadingStudents(false);
-    
+
     // Set the selected class and show modal
     setSelectedClass(classItem);
     setActionModalOpen(true);
-    
+
     console.log("Modal should be opening now");
   };
 
   const handleMarkAttendance = async () => {
     console.log("Mark Attendance clicked");
     if (!selectedClass) return;
-    
+
     setActionModalOpen(false);
     setLoadingStudents(true);
     setViewMode("mark-attendance");
@@ -102,13 +100,15 @@ const AttendancePage: React.FC = () => {
     try {
       const students = await getStudentsByClass(selectedClass._id, token);
 
-      const formattedData: AttendanceRecord[] = students.map((student: any) => ({
-        id: student._id,
-        name: `${student.userId.firstName} ${student.userId.lastName}`,
-        date: new Date().toLocaleDateString(),
-        status: "present", // default status
-        isSubmitted: false,
-      }));
+      const formattedData: AttendanceRecord[] = students.map(
+        (student: any) => ({
+          id: student._id,
+          name: `${student.userId.firstName} ${student.userId.lastName}`,
+          date: new Date().toLocaleDateString(),
+          status: "present", // default status
+          isSubmitted: false,
+        })
+      );
 
       setStudents(students);
       setData(formattedData);
@@ -123,7 +123,7 @@ const AttendancePage: React.FC = () => {
   const handleViewAttendance = async () => {
     console.log("View Attendance clicked");
     if (!selectedClass) return;
-    
+
     setActionModalOpen(false);
     setLoadingStudents(true);
     setViewMode("view-attendance");
@@ -214,12 +214,10 @@ const AttendancePage: React.FC = () => {
       }
 
       // Mark as submitted instead of removing
-      setSubmittedStudents(prev => new Set([...prev, studentId]));
-      setData((prev) => 
-        prev.map(stud => 
-          stud.id === studentId 
-            ? { ...stud, isSubmitted: true }
-            : stud
+      setSubmittedStudents((prev) => new Set([...prev, studentId]));
+      setData((prev) =>
+        prev.map((stud) =>
+          stud.id === studentId ? { ...stud, isSubmitted: true } : stud
         )
       );
 
@@ -273,10 +271,10 @@ const AttendancePage: React.FC = () => {
       }
 
       // Mark as submitted and update the data
-      setSubmittedStudents(prev => new Set([...prev, selectedStudent]));
-      setData((prev) => 
-        prev.map(stud => 
-          stud.id === selectedStudent 
+      setSubmittedStudents((prev) => new Set([...prev, selectedStudent]));
+      setData((prev) =>
+        prev.map((stud) =>
+          stud.id === selectedStudent
             ? { ...stud, isSubmitted: true, reasonForAbsence: absenceReason }
             : stud
         )
@@ -291,7 +289,9 @@ const AttendancePage: React.FC = () => {
 
   const handleViewAnalytics = (studentId: string) => {
     // Navigate to attendance analytics page for this student
-    router.push(`/analytics/attendance?studentId=${studentId}&classId=${selectedClass._id}`);
+    router.push(
+      `/analytics/attendance?studentId=${studentId}&classId=${selectedClass._id}`
+    );
   };
 
   const filteredStudents = students.filter((student) =>
@@ -325,23 +325,25 @@ const AttendancePage: React.FC = () => {
               <div>
                 <div className="flex items-center space-x-2">
                   <h2 className="font-medium text-[#2F2F2F] text-xl sm:text-2xl">
-                    {viewMode === "classes" ? "Attendance" : selectedClass?.name || "Attendance"}
+                    {viewMode === "classes"
+                      ? "Attendance"
+                      : selectedClass?.name || "Attendance"}
                   </h2>
                   <span className="text-[#828282] text-sm">(daily)</span>
                 </div>
                 <p className="text-[#AAAAAA] text-sm">
-                  {viewMode === "classes" 
-                    ? "Record student attendance seamlessly." 
+                  {viewMode === "classes"
+                    ? "Record student attendance seamlessly."
                     : viewMode === "mark-attendance"
                     ? "Mark attendance for today"
-                    : "View student attendance records"
-                  }
+                    : "View student attendance records"}
                 </p>
               </div>
             </div>
 
             {/* Search Bar - Only show when viewing students */}
-            {(viewMode === "mark-attendance" || viewMode === "view-attendance") && (
+            {(viewMode === "mark-attendance" ||
+              viewMode === "view-attendance") && (
               <div className="flex items-center border border-[#F0F0F0] rounded-lg px-3 w-full sm:w-96 bg-white">
                 <Search className="text-[#898989]" size={18} />
                 <Input
@@ -357,9 +359,10 @@ const AttendancePage: React.FC = () => {
           {/* Content */}
           <div className="space-y-4">
             {/* Debug Info - Remove in production */}
-            {process.env.NODE_ENV === 'development' && (
+            {process.env.NODE_ENV === "development" && (
               <div className="p-2 bg-yellow-100 rounded text-xs">
-                Debug: viewMode={viewMode}, actionModalOpen={actionModalOpen}, selectedClass={selectedClass?.name}
+                Debug: viewMode={viewMode}, actionModalOpen={actionModalOpen},
+                selectedClass={selectedClass?.name}
               </div>
             )}
 
@@ -390,7 +393,9 @@ const AttendancePage: React.FC = () => {
                 ) : data.length === 0 ? (
                   <Card className="p-8 text-center">
                     <CardContent>
-                      <p className="text-gray-600">No students found for this class</p>
+                      <p className="text-gray-600">
+                        No students found for this class
+                      </p>
                     </CardContent>
                   </Card>
                 ) : (
@@ -424,24 +429,33 @@ const AttendancePage: React.FC = () => {
                 ) : filteredStudents.length === 0 ? (
                   <Card className="p-8 text-center">
                     <CardContent>
-                      <p className="text-gray-600">No students found for this class</p>
+                      <p className="text-gray-600">
+                        No students found for this class
+                      </p>
                     </CardContent>
                   </Card>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {filteredStudents.map((student) => (
-                      <Card key={student._id} className="hover:shadow-lg transition-shadow duration-200 border-[#F0F0F0]">
+                      <Card
+                        key={student._id}
+                        className="hover:shadow-lg transition-shadow duration-200 border-[#F0F0F0]"
+                      >
                         <CardHeader className="pb-3">
                           <div className="flex items-center space-x-3">
                             <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
-                              {student.userId.firstName[0]}{student.userId.lastName[0]}
+                              {student.userId.firstName[0]}
+                              {student.userId.lastName[0]}
                             </div>
                             <div className="flex-1">
                               <CardTitle className="text-lg font-semibold text-gray-800">
-                                {student.userId.firstName} {student.userId.lastName}
+                                {student.userId.firstName}{" "}
+                                {student.userId.lastName}
                               </CardTitle>
                               <p className="text-sm text-gray-500">
-                                Student ID: {student.userId.studentId || student._id.slice(-6)}
+                                Student ID:{" "}
+                                {student.userId.studentId ||
+                                  student._id.slice(-6)}
                               </p>
                             </div>
                           </div>
@@ -450,14 +464,20 @@ const AttendancePage: React.FC = () => {
                           <div className="space-y-3">
                             {/* Quick Stats */}
                             <div className="flex items-center justify-between text-sm">
-                              <span className="text-gray-600">Attendance Rate</span>
-                              <span className="font-semibold text-green-600">95%</span>
+                              <span className="text-gray-600">
+                                Attendance Rate
+                              </span>
+                              <span className="font-semibold text-green-600">
+                                95%
+                              </span>
                             </div>
                             <div className="flex items-center justify-between text-sm">
                               <span className="text-gray-600">Total Days</span>
-                              <span className="font-semibold text-gray-800">45</span>
+                              <span className="font-semibold text-gray-800">
+                                45
+                              </span>
                             </div>
-                            
+
                             {/* Call-to-Action Button */}
                             <Button
                               onClick={() => handleViewAnalytics(student._id)}

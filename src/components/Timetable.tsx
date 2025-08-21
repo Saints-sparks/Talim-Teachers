@@ -1,22 +1,22 @@
 "use client";
-import { 
-  Download, 
-  RefreshCw, 
-  AlertCircle, 
-  Calendar, 
-  Clock, 
-  BookOpen, 
-  Users, 
+import {
+  Download,
+  RefreshCw,
+  AlertCircle,
+  Calendar,
+  Clock,
+  BookOpen,
+  Users,
   MapPin,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
 } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { useAuth } from "@/app/hooks/useAuth";
 import { useAppContext } from "@/app/context/AppContext";
 import { getTeacherTimetable } from "@/app/services/api.service";
-import { toast } from 'react-hot-toast';
+import { toast } from "react-hot-toast";
 
 // Define a TypeScript interface for a single timetable entry.
 interface TimetableEntry {
@@ -38,112 +38,120 @@ interface TimetableData {
 interface ErrorState {
   hasError: boolean;
   message: string;
-  type: 'network' | 'server' | 'empty' | 'unknown';
+  type: "network" | "server" | "empty" | "unknown";
 }
 
 // Days of the week
-const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
 // Time slots (configurable) - using 12-hour format to match backend
 const TIME_SLOTS = [
-  '08:00 AM - 09:00 AM',
-  '09:00 AM - 10:00 AM', 
-  '10:00 AM - 11:00 AM',
-  '11:00 AM - 12:00 PM',
-  '12:00 PM - 01:00 PM',
-  '01:00 PM - 02:00 PM',
-  '02:00 PM - 03:00 PM',
-  '03:00 PM - 04:00 PM',
-  '04:00 PM - 05:00 PM'
+  "08:00 AM - 09:00 AM",
+  "09:00 AM - 10:00 AM",
+  "10:00 AM - 11:00 AM",
+  "11:00 AM - 12:00 PM",
+  "12:00 PM - 01:00 PM",
+  "01:00 PM - 02:00 PM",
+  "02:00 PM - 03:00 PM",
+  "03:00 PM - 04:00 PM",
+  "04:00 PM - 05:00 PM",
 ];
 
 const Timetable: React.FC = () => {
   const { user, getAccessToken } = useAuth();
-  
+
   // State management
   const [timetableData, setTimetableData] = useState<TimetableData>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<ErrorState>({
     hasError: false,
-    message: '',
-    type: 'unknown'
+    message: "",
+    type: "unknown",
   });
   const [retryCount, setRetryCount] = useState(0);
-  
+
   // Filter states
   const [selectedDays, setSelectedDays] = useState<string[]>(DAYS);
-  const [timeRange, setTimeRange] = useState({ start: 0, end: TIME_SLOTS.length - 1 });
+  const [timeRange, setTimeRange] = useState({
+    start: 0,
+    end: TIME_SLOTS.length - 1,
+  });
   const [isMobileView, setIsMobileView] = useState(false);
 
   // Fetch timetable data
   const fetchTimetable = async (showLoading = true) => {
     if (showLoading) setIsLoading(true);
-    setError({ hasError: false, message: '', type: 'unknown' });
+    setError({ hasError: false, message: "", type: "unknown" });
 
     try {
       if (!user?.userId) {
-        throw new Error('User information not available');
+        throw new Error("User information not available");
       }
 
       const token = getAccessToken();
       if (!token) {
-        throw new Error('Authentication token not available');
+        throw new Error("Authentication token not available");
       }
 
       const response = await getTeacherTimetable(user.userId, token);
-      
+
       if (response) {
         // The API returns data grouped by days
         const timetableByDays = response || {};
-        console.log('Received timetable data:', timetableByDays); // Debug log
+        console.log("Received timetable data:", timetableByDays); // Debug log
         setTimetableData(timetableByDays);
-        
+
         // Check if there are any scheduled classes
         const totalClasses = Object.values(timetableByDays).reduce(
-          (total: number, dayEntries) => total + (Array.isArray(dayEntries) ? dayEntries.length : 0), 
+          (total: number, dayEntries) =>
+            total + (Array.isArray(dayEntries) ? dayEntries.length : 0),
           0
         );
-        
-        console.log('Total classes found:', totalClasses); // Debug log
-        
+
+        console.log("Total classes found:", totalClasses); // Debug log
+
         if (totalClasses === 0) {
           setError({
             hasError: true,
-            message: 'No classes scheduled for this week',
-            type: 'empty'
+            message: "No classes scheduled for this week",
+            type: "empty",
           });
         } else {
-          toast.success(`Timetable loaded successfully! Found ${totalClasses} classes.`);
+          toast.success(
+            `Timetable loaded successfully! Found ${totalClasses} classes.`
+          );
         }
       } else {
-        throw new Error('Invalid response format');
+        throw new Error("Invalid response format");
       }
     } catch (err: any) {
-      console.error('Failed to fetch timetable:', err);
-      
-      let errorType: ErrorState['type'] = 'unknown';
-      let errorMessage = 'Failed to load timetable. Please try again.';
-      
-      if (err.message?.includes('network') || err.code === 'NETWORK_ERROR') {
-        errorType = 'network';
-        errorMessage = 'Network connection error. Please check your internet connection and try again.';
-      } else if (err.message?.includes('404') || err.status === 404) {
-        errorType = 'empty';
-        errorMessage = 'No timetable found for your account.';
+      console.error("Failed to fetch timetable:", err);
+
+      let errorType: ErrorState["type"] = "unknown";
+      let errorMessage = "Failed to load timetable. Please try again.";
+
+      if (err.message?.includes("network") || err.code === "NETWORK_ERROR") {
+        errorType = "network";
+        errorMessage =
+          "Network connection error. Please check your internet connection and try again.";
+      } else if (err.message?.includes("404") || err.status === 404) {
+        errorType = "empty";
+        errorMessage = "No timetable found for your account.";
       } else if (err.status >= 500) {
-        errorType = 'server';
-        errorMessage = 'Server error occurred. Please try again later or contact support.';
-      } else if (err.message?.includes('Authentication')) {
-        errorType = 'unknown';
-        errorMessage = 'Authentication error. Please log in again.';
+        errorType = "server";
+        errorMessage =
+          "Server error occurred. Please try again later or contact support.";
+      } else if (err.message?.includes("Authentication")) {
+        errorType = "unknown";
+        errorMessage = "Authentication error. Please log in again.";
       }
-      
+
       setError({
         hasError: true,
         message: errorMessage,
-        type: errorType
+        type: errorType,
       });
-      
+
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
@@ -154,7 +162,7 @@ const Timetable: React.FC = () => {
   const retryFetch = () => {
     const newRetryCount = retryCount + 1;
     setRetryCount(newRetryCount);
-    
+
     // Add delay for retry attempts
     const delay = Math.min(1000 * Math.pow(2, newRetryCount - 1), 5000);
     setTimeout(() => fetchTimetable(), delay);
@@ -170,77 +178,82 @@ const Timetable: React.FC = () => {
   // Get timetable entry for specific day and time - improved matching
   const getTimetableEntry = (day: string, timeSlot: string) => {
     const dayEntries = timetableData[day] || [];
-    
+
     // Debug logging
-    if (day === 'Tuesday' && dayEntries.length > 0) {
+    if (day === "Tuesday" && dayEntries.length > 0) {
       console.log(`Looking for ${day} ${timeSlot}:`, {
         dayEntries,
         timeSlot,
-        availableEntries: dayEntries.map(e => ({
+        availableEntries: dayEntries.map((e) => ({
           time: e.time,
           startTime: e.startTime || e.startTIme,
-          endTime: e.endTime
-        }))
+          endTime: e.endTime,
+        })),
       });
     }
-    
+
     // First, try exact matches
-    let entry = dayEntries.find(entry => {
-      const startTime = entry.startTime || entry.startTIme || '';
-      const exactMatch = entry.time === timeSlot || `${startTime} - ${entry.endTime}` === timeSlot;
-      if (exactMatch && day === 'Tuesday') {
-        console.log('Found exact match:', entry);
+    let entry = dayEntries.find((entry) => {
+      const startTime = entry.startTime || entry.startTIme || "";
+      const exactMatch =
+        entry.time === timeSlot ||
+        `${startTime} - ${entry.endTime}` === timeSlot;
+      if (exactMatch && day === "Tuesday") {
+        console.log("Found exact match:", entry);
       }
       return exactMatch;
     });
-    
+
     if (entry) return entry;
-    
+
     // If no exact match, try time-based matching
-    const slotStart = timeSlot.split(' - ')[0]; // e.g., "08:00 AM"
-    const slotStartHour = parseInt(slotStart.split(':')[0]); // e.g., 8
-    const slotStartMinute = parseInt(slotStart.split(':')[1].split(' ')[0]); // e.g., 0
-    
-    entry = dayEntries.find(entry => {
-      const startTime = entry.startTime || entry.startTIme || '';
+    const slotStart = timeSlot.split(" - ")[0]; // e.g., "08:00 AM"
+    const slotStartHour = parseInt(slotStart.split(":")[0]); // e.g., 8
+    const slotStartMinute = parseInt(slotStart.split(":")[1].split(" ")[0]); // e.g., 0
+
+    entry = dayEntries.find((entry) => {
+      const startTime = entry.startTime || entry.startTIme || "";
       if (!startTime) return false;
-      
-      const entryStartHour = parseInt(startTime.split(':')[0]);
-      const entryStartMinute = parseInt(startTime.split(':')[1].split(' ')[0]);
-      
+
+      const entryStartHour = parseInt(startTime.split(":")[0]);
+      const entryStartMinute = parseInt(startTime.split(":")[1].split(" ")[0]);
+
       // Check if the entry starts within this time slot (within same hour)
-      const match = entryStartHour === slotStartHour && 
-             Math.abs(entryStartMinute - slotStartMinute) <= 30; // Allow 30-minute tolerance
-      
-      if (match && day === 'Tuesday') {
-        console.log('Found time-based match:', entry, {
+      const match =
+        entryStartHour === slotStartHour &&
+        Math.abs(entryStartMinute - slotStartMinute) <= 30; // Allow 30-minute tolerance
+
+      if (match && day === "Tuesday") {
+        console.log("Found time-based match:", entry, {
           slotStart,
           startTime,
           hourMatch: entryStartHour === slotStartHour,
-          minuteDiff: Math.abs(entryStartMinute - slotStartMinute)
+          minuteDiff: Math.abs(entryStartMinute - slotStartMinute),
         });
       }
-      
+
       return match;
     });
-    
+
     return entry;
   };
 
   // Get all entries for a day that don't match standard time slots
   const getUnmatchedEntries = (day: string) => {
     const dayEntries = timetableData[day] || [];
-    return dayEntries.filter(entry => {
+    return dayEntries.filter((entry) => {
       // Check if this entry matches any of our time slots
-      return !filteredTimeSlots.some(timeSlot => {
-        const startTime = entry.startTime || entry.startTIme || '';
-        const slotStart = timeSlot.split(' - ')[0];
-        const slotStartHour = parseInt(slotStart.split(':')[0]);
-        const entryStartHour = parseInt(startTime.split(':')[0]);
-        
-        return entry.time === timeSlot || 
-               `${startTime} - ${entry.endTime}` === timeSlot ||
-               (entryStartHour === slotStartHour);
+      return !filteredTimeSlots.some((timeSlot) => {
+        const startTime = entry.startTime || entry.startTIme || "";
+        const slotStart = timeSlot.split(" - ")[0];
+        const slotStartHour = parseInt(slotStart.split(":")[0]);
+        const entryStartHour = parseInt(startTime.split(":")[0]);
+
+        return (
+          entry.time === timeSlot ||
+          `${startTime} - ${entry.endTime}` === timeSlot ||
+          entryStartHour === slotStartHour
+        );
       });
     });
   };
@@ -248,28 +261,32 @@ const Timetable: React.FC = () => {
   // Calculate total scheduled classes
   const getTotalScheduledClasses = () => {
     return Object.values(timetableData).reduce(
-      (total: number, dayEntries) => total + (Array.isArray(dayEntries) ? dayEntries.length : 0), 
+      (total: number, dayEntries) =>
+        total + (Array.isArray(dayEntries) ? dayEntries.length : 0),
       0
     );
   };
 
   // Filter time slots based on range
-  const filteredTimeSlots = TIME_SLOTS.slice(timeRange.start, timeRange.end + 1);
+  const filteredTimeSlots = TIME_SLOTS.slice(
+    timeRange.start,
+    timeRange.end + 1
+  );
 
   // Export timetable to CSV
   const exportTimetable = () => {
     try {
       const totalClasses = getTotalScheduledClasses();
       if (totalClasses === 0) {
-        toast.error('No timetable data to export');
+        toast.error("No timetable data to export");
         return;
       }
 
       // Create CSV content
-      let csvContent = 'Day,Time Slot,Course,Subject,Class\n';
-      
-      selectedDays.forEach(day => {
-        filteredTimeSlots.forEach(timeSlot => {
+      let csvContent = "Day,Time Slot,Course,Subject,Class\n";
+
+      selectedDays.forEach((day) => {
+        filteredTimeSlots.forEach((timeSlot) => {
           const entry = getTimetableEntry(day, timeSlot);
           if (entry) {
             csvContent += `${day},"${timeSlot}","${entry.course}","${entry.subject}","${entry.class}"\n`;
@@ -280,53 +297,58 @@ const Timetable: React.FC = () => {
       });
 
       // Create and download file
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
       if (link.download !== undefined) {
         const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', `timetable_${new Date().toISOString().split('T')[0]}.csv`);
-        link.style.visibility = 'hidden';
+        link.setAttribute("href", url);
+        link.setAttribute(
+          "download",
+          `timetable_${new Date().toISOString().split("T")[0]}.csv`
+        );
+        link.style.visibility = "hidden";
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        toast.success('Timetable exported successfully!');
+        toast.success("Timetable exported successfully!");
       }
     } catch (error) {
-      console.error('Export error:', error);
-      toast.error('Failed to export timetable');
+      console.error("Export error:", error);
+      toast.error("Failed to export timetable");
     }
   };
 
   return (
     <div className="space-y-6 p-4 md:p-0">
       {/* Header with filters and controls */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 p-4 md:p-6 bg-gradient-to-r from-white to-blue-50 rounded-xl border border-[#F0F0F0] shadow-sm">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 p-4 md:p-6 bg-gradient-to-r from-white to-blue-50 rounded-xl border border-[#F0F0F0] shadow-none">
         <div className="flex items-center gap-3 md:gap-4">
-          <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-[#003366] to-[#004080] rounded-xl flex items-center justify-center shadow-lg">
+          <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-[#003366] to-[#004080] rounded-xl flex items-center justify-center shadow-none">
             <Calendar className="w-5 h-5 md:w-6 md:h-6 text-white" />
           </div>
           <div>
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">Weekly Timetable</h2>
-            <p className="text-gray-600 flex items-center gap-2 text-sm md:text-base">
+            <h2 className="text-xl md:text-2xl font-medium text-[#030E18] mb-1">
+              Weekly Timetable
+            </h2>
+            <p className="text-[#6F6F6F] flex items-center gap-2 text-sm md:text-base">
               <Users className="w-4 h-4" />
               Your class schedule for the week
             </p>
           </div>
         </div>
-        
+
         <div className="flex flex-col sm:flex-row gap-3">
           {/* Day filter */}
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700">Days:</label>
+            <label className="text-sm font-medium text-[#2F2F2F]">Days:</label>
             <select
-              value={selectedDays.length === DAYS.length ? 'all' : 'custom'}
+              value={selectedDays.length === DAYS.length ? "all" : "custom"}
               onChange={(e) => {
-                if (e.target.value === 'all') {
+                if (e.target.value === "all") {
                   setSelectedDays(DAYS);
                 }
               }}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#003366] transition-all"
+              className="px-3 py-2 border border-[#F0F0F0] rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#003366] transition-all"
             >
               <option value="all">All Days</option>
               <option value="custom">Custom</option>
@@ -335,14 +357,14 @@ const Timetable: React.FC = () => {
 
           {/* Time range filter */}
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700">Time:</label>
+            <label className="text-sm font-medium text-[#2F2F2F]">Time:</label>
             <select
               value={`${timeRange.start}-${timeRange.end}`}
               onChange={(e) => {
-                const [start, end] = e.target.value.split('-').map(Number);
+                const [start, end] = e.target.value.split("-").map(Number);
                 setTimeRange({ start, end });
               }}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#003366] transition-all"
+              className="px-3 py-2 border border-[#F0F0F0] rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#003366] transition-all"
             >
               <option value="0-8">Full Day (8:00 - 17:00)</option>
               <option value="0-4">Morning (8:00 - 13:00)</option>
@@ -357,29 +379,37 @@ const Timetable: React.FC = () => {
               onClick={() => setIsMobileView(!isMobileView)}
               variant="outline"
               size="sm"
-              className="flex md:hidden items-center gap-2 border-purple-500 text-purple-600 hover:bg-purple-500 hover:text-white transition-all duration-200 shadow-sm"
+              className="flex md:hidden items-center gap-2 border-[#F0F0F0] text-purple-600 hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200 transition-all duration-200 shadow-none"
             >
-              <ChevronLeft className={`w-4 h-4 transition-transform ${isMobileView ? 'rotate-180' : ''}`} />
-              <span>{isMobileView ? 'Card View' : 'Table View'}</span>
+              <ChevronLeft
+                className={`w-4 h-4 transition-transform ${
+                  isMobileView ? "rotate-180" : ""
+                }`}
+              />
+              <span>{isMobileView ? "Card View" : "Table View"}</span>
             </Button>
-            
+
             <Button
               onClick={() => fetchTimetable(false)}
               variant="outline"
               size="sm"
               disabled={isLoading}
-              className="flex items-center gap-2 border-[#003366] text-[#003366] hover:bg-[#003366] hover:text-white transition-all duration-200 shadow-sm"
+              className="flex items-center gap-2 border-[#F0F0F0] text-[#6F6F6F] hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all duration-200 shadow-none"
             >
-              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">{isLoading ? 'Refreshing...' : 'Refresh'}</span>
+              <RefreshCw
+                className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
+              />
+              <span className="hidden sm:inline">
+                {isLoading ? "Refreshing..." : "Refresh"}
+              </span>
             </Button>
-            
+
             <Button
               onClick={exportTimetable}
               variant="outline"
               size="sm"
               disabled={isLoading || error.hasError}
-              className="flex items-center gap-2 border-green-500 text-green-600 hover:bg-green-500 hover:text-white transition-all duration-200 shadow-sm"
+              className="flex items-center gap-2 border-[#F0F0F0] text-green-600 hover:bg-green-50 hover:text-green-600 hover:border-green-200 transition-all duration-200 shadow-none"
             >
               <Download className="w-4 h-4" />
               <span className="hidden sm:inline">Export</span>
@@ -391,46 +421,58 @@ const Timetable: React.FC = () => {
       {/* Timetable Grid */}
       {isLoading ? (
         // Loading State
-        <div className="flex flex-col items-center justify-center py-20 px-6 bg-gradient-to-br from-white to-blue-50 rounded-xl border border-[#F0F0F0] shadow-sm">
+        <div className="flex flex-col items-center justify-center py-20 px-6 bg-gradient-to-br from-white to-blue-50 rounded-xl border border-[#F0F0F0] shadow-none">
           <div className="relative mb-6">
             <div className="w-20 h-20 border-4 border-blue-100 rounded-full"></div>
             <div className="w-20 h-20 border-4 border-[#003366] border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
           </div>
           <div className="text-center">
-            <h3 className="text-xl font-bold text-gray-800 mb-2">Loading Your Timetable</h3>
-            <p className="text-gray-600 max-w-md">
+            <h3 className="text-xl font-medium text-[#030E18] mb-2">
+              Loading Your Timetable
+            </h3>
+            <p className="text-[#6F6F6F] max-w-md">
               Please wait while we fetch your class schedule for this week...
             </p>
             <div className="mt-4 flex items-center justify-center gap-2">
               <div className="w-2 h-2 bg-[#003366] rounded-full animate-bounce"></div>
-              <div className="w-2 h-2 bg-[#003366] rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-              <div className="w-2 h-2 bg-[#003366] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+              <div
+                className="w-2 h-2 bg-[#003366] rounded-full animate-bounce"
+                style={{ animationDelay: "0.1s" }}
+              ></div>
+              <div
+                className="w-2 h-2 bg-[#003366] rounded-full animate-bounce"
+                style={{ animationDelay: "0.2s" }}
+              ></div>
             </div>
           </div>
         </div>
       ) : error.hasError ? (
         // Error States
-        <div className="flex flex-col items-center justify-center py-20 px-6 bg-gradient-to-br from-red-50 to-orange-50 rounded-xl border-2 border-red-200 shadow-sm">
-          <div className="w-20 h-20 bg-gradient-to-br from-red-100 to-red-200 rounded-full flex items-center justify-center mb-6 shadow-lg">
+        <div className="flex flex-col items-center justify-center py-20 px-6 bg-gradient-to-br from-red-50 to-orange-50 rounded-xl border-2 border-red-200 shadow-none">
+          <div className="w-20 h-20 bg-gradient-to-br from-red-100 to-red-200 rounded-full flex items-center justify-center mb-6 shadow-none">
             <AlertCircle className="w-10 h-10 text-red-600" />
           </div>
-          
+
           <div className="text-center mb-6">
-            <h3 className="text-2xl font-bold text-red-700 mb-3">
-              {error.type === 'network' ? '🌐 Connection Error' : 
-               error.type === 'server' ? '⚠️ Server Error' : 
-               error.type === 'empty' ? '📚 No Schedule Found' : '❌ Something went wrong'}
+            <h3 className="text-2xl font-medium text-red-700 mb-3">
+              {error.type === "network"
+                ? "🌐 Connection Error"
+                : error.type === "server"
+                ? "⚠️ Server Error"
+                : error.type === "empty"
+                ? "📚 No Schedule Found"
+                : "❌ Something went wrong"}
             </h3>
-            
+
             <p className="text-red-600 max-w-md leading-relaxed">
               {error.message}
             </p>
           </div>
-          
+
           <div className="flex flex-col sm:flex-row gap-3">
             <Button
               onClick={retryFetch}
-              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2"
+              className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-none hover:shadow-none transition-all duration-200 flex items-center gap-2"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -445,12 +487,12 @@ const Timetable: React.FC = () => {
                 </>
               )}
             </Button>
-            
-            {error.type === 'network' && (
+
+            {error.type === "network" && (
               <Button
                 variant="outline"
                 onClick={() => window.location.reload()}
-                className="border-red-300 text-red-600 hover:bg-red-50 transition-all duration-200"
+                className="border-red-300 text-red-600 hover:bg-red-50 transition-all duration-200 shadow-none"
               >
                 Reload Page
               </Button>
@@ -459,56 +501,75 @@ const Timetable: React.FC = () => {
         </div>
       ) : (
         // Timetable Grid
-        <div className="bg-white rounded-xl border border-[#F0F0F0] overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
+        <div className="bg-white rounded-xl border border-[#F0F0F0] overflow-hidden shadow-none hover:shadow-none transition-all duration-300">
           {/* Mobile Card View */}
           {isMobileView ? (
             <div className="p-4 space-y-4">
-              {selectedDays.map(day => {
+              {selectedDays.map((day) => {
                 const allDayEntries = timetableData[day] || [];
-                const dayEntries = filteredTimeSlots.map(timeSlot => ({
-                  timeSlot,
-                  entry: getTimetableEntry(day, timeSlot)
-                })).filter(item => item.entry); // Only show slots with classes
-                
+                const dayEntries = filteredTimeSlots
+                  .map((timeSlot) => ({
+                    timeSlot,
+                    entry: getTimetableEntry(day, timeSlot),
+                  }))
+                  .filter((item) => item.entry); // Only show slots with classes
+
                 return (
-                  <div key={day} className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg p-4">
+                  <div
+                    key={day}
+                    className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg p-4"
+                  >
                     <div className="flex items-center gap-3 mb-4">
                       <div className="w-8 h-8 bg-[#003366] rounded-lg flex items-center justify-center">
                         <Calendar className="w-4 h-4 text-white" />
                       </div>
-                      <h3 className="text-lg font-bold text-[#003366]">{day}</h3>
+                      <h3 className="text-lg font-medium text-[#003366]">
+                        {day}
+                      </h3>
                       <div className="flex-1 h-px bg-[#003366]/20"></div>
-                      <span className="text-sm text-gray-600">{allDayEntries.length} classes</span>
+                      <span className="text-sm text-[#6F6F6F]">
+                        {allDayEntries.length} classes
+                      </span>
                     </div>
-                    
+
                     {allDayEntries.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500">
-                        <Clock className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                      <div className="text-center py-8 text-[#878787]">
+                        <Clock className="w-8 h-8 mx-auto mb-2 text-[#F0F0F0]" />
                         <p>No classes scheduled</p>
                       </div>
                     ) : (
                       <div className="space-y-3">
                         {/* Show all entries for this day */}
                         {allDayEntries.map((entry, index) => (
-                          <div key={index} className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+                          <div
+                            key={index}
+                            className="bg-white rounded-lg p-4 shadow-none border border-[#F0F0F0]"
+                          >
                             <div className="flex items-start justify-between mb-3">
                               <div className="flex items-center gap-2">
                                 <BookOpen className="w-5 h-5 text-[#003366]" />
                                 <div>
-                                  <h4 className="font-semibold text-gray-900">{entry.course}</h4>
-                                  <p className="text-sm text-gray-600">{entry.subject}</p>
+                                  <h4 className="font-semibold text-[#030E18]">
+                                    {entry.course}
+                                  </h4>
+                                  <p className="text-sm text-[#6F6F6F]">
+                                    {entry.subject}
+                                  </p>
                                 </div>
                               </div>
                               <div className="text-right">
-                                <div className="text-sm font-medium text-[#003366]">{entry.time}</div>
-                                <div className="text-xs text-gray-500">
-                                  {(entry.startTime || entry.startTIme)} - {entry.endTime}
+                                <div className="text-sm font-medium text-[#003366]">
+                                  {entry.time}
+                                </div>
+                                <div className="text-xs text-[#878787]">
+                                  {entry.startTime || entry.startTIme} -{" "}
+                                  {entry.endTime}
                                 </div>
                               </div>
                             </div>
-                            
+
                             {entry.class && (
-                              <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <div className="flex items-center gap-2 text-sm text-[#6F6F6F]">
                                 <Users className="w-4 h-4" />
                                 <span>{entry.class}</span>
                               </div>
@@ -525,104 +586,137 @@ const Timetable: React.FC = () => {
             /* Desktop Table View */
             <div className="overflow-x-auto">
               <table className="w-full min-w-[900px]">
-              <thead>
-                <tr className="bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-200">
-                  <th className="px-4 py-4 text-left font-semibold text-gray-700 min-w-[140px] border-r border-gray-300">
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-gray-600" />
-                      Time Slot
-                    </div>
-                  </th>
-                  {selectedDays.map(day => (
-                    <th key={day} className="px-4 py-4 text-center font-semibold text-gray-700 border-r border-gray-200">
-                      <div className="flex flex-col items-center gap-1">
-                        <span className="text-lg">{day}</span>
-                        <div className="w-8 h-1 bg-[#003366] rounded-full"></div>
+                <thead>
+                  <tr className="bg-gradient-to-r from-[#F0F0F0]/50 to-[#F0F0F0]/30 border-b-2 border-[#F0F0F0]">
+                    <th className="px-4 py-4 text-left font-semibold text-[#030E18] min-w-[140px] border-r border-[#F0F0F0]">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-[#6F6F6F]" />
+                        Time Slot
                       </div>
                     </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filteredTimeSlots.map((timeSlot, index) => (
-                  <tr key={timeSlot} className={`border-b border-gray-100 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50/30 transition-colors`}>
-                    <td className="px-4 py-6 font-semibold text-gray-700 border-r-2 border-gray-200 bg-gray-50/50">
-                      <div className="flex flex-col items-center gap-1 text-center">
-                        <div className="text-sm font-bold text-[#003366]">{timeSlot}</div>
-                        <div className="w-16 h-px bg-gray-300"></div>
-                        <div className="text-xs text-gray-500">Slot {index + 1}</div>
-                      </div>
-                    </td>
-                    {selectedDays.map(day => {
-                      const entry = getTimetableEntry(day, timeSlot);
-                      return (
-                        <td key={`${day}-${timeSlot}`} className="px-2 md:px-4 py-4 md:py-6 border-r border-gray-200">
-                          {entry ? (
-                            <div className="bg-gradient-to-br from-[#003366] to-[#004080] text-white rounded-xl p-3 md:p-4 hover:from-[#002244] hover:to-[#003366] transition-all duration-300 cursor-pointer shadow-lg hover:shadow-xl transform hover:-translate-y-1">
-                              <div className="flex items-start justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                  <BookOpen className="w-3 h-3 md:w-4 md:h-4 text-blue-200" />
-                                  <div className="font-semibold text-xs md:text-sm">{entry.course}</div>
-                                </div>
-                                <Clock className="w-3 h-3 text-blue-200" />
-                              </div>
-                              
-                              <div className="flex items-center gap-2 mb-2">
-                                <div className="w-2 h-2 bg-blue-200 rounded-full"></div>
-                                <div className="text-xs text-blue-100 font-medium">{entry.subject}</div>
-                              </div>
-                              
-                              <div className="flex items-center gap-2">
-                                <Users className="w-3 h-3 text-blue-200" />
-                                <div className="text-xs text-blue-200">{entry.class}</div>
-                              </div>
-                              
-                              {/* Time indicator */}
-                              <div className="mt-2 pt-2 border-t border-blue-400/30">
-                                <div className="text-xs text-blue-200 flex items-center gap-1">
-                                  <MapPin className="w-3 h-3" />
-                                  <span className="hidden md:inline">{entry.time}</span>
-                                </div>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="h-20 md:h-24 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center hover:from-gray-100 hover:to-gray-200 transition-all duration-200">
-                              <div className="w-6 h-6 md:w-8 md:h-8 bg-gray-200 rounded-full flex items-center justify-center mb-1">
-                                <Clock className="w-3 h-3 md:w-4 md:h-4 text-gray-400" />
-                              </div>
-                              <span className="text-gray-400 text-xs font-medium">Free</span>
-                            </div>
-                          )}
-                        </td>
-                      );
-                    })}
+                    {selectedDays.map((day) => (
+                      <th
+                        key={day}
+                        className="px-4 py-4 text-center font-semibold text-[#030E18] border-r border-[#F0F0F0]"
+                      >
+                        <div className="flex flex-col items-center gap-1">
+                          <span className="text-lg">{day}</span>
+                          <div className="w-8 h-1 bg-[#003366] rounded-full"></div>
+                        </div>
+                      </th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {filteredTimeSlots.map((timeSlot, index) => (
+                    <tr
+                      key={timeSlot}
+                      className={`border-b border-[#F0F0F0] ${
+                        index % 2 === 0 ? "bg-white" : "bg-[#F0F0F0]/20"
+                      } hover:bg-[#003366]/5 transition-colors`}
+                    >
+                      <td className="px-4 py-6 font-semibold text-[#030E18] border-r-2 border-[#F0F0F0] bg-[#F0F0F0]/30">
+                        <div className="flex flex-col items-center gap-1 text-center">
+                          <div className="text-sm font-bold text-[#003366]">
+                            {timeSlot}
+                          </div>
+                          <div className="w-16 h-px bg-[#F0F0F0]"></div>
+                          <div className="text-xs text-[#878787]">
+                            Slot {index + 1}
+                          </div>
+                        </div>
+                      </td>
+                      {selectedDays.map((day) => {
+                        const entry = getTimetableEntry(day, timeSlot);
+                        return (
+                          <td
+                            key={`${day}-${timeSlot}`}
+                            className="px-2 md:px-4 py-4 md:py-6 border-r border-[#F0F0F0]"
+                          >
+                            {entry ? (
+                              <div className="bg-gradient-to-br from-[#003366] to-[#004080] text-white rounded-xl p-3 md:p-4 hover:from-[#002244] hover:to-[#003366] transition-all duration-300 cursor-pointer shadow-none hover:shadow-none transform hover:-translate-y-1">
+                                <div className="flex items-start justify-between mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <BookOpen className="w-3 h-3 md:w-4 md:h-4 text-blue-200" />
+                                    <div className="font-semibold text-xs md:text-sm">
+                                      {entry.course}
+                                    </div>
+                                  </div>
+                                  <Clock className="w-3 h-3 text-blue-200" />
+                                </div>
+
+                                <div className="flex items-center gap-2 mb-2">
+                                  <div className="w-2 h-2 bg-blue-200 rounded-full"></div>
+                                  <div className="text-xs text-blue-100 font-medium">
+                                    {entry.subject}
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                  <Users className="w-3 h-3 text-blue-200" />
+                                  <div className="text-xs text-blue-200">
+                                    {entry.class}
+                                  </div>
+                                </div>
+
+                                {/* Time indicator */}
+                                <div className="mt-2 pt-2 border-t border-blue-400/30">
+                                  <div className="text-xs text-blue-200 flex items-center gap-1">
+                                    <MapPin className="w-3 h-3" />
+                                    <span className="hidden md:inline">
+                                      {entry.time}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="h-20 md:h-24 bg-gradient-to-br from-[#F0F0F0]/50 to-[#F0F0F0]/30 rounded-xl border-2 border-dashed border-[#F0F0F0] flex flex-col items-center justify-center hover:from-[#F0F0F0]/60 hover:to-[#F0F0F0]/40 transition-all duration-200">
+                                <div className="w-6 h-6 md:w-8 md:h-8 bg-[#F0F0F0] rounded-full flex items-center justify-center mb-1">
+                                  <Clock className="w-3 h-3 md:w-4 md:h-4 text-[#878787]" />
+                                </div>
+                                <span className="text-[#878787] text-xs font-medium">
+                                  Free
+                                </span>
+                              </div>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
-          
+
           {/* Summary footer */}
-          <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-t-2 border-gray-200">
+          <div className="bg-gradient-to-r from-[#F0F0F0]/50 to-[#F0F0F0]/30 px-6 py-4 border-t-2 border-[#F0F0F0]">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex items-center gap-3 text-gray-700">
+              <div className="flex items-center gap-3 text-[#030E18]">
                 <div className="w-10 h-10 bg-[#003366] rounded-full flex items-center justify-center">
                   <Calendar className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <div className="font-bold text-lg text-[#003366]">{getTotalScheduledClasses()}</div>
-                  <div className="text-sm text-gray-600">classes scheduled this week</div>
+                  <div className="font-bold text-lg text-[#003366]">
+                    {getTotalScheduledClasses()}
+                  </div>
+                  <div className="text-sm text-[#6F6F6F]">
+                    classes scheduled this week
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-6">
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-gradient-to-br from-[#003366] to-[#004080] rounded shadow-sm"></div>
-                  <span className="text-sm font-medium text-gray-700">Scheduled Class</span>
+                  <div className="w-4 h-4 bg-gradient-to-br from-[#003366] to-[#004080] rounded shadow-none"></div>
+                  <span className="text-sm font-medium text-[#030E18]">
+                    Scheduled Class
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-gradient-to-br from-gray-200 to-gray-300 rounded border border-gray-400"></div>
-                  <span className="text-sm font-medium text-gray-700">Free Period</span>
+                  <div className="w-4 h-4 bg-gradient-to-br from-[#F0F0F0] to-[#F0F0F0]/70 rounded border border-[#F0F0F0]"></div>
+                  <span className="text-sm font-medium text-[#030E18]">
+                    Free Period
+                  </span>
                 </div>
               </div>
             </div>

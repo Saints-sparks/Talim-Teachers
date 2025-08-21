@@ -21,7 +21,14 @@ import {
 } from "../../app/services/api.service";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/app/hooks/useAuth";
-import { Upload, FileText, X, CheckCircle2, Loader2, GraduationCap } from "lucide-react";
+import {
+  Upload,
+  FileText,
+  X,
+  CheckCircle2,
+  Loader2,
+  GraduationCap,
+} from "lucide-react";
 import { Resource } from "@/types/student";
 import { useAppContext } from "@/app/context/AppContext";
 
@@ -47,6 +54,7 @@ export function UploadModal({
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [termLoading, setTermLoading] = useState(false);
   const [classesLoading, setClassesLoading] = useState(false);
+  const [termFetched, setTermFetched] = useState(false); // Track if term has been fetched
 
   // Use classes from context, fallback to local classes
   const availableClasses = classes.length > 0 ? classes : localClasses;
@@ -56,48 +64,53 @@ export function UploadModal({
   const UPLOAD_PRESET = "presetOne";
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !isOpen) return;
 
-    console.log("Upload modal - User:", user);
-    console.log("Upload modal - Classes from context:", classes);
-    console.log("Upload modal - Local classes:", localClasses);
-    console.log("Upload modal - Context loading:", contextLoading);
+    // Only log once when modal opens
+    console.log("Upload modal opened - User:", user?.userId);
 
     const fetchData = async () => {
-      setTermLoading(true);
       const token = getAccessToken();
       if (!token) return;
 
       try {
-        // Fetch current term
-        const term = await getCurrentTerm(token);
-        setCurrentTerm(term);
-        console.log("Current term:", term);
+        // Fetch current term only once per modal session
+        if (!currentTerm && !termFetched) {
+          setTermLoading(true);
+          const term = await getCurrentTerm(token);
+          setCurrentTerm(term);
+          setTermFetched(true);
+          console.log("Fetched current term:", term?.name);
+          setTermLoading(false);
+        }
 
         // If no classes from context and not loading, fetch them directly
-        if (classes.length === 0 && !contextLoading && localClasses.length === 0) {
-          console.log("Fetching classes directly for upload modal...");
+        if (
+          classes.length === 0 &&
+          !contextLoading &&
+          localClasses.length === 0
+        ) {
+          console.log("Fetching classes for upload modal...");
           setClassesLoading(true);
           try {
             const teacherId = user?.teacherId || user?.userId;
             const classDetails = await getAssignedClasses(teacherId, token);
-            console.log("Fetched classes directly:", classDetails);
+            console.log("Fetched classes count:", classDetails?.length || 0);
             setLocalClasses(classDetails);
           } catch (error) {
-            console.error("Error fetching classes directly:", error);
+            console.error("Error fetching classes:", error);
           } finally {
             setClassesLoading(false);
           }
         }
       } catch (error) {
-        console.error("Error fetching current term:", error);
-      } finally {
+        console.error("Error in upload modal fetchData:", error);
         setTermLoading(false);
       }
     };
 
     fetchData();
-  }, [user, getAccessToken, classes, contextLoading, localClasses.length]);
+  }, [user?.userId, isOpen]); // Simplified dependencies
 
   // Reset form when modal opens/closes
   useEffect(() => {
@@ -106,6 +119,8 @@ export function UploadModal({
       setSelectedClass(null);
       setSelectedFile(null);
       setUploadSuccess(false);
+      setTermFetched(false); // Reset term fetched flag when modal closes
+      setCurrentTerm(null); // Reset current term when modal closes
     }
   }, [isOpen]);
 
@@ -186,9 +201,9 @@ export function UploadModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px] text-black p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-[500px] text-black p-0 overflow-hidden shadow-none border border-[#F0F0F0]">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 text-white">
+        <div className="bg-[#003366] p-6 text-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
@@ -198,7 +213,7 @@ export function UploadModal({
                 <DialogTitle className="text-xl font-semibold text-white">
                   Upload Resource
                 </DialogTitle>
-                <p className="text-blue-100 text-sm">
+                <p className="text-white/80 text-sm">
                   Share educational materials with your students
                 </p>
               </div>
@@ -218,21 +233,25 @@ export function UploadModal({
         <div className="p-6 space-y-6">
           {uploadSuccess ? (
             <div className="text-center py-8">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle2 className="w-8 h-8 text-green-600" />
+              <div className="w-16 h-16 bg-[#F0F0F0] rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle2 className="w-8 h-8 text-[#003366]" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <h3 className="text-lg font-semibold text-[#030E18] mb-2">
                 Upload Successful!
               </h3>
-              <p className="text-gray-600">
-                Your resource has been uploaded and is now available to students.
+              <p className="text-[#6F6F6F]">
+                Your resource has been uploaded and is now available to
+                students.
               </p>
             </div>
           ) : (
             <>
               {/* Resource Name */}
               <div className="space-y-2">
-                <Label htmlFor="resource-name" className="text-sm font-medium text-gray-700">
+                <Label
+                  htmlFor="resource-name"
+                  className="text-sm font-medium text-[#030E18]"
+                >
                   Resource Name
                 </Label>
                 <Input
@@ -240,36 +259,47 @@ export function UploadModal({
                   placeholder="e.g., Mathematics Chapter 5 Notes"
                   value={resourceName}
                   onChange={(e) => setResourceName(e.target.value)}
-                  className="border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+                  className="border-[#F0F0F0] focus:border-[#003366] focus:ring-[#003366] shadow-none"
                 />
               </div>
 
               {/* Class Selection */}
               <div className="space-y-2">
-                <Label htmlFor="class" className="text-sm font-medium text-gray-700">
+                <Label
+                  htmlFor="class"
+                  className="text-sm font-medium text-[#030E18]"
+                >
                   Class
                 </Label>
-                <Select onValueChange={setSelectedClass} disabled={contextLoading || termLoading || classesLoading || availableClasses.length === 0}>
-                  <SelectTrigger className="border-gray-200 focus:border-blue-500 focus:ring-blue-500">
+                <Select
+                  onValueChange={setSelectedClass}
+                  disabled={
+                    contextLoading ||
+                    termLoading ||
+                    classesLoading ||
+                    availableClasses.length === 0
+                  }
+                >
+                  <SelectTrigger className="border-[#F0F0F0] focus:border-[#003366] focus:ring-[#003366] shadow-none">
                     <div className="flex items-center space-x-2">
-                      <GraduationCap className="w-4 h-4 text-gray-400" />
+                      <GraduationCap className="w-4 h-4 text-[#878787]" />
                       <SelectValue
                         placeholder={
                           contextLoading || termLoading || classesLoading
-                            ? "Loading classes..." 
-                            : availableClasses.length === 0 
-                              ? "No classes available" 
-                              : "Select a class"
+                            ? "Loading classes..."
+                            : availableClasses.length === 0
+                            ? "No classes available"
+                            : "Select a class"
                         }
                       />
                     </div>
                   </SelectTrigger>
-                  <SelectContent className="text-black bg-white">
+                  <SelectContent className="text-[#030E18] bg-white border-[#F0F0F0] shadow-none">
                     {availableClasses.length > 0 ? (
                       availableClasses.map((cls) => (
                         <SelectItem key={cls._id} value={cls._id}>
                           <div className="flex items-center space-x-2">
-                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            <div className="w-2 h-2 bg-[#003366] rounded-full"></div>
                             <span>{cls.name}</span>
                           </div>
                         </SelectItem>
@@ -281,24 +311,28 @@ export function UploadModal({
                     )}
                   </SelectContent>
                 </Select>
-                {availableClasses.length === 0 && !contextLoading && !termLoading && !classesLoading && (
-                  <p className="text-xs text-orange-600">
-                    No classes assigned. Please contact your administrator.
-                  </p>
-                )}
+                {availableClasses.length === 0 &&
+                  !contextLoading &&
+                  !termLoading &&
+                  !classesLoading && (
+                    <p className="text-xs text-[#878787]">
+                      No classes assigned. Please contact your administrator.
+                    </p>
+                  )}
                 {availableClasses.length > 0 && (
-                  <p className="text-xs text-green-600">
-                    {availableClasses.length} class{availableClasses.length !== 1 ? 'es' : ''} available
+                  <p className="text-xs text-[#6F6F6F]">
+                    {availableClasses.length} class
+                    {availableClasses.length !== 1 ? "es" : ""} available
                   </p>
                 )}
               </div>
 
               {/* File Upload */}
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-gray-700">
+                <Label className="text-sm font-medium text-[#030E18]">
                   Upload File
                 </Label>
-                <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center hover:border-blue-300 transition-colors">
+                <div className="border-2 border-dashed border-[#F0F0F0] rounded-lg p-6 text-center hover:border-[#003366] transition-colors">
                   <input
                     type="file"
                     id="file-upload"
@@ -310,14 +344,14 @@ export function UploadModal({
                     htmlFor="file-upload"
                     className="cursor-pointer flex flex-col items-center space-y-3"
                   >
-                    <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
-                      <FileText className="w-6 h-6 text-blue-600" />
+                    <div className="w-12 h-12 bg-[#F0F0F0] rounded-lg flex items-center justify-center">
+                      <FileText className="w-6 h-6 text-[#003366]" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-900">
+                      <p className="text-sm font-medium text-[#030E18]">
                         {selectedFile ? selectedFile.name : "Choose a file"}
                       </p>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-[#878787] mt-1">
                         PDF, DOC, Images, Videos up to 10MB
                       </p>
                     </div>
@@ -335,14 +369,16 @@ export function UploadModal({
               variant="outline"
               onClick={onClose}
               disabled={uploading}
-              className="border-gray-200 hover:bg-gray-50"
+              className="border-[#F0F0F0] hover:bg-[#F0F0F0] text-[#030E18] shadow-none"
             >
               Cancel
             </Button>
             <Button
               onClick={handleUpload}
-              disabled={uploading || !selectedClass || !resourceName || !selectedFile}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+              disabled={
+                uploading || !selectedClass || !resourceName || !selectedFile
+              }
+              className="bg-[#003366] hover:bg-[#002244] text-white shadow-none transition-all duration-300"
             >
               {uploading ? (
                 <>
