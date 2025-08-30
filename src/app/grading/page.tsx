@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,26 +13,102 @@ import {
   Trophy,
   TrendingUp,
   FileText,
+  RefreshCw,
 } from "lucide-react";
 import CourseTeacherView from "@/components/grading/CourseTeacherView-new";
 import ClassTeacherView from "@/components/grading/ClassTeacherView-lean";
+import { gradeRecordsApi } from "@/app/services/grade-records.service";
+import { useAuth } from "@/app/hooks/useAuth";
 
 type TeacherRole = "course" | "class";
 
+interface KpiData {
+  totalAssessments: number;
+  studentsGraded: number;
+  averageScore: number;
+  pendingReviews: number;
+}
+
 const GradingPage: React.FC = () => {
   const [activeRole, setActiveRole] = useState<TeacherRole>("course");
+  const [kpiData, setKpiData] = useState<KpiData>({
+    totalAssessments: 0,
+    studentsGraded: 0,
+    averageScore: 0,
+    pendingReviews: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const { getAccessToken } = useAuth();
+
+  const fetchKpis = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const token = getAccessToken();
+      if (!token) {
+        throw new Error("No authentication token available");
+      }
+
+      // For now, fetch school-wide KPIs
+      // TODO: Add logic to fetch class-specific KPIs when user selects a class
+      const data = await gradeRecordsApi.getSchoolKpis(token);
+      setKpiData(data);
+    } catch (err: any) {
+      console.error("Error fetching KPIs:", err);
+      setError(err.message || "Failed to fetch KPI data");
+      // Set fallback data in case of error
+      setKpiData({
+        totalAssessments: 0,
+        studentsGraded: 0,
+        averageScore: 0,
+        pendingReviews: 0,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchKpis();
+  }, []);
 
   return (
     <Layout>
       <div className="px-6 py-4 h-full">
         {/* Header Section */}
         <div className="mb-6">
-          <h2 className="text-xl font-medium text-[#030E18] mb-2">
-            Student Grading
-          </h2>
-          <p className="text-sm text-[#6F6F6F]">
-            Manage assessments and track student performance
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-medium text-[#030E18] mb-2">
+                Student Grading
+              </h2>
+              <p className="text-sm text-[#6F6F6F]">
+                Manage assessments and track student performance
+              </p>
+            </div>
+            <Button
+              onClick={fetchKpis}
+              disabled={loading}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2 border-[#F0F0F0] text-[#6F6F6F] hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+              />
+              Refresh KPIs
+            </Button>
+          </div>
+          {error && (
+            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-700">
+                <strong>Error loading KPIs:</strong> {error}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Stats Cards Row */}
@@ -44,8 +120,13 @@ const GradingPage: React.FC = () => {
                   <GraduationCap className="h-6 w-6 text-blue-600" />
                 </div>
                 <div>
-                  <div className="text-2xl font-medium text-gray-900">8</div>
+                  <div className="text-2xl font-medium text-gray-900">
+                    {loading ? "..." : kpiData.totalAssessments}
+                  </div>
                   <p className="text-sm text-[#878787]">Total Assessments</p>
+                  {error && (
+                    <p className="text-xs text-red-500 mt-1">Failed to load</p>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -58,8 +139,13 @@ const GradingPage: React.FC = () => {
                   <Users className="h-6 w-6 text-green-600" />
                 </div>
                 <div>
-                  <div className="text-2xl font-medium text-gray-900">24</div>
+                  <div className="text-2xl font-medium text-gray-900">
+                    {loading ? "..." : kpiData.studentsGraded}
+                  </div>
                   <p className="text-sm text-[#878787]">Students Graded</p>
+                  {error && (
+                    <p className="text-xs text-red-500 mt-1">Failed to load</p>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -72,8 +158,13 @@ const GradingPage: React.FC = () => {
                   <TrendingUp className="h-6 w-6 text-purple-600" />
                 </div>
                 <div>
-                  <div className="text-2xl font-medium text-gray-900">85%</div>
+                  <div className="text-2xl font-medium text-gray-900">
+                    {loading ? "..." : `${kpiData.averageScore}%`}
+                  </div>
                   <p className="text-sm text-[#878787]">Average Score</p>
+                  {error && (
+                    <p className="text-xs text-red-500 mt-1">Failed to load</p>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -86,8 +177,13 @@ const GradingPage: React.FC = () => {
                   <FileText className="h-6 w-6 text-orange-600" />
                 </div>
                 <div>
-                  <div className="text-2xl font-medium text-gray-900">3</div>
+                  <div className="text-2xl font-medium text-gray-900">
+                    {loading ? "..." : kpiData.pendingReviews}
+                  </div>
                   <p className="text-sm text-[#878787]">Pending Reviews</p>
+                  {error && (
+                    <p className="text-xs text-red-500 mt-1">Failed to load</p>
+                  )}
                 </div>
               </div>
             </CardContent>

@@ -659,6 +659,61 @@ export class GradeRecordsApiService {
       return [];
     }
   }
+
+  // ===============================
+  // KPI ENDPOINTS
+  // ===============================
+
+  /**
+   * Get school-wide grading KPIs
+   * Protected endpoint: /grade-records/kpis
+   */
+  async getSchoolKpis(token: string): Promise<{
+    totalAssessments: number;
+    studentsGraded: number;
+    averageScore: number;
+    pendingReviews: number;
+  }> {
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/grade-records/kpis`,
+        this.getAuthHeaders(token)
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error("Error fetching school KPIs:", error);
+      throw new Error(
+        error.response?.data?.message || "Failed to fetch school KPIs"
+      );
+    }
+  }
+
+  /**
+   * Get class-specific grading KPIs
+   * Protected endpoint: /grade-records/kpis/class/:classId
+   */
+  async getClassKpis(
+    classId: string,
+    token: string
+  ): Promise<{
+    totalAssessments: number;
+    studentsGraded: number;
+    averageScore: number;
+    pendingReviews: number;
+  }> {
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/grade-records/kpis/class/${classId}`,
+        this.getAuthHeaders(token)
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error("Error fetching class KPIs:", error);
+      throw new Error(
+        error.response?.data?.message || "Failed to fetch class KPIs"
+      );
+    }
+  }
 }
 
 // Export singleton instance
