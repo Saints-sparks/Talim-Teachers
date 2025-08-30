@@ -1,27 +1,51 @@
-'use client';
+"use client";
 import React, { useState, useEffect } from "react";
-import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import TextStyle from '@tiptap/extension-text-style';
-import FontFamily from '@tiptap/extension-font-family';
-import Color from '@tiptap/extension-color';
-import Highlight from '@tiptap/extension-highlight';
-import TextAlign from '@tiptap/extension-text-align';
-import Underline from '@tiptap/extension-underline';
-import Table from '@tiptap/extension-table';
-import TableRow from '@tiptap/extension-table-row';
-import TableHeader from '@tiptap/extension-table-header';
-import TableCell from '@tiptap/extension-table-cell';
-import Image from '@tiptap/extension-image';
-import Link from '@tiptap/extension-link';
-import { 
-  Save, Bold, Italic, Underline as UnderlineIcon, 
-  AlignLeft, AlignCenter, AlignRight, AlignJustify,
-  List, ListOrdered, Quote, Undo, Redo, 
-  Type, Palette, Highlighter, Table as TableIcon,
-  ImageIcon, Link as LinkIcon, Plus, Minus, Upload, Trash,
-  BookOpen, GraduationCap, FileText, Calendar, Clock,
-  CheckCircle, AlertCircle, X
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import TextStyle from "@tiptap/extension-text-style";
+import FontFamily from "@tiptap/extension-font-family";
+import Color from "@tiptap/extension-color";
+import Highlight from "@tiptap/extension-highlight";
+import TextAlign from "@tiptap/extension-text-align";
+import Underline from "@tiptap/extension-underline";
+import Table from "@tiptap/extension-table";
+import TableRow from "@tiptap/extension-table-row";
+import TableHeader from "@tiptap/extension-table-header";
+import TableCell from "@tiptap/extension-table-cell";
+import Image from "@tiptap/extension-image";
+import Link from "@tiptap/extension-link";
+import {
+  Save,
+  Bold,
+  Italic,
+  Underline as UnderlineIcon,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  AlignJustify,
+  List,
+  ListOrdered,
+  Quote,
+  Undo,
+  Redo,
+  Type,
+  Palette,
+  Highlighter,
+  Table as TableIcon,
+  ImageIcon,
+  Link as LinkIcon,
+  Plus,
+  Minus,
+  Upload,
+  Trash,
+  BookOpen,
+  GraduationCap,
+  FileText,
+  Calendar,
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  X,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useCurriculum } from "../../app/hooks/useCurriculum";
@@ -32,21 +56,24 @@ interface CurriculumEditorProps {
   initialCourseId?: string | null;
   courseInfo?: any;
   editingCurriculumId?: string | null;
+  editingCurriculumData?: any;
   teacherCourses?: any[];
   currentTerm?: any;
 }
 
-const CurriculumEditor: React.FC<CurriculumEditorProps> = ({ 
-  onClose, 
+const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
+  onClose,
   initialCourseId,
   courseInfo,
   editingCurriculumId,
+  editingCurriculumData,
   teacherCourses = [],
-  currentTerm = null
+  currentTerm = null,
 }) => {
   const { getAccessToken } = useAuth();
-  const { addCurriculum, editCurriculum, fetchCurriculumById, isLoading } = useCurriculum();
-  
+  const { addCurriculum, editCurriculum, fetchCurriculumById, isLoading } =
+    useCurriculum();
+
   const [courseId, setCourseId] = useState<string>("");
   const [termId, setTermId] = useState<string>("");
   const [content, setContent] = useState<string>("");
@@ -54,17 +81,33 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
   const [selectedFont, setSelectedFont] = useState<string>("Arial");
   const [fontSize, setFontSize] = useState<number>(14);
   const [showColorPicker, setShowColorPicker] = useState<boolean>(false);
-  const [showHighlightPicker, setShowHighlightPicker] = useState<boolean>(false);
+  const [showHighlightPicker, setShowHighlightPicker] =
+    useState<boolean>(false);
   const [fileUploading, setFileUploading] = useState<boolean>(false);
 
   const fonts = [
-    "Arial", "Times New Roman", "Calibri", "Georgia", "Verdana", 
-    "Comic Sans MS", "Impact", "Trebuchet MS", "Courier New"
+    "Arial",
+    "Times New Roman",
+    "Calibri",
+    "Georgia",
+    "Verdana",
+    "Comic Sans MS",
+    "Impact",
+    "Trebuchet MS",
+    "Courier New",
   ];
 
   const colors = [
-    "#000000", "#FF0000", "#00FF00", "#0000FF", "#FFFF00", 
-    "#FF00FF", "#00FFFF", "#FFA500", "#800080", "#008000"
+    "#000000",
+    "#FF0000",
+    "#00FF00",
+    "#0000FF",
+    "#FFFF00",
+    "#FF00FF",
+    "#00FFFF",
+    "#FFA500",
+    "#800080",
+    "#008000",
   ];
 
   const editor = useEditor({
@@ -72,16 +115,16 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
       StarterKit,
       TextStyle,
       FontFamily.configure({
-        types: ['textStyle'],
+        types: ["textStyle"],
       }),
       Color.configure({
-        types: ['textStyle'],
+        types: ["textStyle"],
       }),
       Highlight.configure({
         multicolor: true,
       }),
       TextAlign.configure({
-        types: ['heading', 'paragraph'],
+        types: ["heading", "paragraph"],
       }),
       Underline,
       Table.configure({
@@ -93,14 +136,14 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
       Image.configure({
         inline: true,
         HTMLAttributes: {
-          class: 'max-w-full h-auto',
+          class: "max-w-full h-auto",
         },
       }),
       Link.configure({
         openOnClick: false,
       }),
     ],
-    content: '<p>Enter curriculum content here...</p>',
+    content: "<p>Enter curriculum content here...</p>",
     onUpdate: ({ editor }) => {
       setContent(editor.getHTML());
     },
@@ -111,7 +154,7 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
     if (initialCourseId) {
       setCourseId(initialCourseId);
     }
-    
+
     // Set term ID from currentTerm prop
     if (currentTerm?._id) {
       setTermId(currentTerm._id);
@@ -121,27 +164,40 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
   // Load existing curriculum for editing
   useEffect(() => {
     const loadCurriculumForEdit = async () => {
-      if (editingCurriculumId) {
+      if (editingCurriculumData) {
+        // Use the passed curriculum data directly
+        setCourseId(
+          editingCurriculumData.course._id || editingCurriculumData.course
+        );
+        setTermId(editingCurriculumData.term._id || editingCurriculumData.term);
+        setContent(editingCurriculumData.content || "");
+        setAttachments(editingCurriculumData.attachments || []);
+        if (editor) {
+          editor.commands.setContent(editingCurriculumData.content || "");
+        }
+      } else if (editingCurriculumId) {
+        // Fallback to fetching by ID
         try {
           const curriculum = await fetchCurriculumById(editingCurriculumId);
           if (curriculum) {
+            // Handle the new API response structure
             setCourseId(curriculum.course._id || curriculum.course);
             setTermId(curriculum.term._id || curriculum.term);
-            setContent(curriculum.content || '');
+            setContent(curriculum.content || "");
             setAttachments(curriculum.attachments || []);
             if (editor) {
-              editor.commands.setContent(curriculum.content || '');
+              editor.commands.setContent(curriculum.content || "");
             }
           }
         } catch (error) {
-          console.error('Failed to load curriculum for editing:', error);
-          toast.error('Failed to load curriculum for editing');
+          console.error("Failed to load curriculum for editing:", error);
+          toast.error("Failed to load curriculum for editing");
         }
       }
     };
 
     loadCurriculumForEdit();
-  }, [editingCurriculumId, editor, fetchCurriculumById]);
+  }, [editingCurriculumId, editingCurriculumData, editor]);
 
   const applyFont = (font: string) => {
     setSelectedFont(font);
@@ -164,28 +220,37 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
   };
 
   const insertTable = () => {
-    editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+    editor
+      ?.chain()
+      .focus()
+      .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+      .run();
   };
 
   const addImageFromUrl = () => {
-    const url = window.prompt('Enter image URL:');
+    const url = window.prompt("Enter image URL:");
     if (url) {
       editor?.chain().focus().setImage({ src: url }).run();
     }
   };
 
   const toggleLink = () => {
-    const previousUrl = editor?.getAttributes('link').href;
-    const url = window.prompt('Enter URL:', previousUrl);
-    
+    const previousUrl = editor?.getAttributes("link").href;
+    const url = window.prompt("Enter URL:", previousUrl);
+
     if (url === null) return;
-    
-    if (url === '') {
-      editor?.chain().focus().extendMarkRange('link').unsetLink().run();
+
+    if (url === "") {
+      editor?.chain().focus().extendMarkRange("link").unsetLink().run();
       return;
     }
-    
-    editor?.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+
+    editor
+      ?.chain()
+      .focus()
+      .extendMarkRange("link")
+      .setLink({ href: url })
+      .run();
   };
 
   const uploadFilesToCloudinary = async (files: FileList) => {
@@ -204,11 +269,11 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
     try {
       for (const file of Array.from(files)) {
         const formData = new FormData();
-        formData.append('file', file);
-        formData.append('upload_preset', uploadPreset || '');
-        
+        formData.append("file", file);
+        formData.append("upload_preset", uploadPreset || "");
+
         const response = await fetch(cloudinaryUrl, {
-          method: 'POST',
+          method: "POST",
           body: formData,
         });
 
@@ -222,7 +287,7 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
         }
       }
 
-      setAttachments(prev => [...prev, ...uploadedUrls]);
+      setAttachments((prev) => [...prev, ...uploadedUrls]);
       toast.success(`${uploadedUrls.length} file(s) uploaded successfully`);
     } catch (error) {
       console.error("Error uploading files:", error);
@@ -233,13 +298,20 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
   };
 
   const removeAttachment = (url: string) => {
-    setAttachments(prev => prev.filter(item => item !== url));
+    setAttachments((prev) => prev.filter((item) => item !== url));
     toast.success("Attachment removed");
   };
 
   const handleSave = async () => {
-    console.log("Attempting to save with - Term ID:", termId, "Course ID:", courseId, "Attachments:", attachments);
-    
+    console.log(
+      "Attempting to save with - Term ID:",
+      termId,
+      "Course ID:",
+      courseId,
+      "Attachments:",
+      attachments
+    );
+
     if (!courseId) {
       toast.error("Please select a course");
       return;
@@ -250,12 +322,12 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
       return;
     }
 
-    if (!content || content === '<p>Enter curriculum content here...</p>') {
+    if (!content || content === "<p>Enter curriculum content here...</p>") {
       toast.error("Please enter curriculum content");
       return;
     }
 
-    const userData = localStorage.getItem('user');
+    const userData = localStorage.getItem("user");
     if (!userData) {
       toast.error("User not authenticated");
       return;
@@ -312,33 +384,44 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
   };
 
   if (!editor) {
-    return <div className="flex justify-center items-center h-screen">Loading editor...</div>;
+    return (
+      <div className="flex justify-center items-center h-screen">
+        Loading editor...
+      </div>
+    );
   }
 
-  const selectedCourse = teacherCourses.find(course => course._id === courseId);
+  const selectedCourse = teacherCourses.find(
+    (course) => course._id === courseId
+  );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-[#F8F8F8]">
       <div className="max-w-7xl mx-auto p-3 md:p-6">
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-          
-          {/* Modern Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-4 md:p-6 text-white">
+        <div className="bg-white rounded-xl shadow-none border border-[#F0F0F0] overflow-hidden">
+          {/* Talim Header */}
+          <div className="bg-[#003366] p-4 md:p-6 text-white">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 md:gap-4">
-                <div className="p-2 md:p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                <div className="p-2 md:p-3 bg-white/20 rounded-lg backdrop-blur-sm">
                   <FileText className="w-6 h-6 md:w-8 md:h-8" />
                 </div>
                 <div>
                   <h1 className="text-lg md:text-2xl font-bold">
-                    {editingCurriculumId ? 'Edit Curriculum' : 'Create New Curriculum'}
+                    {editingCurriculumId
+                      ? "Edit Curriculum"
+                      : "Create New Curriculum"}
                   </h1>
-                  <p className="text-blue-100 mt-1 text-sm md:text-base">
-                    {selectedCourse ? `${selectedCourse.name} - ${selectedCourse.code}` : "Design your course curriculum"}
+                  <p className="text-white/90 mt-1 text-sm md:text-base">
+                    {selectedCourse
+                      ? `${selectedCourse.title || selectedCourse.name} - ${
+                          selectedCourse.courseCode || selectedCourse.code
+                        }`
+                      : "Design your course curriculum"}
                   </p>
                 </div>
               </div>
-              
+
               {onClose && (
                 <button
                   onClick={handleCancel}
@@ -352,59 +435,76 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
           </div>
 
           {/* Mobile/Tablet Configuration Cards - Top */}
-          <div className="lg:hidden bg-gray-50 border-b border-gray-200 p-4">
+          <div className="lg:hidden bg-[#F8F8F8] border-b border-[#F0F0F0] p-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              
               {/* Course Selection Card */}
-              {(!initialCourseId) ? (
-                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+              {!initialCourseId ? (
+                <div className="bg-white rounded-lg p-4 shadow-none border border-[#F0F0F0]">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <BookOpen className="w-4 h-4 text-blue-600" />
+                    <div className="p-2 bg-[#003366]/10 rounded-lg">
+                      <BookOpen className="w-4 h-4 text-[#003366]" />
                     </div>
-                    <h3 className="font-semibold text-gray-900 text-sm">Course Selection</h3>
+                    <h3 className="font-semibold text-[#030E18] text-sm">
+                      Course Selection
+                    </h3>
                   </div>
                   <select
                     value={courseId}
                     onChange={(e) => setCourseId(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className="w-full px-3 py-2 border border-[#F0F0F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#003366] focus:border-transparent transition-all"
                     required
                     disabled={teacherCourses.length === 0}
                   >
                     <option value="">
-                      {teacherCourses.length === 0 ? "Loading courses..." : "Select a course/subject"}
+                      {teacherCourses.length === 0
+                        ? "Loading courses..."
+                        : "Select a course/subject"}
                     </option>
                     {teacherCourses.map((course) => (
                       <option key={course._id} value={course._id}>
-                        {course.name} ({course.code})
+                        {course.title || course.name} (
+                        {course.courseCode || course.code})
                       </option>
                     ))}
                   </select>
                 </div>
               ) : (
-                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center gap-3 mb-3">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <BookOpen className="w-4 h-4 text-blue-600" />
+                <div className="bg-white rounded-lg p-4 shadow-none border border-[#F0F0F0] flex items-center gap-3 mb-3">
+                  <div className="p-2 bg-[#003366]/10 rounded-lg">
+                    <BookOpen className="w-4 h-4 text-[#003366]" />
                   </div>
-                  <span className="font-semibold text-gray-900 text-sm">Course: {courseInfo?.name || 'Selected Course'}</span>
+                  <div className="flex flex-col">
+                    <span className="text-[#878787] text-xs font-medium">
+                      Course Description
+                    </span>
+                    <span className="font-semibold text-[#030E18] text-sm">
+                      {selectedCourse.description}
+                    </span>
+                  </div>
                 </div>
               )}
 
               {/* Term Information Card */}
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+              <div className="bg-white rounded-lg p-4 shadow-none border border-[#F0F0F0]">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <Calendar className="w-4 h-4 text-green-600" />
+                  <div className="p-2 bg-[#003366]/10 rounded-lg">
+                    <Calendar className="w-4 h-4 text-[#003366]" />
                   </div>
-                  <h3 className="font-semibold text-gray-900 text-sm">Term Information</h3>
+                  <h3 className="font-semibold text-[#030E18] text-sm">
+                    Term Information
+                  </h3>
                 </div>
-                
+
                 {currentTerm ? (
-                  <div className="flex items-center gap-2 p-2 bg-green-50 rounded-lg">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
+                  <div className="flex items-center gap-2 p-2 bg-[#003366]/5 rounded-lg">
+                    <CheckCircle className="w-4 h-4 text-[#003366]" />
                     <div>
-                      <p className="text-xs font-medium text-green-800">Current Term</p>
-                      <p className="text-xs text-green-600">{currentTerm.name}</p>
+                      <p className="text-xs font-medium text-[#030E18]">
+                        Current Term
+                      </p>
+                      <p className="text-xs text-[#6F6F6F]">
+                        {currentTerm.name}
+                      </p>
                     </div>
                   </div>
                 ) : (
@@ -418,37 +518,40 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
               </div>
 
               {/* Status Indicator */}
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 sm:col-span-2">
+              <div className="bg-white rounded-lg p-4 shadow-none border border-[#F0F0F0] sm:col-span-2">
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 bg-orange-100 rounded-lg">
-                    <Clock className="w-4 h-4 text-orange-600" />
+                  <div className="p-2 bg-[#003366]/10 rounded-lg">
+                    <Clock className="w-4 h-4 text-[#003366]" />
                   </div>
-                  <h3 className="font-semibold text-gray-900 text-sm">Status</h3>
+                  <h3 className="font-semibold text-[#030E18] text-sm">
+                    Status
+                  </h3>
                 </div>
-                
+
                 <div className="grid grid-cols-3 gap-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-600">Course</span>
+                    <span className="text-xs text-[#6F6F6F]">Course</span>
                     {courseId ? (
-                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <CheckCircle className="w-4 h-4 text-[#003366]" />
                     ) : (
-                      <div className="w-4 h-4 rounded-full border-2 border-gray-300"></div>
+                      <div className="w-4 h-4 rounded-full border-2 border-[#F0F0F0]"></div>
                     )}
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-600">Term</span>
+                    <span className="text-xs text-[#6F6F6F]">Term</span>
                     {termId ? (
-                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <CheckCircle className="w-4 h-4 text-[#003366]" />
                     ) : (
-                      <div className="w-4 h-4 rounded-full border-2 border-gray-300"></div>
+                      <div className="w-4 h-4 rounded-full border-2 border-[#F0F0F0]"></div>
                     )}
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-600">Content</span>
-                    {content && content !== '<p>Enter curriculum content here...</p>' ? (
-                      <CheckCircle className="w-4 h-4 text-green-500" />
+                    <span className="text-xs text-[#6F6F6F]">Content</span>
+                    {content &&
+                    content !== "<p>Enter curriculum content here...</p>" ? (
+                      <CheckCircle className="w-4 h-4 text-[#003366]" />
                     ) : (
-                      <div className="w-4 h-4 rounded-full border-2 border-gray-300"></div>
+                      <div className="w-4 h-4 rounded-full border-2 border-[#F0F0F0]"></div>
                     )}
                   </div>
                 </div>
@@ -458,59 +561,76 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
 
           <div className="flex flex-col lg:flex-row">
             {/* Desktop Sidebar - Course Configuration */}
-            <div className="hidden lg:block w-80 bg-gray-50 border-r border-gray-200 p-6 space-y-6">
+            <div className="hidden lg:block w-80 bg-[#F8F8F8] border-r border-[#F0F0F0] p-6 space-y-6">
               <div className="space-y-4">
-                
                 {/* Course Selection Card */}
-                {(!initialCourseId) ? (
-                  <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                {!initialCourseId ? (
+                  <div className="bg-white rounded-lg p-4 shadow-none border border-[#F0F0F0]">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="p-2 bg-blue-100 rounded-lg">
-                        <BookOpen className="w-5 h-5 text-blue-600" />
+                      <div className="p-2 bg-[#003366]/10 rounded-lg">
+                        <BookOpen className="w-5 h-5 text-[#003366]" />
                       </div>
-                      <h3 className="font-semibold text-gray-900">Course Selection</h3>
+                      <h3 className="font-semibold text-[#030E18]">
+                        Course Selection
+                      </h3>
                     </div>
                     <select
                       value={courseId}
                       onChange={(e) => setCourseId(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      className="w-full px-4 py-3 border border-[#F0F0F0] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#003366] focus:border-transparent transition-all"
                       required
                       disabled={teacherCourses.length === 0}
                     >
                       <option value="">
-                        {teacherCourses.length === 0 ? "Loading courses..." : "Select a course/subject"}
+                        {teacherCourses.length === 0
+                          ? "Loading courses..."
+                          : "Select a course/subject"}
                       </option>
                       {teacherCourses.map((course) => (
                         <option key={course._id} value={course._id}>
-                          {course.name} ({course.code})
+                          {course.title || course.name} (
+                          {course.courseCode || course.code})
                         </option>
                       ))}
                     </select>
                   </div>
                 ) : (
-                  <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <BookOpen className="w-5 h-5 text-blue-600" />
+                  <div className="bg-white rounded-lg p-4 shadow-none border border-[#F0F0F0] flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-[#003366]/10 rounded-lg">
+                      <BookOpen className="w-5 h-5 text-[#003366]" />
                     </div>
-                    <span className="font-semibold text-gray-900">Course: {courseInfo?.name || 'Selected Course'}</span>
+                    <div className="flex flex-col">
+                      <span className="text-[#878787] text-xs font-medium">
+                        Course Description
+                      </span>
+                      <span className="font-semibold text-[#030E18]">
+                        {selectedCourse.description}
+                      </span>
+                    </div>
                   </div>
                 )}
 
                 {/* Term Information Card */}
-                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <div className="bg-white rounded-lg p-4 shadow-none border border-[#F0F0F0]">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <Calendar className="w-5 h-5 text-green-600" />
+                    <div className="p-2 bg-[#003366]/10 rounded-lg">
+                      <Calendar className="w-5 h-5 text-[#003366]" />
                     </div>
-                    <h3 className="font-semibold text-gray-900">Term Information</h3>
+                    <h3 className="font-semibold text-[#030E18]">
+                      Term Information
+                    </h3>
                   </div>
-                  
+
                   {currentTerm ? (
-                    <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-                      <CheckCircle className="w-5 h-5 text-green-600" />
+                    <div className="flex items-center gap-3 p-3 bg-[#003366]/5 rounded-lg">
+                      <CheckCircle className="w-5 h-5 text-[#003366]" />
                       <div>
-                        <p className="text-sm font-medium text-green-800">Current Term</p>
-                        <p className="text-xs text-green-600">{currentTerm.name}</p>
+                        <p className="text-sm font-medium text-[#030E18]">
+                          Current Term
+                        </p>
+                        <p className="text-xs text-[#6F6F6F]">
+                          {currentTerm.name}
+                        </p>
                       </div>
                     </div>
                   ) : (
@@ -526,52 +646,64 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
                 </div>
 
                 {/* File Attachments Card */}
-                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <div className="bg-white rounded-lg p-4 shadow-none border border-[#F0F0F0]">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-purple-100 rounded-lg">
-                      <Upload className="w-5 h-5 text-purple-600" />
+                    <div className="p-2 bg-[#003366]/10 rounded-lg">
+                      <Upload className="w-5 h-5 text-[#003366]" />
                     </div>
-                    <h3 className="font-semibold text-gray-900">Attachments</h3>
+                    <h3 className="font-semibold text-[#030E18]">
+                      Attachments
+                    </h3>
                   </div>
-                  
+
                   <div className="space-y-3">
                     <input
                       type="file"
                       multiple
-                      onChange={(e) => e.target.files && uploadFilesToCloudinary(e.target.files)}
+                      onChange={(e) =>
+                        e.target.files &&
+                        uploadFilesToCloudinary(e.target.files)
+                      }
                       className="hidden"
                       id="file-upload"
                       accept="image/*,application/pdf"
                     />
                     <label
                       htmlFor="file-upload"
-                      className={`flex items-center justify-center gap-2 w-full p-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-purple-400 hover:bg-purple-50 transition-all ${fileUploading ? 'opacity-50 pointer-events-none' : ''}`}
+                      className={`flex items-center justify-center gap-2 w-full p-3 border-2 border-dashed border-[#F0F0F0] rounded-lg cursor-pointer hover:border-[#003366] hover:bg-[#003366]/5 transition-all ${
+                        fileUploading ? "opacity-50 pointer-events-none" : ""
+                      }`}
                     >
-                      <Upload className="w-5 h-5 text-gray-400" />
-                      <span className="text-sm text-gray-600">
+                      <Upload className="w-5 h-5 text-[#6F6F6F]" />
+                      <span className="text-sm text-[#6F6F6F]">
                         {fileUploading ? "Uploading..." : "Choose Files"}
                       </span>
                     </label>
-                    
+
                     {/* Display Uploaded Files */}
                     {attachments.length > 0 && (
                       <div className="space-y-2">
-                        <p className="text-sm font-medium text-gray-700">Uploaded Files ({attachments.length})</p>
+                        <p className="text-sm font-medium text-[#030E18]">
+                          Uploaded Files ({attachments.length})
+                        </p>
                         <div className="space-y-2 max-h-32 overflow-y-auto">
                           {attachments.map((url, index) => (
-                            <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                            <div
+                              key={index}
+                              className="flex items-center justify-between p-2 bg-[#F8F8F8] rounded-lg"
+                            >
                               <a
                                 href={url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-blue-600 hover:text-blue-800 text-sm truncate flex-1 mr-2"
+                                className="text-[#003366] hover:text-[#002244] text-sm truncate flex-1 mr-2"
                                 title={url}
                               >
-                                📎 {url.split('/').pop()?.slice(0, 20)}...
+                                📎 {url.split("/").pop()?.slice(0, 20)}...
                               </a>
                               <button
                                 onClick={() => removeAttachment(url)}
-                                className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded"
+                                className="p-1 text-[#878787] hover:text-red-600 hover:bg-red-50 rounded"
                                 title="Remove"
                               >
                                 <Trash className="w-4 h-4" />
@@ -585,37 +717,44 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
                 </div>
 
                 {/* Status Indicator */}
-                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <div className="bg-white rounded-lg p-4 shadow-none border border-[#F0F0F0]">
                   <div className="flex items-center gap-3 mb-2">
-                    <div className="p-2 bg-orange-100 rounded-lg">
-                      <Clock className="w-5 h-5 text-orange-600" />
+                    <div className="p-2 bg-[#003366]/10 rounded-lg">
+                      <Clock className="w-5 h-5 text-[#003366]" />
                     </div>
-                    <h3 className="font-semibold text-gray-900">Status</h3>
+                    <h3 className="font-semibold text-[#030E18]">Status</h3>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Course Selected</span>
+                      <span className="text-sm text-[#6F6F6F]">
+                        Course Selected
+                      </span>
                       {courseId ? (
-                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        <CheckCircle className="w-4 h-4 text-[#003366]" />
                       ) : (
-                        <div className="w-4 h-4 rounded-full border-2 border-gray-300"></div>
+                        <div className="w-4 h-4 rounded-full border-2 border-[#F0F0F0]"></div>
                       )}
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Term Loaded</span>
+                      <span className="text-sm text-[#6F6F6F]">
+                        Term Loaded
+                      </span>
                       {termId ? (
-                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        <CheckCircle className="w-4 h-4 text-[#003366]" />
                       ) : (
-                        <div className="w-4 h-4 rounded-full border-2 border-gray-300"></div>
+                        <div className="w-4 h-4 rounded-full border-2 border-[#F0F0F0]"></div>
                       )}
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Content Added</span>
-                      {content && content !== '<p>Enter curriculum content here...</p>' ? (
-                        <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span className="text-sm text-[#6F6F6F]">
+                        Content Added
+                      </span>
+                      {content &&
+                      content !== "<p>Enter curriculum content here...</p>" ? (
+                        <CheckCircle className="w-4 h-4 text-[#003366]" />
                       ) : (
-                        <div className="w-4 h-4 rounded-full border-2 border-gray-300"></div>
+                        <div className="w-4 h-4 rounded-full border-2 border-[#F0F0F0]"></div>
                       )}
                     </div>
                   </div>
@@ -625,56 +764,74 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
 
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col">
-              
               {/* Enhanced Toolbar */}
-              <div className="p-4 bg-white border-b border-gray-200">
+              <div className="p-4 bg-white border-b border-[#F0F0F0]">
                 <div className="flex flex-wrap gap-1 items-center">
-                  
                   {/* Font Controls */}
-                  <div className="flex items-center gap-2 pr-3 border-r border-gray-200">
+                  <div className="flex items-center gap-2 pr-3 border-r border-[#F0F0F0]">
                     <select
                       value={selectedFont}
                       onChange={(e) => applyFont(e.target.value)}
-                      className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="px-3 py-2 border border-[#F0F0F0] rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#003366]"
                     >
-                      {fonts.map(font => (
-                        <option key={font} value={font} style={{ fontFamily: font }}>
+                      {fonts.map((font) => (
+                        <option
+                          key={font}
+                          value={font}
+                          style={{ fontFamily: font }}
+                        >
                           {font}
                         </option>
                       ))}
                     </select>
-                    
+
                     <input
                       type="number"
                       value={fontSize}
                       onChange={(e) => applyFontSize(Number(e.target.value))}
-                      className="w-16 px-2 py-2 border border-gray-200 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-16 px-2 py-2 border border-[#F0F0F0] rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-[#003366]"
                       min="8"
                       max="72"
                     />
                   </div>
 
                   {/* Format Controls */}
-                  <div className="flex items-center gap-1 px-3 border-r border-gray-200">
+                  <div className="flex items-center gap-1 px-3 border-r border-[#F0F0F0]">
                     <button
                       onClick={() => editor.chain().focus().toggleBold().run()}
-                      className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${editor.isActive('bold') ? 'bg-blue-100 text-blue-600' : 'text-gray-600'}`}
+                      className={`p-2 rounded-lg hover:bg-[#F8F8F8] transition-colors ${
+                        editor.isActive("bold")
+                          ? "bg-[#003366]/10 text-[#003366]"
+                          : "text-[#6F6F6F]"
+                      }`}
                       title="Bold"
                     >
                       <Bold className="w-4 h-4" />
                     </button>
-                    
+
                     <button
-                      onClick={() => editor.chain().focus().toggleItalic().run()}
-                      className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${editor.isActive('italic') ? 'bg-blue-100 text-blue-600' : 'text-gray-600'}`}
+                      onClick={() =>
+                        editor.chain().focus().toggleItalic().run()
+                      }
+                      className={`p-2 rounded-lg hover:bg-[#F8F8F8] transition-colors ${
+                        editor.isActive("italic")
+                          ? "bg-[#003366]/10 text-[#003366]"
+                          : "text-[#6F6F6F]"
+                      }`}
                       title="Italic"
                     >
                       <Italic className="w-4 h-4" />
                     </button>
-                    
+
                     <button
-                      onClick={() => editor.chain().focus().toggleUnderline().run()}
-                      className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${editor.isActive('underline') ? 'bg-blue-100 text-blue-600' : 'text-gray-600'}`}
+                      onClick={() =>
+                        editor.chain().focus().toggleUnderline().run()
+                      }
+                      className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${
+                        editor.isActive("underline")
+                          ? "bg-blue-100 text-blue-600"
+                          : "text-gray-600"
+                      }`}
                       title="Underline"
                     >
                       <UnderlineIcon className="w-4 h-4" />
@@ -694,7 +851,7 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
                       {showColorPicker && (
                         <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-lg p-3 shadow-lg z-20">
                           <div className="grid grid-cols-5 gap-2">
-                            {colors.map(color => (
+                            {colors.map((color) => (
                               <button
                                 key={color}
                                 onClick={() => applyColor(color)}
@@ -710,7 +867,9 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
 
                     <div className="relative">
                       <button
-                        onClick={() => setShowHighlightPicker(!showHighlightPicker)}
+                        onClick={() =>
+                          setShowHighlightPicker(!showHighlightPicker)
+                        }
                         className="p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-600"
                         title="Highlight"
                       >
@@ -719,7 +878,7 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
                       {showHighlightPicker && (
                         <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-lg p-3 shadow-lg z-20">
                           <div className="grid grid-cols-5 gap-2">
-                            {colors.map(color => (
+                            {colors.map((color) => (
                               <button
                                 key={color}
                                 onClick={() => applyHighlight(color)}
@@ -737,32 +896,56 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
                   {/* Alignment Controls */}
                   <div className="flex items-center gap-1 px-3 border-r border-gray-200">
                     <button
-                      onClick={() => editor.chain().focus().setTextAlign('left').run()}
-                      className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${editor.isActive({ textAlign: 'left' }) ? 'bg-blue-100 text-blue-600' : 'text-gray-600'}`}
+                      onClick={() =>
+                        editor.chain().focus().setTextAlign("left").run()
+                      }
+                      className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${
+                        editor.isActive({ textAlign: "left" })
+                          ? "bg-blue-100 text-blue-600"
+                          : "text-gray-600"
+                      }`}
                       title="Align Left"
                     >
                       <AlignLeft className="w-4 h-4" />
                     </button>
-                    
+
                     <button
-                      onClick={() => editor.chain().focus().setTextAlign('center').run()}
-                      className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${editor.isActive({ textAlign: 'center' }) ? 'bg-blue-100 text-blue-600' : 'text-gray-600'}`}
+                      onClick={() =>
+                        editor.chain().focus().setTextAlign("center").run()
+                      }
+                      className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${
+                        editor.isActive({ textAlign: "center" })
+                          ? "bg-blue-100 text-blue-600"
+                          : "text-gray-600"
+                      }`}
                       title="Align Center"
                     >
                       <AlignCenter className="w-4 h-4" />
                     </button>
-                    
+
                     <button
-                      onClick={() => editor.chain().focus().setTextAlign('right').run()}
-                      className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${editor.isActive({ textAlign: 'right' }) ? 'bg-blue-100 text-blue-600' : 'text-gray-600'}`}
+                      onClick={() =>
+                        editor.chain().focus().setTextAlign("right").run()
+                      }
+                      className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${
+                        editor.isActive({ textAlign: "right" })
+                          ? "bg-blue-100 text-blue-600"
+                          : "text-gray-600"
+                      }`}
                       title="Align Right"
                     >
                       <AlignRight className="w-4 h-4" />
                     </button>
-                    
+
                     <button
-                      onClick={() => editor.chain().focus().setTextAlign('justify').run()}
-                      className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${editor.isActive({ textAlign: 'justify' }) ? 'bg-blue-100 text-blue-600' : 'text-gray-600'}`}
+                      onClick={() =>
+                        editor.chain().focus().setTextAlign("justify").run()
+                      }
+                      className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${
+                        editor.isActive({ textAlign: "justify" })
+                          ? "bg-blue-100 text-blue-600"
+                          : "text-gray-600"
+                      }`}
                       title="Justify"
                     >
                       <AlignJustify className="w-4 h-4" />
@@ -772,24 +955,42 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
                   {/* List Controls */}
                   <div className="flex items-center gap-1 px-3 border-r border-gray-200">
                     <button
-                      onClick={() => editor.chain().focus().toggleBulletList().run()}
-                      className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${editor.isActive('bulletList') ? 'bg-blue-100 text-blue-600' : 'text-gray-600'}`}
+                      onClick={() =>
+                        editor.chain().focus().toggleBulletList().run()
+                      }
+                      className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${
+                        editor.isActive("bulletList")
+                          ? "bg-blue-100 text-blue-600"
+                          : "text-gray-600"
+                      }`}
                       title="Bullet List"
                     >
                       <List className="w-4 h-4" />
                     </button>
-                    
+
                     <button
-                      onClick={() => editor.chain().focus().toggleOrderedList().run()}
-                      className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${editor.isActive('orderedList') ? 'bg-blue-100 text-blue-600' : 'text-gray-600'}`}
+                      onClick={() =>
+                        editor.chain().focus().toggleOrderedList().run()
+                      }
+                      className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${
+                        editor.isActive("orderedList")
+                          ? "bg-blue-100 text-blue-600"
+                          : "text-gray-600"
+                      }`}
                       title="Numbered List"
                     >
                       <ListOrdered className="w-4 h-4" />
                     </button>
 
                     <button
-                      onClick={() => editor.chain().focus().toggleBlockquote().run()}
-                      className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${editor.isActive('blockquote') ? 'bg-blue-100 text-blue-600' : 'text-gray-600'}`}
+                      onClick={() =>
+                        editor.chain().focus().toggleBlockquote().run()
+                      }
+                      className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${
+                        editor.isActive("blockquote")
+                          ? "bg-blue-100 text-blue-600"
+                          : "text-gray-600"
+                      }`}
                       title="Quote"
                     >
                       <Quote className="w-4 h-4" />
@@ -805,7 +1006,7 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
                     >
                       <TableIcon className="w-4 h-4" />
                     </button>
-                    
+
                     <button
                       onClick={addImageFromUrl}
                       className="p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-600"
@@ -813,10 +1014,14 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
                     >
                       <ImageIcon className="w-4 h-4" />
                     </button>
-                    
+
                     <button
                       onClick={toggleLink}
-                      className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${editor.isActive('link') ? 'bg-blue-100 text-blue-600' : 'text-gray-600'}`}
+                      className={`p-2 rounded-lg hover:bg-gray-100 transition-colors ${
+                        editor.isActive("link")
+                          ? "bg-blue-100 text-blue-600"
+                          : "text-gray-600"
+                      }`}
                       title="Insert Link"
                     >
                       <LinkIcon className="w-4 h-4" />
@@ -833,7 +1038,7 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
                     >
                       <Undo className="w-4 h-4" />
                     </button>
-                    
+
                     <button
                       onClick={() => editor.chain().focus().redo().run()}
                       className="p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -852,7 +1057,13 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
                         if (level === 0) {
                           editor.chain().focus().setParagraph().run();
                         } else {
-                          editor.chain().focus().toggleHeading({ level: level as 1 | 2 | 3 | 4 | 5 | 6 }).run();
+                          editor
+                            .chain()
+                            .focus()
+                            .toggleHeading({
+                              level: level as 1 | 2 | 3 | 4 | 5 | 6,
+                            })
+                            .run();
                         }
                       }}
                       className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -873,12 +1084,12 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
               {/* Editor Content */}
               <div className="flex-1 p-6 bg-gray-50">
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 min-h-[600px]">
-                  <EditorContent 
+                  <EditorContent
                     editor={editor}
                     className="prose prose-lg max-w-none p-6 focus:outline-none min-h-[600px]"
-                    style={{ 
+                    style={{
                       fontFamily: selectedFont,
-                      fontSize: `${fontSize}px`
+                      fontSize: `${fontSize}px`,
                     }}
                   />
                 </div>
@@ -887,7 +1098,10 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
               {/* Action Bar */}
               <div className="p-6 bg-white border-t border-gray-200 flex justify-between items-center">
                 <div className="flex items-center gap-2">
-                  {courseId && termId && content && content !== '<p>Enter curriculum content here...</p>' ? (
+                  {courseId &&
+                  termId &&
+                  content &&
+                  content !== "<p>Enter curriculum content here...</p>" ? (
                     <div className="flex items-center gap-2 text-green-600">
                       <CheckCircle className="w-5 h-5" />
                       <span className="text-sm font-medium">Ready to save</span>
@@ -895,27 +1109,35 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
                   ) : (
                     <div className="flex items-center gap-2 text-orange-600">
                       <AlertCircle className="w-5 h-5" />
-                      <span className="text-sm">Complete all required fields</span>
+                      <span className="text-sm">
+                        Complete all required fields
+                      </span>
                     </div>
                   )}
                 </div>
-                
+
                 <div className="flex gap-3">
                   {onClose && (
                     <button
                       onClick={handleCancel}
-                      className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                      className="px-6 py-3 border border-[#F0F0F0] text-[#6F6F6F] rounded-lg hover:bg-[#F8F8F8] transition-colors font-medium"
                     >
                       Cancel
                     </button>
                   )}
                   <button
                     onClick={handleSave}
-                    className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-3 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg"
-                    disabled={isLoading || !courseId || !termId || fileUploading}
+                    className="flex items-center gap-2 bg-[#003366] text-white px-8 py-3 rounded-lg hover:bg-[#002244] transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-none"
+                    disabled={
+                      isLoading || !courseId || !termId || fileUploading
+                    }
                   >
                     <Save className="w-5 h-5" />
-                    {isLoading ? "Saving..." : editingCurriculumId ? "Update Curriculum" : "Save Curriculum"}
+                    {isLoading
+                      ? "Saving..."
+                      : editingCurriculumId
+                      ? "Update Curriculum"
+                      : "Save Curriculum"}
                   </button>
                 </div>
               </div>

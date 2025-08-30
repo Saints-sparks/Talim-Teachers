@@ -100,14 +100,11 @@ export function ResourcesTable({
 
   return (
     <div>
-      <div className="bg-white p-4 border border-[#F0F0F0] rounded-lg hidden md:block">
-        <Table className="text-[#030303] bg-white p-6 ">
+      <div className="bg-white rounded-lg hidden md:block">
+        <Table className="text-[#030303] bg-white ">
           <TableHeader className="text-[#030E18]">
             <TableRow>
-              <TableHead className="flex gap-2 items-center">
-                <Checkbox className="shadow-none pb-1" />
-                Name
-              </TableHead>
+              <TableHead className="flex gap-2 items-center">Name</TableHead>
               <TableHead>Class</TableHead>
               <TableHead>Upload Date</TableHead>
               <TableHead className="flex justify-center">Actions</TableHead>

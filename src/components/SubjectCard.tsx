@@ -120,7 +120,7 @@ const SubjectCard: React.FC<SubjectCardProps> = ({
         return;
       }
       router.push(
-        `/curriculum?courseId=${_id}&termId=${term._id}&mode=view&curriculumId=${curriculum._id}`
+        `/curriculum/view?courseId=${_id}&termId=${term._id}&curriculumId=${curriculum._id}`
       );
     } catch (error) {
       console.error("[SubjectCard] Error in handleView:", error);

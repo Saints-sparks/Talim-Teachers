@@ -108,7 +108,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, curriculum }) => {
           </p>
           <p>
             <span className="font-medium">School:</span>{" "}
-            {curriculum.schoolId?.name || "Unknown"}
+            {curriculum.schoolId || "Unknown"}
           </p>
           <p>
             <span className="font-medium">Created:</span>{" "}
@@ -258,15 +258,7 @@ const CurriculumPage = () => {
         fetchCurricula({});
       }
     }
-  }, [
-    isAuthenticated,
-    courseId,
-    mode,
-    courseTitle,
-    courseCode,
-    curriculumId,
-    termId,
-  ]);
+  }, [isAuthenticated, courseId, mode, curriculumId, termId]);
 
   const fetchTeacherData = async () => {
     try {
@@ -328,7 +320,20 @@ const CurriculumPage = () => {
 
   const handleEditorClose = () => {
     setShowEditor(false);
+    const previousEditingId = editingCurriculumId;
     setEditingCurriculumId(null);
+
+    // If we're in edit or create mode and have curriculum details, redirect to view page
+    if ((mode === "edit" || mode === "create") && courseId && termId) {
+      // For edit mode, use existing curriculum ID; for create mode, we'll redirect to the view page
+      // and let it fetch the newly created curriculum
+      router.push(
+        `/curriculum/view?courseId=${courseId}&termId=${termId}&curriculumId=${
+          curriculumId || previousEditingId || ""
+        }`
+      );
+      return;
+    }
 
     // If we came from a specific course, refresh course curricula
     if (courseId) {
@@ -442,7 +447,6 @@ const CurriculumPage = () => {
                     className="flex items-center gap-2 text-[#6F6F6F] hover:text-[#030E18] transition-colors"
                   >
                     <ArrowLeft className="w-5 h-5" />
-                    Back to Subjects
                   </button>
                 )}
                 <h1 className="text-3xl font-bold text-[#030E18]">

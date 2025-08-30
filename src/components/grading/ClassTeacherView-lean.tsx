@@ -267,32 +267,60 @@ const ClassTeacherView: React.FC = () => {
   };
 
   const handleStudentSelect = async (student: Student) => {
-    setSelectedStudent(student);
-    setViewMode("student-details");
+  setSelectedStudent(student);
+  setViewMode("student-details");
 
+  const token = getAccessToken();
+  console.log("DEBUG token, studentId, selectedTerm:", { token, studentId: student._id, selectedTerm });
+
+  if (!token || !selectedTerm) {
+    console.warn("Missing token or term:", { token, selectedTerm });
+    return;
+  }
+
+  setLoading(true);
+  setError(null);
+
+  try {
+    // call sequentially so we can capture per-call errors
+    let rawCourseGrades: any = undefined;
     try {
-      const token = getAccessToken();
-      if (!token || !selectedTerm) return;
-
-      setLoading(true);
-
-      // Load student's course grades and cumulative record
-      const [courseGrades, cumulativeRecord] = await Promise.all([
-        gradeRecordsApi.getStudentTermGrades(student._id, selectedTerm, token),
-        gradeRecordsApi
-          .getStudentCumulative(student._id, selectedTerm, token)
-          .catch(() => null),
-      ]);
-
-      setStudentCourseGrades(Array.isArray(courseGrades) ? courseGrades : []);
-      setStudentCumulative(cumulativeRecord as any);
-    } catch (error) {
-      console.error("Error loading student details:", error);
-      setError("Failed to load student details.");
-    } finally {
-      setLoading(false);
+      rawCourseGrades = await gradeRecordsApi.getGraderRecords(student._id, selectedTerm, token);
+      console.log("getStudentTermGrades returned:", rawCourseGrades);
+    } catch (e) {
+      console.error("getStudentTermGrades threw:", e);
     }
-  };
+
+    let rawCumulative: any = undefined;
+    try {
+      rawCumulative = await gradeRecordsApi.getGraderRecords(student._id, selectedTerm, token);
+      console.log("getStudentCumulative returned:", rawCumulative);
+    } catch (e) {
+      console.error("getStudentCumulative threw:", e);
+    }
+
+    // defensive parsing (same as before)
+    let parsedGrades: any[] = [];
+    if (Array.isArray(rawCourseGrades)) parsedGrades = rawCourseGrades;
+    else if (rawCourseGrades && Array.isArray((rawCourseGrades as any).data))
+      parsedGrades = (rawCourseGrades as any).data;
+    else if (rawCourseGrades && typeof rawCourseGrades === "object")
+      parsedGrades = [rawCourseGrades];
+
+    console.log("parsedGrades:", parsedGrades);
+
+    setStudentCourseGrades(parsedGrades);
+    setStudentCumulative(rawCumulative as any);
+  } catch (err) {
+    console.error("Unexpected error in handleStudentSelect:", err);
+    setError("Failed to load student details.");
+    setStudentCourseGrades([]);
+    setStudentCumulative(null);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleGenerateCumulative = async () => {
     if (!selectedStudent || !selectedTerm) return;
