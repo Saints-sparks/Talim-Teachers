@@ -1,8 +1,9 @@
 import React from "react";
+import { Course, TeacherClass } from "@/types/student";
 
 interface ClassAndSubjectsProps {
-  assignedClasses: { name: string }[];
-  assignedCourses: string[]; // Array of course IDs
+  assignedClasses: TeacherClass[];
+  assignedCourses: Course[];
 }
 
 const ClassAndSubjects = ({
@@ -14,13 +15,17 @@ const ClassAndSubjects = ({
       ? assignedClasses.map((classObj) => classObj.name).join(", ")
       : "No classes assigned";
 
+  const courseNames =
+    assignedCourses.length > 0
+      ? assignedCourses
+          .map((course) => `${course.courseCode} - ${course.title}`)
+          .join(", ")
+      : "No subjects assigned";
+
   const studentDetails = [
     {
       label: "Subjects to Teach:",
-      value:
-        assignedCourses.length > 0
-          ? assignedCourses.join(", ")
-          : "No subjects assigned",
+      value: courseNames,
     },
     { label: "Assigned Classes:", value: classNames },
   ];

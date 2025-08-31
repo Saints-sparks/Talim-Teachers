@@ -49,21 +49,36 @@ export interface Student {
   dateOfBirth: string;
 }
 
+export interface Course {
+  _id: string;
+  courseCode: string;
+  title: string;
+  description: string;
+  classId: string;
+}
+
+export interface TeacherClass {
+  _id: string;
+  name: string;
+  classDescription: string;
+  classCapacity: string;
+}
+
 export interface Teacher {
   _id: string;
   userId: User;
-  assignedClasses: string[];
-  assignedCourses: string[];
-  isFormTeacher: boolean;
-  highestAcademicQualification: string;
-  yearsOfExperience: number;
-  specialization: string;
   employmentType: string;
   employmentRole: string;
   availabilityDays: string[];
   availableTime: string;
-  createdAt: string;
-  updatedAt: string;
+  highestAcademicQualification: string;
+  yearsOfExperience: number;
+  specialization: string;
+  isFormTeacher: boolean;
+  assignedCourses: Course[];
+  classTeacherClasses: TeacherClass[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Resource {

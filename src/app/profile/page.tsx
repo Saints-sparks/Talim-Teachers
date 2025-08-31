@@ -19,10 +19,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../hooks/useAuth";
-import {
-  fetchTeacherDetails,
-  getAssignedClasses,
-} from "../services/api.service";
+import { fetchTeacherDetails } from "../services/api.service";
 import { Teacher } from "@/types/student";
 import { useAppContext } from "../context/AppContext";
 
@@ -38,7 +35,6 @@ export default function Profile() {
   const { user } = useAppContext();
   const { getAccessToken } = useAuth(); // Get logged-in teacher's info
   const [teacher, setTeacher] = useState<Teacher | null>(null);
-  const [assignedClasses, setAssignedClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTab, setSelectedTab] = useState(tabs[0].label);
@@ -53,8 +49,6 @@ export default function Profile() {
         if (!token) throw new Error("Unauthorized");
         const teacherDetails = await fetchTeacherDetails(user.userId, token);
         setTeacher(teacherDetails);
-        const classes = await getAssignedClasses(user.userId, token);
-        setAssignedClasses(classes);
       } catch (err: any) {
         setError(
           err.message || "Please check your internet connection and try again"
@@ -148,8 +142,8 @@ export default function Profile() {
             )}
             {selectedTab === "Class and Subjects" && (
               <ClassAndSubjects
-                assignedClasses={assignedClasses}
-                assignedCourses={teacher!.assignedCourses}
+                assignedClasses={teacher!.classTeacherClasses || []}
+                assignedCourses={teacher!.assignedCourses || []}
               />
             )}
             {selectedTab === "Availability" && (

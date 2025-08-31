@@ -313,3 +313,90 @@ export const getActiveAssessmentsByTerm = async (
     return [];
   }
 };
+
+// Get class attendance status for a specific date
+export const getClassAttendanceStatus = async (
+  classId: string,
+  token: string,
+  date?: string
+) => {
+  try {
+    const dateQuery = date ? `?date=${date}` : "";
+    const response = await axios.get(
+      `${API_BASE_URL}/attendance/class/${classId}/status${dateQuery}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching class attendance status:", error);
+    return null;
+  }
+};
+
+// Get student attendance KPIs
+export const getStudentAttendanceKPIs = async (
+  studentId: string,
+  token: string,
+  options?: {
+    termId?: string;
+    startDate?: string;
+    endDate?: string;
+  }
+) => {
+  try {
+    const queryParams = new URLSearchParams();
+    if (options?.termId) queryParams.append("termId", options.termId);
+    if (options?.startDate) queryParams.append("startDate", options.startDate);
+    if (options?.endDate) queryParams.append("endDate", options.endDate);
+
+    const queryString = queryParams.toString();
+    const url = `${API_BASE_URL}/attendance/student/${studentId}/kpis${
+      queryString ? `?${queryString}` : ""
+    }`;
+
+    const response = await axios.get(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching student attendance KPIs:", error);
+    return null;
+  }
+};
+
+// Fetch teacher dashboard KPIs
+export const getTeacherDashboardKPIs = async (
+  teacherId: string,
+  token: string
+) => {
+  try {
+    const response = await axios.get(
+      `${API_BASE_URL}/teachers/${teacherId}/dashboard/kpis`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching teacher dashboard KPIs:", error);
+    return null;
+  }
+};
+
+// Fetch all teachers dashboard KPIs
+export const getAllTeachersDashboardKPIs = async (token: string) => {
+  try {
+    const response = await axios.get(
+      `${API_BASE_URL}/teachers/dashboard/kpis/all`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching all teachers dashboard KPIs:", error);
+    return null;
+  }
+};

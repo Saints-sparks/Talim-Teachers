@@ -27,11 +27,11 @@ const useNotifications = () => {
 
         const formattedNotifications = response.data.data.map((notif: any) => ({
           id: notif._id,
-          title: notif.title,
-          message: notif.message,
-          senderId: notif.senderId,
+          title: notif.title || "No title",
+          message: notif.message || "No message",
+          senderId: notif.senderId || null,
           createdAt: notif.createdAt,
-          unread: notif.readBy.length === 0, // Assuming unread notifications have no readBy data
+          unread: notif.readBy?.length === 0, // Assuming unread notifications have no readBy data
         }));
 
         // **Update state & cache**

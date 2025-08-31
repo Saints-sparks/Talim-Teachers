@@ -15,26 +15,29 @@ export interface User {
   phoneNumber: string;
   isActive: boolean;
   isEmailVerified: boolean;
-  schoolId: {
-    _id: string;
-    name: string;
-    email: string;
-    physicalAddress: string;
-    location: {
-      country: string;
-      state: string;
-      _id: string;
-    };
-    schoolPrefix: string;
-    active: boolean;
-    logo: string;
-    createdAt: string;
-    updatedAt: string;
-  };
-  isTwoFactorEnabled: boolean;
-  createdAt: string;
-  updatedAt: string;
-  devices: Array<{
+  schoolId:
+    | string
+    | {
+        _id: string;
+        name: string;
+        email: string;
+        physicalAddress: string;
+        location: {
+          country: string;
+          state: string;
+          _id: string;
+        };
+        schoolPrefix: string;
+        active: boolean;
+        logo: string;
+        createdAt: string;
+        updatedAt: string;
+      };
+  schoolName: string;
+  isTwoFactorEnabled?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  devices?: Array<{
     deviceToken: string;
     platform: string;
     _id: string;

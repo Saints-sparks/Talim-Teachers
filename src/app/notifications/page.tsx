@@ -19,10 +19,10 @@ type Notification = {
   title: string;
   message: string;
   senderId: {
-    firstName: string;
-    lastName: string;
-    email: string;
-  };
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+  } | null;
   createdAt: string;
   unread: boolean;
   avatar?: string; // Optional in case you want to add avatars later
@@ -111,8 +111,8 @@ function Page() {
                     </div>
                     <div className="sm:flex gap-4 flex-1">
                       <p className="text-[#030E18]">
-                        {notification.senderId.firstName}{" "}
-                        {notification.senderId.lastName}
+                        {notification.senderId?.firstName || "Unknown"}{" "}
+                        {notification.senderId?.lastName || "User"}
                       </p>
                       <p className="text-sm truncate max-w-[250px] sm:max-w-[100px] md:max-w-[50px] lg:max-w-[300px] xl:max-w-[750px] 2xl:max-w-[1800px] flex items-center text-[#737373]">
                         Announcement: {notification.message}

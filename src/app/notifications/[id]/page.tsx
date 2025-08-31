@@ -13,10 +13,10 @@ interface Notification {
   title: string;
   message: string;
   senderId: {
-    firstName: string;
-    lastName: string;
-    email: string;
-  };
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+  } | null;
   avatar: string;
   time: string;
 }
@@ -104,9 +104,15 @@ const SenderInfo: React.FC<{ notification: Notification }> = ({
     </Avatar>
     <div className="flex flex-col">
       <p className="text-[#030E18]">
-        {`${notification.senderId.firstName} ${notification.senderId.lastName}`}
+        {notification.senderId
+          ? `${notification.senderId.firstName || "Unknown"} ${
+              notification.senderId.lastName || "User"
+            }`
+          : "Unknown User"}
       </p>
-      <p className="text-sm text-[#7B7B7B]">{notification.senderId.email}</p>
+      <p className="text-sm text-[#7B7B7B]">
+        {notification.senderId?.email || "No email available"}
+      </p>
     </div>
   </div>
 );

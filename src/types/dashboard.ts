@@ -24,3 +24,18 @@ export interface DashboardProps {
     attendancePercentage: number;
   };
 }
+
+export interface TeacherKPIs {
+  teacherId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  userAvatar?: string;
+  assignedSubjects: number;
+  addedResources: number;
+  recordedAttendance: number;
+  assignedClasses: number;
+  totalStudents: number;
+  specialization: string;
+  yearsOfExperience: number;
+}

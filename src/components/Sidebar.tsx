@@ -49,16 +49,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const pathname = usePathname(); // usePathname is the correct hook for App Router
   const { user } = useAppContext();
 
-  if (!user || !user.schoolId) {
+  if (!user) {
     return null; // or return <Spinner/> or some placeholder
   }
 
-  const raw = user.schoolId;
-  const nameMatch = raw.match(/name:\s*"([^"]+)"/);
-  const logoMatch = raw.match(/logo:\s*'([^']+)'/);
-
-  const schoolName = nameMatch ? nameMatch[1] : "Your School";
-  const schoolLogo = logoMatch ? logoMatch[1] : "/unity.png";
+  // Use schoolName directly from the user object, fallback to parsing schoolId if needed
+  const schoolName =
+    user.schoolName ||
+    (typeof user.schoolId === "object" && user.schoolId?.name) ||
+    "Your School";
 
   console.log("School name:", schoolName);
 
@@ -91,13 +90,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
         {/* School Selector */}
         <div className="flex gap-2 items-center px-2 py-3 border border-[#F1F1F1] bg-[#FBFBFB] rounded-md mb-4">
-          {schoolLogo ? (
-            <Image src="/unity.png" alt={schoolName} width={40} height={40} />
-          ) : (
-            <Image src="/unity.png" alt="School" width={40} height={40} />
-          )}
+          <Image src="/unity.png" alt={schoolName} width={40} height={40} />
           <span className="ml-2 font-medium text-base text-[#030E18]">
-            {schoolName || "Your School"}
+            {schoolName}
           </span>
         </div>
 
