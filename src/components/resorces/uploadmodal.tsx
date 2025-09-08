@@ -18,6 +18,7 @@ import {
   getAssignedClasses,
   getCurrentTerm,
   createResource,
+  getTeacherCourses,
 } from "../../app/services/api.service";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/app/hooks/useAuth";
@@ -46,7 +47,9 @@ export function UploadModal({
   const { user, classes, isLoading: contextLoading } = useAppContext(); // Get loading state from context
   const { getAccessToken } = useAuth();
   const [localClasses, setLocalClasses] = useState<any[]>([]); // Fallback local classes
+  const [courses, setCourses] = useState<any[]>([]);
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
+  const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
   const [resourceName, setResourceName] = useState("");
   const [currentTerm, setCurrentTerm] = useState<any>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -54,7 +57,9 @@ export function UploadModal({
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [termLoading, setTermLoading] = useState(false);
   const [classesLoading, setClassesLoading] = useState(false);
+  const [coursesLoading, setCoursesLoading] = useState(false);
   const [termFetched, setTermFetched] = useState(false); // Track if term has been fetched
+  const [coursesFetched, setCoursesFetched] = useState(false); // Track if courses have been fetched
 
   // Use classes from context, fallback to local classes
   const availableClasses = classes.length > 0 ? classes : localClasses;
@@ -103,6 +108,23 @@ export function UploadModal({
             setClassesLoading(false);
           }
         }
+
+        // Fetch teacher courses only once per modal session
+        if (!coursesFetched && courses.length === 0) {
+          console.log("Fetching courses for upload modal...");
+          setCoursesLoading(true);
+          try {
+            const teacherId = user?.teacherId || user?.userId;
+            const teacherCourses = await getTeacherCourses(teacherId, token);
+            console.log("Fetched courses count:", teacherCourses?.length || 0);
+            setCourses(teacherCourses);
+            setCoursesFetched(true);
+          } catch (error) {
+            console.error("Error fetching courses:", error);
+          } finally {
+            setCoursesLoading(false);
+          }
+        }
       } catch (error) {
         console.error("Error in upload modal fetchData:", error);
         setTermLoading(false);
@@ -117,10 +139,13 @@ export function UploadModal({
     if (!isOpen) {
       setResourceName("");
       setSelectedClass(null);
+      setSelectedCourse(null);
       setSelectedFile(null);
       setUploadSuccess(false);
       setTermFetched(false); // Reset term fetched flag when modal closes
+      setCoursesFetched(false); // Reset courses fetched flag when modal closes
       setCurrentTerm(null); // Reset current term when modal closes
+      setCourses([]); // Reset courses when modal closes
     }
   }, [isOpen]);
 
@@ -170,7 +195,7 @@ export function UploadModal({
       const resourceData = {
         name: resourceName,
         classId: selectedClass,
-        courseId: "669b0a0cdbc8b99b10dbdcf8", // You might want to make this dynamic based on selected class/course
+        courseId: selectedCourse, // Use selected course instead of hardcoded value
         uploadedBy: teacherId, // Use teacher ID from context
         termId: currentTerm?._id,
         uploadDate: new Date().toISOString(),
@@ -327,6 +352,64 @@ export function UploadModal({
                 )}
               </div>
 
+              {/* Course Selection */}
+              <div className="space-y-2">
+                <Label
+                  htmlFor="course"
+                  className="text-sm font-medium text-[#030E18]"
+                >
+                  Course
+                </Label>
+                <Select
+                  onValueChange={setSelectedCourse}
+                  disabled={coursesLoading || courses.length === 0}
+                >
+                  <SelectTrigger className="border-[#F0F0F0] focus:border-[#003366] focus:ring-[#003366] shadow-none">
+                    <div className="flex items-center space-x-2">
+                      <FileText className="w-4 h-4 text-[#878787]" />
+                      <SelectValue
+                        placeholder={
+                          coursesLoading
+                            ? "Loading courses..."
+                            : courses.length === 0
+                            ? "No courses available"
+                            : "Select a course"
+                        }
+                      />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent className="text-[#030E18] bg-white border-[#F0F0F0] shadow-none">
+                    {courses.length > 0 ? (
+                      courses.map((course) => (
+                        <SelectItem key={course._id} value={course._id}>
+                          <div className="flex items-center space-x-2">
+                            <div className="w-2 h-2 bg-[#003366] rounded-full"></div>
+                            <span>
+                              {course.courseCode} - {course.title}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="no-courses" disabled>
+                        No courses found
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+                {courses.length === 0 && !coursesLoading && (
+                  <p className="text-xs text-[#878787]">
+                    No courses assigned. Please contact your administrator.
+                  </p>
+                )}
+                {courses.length > 0 && (
+                  <p className="text-xs text-[#6F6F6F]">
+                    {courses.length} course{courses.length !== 1 ? "s" : ""}{" "}
+                    available
+                  </p>
+                )}
+              </div>
+
               {/* File Upload */}
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#030E18]">
@@ -376,7 +459,11 @@ export function UploadModal({
             <Button
               onClick={handleUpload}
               disabled={
-                uploading || !selectedClass || !resourceName || !selectedFile
+                uploading ||
+                !selectedClass ||
+                !selectedCourse ||
+                !resourceName ||
+                !selectedFile
               }
               className="bg-[#003366] hover:bg-[#002244] text-white shadow-none transition-all duration-300"
             >

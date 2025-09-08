@@ -10,38 +10,41 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  GraduationCap, 
-  BookOpen, 
-  ArrowLeft, 
+import {
+  GraduationCap,
+  BookOpen,
+  ArrowLeft,
   Users,
   Search,
-  Loader2
+  Loader2,
 } from "lucide-react";
 import Image from "next/image";
 import { useAppContext } from "@/app/context/AppContext";
 import { useAuth } from "@/app/hooks/useAuth";
 import { getCurrentTerm } from "@/app/services/api.service";
-import { createGroupChat, CreateGroupChatPayload } from "@/app/services/chat.service";
+import {
+  createGroupChat,
+  CreateGroupChatPayload,
+} from "@/app/services/chat.service";
 
 // Utility function to get course icon based on course name
 const getCourseIcon = (courseName: string) => {
-  const name = courseName?.toLowerCase() || '';
-  if (name.includes('math')) return '📊';
-  if (name.includes('english') || name.includes('eng')) return '📚';
-  if (name.includes('physics')) return '⚛️';
-  if (name.includes('chemistry')) return '🧪';
-  if (name.includes('biology')) return '🧬';
-  if (name.includes('history')) return '📜';
-  if (name.includes('geography')) return '🌍';
-  if (name.includes('civic')) return '🏛️';
-  if (name.includes('computer')) return '💻';
-  if (name.includes('science')) return '🔬';
-  if (name.includes('art')) return '🎨';
-  if (name.includes('music')) return '🎵';
-  if (name.includes('physical')) return '⚽';
-  if (name.includes('lang')) return '🗣️';
-  return '📖'; // default book icon
+  const name = courseName?.toLowerCase() || "";
+  if (name.includes("math")) return "📊";
+  if (name.includes("english") || name.includes("eng")) return "📚";
+  if (name.includes("physics")) return "⚛️";
+  if (name.includes("chemistry")) return "🧪";
+  if (name.includes("biology")) return "🧬";
+  if (name.includes("history")) return "📜";
+  if (name.includes("geography")) return "🌍";
+  if (name.includes("civic")) return "🏛️";
+  if (name.includes("computer")) return "💻";
+  if (name.includes("science")) return "🔬";
+  if (name.includes("art")) return "🎨";
+  if (name.includes("music")) return "🎵";
+  if (name.includes("physical")) return "⚽";
+  if (name.includes("lang")) return "🗣️";
+  return "📖"; // default book icon
 };
 
 interface CreateGroupModalProps {
@@ -51,7 +54,10 @@ interface CreateGroupModalProps {
 
 type Step = "selection" | "class-list" | "course-list";
 
-export default function CreateGroupModal({ open, onOpenChange }: CreateGroupModalProps) {
+export default function CreateGroupModal({
+  open,
+  onOpenChange,
+}: CreateGroupModalProps) {
   const [currentStep, setCurrentStep] = useState<Step>("selection");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentTerm, setCurrentTerm] = useState<any>(null);
@@ -61,8 +67,9 @@ export default function CreateGroupModal({ open, onOpenChange }: CreateGroupModa
     type: "success" | "error";
     message: string;
   } | null>(null);
-  
-  const { classes, courses, isLoading, user, refreshChatRooms } = useAppContext() as any;
+
+  const { classes, courses, isLoading, user, refreshChatRooms } =
+    useAppContext() as any;
   const { getAccessToken } = useAuth();
 
   // Fetch current term when modal opens
@@ -130,9 +137,11 @@ export default function CreateGroupModal({ open, onOpenChange }: CreateGroupModa
       // Show success notification
       setNotification({
         type: "success",
-        message: `${type === "class" ? "Class" : "Course"} group chat created successfully!`
+        message: `${
+          type === "class" ? "Class" : "Course"
+        } group chat created successfully!`,
       });
-      
+
       // Close modal after a brief delay
       setTimeout(() => {
         onOpenChange(false);
@@ -144,20 +153,24 @@ export default function CreateGroupModal({ open, onOpenChange }: CreateGroupModa
       console.error("Error creating group:", error);
       setNotification({
         type: "error",
-        message: `Failed to create group: ${error.message}`
+        message: `Failed to create group: ${error.message}`,
       });
     } finally {
       setIsCreating(false);
     }
   };
 
-  const filteredClasses = classes?.filter(cls =>
-    cls.name?.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const filteredClasses =
+    classes?.filter((cls: any) =>
+      cls.name?.toLowerCase().includes(searchTerm.toLowerCase())
+    ) || [];
 
-  const filteredCourses = courses?.filter(course =>
-    (course.title || course.name)?.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const filteredCourses =
+    courses?.filter((course: any) =>
+      (course.title || course.name)
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase())
+    ) || [];
 
   // Debug logging
   useEffect(() => {
@@ -186,10 +199,12 @@ export default function CreateGroupModal({ open, onOpenChange }: CreateGroupModa
             <Loader2 className="w-4 h-4 animate-spin" />
             <span className="text-xs text-[#7B7B7B]">Loading term info...</span>
           </div>
-        ) : currentTerm && (
-          <div className="mt-2 text-xs text-[#003366] bg-[#003366]/5 px-3 py-1 rounded-full inline-block">
-            {currentTerm.name} - {currentTerm.academicYear?.name}
-          </div>
+        ) : (
+          currentTerm && (
+            <div className="mt-2 text-xs text-[#003366] bg-[#003366]/5 px-3 py-1 rounded-full inline-block">
+              {currentTerm.name} - {currentTerm.academicYear?.name}
+            </div>
+          )
         )}
       </div>
 
@@ -226,7 +241,8 @@ export default function CreateGroupModal({ open, onOpenChange }: CreateGroupModa
             <div className="text-left">
               <p className="font-medium text-[#030E18]">Create by Course</p>
               <p className="text-sm text-[#7B7B7B]">
-                Group students taking a course ({courses?.length || 0} available)
+                Group students taking a course ({courses?.length || 0}{" "}
+                available)
               </p>
             </div>
           </div>
@@ -248,7 +264,9 @@ export default function CreateGroupModal({ open, onOpenChange }: CreateGroupModa
         </Button>
         <div>
           <h3 className="text-lg font-semibold text-[#030E18]">Select Class</h3>
-          <p className="text-sm text-[#7B7B7B]">Choose a class to create group</p>
+          <p className="text-sm text-[#7B7B7B]">
+            Choose a class to create group
+          </p>
         </div>
       </div>
 
@@ -271,11 +289,13 @@ export default function CreateGroupModal({ open, onOpenChange }: CreateGroupModa
         ) : filteredClasses.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-[#7B7B7B]">
-              {searchTerm ? "No classes found matching your search" : "No classes available"}
+              {searchTerm
+                ? "No classes found matching your search"
+                : "No classes available"}
             </p>
           </div>
         ) : (
-          filteredClasses.map((cls) => (
+          filteredClasses.map((cls: any) => (
             <Button
               key={cls.id || cls._id}
               variant="outline"
@@ -320,8 +340,12 @@ export default function CreateGroupModal({ open, onOpenChange }: CreateGroupModa
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
-          <h3 className="text-lg font-semibold text-[#030E18]">Select Course</h3>
-          <p className="text-sm text-[#7B7B7B]">Choose a course to create group</p>
+          <h3 className="text-lg font-semibold text-[#030E18]">
+            Select Course
+          </h3>
+          <p className="text-sm text-[#7B7B7B]">
+            Choose a course to create group
+          </p>
         </div>
       </div>
 
@@ -344,11 +368,13 @@ export default function CreateGroupModal({ open, onOpenChange }: CreateGroupModa
         ) : filteredCourses.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-[#7B7B7B]">
-              {searchTerm ? "No courses found matching your search" : "No courses available"}
+              {searchTerm
+                ? "No courses found matching your search"
+                : "No courses available"}
             </p>
           </div>
         ) : (
-          filteredCourses.map((course) => (
+          filteredCourses.map((course: any) => (
             <Button
               key={course.id || course._id}
               variant="outline"
@@ -365,7 +391,9 @@ export default function CreateGroupModal({ open, onOpenChange }: CreateGroupModa
                   )}
                 </div>
                 <div className="flex-1 text-left">
-                  <p className="font-medium text-[#030E18]">{course.title || course.name}</p>
+                  <p className="font-medium text-[#030E18]">
+                    {course.title || course.name}
+                  </p>
                   <p className="text-sm text-[#7B7B7B]">
                     {course.courseCode && (
                       <span className="font-mono">{course.courseCode}</span>
@@ -403,15 +431,19 @@ export default function CreateGroupModal({ open, onOpenChange }: CreateGroupModa
       <DialogContent className="sm:max-w-md font-manrope">
         <DialogHeader className="sr-only">
           <DialogTitle>Create Group</DialogTitle>
-          <DialogDescription>Create a new group for messaging</DialogDescription>
+          <DialogDescription>
+            Create a new group for messaging
+          </DialogDescription>
         </DialogHeader>
-        
+
         {notification && (
-          <div className={`p-3 rounded-lg mb-4 ${
-            notification.type === "success" 
-              ? "bg-green-50 border border-green-200 text-green-800" 
-              : "bg-red-50 border border-red-200 text-red-800"
-          }`}>
+          <div
+            className={`p-3 rounded-lg mb-4 ${
+              notification.type === "success"
+                ? "bg-green-50 border border-green-200 text-green-800"
+                : "bg-red-50 border border-red-200 text-red-800"
+            }`}
+          >
             <div className="flex items-center gap-2">
               {notification.type === "success" ? (
                 <div className="w-5 h-5 rounded-full bg-green-200 flex items-center justify-center">
@@ -422,11 +454,13 @@ export default function CreateGroupModal({ open, onOpenChange }: CreateGroupModa
                   ✕
                 </div>
               )}
-              <span className="text-sm font-medium">{notification.message}</span>
+              <span className="text-sm font-medium">
+                {notification.message}
+              </span>
             </div>
           </div>
         )}
-        
+
         {currentStep === "selection" && renderSelectionStep()}
         {currentStep === "class-list" && renderClassList()}
         {currentStep === "course-list" && renderCourseList()}

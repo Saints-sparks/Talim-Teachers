@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Layout from "@/components/Layout";
 import { useAuth } from "@/app/hooks/useAuth";
@@ -20,7 +20,7 @@ import jsPDF from "jspdf";
 import { getCurriculumByCourseAndTerm } from "../../services/curriculum.services";
 import LoadingCard from "@/components/LoadingCard";
 
-const CurriculumViewPage = () => {
+const CurriculumViewContent = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { getAccessToken } = useAuth();
@@ -564,6 +564,14 @@ const CurriculumViewPage = () => {
         </div>
       </div>
     </Layout>
+  );
+};
+
+const CurriculumViewPage = () => {
+  return (
+    <Suspense fallback={<LoadingCard />}>
+      <CurriculumViewContent />
+    </Suspense>
   );
 };
 

@@ -42,6 +42,22 @@ export const getAssignedClasses = async (userId: string, token: string) => {
   }
 };
 
+// Fetch courses assigned to a teacher
+export const getTeacherCourses = async (teacherId: string, token: string) => {
+  try {
+    const response = await axios.get(
+      `${API_BASE_URL}/teachers/${teacherId}/courses`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    return response.data || [];
+  } catch (error) {
+    console.error("Error fetching teacher courses:", error);
+    return [];
+  }
+};
+
 // Fetch students by class
 export const getStudentsByClass = async (classId: string, token: string) => {
   try {

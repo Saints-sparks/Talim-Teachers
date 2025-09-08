@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -18,7 +18,7 @@ import LoadingCard from "@/components/LoadingCard";
 import { useAuth } from "../../hooks/useAuth";
 import { getStudentAttendanceKPIs } from "../../services/api.service";
 
-const AttendanceAnalyticsPage: React.FC = () => {
+const AttendanceAnalyticsContent: React.FC = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { getAccessToken } = useAuth();
@@ -141,7 +141,6 @@ const AttendanceAnalyticsPage: React.FC = () => {
                 className="flex items-center space-x-2 text-gray-600 hover:text-gray-800"
               >
                 <ArrowLeft size={16} />
-               
               </Button>
             </div>
             <Card className="p-8 text-center border-[#F0F0F0]">
@@ -176,7 +175,6 @@ const AttendanceAnalyticsPage: React.FC = () => {
               className="flex items-center space-x-2 text-gray-600 hover:text-gray-800"
             >
               <ArrowLeft size={16} />
-             
             </Button>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
@@ -440,6 +438,14 @@ const AttendanceAnalyticsPage: React.FC = () => {
         </div>
       </div>
     </Layout>
+  );
+};
+
+const AttendanceAnalyticsPage: React.FC = () => {
+  return (
+    <Suspense fallback={<LoadingCard />}>
+      <AttendanceAnalyticsContent />
+    </Suspense>
   );
 };
 

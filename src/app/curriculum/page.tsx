@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Layout from "@/components/Layout";
 import CurriculumEditor from "@/components/curriculum/CurriculumEditor";
@@ -159,7 +159,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, curriculum }) => {
   );
 };
 
-const CurriculumPage = () => {
+const CurriculumContent = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const {
@@ -548,6 +548,14 @@ const CurriculumPage = () => {
         )}
       </div>
     </Layout>
+  );
+};
+
+const CurriculumPage = () => {
+  return (
+    <Suspense fallback={<SkeletonLoader />}>
+      <CurriculumContent />
+    </Suspense>
   );
 };
 

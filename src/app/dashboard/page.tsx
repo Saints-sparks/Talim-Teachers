@@ -267,9 +267,6 @@ const DashboardPage: React.FC = () => {
 
           {/* Schedule */}
           <div>
-            <h2 className="text-xl font-medium text-[#2F2F2F] mb-4">
-              Your Timetable
-            </h2>
             <Timetable />
           </div>
         </div>
