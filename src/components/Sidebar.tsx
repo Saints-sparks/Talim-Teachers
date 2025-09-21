@@ -90,7 +90,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
         {/* School Selector */}
         <div className="flex gap-2 items-center px-2 py-3 border border-[#F1F1F1] bg-[#FBFBFB] rounded-md mb-4">
-          <Image src="/unity.png" alt={schoolName} width={40} height={40} />
+          <Image
+            src={user.schoolLogo}
+            alt={schoolName}
+            width={40}
+            height={40}
+          />
           <span className="ml-2 font-medium text-base text-[#030E18]">
             {schoolName}
           </span>
