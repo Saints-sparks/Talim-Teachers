@@ -1,11 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import axios from "axios";
 import { API_BASE_URL } from "../lib/api/config";
+import { useAuth } from "./useAuth";
 
 const useNotifications = () => {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { user, getAccessToken } = useAuth();
+  const userId = user?.userId;
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -19,7 +22,14 @@ const useNotifications = () => {
         }
 
         // **Fetch fresh notifications**
-        const response = await axios.get(`${API_BASE_URL}/notifications`);
+        const token = getAccessToken();
+        if (!token) throw new Error("No authentication token found");
+        const response = await axios.get(
+          `${API_BASE_URL}/notifications/announcements/receiver/${userId}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
 
         if (!response.data || !Array.isArray(response.data.data)) {
           throw new Error("Unexpected response format");
@@ -54,7 +64,7 @@ const useNotifications = () => {
     const interval = setInterval(fetchNotifications, 1000 * 60 * 5);
 
     return () => clearInterval(interval); // Cleanup
-  }, []);
+  }, [userId]);
 
   return { notifications, loading, error };
 };

@@ -35,7 +35,6 @@ const menuItems: MenuItem[] = [
     label: "Messages",
     iconPath: "/icons/messages.svg",
     link: "/messages",
-    notification: 5,
   },
 ];
 

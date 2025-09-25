@@ -50,10 +50,9 @@ function Page() {
           </div>
         )
       ) : notifications.length === 0 ? (
-        <div className="flex justify-center items-center min-h-screen">
-          <p className="text-lg text-center text-[#737373]">
-            No notifications available
-          </p>
+        <div className="flex flex-col items-center justify-center h-full">
+          <img src="/icons/notifications.svg" alt="No notifications" />
+          <p className="text-[#525252]">There are no updates for now</p>
         </div>
       ) : (
         <div className="p-4 max-h-full border-[#F0F0F0] overflow-y-auto rounded-xl">
