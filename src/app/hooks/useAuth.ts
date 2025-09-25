@@ -9,7 +9,18 @@ import { LoginCredentials, User } from "../../types/auth";
 import { API_BASE_URL } from "../lib/api/config";
 import axios from "axios";
 
-export const useAuth = () => {
+export interface UseAuthReturn {
+  login: (credentials: LoginCredentials) => Promise<any>;
+  logout: () => void;
+  getUser: () => User | null;
+  getAccessToken: () => string | null;
+  getRefreshToken: () => string | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  user: User | null;
+}
+
+export const useAuth = (): UseAuthReturn => {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -20,25 +31,34 @@ export const useAuth = () => {
     const checkAuth = async () => {
       const token = getAccessToken();
       const userData = getUser();
-      
-      console.log('🔍 Auth checkAuth:', { 
-        hasToken: !!token, 
-        hasUserData: !!userData, 
-        userData: userData 
+
+      console.log("🔍 [Auth] Checking token and userData:", {
+        token,
+        hasToken: !!token,
+        hasUserData: !!userData,
+        userData: userData,
       });
-      
+
+      if (!token) {
+        console.error(
+          "❌ [Auth] Authentication token not available after login!"
+        );
+        toast.error(
+          "Authentication token not available. Please try logging in again."
+        );
+      }
       if (token && userData) {
         setIsAuthenticated(true);
         setUser(userData);
-        console.log('🔍 Auth state set:', { 
-          isAuthenticated: true, 
+        console.log("🔍 [Auth] Auth state set:", {
+          isAuthenticated: true,
           userId: userData._id,
-          userObject: userData 
+          userObject: userData,
         });
       } else {
         setIsAuthenticated(false);
         setUser(null);
-        console.log('🔍 Auth state cleared - missing token or userData');
+        console.log("🔍 [Auth] Auth state cleared - missing token or userData");
       }
     };
 
@@ -46,20 +66,43 @@ export const useAuth = () => {
   }, []);
 
   const login = async (credentials: LoginCredentials) => {
+    // Clear old auth cookies before setting new ones
+    nookies.destroy(undefined, "access_token", { path: "/" });
+    nookies.destroy(undefined, "refresh_token", { path: "/" });
     setIsLoading(true);
     try {
       const response = await authService.login(credentials);
 
-      // Save tokens in cookies
-      nookies.set(null, "access_token", response.access_token, {
+      console.log(
+        "🔑 [Login] Setting access_token cookie:",
+        response.access_token
+      );
+      nookies.set(undefined, "access_token", response.access_token, {
         maxAge: 30 * 24 * 60 * 60, // 30 days
         path: "/",
+        sameSite: "lax",
+        secure: false,
       });
 
-      nookies.set(null, "refresh_token", response.refresh_token, {
+      console.log(
+        "🔑 [Login] Setting refresh_token cookie:",
+        response.refresh_token
+      );
+      nookies.set(undefined, "refresh_token", response.refresh_token, {
         maxAge: 30 * 24 * 60 * 60, // 30 days
         path: "/",
+        sameSite: "lax",
+        secure: false,
       });
+
+      // Immediately check if cookies are set
+      const cookiesAfterSet = nookies.get(undefined);
+      console.log("🔍 [Login] Cookies after set:", cookiesAfterSet);
+      if (!cookiesAfterSet.access_token) {
+        console.error("❌ [Login] access_token cookie not set!");
+        toast.error("Login failed: Token not saved.");
+        throw new Error("Login failed: Token not saved.");
+      }
 
       const introspection = await axios.post(
         `${API_BASE_URL}/auth/introspect`,
@@ -74,44 +117,41 @@ export const useAuth = () => {
 
       const userData = introspection.data.user;
 
-      console.log('🔍 Login - userData from introspection:', userData);
-      console.log('🔍 Login - User ID fields:', {
+      console.log("🔍 [Login] userData from introspection:", userData);
+      console.log("🔍 [Login] User ID fields:", {
         _id: userData._id,
         userId: userData.userId,
-        preferredId: userData.userId || userData._id
+        preferredId: userData.userId || userData._id,
       });
 
       // Store user data in localStorage
       localStorage.setItem("user", JSON.stringify(userData));
-      
+
       // Update state
       setIsAuthenticated(true);
       setUser(userData);
 
-      console.log('🔍 Login - Auth state updated:', { 
-        isAuthenticated: true, 
+      console.log("🔍 [Login] Auth state updated:", {
+        isAuthenticated: true,
         userId: userData._id,
-        userObject: userData 
+        userObject: userData,
       });
 
       toast.success("Login successful!");
 
-      // Try multiple navigation approaches
-      try {
-        router.push("/dashboard");
-
-        // If router.push doesn't work, try window.location after a short delay
-        setTimeout(() => {
+      // Ensure cookies are set before redirecting
+      setTimeout(() => {
+        try {
+          router.push("/dashboard");
           if (window.location.pathname !== "/dashboard") {
             console.log("Fallback to window.location...");
             window.location.href = "/dashboard";
           }
-        }, 500);
-      } catch (navError) {
-        console.error("Navigation error:", navError);
-        // Fallback to window.location
-        window.location.href = "/dashboard";
-      }
+        } catch (navError) {
+          console.error("Navigation error:", navError);
+          window.location.href = "/dashboard";
+        }
+      }, 300); // Slight delay to ensure cookies are set
 
       return response;
     } catch (error) {
@@ -119,11 +159,11 @@ export const useAuth = () => {
       const errorMessage =
         error instanceof Error ? error.message : "Login failed";
       toast.error(errorMessage);
-      
+
       // Update state on login failure
       setIsAuthenticated(false);
       setUser(null);
-      
+
       throw error;
     } finally {
       setIsLoading(false);
@@ -132,8 +172,8 @@ export const useAuth = () => {
 
   const logout = () => {
     // Clear cookies
-    nookies.destroy(null, "access_token");
-    nookies.destroy(null, "refresh_token");
+    nookies.destroy(undefined, "access_token", { path: "/" });
+    nookies.destroy(undefined, "refresh_token", { path: "/" });
 
     // Clear local storage
     localStorage.removeItem("user");
@@ -161,12 +201,12 @@ export const useAuth = () => {
   };
 
   const getAccessToken = (): string | null => {
-    const cookies = nookies.get(null);
+    const cookies = nookies.get(undefined);
     return cookies.access_token || null;
   };
 
   const getRefreshToken = (): string | null => {
-    const cookies = nookies.get(null);
+    const cookies = nookies.get(undefined);
     return cookies.refresh_token || null;
   };
 

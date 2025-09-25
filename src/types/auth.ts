@@ -34,6 +34,7 @@ export interface User {
         updatedAt: string;
       };
   schoolName: string;
+  userAvatar?: string;
   isTwoFactorEnabled?: boolean;
   createdAt?: string;
   updatedAt?: string;

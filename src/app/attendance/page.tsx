@@ -585,15 +585,7 @@ const AttendancePage: React.FC = () => {
                             Marked
                           </div>
                         </div>
-                        <div className="text-center">
-                          <div className="text-lg sm:text-2xl font-bold text-orange-600">
-                            {attendanceStatus?.attendanceNotMarked ||
-                              data.length - submittedStudents.size}
-                          </div>
-                          <div className="text-xs sm:text-sm text-[#878787]">
-                            Pending
-                          </div>
-                        </div>
+                        
                       </div>
                     </div>
 
@@ -663,15 +655,13 @@ const AttendancePage: React.FC = () => {
                                             </div>
                                           );
                                         } else {
-                                          return (
-                                            <p className="text-sm text-[#878787]">
-                                              ID: {student.id}
-                                            </p>
-                                          );
+                                          return {
+                                            /* Student ID removed from UI as requested */
+                                          };
                                         }
                                       })()) || (
                                       <p className="text-sm text-[#878787]">
-                                        ID: {student.id}
+                                        {/* Student ID removed from UI as requested */}
                                       </p>
                                     )}
                                   </div>
@@ -917,14 +907,7 @@ const AttendancePage: React.FC = () => {
                             Marked
                           </div>
                         </div>
-                        <div className="text-center p-4 bg-orange-50 rounded-lg border border-orange-200">
-                          <div className="text-2xl font-bold text-orange-700 mb-1">
-                            {attendanceStatus.attendanceNotMarked}
-                          </div>
-                          <div className="text-sm text-orange-600 font-medium">
-                            Pending
-                          </div>
-                        </div>
+                       
                       </div>
                     </div>
 

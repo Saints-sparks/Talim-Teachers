@@ -22,6 +22,7 @@ import { useAuth } from "../hooks/useAuth";
 import { fetchTeacherDetails } from "../services/api.service";
 import { Teacher } from "@/types/student";
 import { useAppContext } from "../context/AppContext";
+import { API_BASE_URL } from "../lib/api/config";
 
 const tabs = [
   { label: "Personal Information", icon: <UserRound /> },
@@ -38,14 +39,72 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTab, setSelectedTab] = useState(tabs[0].label);
+  const CLOUD_NAME = "ddbs7m7nt";
+  const UPLOAD_PRESET = "presetOne";
+  const [uploading, setUploading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const router = useRouter();
+  const token = getAccessToken();
+
+   const getInitials = () => {
+    if (!user) return "US"; // Default if no user
+
+    const firstNameInitial = user.firstName?.[0]?.toUpperCase() || "";
+    const lastNameInitial = user.lastName?.[0]?.toUpperCase() || "";
+
+    // Handle cases where only one name exists
+    return `${firstNameInitial}${lastNameInitial}` || "US";
+  };
+
+  const handleUploadClick = () => {
+    if (fileInputRef.current) fileInputRef.current.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setErrorMsg(null);
+    try {
+      // Upload to Cloudinary
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", UPLOAD_PRESET);
+      const cloudRes = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+      const cloudData = await cloudRes.json();
+      if (!cloudData.secure_url) throw new Error("Cloudinary upload failed");
+      // Send to backend
+      const avatarUrl = cloudData.secure_url;
+      
+      const apiRes = await fetch(`${API_BASE_URL}/auth/profile/avatar`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ avatarUrl }),
+      });
+      if (!apiRes.ok) throw new Error("Failed to update avatar");
+      // Optionally: reload or update user context
+    } catch (err: any) {
+      setErrorMsg(err.message || "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
     (async () => {
       setLoading(true);
       try {
-        const token = getAccessToken();
         if (!token) throw new Error("Unauthorized");
         const teacherDetails = await fetchTeacherDetails(user.userId, token);
         setTeacher(teacherDetails);
@@ -85,15 +144,31 @@ export default function Profile() {
           </Button>
 
           <div className="flex gap-4 bg-white py-10 sm:p-10 rounded-3xl justify-center sm:justify-start items-center">
-            <Avatar className="w-[100px] sm:w-[150px] h-[100px] sm:h-[150px]">
-              <AvatarImage src="/placeholder.svg" alt="User avatar" />
-              <AvatarFallback className="bg-green-300">OA</AvatarFallback>
-            </Avatar>
+             <Avatar className="w-[100px] sm:w-[150px] h-[100px] sm:h-[150px]">
+                <AvatarImage src={user?.userAvatar || "/placeholder.svg"} alt="User avatar" />
+                <AvatarFallback className="bg-green-300">
+                  {getInitials()}
+                </AvatarFallback>
+              </Avatar>
             <div className="flex flex-col gap-3">
               <p>My Profile</p>
-              <Button className="border border-[#003366] text-[#003366] bg-[#F3F3F3] shadow-none hover:bg-gray-200">
-                Upload Photo
+              <Button
+                className="border border-[#003366] text-[#003366] bg-[#F3F3F3] shadow-none hover:bg-gray-200"
+                onClick={handleUploadClick}
+                disabled={uploading}
+              >
+                {uploading ? "Uploading..." : "Upload Photo"}
               </Button>
+              <input
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                style={{ display: "none" }}
+                onChange={handleFileChange}
+              />
+              {errorMsg && (
+                <div className="text-red-500 text-sm mt-2">{errorMsg}</div>
+              )}
             </div>
           </div>
 

@@ -5,8 +5,21 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "./ui/button";
 import { format } from "date-fns";
 import { WebSocketStatus } from "./WebSocketStatus";
+import { useAuth } from "@/app/hooks/useAuth";
 
 export function Header({ onMenuClick }: { onMenuClick: () => void }) {
+  const { user } = useAuth();
+
+  // Generate initials from first and last names
+  const getInitials = () => {
+    if (!user) return "US"; // Default if no user
+
+    const firstNameInitial = user.firstName?.[0]?.toUpperCase() || "";
+    const lastNameInitial = user.lastName?.[0]?.toUpperCase() || "";
+
+    // Handle cases where only one name exists
+    return `${firstNameInitial}${lastNameInitial}` || "US";
+  };
   return (
     <header className="font-manrope px-5 border-b sm:border-b-2 border-b-[#F0F0F0] py-2 ">
       {/* Top row: Menu, Date, Notifications, Avatar */}
@@ -37,9 +50,14 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
               </Button>
             </Link>
             <Link href="/profile">
-              <Avatar>
-                <AvatarImage src="/placeholder.svg" alt="User avatar" />
-                <AvatarFallback className="bg-green-300">OA</AvatarFallback>
+                <Avatar>
+                <AvatarImage
+                  src={user?.userAvatar || "/placeholder.svg"}
+                  alt="User avatar"
+                />
+                <AvatarFallback className="bg-green-300">
+                  {getInitials()}
+                </AvatarFallback>
               </Avatar>
             </Link>
           </div>

@@ -15,6 +15,7 @@ export interface ClassCardProps {
     name: string;
     classCapacity: string;
     classDescription?: string;
+    studentCount: number;
   };
   onView: (classItem: { _id: string; name: string }) => void;
   disabled?: boolean;
@@ -68,10 +69,10 @@ const ClassCard: React.FC<ClassCardProps> = ({
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-2 text-[#6F6F6F]">
               <Users className="w-4 h-4" />
-              <span>Capacity</span>
+              <span>Student Count</span>
             </div>
             <span className="font-medium text-[#030E18]">
-              {classItem.classCapacity} students
+              {classItem.studentCount} students
             </span>
           </div>
         </div>
