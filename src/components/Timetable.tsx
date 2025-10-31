@@ -11,7 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "./ui/button";
 import { useAuth } from "@/app/hooks/useAuth";
 import { useAppContext } from "@/app/context/AppContext";
@@ -46,15 +46,15 @@ const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
 // Time slots (configurable) - using 12-hour format to match backend
 const TIME_SLOTS = [
-  "08:00 AM - 09:00 AM",
-  "09:00 AM - 10:00 AM",
-  "10:00 AM - 11:00 AM",
-  "11:00 AM - 12:00 PM",
-  "12:00 PM - 01:00 PM",
-  "01:00 PM - 02:00 PM",
-  "02:00 PM - 03:00 PM",
-  "03:00 PM - 04:00 PM",
-  "04:00 PM - 05:00 PM",
+  "8:00 AM",
+  "9:00 AM",
+  "10:00 AM",
+  "11:00 AM",
+  "12:00 PM",
+  "1:00 PM",
+  "2:00 PM",
+  "3:00 PM",
+  "4:00 PM",
 ];
 
 const Timetable: React.FC = () => {
@@ -77,6 +77,22 @@ const Timetable: React.FC = () => {
     end: TIME_SLOTS.length - 1,
   });
   const [isMobileView, setIsMobileView] = useState(false);
+
+  // Refs and indicator state for current-time line
+  const tableWrapperRef = useRef<HTMLDivElement | null>(null);
+  const [indicator, setIndicator] = useState<{
+    top: number;
+    left: number; // line left (after sticky column)
+    width: number;
+    stickyLeft: number; // left position of sticky column relative to wrapper
+    badgeLeft: number; // computed left for the time badge
+    timeLabel: string;
+    visible: boolean;
+  }>({ top: 0, left: 0, width: 0, stickyLeft: 0, badgeLeft: 0, timeLabel: "", visible: false });
+
+  // Debug / preview: force the indicator to a specific time (useful for screenshots)
+  // Set to '' to use real current time. Example: '10:30 AM'
+  const PREVIEW_INDICATOR_TIME = "10:30 AM"; // empty string to disable
 
   // Fetch timetable data
   const fetchTimetable = async (showLoading = true) => {
@@ -273,6 +289,145 @@ const Timetable: React.FC = () => {
     timeRange.end + 1
   );
 
+  // --- Current time indicator helpers ---
+  const parseTimeToMinutes = (t: string) => {
+    if (!t) return NaN;
+    const parts = t.split(" ");
+    const time = parts[0];
+    const ampm = parts[1] || "";
+    const [hStr, mStr] = time.split(":");
+    let h = parseInt(hStr || "0", 10);
+    const m = parseInt(mStr || "0", 10);
+    if (ampm.toUpperCase() === "PM" && h !== 12) h += 12;
+    if (ampm.toUpperCase() === "AM" && h === 12) h = 0;
+    return h * 60 + m;
+  };
+
+  const computeIndicator = () => {
+    const wrapper = tableWrapperRef.current;
+    if (!wrapper) return setIndicator({ top: 0, left: 0, width: 0, stickyLeft: 0, badgeLeft: 0, timeLabel: "", visible: false });
+
+    // Allow previewing the indicator at a forced time for screenshots/testing
+    let nowMinutes: number;
+    let formatted: string;
+    if (PREVIEW_INDICATOR_TIME && PREVIEW_INDICATOR_TIME.trim().length > 0) {
+      nowMinutes = parseTimeToMinutes(PREVIEW_INDICATOR_TIME);
+      formatted = PREVIEW_INDICATOR_TIME;
+    } else {
+      const now = new Date();
+      nowMinutes = now.getHours() * 60 + now.getMinutes();
+      formatted = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    }
+
+    const slotStarts = filteredTimeSlots.map((slot) => {
+      const start = slot.split(" - ")[0].trim();
+      return parseTimeToMinutes(start);
+    });
+
+    if (slotStarts.length === 0) {
+      setIndicator({ top: 0, left: 0, width: 0, stickyLeft: 0, badgeLeft: 0, timeLabel: formatted, visible: false });
+      return;
+    }
+
+    // Compute timeline minute range (first slot start .. last slot end)
+    const firstSlotStart = slotStarts[0];
+    const lastSlotStart = slotStarts[slotStarts.length - 1];
+    const lastSlotEnd = (slotStarts[slotStarts.length - 1] ?? firstSlotStart) + 60;
+    const totalMinutes = Math.max(1, lastSlotEnd - firstSlotStart);
+
+    const rows = wrapper.querySelectorAll("tbody tr");
+    // Measure total available pixels for the timeline (tbody height)
+    const tbodyEl = wrapper.querySelector("tbody") as HTMLElement | null;
+    const tbodyRect = tbodyEl ? tbodyEl.getBoundingClientRect() : null;
+    const wrapperRect = wrapper.getBoundingClientRect();
+
+    let timelineTop = 0;
+    let timelineHeight = 0;
+    if (tbodyRect) {
+      timelineTop = tbodyRect.top;
+      timelineHeight = tbodyRect.height;
+    } else if (rows.length > 0) {
+      // Fallback: sum row heights
+      let h = 0;
+      rows.forEach((r) => {
+        const rr = (r as HTMLElement).getBoundingClientRect();
+        if (h === 0) timelineTop = rr.top;
+        h += rr.height;
+      });
+      timelineHeight = h;
+    } else {
+      setIndicator({ top: 0, left: 0, width: 0, stickyLeft: 0, badgeLeft: 0, timeLabel: formatted, visible: false });
+      return;
+    }
+
+    const pxPerMinute = timelineHeight / totalMinutes;
+
+    // Compute minutes since timeline start
+    let minutesSinceStart = nowMinutes - firstSlotStart;
+
+    // Find the slot index and slot start/end for snapping logic
+    let idx = slotStarts.findIndex((start, i) => {
+      const next = slotStarts[i + 1] ?? start + 60;
+      return nowMinutes >= start && nowMinutes < next;
+    });
+
+    const SNAP_TO_SLOT_END = true; // optionally snap to end of slot for preview
+    if (SNAP_TO_SLOT_END && idx !== -1) {
+      const slotStart = slotStarts[idx];
+      const slotEnd = slotStarts[idx + 1] ?? slotStart + 60;
+      // Snap preview times to the end of the slot
+      if (PREVIEW_INDICATOR_TIME && PREVIEW_INDICATOR_TIME.trim().length > 0) {
+        minutesSinceStart = slotEnd - firstSlotStart;
+      }
+    }
+
+    // If outside the timeline range, hide indicator
+    if (minutesSinceStart < 0 || minutesSinceStart > totalMinutes) {
+      setIndicator({ top: 0, left: 0, width: 0, stickyLeft: 0, badgeLeft: 0, timeLabel: formatted, visible: false });
+      return;
+    }
+
+    const top = timelineTop - wrapperRect.top + minutesSinceStart * pxPerMinute;
+
+    const tableEl = wrapper.querySelector("table") as HTMLElement | null;
+    const stickyCell = wrapper.querySelector("td.sticky") as HTMLElement | null;
+    const stickyRect = stickyCell ? stickyCell.getBoundingClientRect() : null;
+    const stickyWidth = stickyRect ? stickyRect.width : 103;
+    const stickyLeft = stickyRect ? stickyRect.left - wrapperRect.left : 0;
+    // Start the line at the right edge of the sticky cell
+    const left = stickyLeft + stickyWidth;
+    // Compute available width for the line inside the wrapper (leave small right margin)
+    const width = Math.max(0, wrapperRect.width - left - 16);
+
+    // Measure badge width (if rendered) so we can center it on the indicator
+    const badgeEl = wrapper.querySelector(".current-time-badge") as HTMLElement | null;
+    const badgeWidth = badgeEl ? badgeEl.offsetWidth : 0;
+    // Center the badge horizontally on the indicator (left) and clamp inside wrapper
+    // BADGE_NUDGE lets us nudge the badge horizontally (negative = move right, positive = move left)
+    const minLeftClamp = 8;
+    const maxLeftClamp = Math.max(minLeftClamp, wrapperRect.width - badgeWidth - 8);
+    const BADGE_NUDGE = -85; // px: negative moves left, positive moves right
+    const badgeLeft = Math.min(
+      maxLeftClamp,
+      Math.max(minLeftClamp, left - badgeWidth / 2 + BADGE_NUDGE)
+    );
+
+    setIndicator({ top, left, width, stickyLeft, badgeLeft, timeLabel: formatted, visible: true });
+  };
+
+  useEffect(() => {
+    computeIndicator();
+    const iv = setInterval(computeIndicator, 30 * 1000);
+    const onResize = () => computeIndicator();
+    window.addEventListener("resize", onResize);
+    tableWrapperRef.current?.addEventListener("scroll", computeIndicator, { passive: true });
+    return () => {
+      clearInterval(iv);
+      window.removeEventListener("resize", onResize);
+      tableWrapperRef.current?.removeEventListener("scroll", computeIndicator);
+    };
+  }, [filteredTimeSlots, timetableData]);
+
   // Export timetable to CSV
   const exportTimetable = () => {
     try {
@@ -321,17 +476,16 @@ const Timetable: React.FC = () => {
   return (
     <div className="space-y-6 p-4 md:p-0">
       {/* Header with filters and controls */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 p-4 md:p-6 bg-gradient-to-r from-white to-blue-50 rounded-xl border border-[#F0F0F0] shadow-none">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 p-4 md:p-6 bg- rounded-xl  shadow-none">
         <div className="flex items-center gap-3 md:gap-4">
-          <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-[#003366] to-[#004080] rounded-xl flex items-center justify-center shadow-none">
+          {/* <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-[#003366] to-[#004080] rounded-xl flex items-center justify-center shadow-none">
             <Calendar className="w-5 h-5 md:w-6 md:h-6 text-white" />
-          </div>
+          </div> */}
           <div>
-            <h2 className="text-xl md:text-2xl font-medium text-[#030E18] mb-1">
-              Weekly Timetable
+            <h2 className="text-lg md:text-xl font-medium text-[#2F2F2F] mb-1">
+              Timetable
             </h2>
-            <p className="text-[#6F6F6F] flex items-center gap-2 text-sm md:text-base">
-              <Users className="w-4 h-4" />
+            <p className="md:text-lg text-[#6F6F6F] flex items-center gap-2 text-sm">
               Your class schedule for the week
             </p>
           </div>
@@ -339,7 +493,7 @@ const Timetable: React.FC = () => {
 
         <div className="flex flex-col sm:flex-row gap-3">
           {/* Day filter */}
-          <div className="flex items-center gap-2">
+          {/* <div className="flex items-center gap-2">
             <label className="text-sm font-medium text-[#2F2F2F]">Days:</label>
             <select
               value={selectedDays.length === DAYS.length ? "all" : "custom"}
@@ -353,10 +507,10 @@ const Timetable: React.FC = () => {
               <option value="all">All Days</option>
               <option value="custom">Custom</option>
             </select>
-          </div>
+          </div> */}
 
           {/* Time range filter */}
-          <div className="flex items-center gap-2">
+          {/* <div className="flex items-center gap-2">
             <label className="text-sm font-medium text-[#2F2F2F]">Time:</label>
             <select
               value={`${timeRange.start}-${timeRange.end}`}
@@ -370,26 +524,25 @@ const Timetable: React.FC = () => {
               <option value="0-4">Morning (8:00 - 13:00)</option>
               <option value="4-8">Afternoon (13:00 - 17:00)</option>
             </select>
-          </div>
+          </div> */}
 
           {/* Action buttons */}
           <div className="flex gap-3">
             {/* Mobile view toggle - only show on small screens */}
-            <Button
+            {/* <Button
               onClick={() => setIsMobileView(!isMobileView)}
               variant="outline"
               size="sm"
               className="flex md:hidden items-center gap-2 border-[#F0F0F0] text-purple-600 hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200 transition-all duration-200 shadow-none"
             >
               <ChevronLeft
-                className={`w-4 h-4 transition-transform ${
-                  isMobileView ? "rotate-180" : ""
-                }`}
+                className={`w-4 h-4 transition-transform ${isMobileView ? "rotate-180" : ""
+                  }`}
               />
               <span>{isMobileView ? "Card View" : "Table View"}</span>
-            </Button>
+            </Button> */}
 
-            <Button
+            {/* <Button
               onClick={() => fetchTimetable(false)}
               variant="outline"
               size="sm"
@@ -402,17 +555,13 @@ const Timetable: React.FC = () => {
               <span className="hidden sm:inline">
                 {isLoading ? "Refreshing..." : "Refresh"}
               </span>
-            </Button>
+            </Button> */}
 
             <Button
-              onClick={exportTimetable}
-              variant="outline"
-              size="sm"
               disabled={isLoading || error.hasError}
-              className="flex items-center gap-2 border-[#F0F0F0] text-green-600 hover:bg-green-50 hover:text-green-600 hover:border-green-200 transition-all duration-200 shadow-none"
+              className="flex items-center gap-2 text-[#6F6F6F] border-none shadow-none"
             >
-              <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Export</span>
+              <span className="hidden sm:inline">See All</span>
             </Button>
           </div>
         </div>
@@ -458,10 +607,10 @@ const Timetable: React.FC = () => {
               {error.type === "network"
                 ? "🌐 Connection Error"
                 : error.type === "server"
-                ? "⚠️ Server Error"
-                : error.type === "empty"
-                ? "📚 No Schedule Found"
-                : "❌ Something went wrong"}
+                  ? "⚠️ Server Error"
+                  : error.type === "empty"
+                    ? "📚 No Schedule Found"
+                    : "❌ Something went wrong"}
             </h3>
 
             <p className="text-red-600 max-w-md leading-relaxed">
@@ -501,7 +650,7 @@ const Timetable: React.FC = () => {
         </div>
       ) : (
         // Timetable Grid
-        <div className="bg-white rounded-xl border border-[#F0F0F0] overflow-hidden shadow-none hover:shadow-none transition-all duration-300">
+        <div className=" rounded-3xl border border-[#F0F0F0] overflow-hidden shadow-2xl transition-all duration-300">
           {/* Mobile Card View */}
           {isMobileView ? (
             <div className="p-4 space-y-4">
@@ -584,46 +733,42 @@ const Timetable: React.FC = () => {
             </div>
           ) : (
             /* Desktop Table View */
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[900px]">
+            <div ref={tableWrapperRef} className="relative overflow-x-auto">
+              <table className="w-full min-w-[900px] bg-[#F8F8F8]">
                 <thead>
-                  <tr className="bg-gradient-to-r from-[#F0F0F0]/50 to-[#F0F0F0]/30 border-b-2 border-[#F0F0F0]">
-                    <th className="px-4 py-4 text-left font-semibold text-[#030E18] min-w-[140px] border-r border-[#F0F0F0]">
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-[#6F6F6F]" />
-                        Time Slot
+                  <tr className="bg-[#F8F8F8] border-b border-[#F0F0F0]">
+                    <th className="bg-white px-4 py-4 text-left font-semibold text-[#030E18] min-w-[140px] border-r border-[#F0F0F0]">
+                      <div className="text-lg flex items-center justify-center">
+                        Time
                       </div>
                     </th>
                     {selectedDays.map((day) => (
                       <th
                         key={day}
-                        className="px-4 py-4 text-center font-semibold text-[#030E18] border-r border-[#F0F0F0]"
+                        className="bg-white px-4 py-4 text-center font-semibold text-[#030E18] border-r border-[#F0F0F0]"
                       >
-                        <div className="flex flex-col items-center gap-1">
+                        <div className=" flex flex-col items-center gap-1">
                           <span className="text-lg">{day}</span>
-                          <div className="w-8 h-1 bg-[#003366] rounded-full"></div>
                         </div>
                       </th>
                     ))}
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="bg-transparent">
                   {filteredTimeSlots.map((timeSlot, index) => (
                     <tr
                       key={timeSlot}
-                      className={`border-b border-[#F0F0F0] ${
-                        index % 2 === 0 ? "bg-white" : "bg-[#F0F0F0]/20"
-                      } hover:bg-[#003366]/5 transition-colors`}
+                      className={`border-b border-[#F0F0F0] h-[100px]`}
                     >
-                      <td className="px-4 py-6 font-semibold text-[#030E18] border-r-2 border-[#F0F0F0] bg-[#F0F0F0]/30">
+                      <td className="px-4 py-6 font-semibold text-[#030E18] border-r border-[#F0F0F0] bg-[#F8F8F8] sticky left-0 z-10">
                         <div className="flex flex-col items-center gap-1 text-center">
-                          <div className="text-sm font-bold text-[#003366]">
+                          <div className="text-sm font-bold text-[#2E2E2E]">
                             {timeSlot}
                           </div>
-                          <div className="w-16 h-px bg-[#F0F0F0]"></div>
-                          <div className="text-xs text-[#878787]">
+                          <div className="w-16 h-px bg-[#F8F8F8]"></div>
+                          {/* <div className="text-xs text-[#878787]">
                             Slot {index + 1}
-                          </div>
+                          </div> */}
                         </div>
                       </td>
                       {selectedDays.map((day) => {
@@ -634,50 +779,38 @@ const Timetable: React.FC = () => {
                             className="px-2 md:px-4 py-4 md:py-6 border-r border-[#F0F0F0]"
                           >
                             {entry ? (
-                              <div className="bg-gradient-to-br from-[#003366] to-[#004080] text-white rounded-xl p-3 md:p-4 hover:from-[#002244] hover:to-[#003366] transition-all duration-300 cursor-pointer shadow-none hover:shadow-none transform hover:-translate-y-1">
-                                <div className="flex items-start justify-between mb-2">
-                                  <div className="flex items-center gap-2">
-                                    <BookOpen className="w-3 h-3 md:w-4 md:h-4 text-blue-200" />
-                                    <div className="font-semibold text-xs md:text-sm">
+                              <div className="bg-white text-[#030E18] rounded-2xl border border-[#F0F0F0] shadow-sm w-[160px] h-[90px] p-3 flex flex-col items-center justify-center mx-auto hover:shadow-md transition-shadow duration-200">
+                                {/* <div className="flex items-start justify-between gap-2 mb-3">
+                                  <div className="flex items-center gap-2 flex-1">
+                                    <BookOpen className="w-3 h-3 text-blue-200 flex-shrink-0" />
+                                    <div className="font-semibold text-xs">
                                       {entry.course}
                                     </div>
                                   </div>
-                                  <Clock className="w-3 h-3 text-blue-200" />
-                                </div>
+                                  <Clock className="w-3 h-3 text-blue-200 flex-shrink-0" />
+                                </div> */}
 
-                                <div className="flex items-center gap-2 mb-2">
-                                  <div className="w-2 h-2 bg-blue-200 rounded-full"></div>
-                                  <div className="text-xs text-blue-100 font-medium">
+                                <div className="flex items-center justify-center gap-2 mb-2">
+                                  <div className="text-lg text-[#030E18] font-medium">
                                     {entry.subject}
                                   </div>
                                 </div>
 
-                                <div className="flex items-center gap-2">
+                                {/* <div className="flex items-center gap-2">
                                   <Users className="w-3 h-3 text-blue-200" />
                                   <div className="text-xs text-blue-200">
                                     {entry.class}
                                   </div>
-                                </div>
+                                </div> */}
 
-                                {/* Time indicator */}
-                                <div className="mt-2 pt-2 border-t border-blue-400/30">
-                                  <div className="text-xs text-blue-200 flex items-center gap-1">
-                                    <MapPin className="w-3 h-3" />
-                                    <span className="hidden md:inline">
-                                      {entry.time}
-                                    </span>
+                                <div className="mt-2 pt-2">
+                                  <div className="text-xs text-[#646464] flex items-center justify-center gap-1">
+                                    <span>{entry.startTime || entry.startTIme} - {entry.endTime}</span>
                                   </div>
                                 </div>
                               </div>
                             ) : (
-                              <div className="h-20 md:h-24 bg-gradient-to-br from-[#F0F0F0]/50 to-[#F0F0F0]/30 rounded-xl border-2 border-dashed border-[#F0F0F0] flex flex-col items-center justify-center hover:from-[#F0F0F0]/60 hover:to-[#F0F0F0]/40 transition-all duration-200">
-                                <div className="w-6 h-6 md:w-8 md:h-8 bg-[#F0F0F0] rounded-full flex items-center justify-center mb-1">
-                                  <Clock className="w-3 h-3 md:w-4 md:h-4 text-[#878787]" />
-                                </div>
-                                <span className="text-[#878787] text-xs font-medium">
-                                  Free
-                                </span>
-                              </div>
+                              null
                             )}
                           </td>
                         );
@@ -686,6 +819,66 @@ const Timetable: React.FC = () => {
                   ))}
                 </tbody>
               </table>
+
+              {/* Current time indicator overlay */}
+              {indicator.visible && (
+                <div className="pointer-events-none absolute inset-0" aria-hidden>
+                  {/* badge inside sticky column */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: indicator.badgeLeft,
+                      top: indicator.top,
+                      transform: "translateY(-50%)",
+                      zIndex: 60,
+                    }}
+                  >
+                    <div className="current-time-badge bg-[#08335f] text-white rounded-full px-3 py-1 text-xs font-medium shadow">
+                      {indicator.timeLabel}
+                    </div>
+                  </div>
+
+                  {/* dot and horizontal line centered on indicator */}
+                  {/* Use small constants to make micro-adjustments easy */}
+                  {(() => {
+                    const dotSize = 12; // px
+                    const lineHeight = 2; // px
+                    const dotLeft = indicator.left - dotSize / 2;
+                    const dotTop = indicator.top - dotSize / 2;
+                    const lineLeft = indicator.left + dotSize / 2; // start at dot's right edge
+                    const lineTop = indicator.top - lineHeight / 2;
+                    return (
+                      <>
+                        <div
+                          style={{
+                            position: "absolute",
+                            left: dotLeft,
+                            top: dotTop,
+                            width: dotSize,
+                            height: dotSize,
+                            borderRadius: 9999,
+                            background: "#08335f",
+                            zIndex: 60,
+                          }}
+                        />
+
+                        <div
+                          style={{
+                            position: "absolute",
+                            left: lineLeft,
+                            top: lineTop,
+                            width: Math.max(0, indicator.width - dotSize / 2),
+                            height: lineHeight,
+                            background: "#08335f",
+                            opacity: 1,
+                            zIndex: 50,
+                          }}
+                        />
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
           )}
 
@@ -707,7 +900,7 @@ const Timetable: React.FC = () => {
               </div>
               <div className="flex items-center gap-6">
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-gradient-to-br from-[#003366] to-[#004080] rounded shadow-none"></div>
+                  <div className="w-4 h-4 bg-white rounded shadow-none"></div>
                   <span className="text-sm font-medium text-[#030E18]">
                     Scheduled Class
                   </span>

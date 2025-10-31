@@ -101,7 +101,10 @@ const DashboardPage: React.FC = () => {
           <div className="flex-grow ">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-medium text-[#2F2F2F]">Overview</h2>
+              <div className="text-sm text-[#6F6F6F]">&nbsp;</div>
             </div>
+
+            {/* Top metric cards (Figma style) */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <MetricCard
                 icon={
@@ -113,10 +116,24 @@ const DashboardPage: React.FC = () => {
                     className="h-[52px] w-[52px]"
                   />
                 }
-                value={kpis?.assignedSubjects || 0}
+                value={kpis?.assignedSubjects ?? 0}
                 label="Assigned Subjects"
                 link="/subjects"
               />
+
+              <MetricCard
+                icon={
+                  <img
+                    src="/icons/dashboard/award.svg"
+                    alt="Resources Icon"
+                    className="h-[52px] w-[52px]"
+                  />
+                }
+                value={kpis?.addedResources ?? 0}
+                label="Added Resources"
+                link="/resources"
+              />
+
               <MetricCard
                 icon={
                   <img
@@ -125,21 +142,17 @@ const DashboardPage: React.FC = () => {
                     className="h-[52px] w-[52px]"
                   />
                 }
-                value={kpis?.assignedClasses || 0}
-                label="Assigned Classes"
-                link="/classes"
-              />
-              <MetricCard
-                icon={
-                  <img
-                    src="/icons/dashboard/award.svg"
-                    alt="Award Icon"
-                    className="h-[52px] w-[52px]"
-                  />
-                }
-                value={kpis?.addedResources || 0}
-                label="Added Resources"
-                link="/resources"
+                value={(() => {
+                  // recordedAttendance may be a percent (0-100) or a count relative to totalStudents
+                  const raw = kpis?.recordedAttendance ?? 0;
+                  const total = kpis?.totalStudents ?? 0;
+                  if (raw === 0 && total === 0) return "0%";
+                  if (raw > 0 && raw <= 100) return `${Math.round(raw)}%`;
+                  if (total > 0) return `${Math.round((raw / total) * 100)}%`;
+                  return `${Math.round(raw)}%`;
+                })()}
+                label="Recorded Attendance"
+                link="/attendance"
               />
             </div>
 

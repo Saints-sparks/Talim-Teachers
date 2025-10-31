@@ -396,7 +396,17 @@ export const getTeacherDashboardKPIs = async (
     );
     return response.data;
   } catch (error) {
-    console.error("Error fetching teacher dashboard KPIs:", error);
+    // Improve error logging so we can see HTTP status and response body
+    const err = error as any;
+    if (err.response) {
+      console.error(
+        "Error fetching teacher dashboard KPIs:",
+        `status=${err.response.status}`,
+        err.response.data
+      );
+    } else {
+      console.error("Error fetching teacher dashboard KPIs:", err.message || err);
+    }
     return null;
   }
 };
