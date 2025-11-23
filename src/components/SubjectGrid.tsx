@@ -169,14 +169,6 @@ const SubjectGrid: React.FC = () => {
     <div className="px-6 py-4 h-full">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-medium text-[#030E18]">My Subjects</h2>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={loadSubjects}
-          className="text-[#6F6F6F] hover:text-[#030E18] hover:bg-[#F0F0F0]"
-        >
-          <RefreshCw className="w-4 h-4" />
-        </Button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {subjects.map((subject, index) => (

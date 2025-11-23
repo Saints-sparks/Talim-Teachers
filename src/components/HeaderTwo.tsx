@@ -21,7 +21,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
     return `${firstNameInitial}${lastNameInitial}` || "US";
   };
   return (
-    <header className="font-manrope px-5 border-b sm:border-b-2 border-b-[#F0F0F0] py-2 ">
+    <header className="font-manrope px-5 border-b sm:border-b-2 border-b-[#F0F0F0] bg-white py-2 ">
       {/* Top row: Menu, Date, Notifications, Avatar */}
       <div className="flex flex-col  sm:flex-row items-center w-full justify-end gap-4 py-3">
         {/* Menu Button (Only on Mobile) */}

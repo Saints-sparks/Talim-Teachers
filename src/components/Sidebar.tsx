@@ -61,7 +61,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   console.log("School name:", schoolName);
 
   return (
-    <div className=" w-[280px] font-manrope px-4 h-full  pb-4 bg-[#FBFBFB] flex flex-col justify-between border-r overflow-y-auto scrollbar-hide">
+    <div className=" w-[280px] font-manrope px-4 h-full bg-white pb-4 bg-[#FBFBFB] flex flex-col justify-between border-r overflow-y-auto scrollbar-hide">
       {/* Header */}
       <div>
         <div className="flex items-center py-2 justify-between">

@@ -184,10 +184,17 @@ const SubjectCard: React.FC<SubjectCardProps> = ({
     setShowActionModal(true);
   };
 
+  // Dummy avatars for demonstration
+  const avatars = [
+    "https://randomuser.me/api/portraits/men/32.jpg",
+    "https://randomuser.me/api/portraits/women/44.jpg",
+    "https://randomuser.me/api/portraits/men/45.jpg",
+  ];
+
   return (
     <>
       <div
-        className={`group relative bg-white rounded-xl shadow-none hover:shadow-none transition-all duration-300 cursor-pointer border border-[#F0F0F0] overflow-hidden ${
+        className={`group relative bg-white rounded-xl transition-all duration-300 cursor-pointer border border-[#F0F0F0] overflow-hidden ${
           isCheckingCurriculum || isLoading
             ? "opacity-75 pointer-events-none"
             : ""
@@ -200,55 +207,106 @@ const SubjectCard: React.FC<SubjectCardProps> = ({
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#003366]"></div>
           </div>
         )}
-        {/* Header with gradient background */}
-        <div
-          className={`relative h-32 ${getGradientColor(
-            title
-          )} flex items-center justify-center`}
-        >
-          <div className="text-6xl opacity-90">
-            {getSubjectIcon(title, courseCode)}
-          </div>
-          {/* Course Code Badge */}
-          {courseCode && (
-            <div className="absolute top-3 right-3 bg-white/20 backdrop-blur-sm text-white text-xs font-medium px-2 py-1 rounded-full">
-              {courseCode}
-            </div>
-          )}
-          {/* Hover overlay */}
-          <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        </div>
-
         {/* Content */}
-        <div className="p-4 space-y-3">
+        <div className="p-5 space-y-3">
           <div className="flex items-start justify-between">
-            <h3 className="text-lg font-semibold text-[#030E18] line-clamp-2 leading-tight">
-              {title}
-            </h3>
-            <ChevronRight className="w-5 h-5 text-[#878787] group-hover:text-[#030E18] transition-colors flex-shrink-0 ml-2" />
+            <div className="flex flex-col gap-2">
+              <span className="inline-block border border-[#F2F2F2] text-[#4D4D4D] text-[15px] rounded-full font-semibold rounded px-2 mb-1">
+                {courseCode || "ENG 213"}
+              </span>
+            </div>
+            <div className="flex -space-x-2">
+              {avatars.map((src, idx) => (
+                <img
+                  key={idx}
+                  src={src}
+                  alt="avatar"
+                  className="w-8 h-8 rounded-full border-2 border-white shadow -ml-1"
+                  style={{ zIndex: 10 - idx }}
+                />
+              ))}
+            </div>
           </div>
-          {description && (
-            <p className="text-sm text-[#6F6F6F] line-clamp-2 leading-relaxed">
-              {description}
+          <div>
+            
+            <p className="text-[14px] text-[#4D4D4D]">
+              {description ||
+                "English Language, you will be learning on grammar, essay writing and comprehension"}
             </p>
-          )}
-          {/* Footer */}
-          <div className="flex items-center justify-between pt-2 border-t border-[#F0F0F0]">
-            <div className="flex items-center gap-2 text-sm text-[#878787]">
-              <GraduationCap className="w-4 h-4" />
-              <span>Course</span>
-            </div>
-            <div
-              className="flex items-center gap-1 text-sm text-[#003366] group-hover:text-[#002244] transition-colors cursor-pointer"
-              onClick={handleViewDetails}
+          </div>
+          <div className="flex items-center gap-2 mt-2">
+            <span className="flex items-center bg-gray-100 text-gray-700 text-xs rounded px-3 py-1">
+              <svg
+                className="w-4 h-4 mr-1"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
+              </svg>
+              Wed 08:00AM - 10:00AM
+            </span>
+            <span className="bg-gray-100 text-gray-700 text-xs rounded px-3 py-1">
+              Course
+            </span>
+          </div>
+          <div className="flex gap-3 mt-4">
+            <button
+              className="flex-1 flex items-center justify-center gap-2 border border-gray-200 rounded-lg py-2 text-[#0A2343] font-medium text-base hover:bg-gray-50"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleView();
+              }}
             >
-              <BookOpen className="w-4 h-4" />
-              <span className="font-medium">View Curriculum</span>
-            </div>
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                />
+              </svg>
+              View
+            </button>
+            <button
+              className="flex-1 flex items-center justify-center gap-2 border border-gray-200 rounded-lg py-2 text-[#0A2343] font-medium text-base hover:bg-gray-50"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEdit();
+              }}
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-2.828 1.172H7v-2a4 4 0 011.172-2.828z"
+                />
+              </svg>
+              Edit
+            </button>
           </div>
         </div>
-        {/* Hover effect border */}
-        <div className="absolute inset-0 rounded-xl border-2 border-transparent group-hover:border-[#F0F0F0] transition-colors duration-300 pointer-events-none" />
       </div>
       {/* Curriculum Action Modal */}
       <CurriculumActionModal

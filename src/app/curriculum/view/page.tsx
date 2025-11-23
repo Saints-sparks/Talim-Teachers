@@ -358,13 +358,20 @@ const CurriculumViewContent = () => {
     );
   }
 
+  // Dummy avatars for demonstration
+  const avatars = [
+    "https://randomuser.me/api/portraits/men/32.jpg",
+    "https://randomuser.me/api/portraits/women/44.jpg",
+    "https://randomuser.me/api/portraits/men/45.jpg",
+  ];
+
   return (
     <Layout>
       <div className="min-h-screen bg-[#F8F8F8]">
         <div className="p-6">
-          <div className="max-w-4xl mx-auto space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
+          <div className="max-w-4xl mx-auto">
+            {/* Top bar */}
+            <div className="flex items-center justify-between mb-4">
               <button
                 onClick={() => router.back()}
                 className="flex items-center gap-2 text-[#6F6F6F] hover:text-[#030E18] transition-colors"
@@ -375,188 +382,142 @@ const CurriculumViewContent = () => {
               <div className="flex items-center gap-3">
                 <button
                   onClick={handleEdit}
-                  className="flex items-center gap-2 px-4 py-2 text-[#003366] border border-[#003366] rounded-lg hover:bg-[#003366] hover:text-white transition-colors duration-200"
+                  className="flex items-center gap-2 px-4 py-2 border border-[#D9D9D9] rounded-lg bg-white text-[#0A2343] hover:bg-gray-100"
                 >
                   <Edit className="w-4 h-4" />
                   Edit
                 </button>
                 <button
                   onClick={handleDownload}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#003366] text-white rounded-lg hover:bg-[#002244] transition-colors duration-200"
+                  className="flex items-center gap-2 px-4 py-2 bg-[#003366] text-white rounded-lg hover:bg-[#002244]"
                 >
                   <Download className="w-4 h-4" />
-                  Download PDF
+                  Download
                 </button>
               </div>
             </div>
 
-            {/* Main Content */}
+            {/* Main Card */}
             <div
               ref={contentRef}
-              className="bg-white rounded-xl border border-[#F0F0F0] overflow-hidden"
+              className="bg-white rounded-2xl border border-[#F0F0F0] p-8"
             >
-              {/* Header Section */}
-              <div className="bg-gradient-to-r from-[#003366] to-[#004080] text-white p-8">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2">
-                    <h1 className="text-3xl font-bold">
-                      {curriculum.course?.title || "Untitled Course"}
-                    </h1>
+              {/* Subject, code, class, avatars */}
+              <div className="flex flex-wrap items-center justify-between mb-6 gap-4">
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl font-semibold text-[#030E18]">
+                      {curriculum.course?.title || "English Language"}
+                    </span>
                     {curriculum.course?.courseCode && (
-                      <div className="inline-block bg-white/20 backdrop-blur-sm text-white text-sm font-medium px-3 py-1 rounded-full">
+                      <span className="bg-gray-100 text-[#0A2343] text-xs font-semibold rounded px-3 py-1">
                         {curriculum.course.courseCode}
-                      </div>
+                      </span>
                     )}
-                    <p className="text-white/90 mt-2">
-                      {curriculum.course?.description ||
-                        "No description available"}
-                    </p>
                   </div>
-                  <div className="text-right text-white/90">
-                    <p className="text-sm">Class</p>
-                    <p className="font-semibold">
-                      {curriculum.course?.className || "N/A"}
-                    </p>
-                  </div>
+                  {curriculum.course?.description && (
+                    <span className="text-[#6F6F6F] text-sm">
+                      {curriculum.course.description}
+                    </span>
+                  )}
                 </div>
-              </div>
-
-              {/* Info Cards */}
-              <div className="p-8 border-b border-[#F0F0F0]">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="flex items-center gap-3 p-4 bg-[#F8F8F8] rounded-lg">
-                    <Calendar className="w-5 h-5 text-[#003366]" />
-                    <div>
-                      <p className="text-sm text-[#878787]">Term</p>
-                      <p className="font-medium text-[#030E18]">
-                        {curriculum.term?.name || "N/A"}
-                      </p>
-                    </div>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-gray-100 text-[#0A2343] text-xs font-semibold rounded px-3 py-1">
+                      Class
+                    </span>
+                    <span className="bg-gray-100 text-[#0A2343] text-xs font-semibold rounded px-3 py-1">
+                      {curriculum.course?.className || "SS2"}
+                    </span>
                   </div>
-                  <div className="flex items-center gap-3 p-4 bg-[#F8F8F8] rounded-lg">
-                    <User className="w-5 h-5 text-[#003366]" />
-                    <div>
-                      <p className="text-sm text-[#878787]">Teacher</p>
-                      <p className="font-medium text-[#030E18]">
-                        {curriculum.course?.teacherName || "Unknown"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 p-4 bg-[#F8F8F8] rounded-lg">
-                    <School className="w-5 h-5 text-[#003366]" />
-                    <div>
-                      <p className="text-sm text-[#878787]">School</p>
-                      <p className="font-medium text-[#030E18]">
-                        {curriculum.course?.schoolName || "Unknown"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 p-4 bg-[#F8F8F8] rounded-lg">
-                    <Clock className="w-5 h-5 text-[#003366]" />
-                    <div>
-                      <p className="text-sm text-[#878787]">Last Updated</p>
-                      <p className="font-medium text-[#030E18]">
-                        {curriculum.updatedAt
-                          ? new Date(curriculum.updatedAt).toLocaleDateString()
-                          : "N/A"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Content Section */}
-              <div className="p-8">
-                <div className="space-y-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <BookOpen className="w-5 h-5 text-[#003366]" />
-                    <h2 className="text-xl font-semibold text-[#030E18]">
-                      Curriculum Content
-                    </h2>
-                  </div>
-
-                  <div className="bg-[#F8F8F8] rounded-lg p-6">
-                    {curriculum.content && curriculum.content.trim() !== "" ? (
-                      <div
-                        className="prose max-w-none text-[#030E18] leading-relaxed"
-                        dangerouslySetInnerHTML={{ __html: curriculum.content }}
+                  <div className="flex -space-x-2 ml-2">
+                    {avatars.map((src, idx) => (
+                      <img
+                        key={idx}
+                        src={src}
+                        alt="avatar"
+                        className="w-8 h-8 rounded-full border-2 border-white shadow -ml-1"
+                        style={{ zIndex: 10 - idx }}
                       />
-                    ) : (
-                      <div className="text-center py-8">
-                        <div className="mx-auto w-16 h-16 bg-white rounded-full flex items-center justify-center mb-4">
-                          <BookOpen className="w-8 h-8 text-[#878787]" />
-                        </div>
-                        <p className="text-[#6F6F6F] font-medium mb-2">
-                          No content added yet
-                        </p>
-                        <p className="text-[#878787] text-sm mb-4">
-                          This curriculum exists but doesn't have any content
-                          yet.
-                        </p>
-                        <button
-                          onClick={handleEdit}
-                          className="inline-flex items-center gap-2 px-4 py-2 text-[#003366] border border-[#003366] rounded-lg hover:bg-[#003366] hover:text-white transition-colors duration-200"
-                        >
-                          <Edit className="w-4 h-4" />
-                          Add Content
-                        </button>
-                      </div>
-                    )}
+                    ))}
                   </div>
+                </div>
+              </div>
 
-                  {/* Attachments */}
-                  {curriculum.attachments &&
-                    curriculum.attachments.length > 0 && (
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-semibold text-[#030E18]">
-                          Attachments
-                        </h3>
-                        <div className="grid grid-cols-1 gap-3">
-                          {curriculum.attachments.map(
-                            (url: string, index: number) => (
-                              <a
-                                key={index}
-                                href={url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-3 p-4 bg-white border border-[#F0F0F0] rounded-lg hover:bg-[#F8F8F8] transition-colors"
-                              >
-                                <div className="w-10 h-10 bg-[#003366] rounded-lg flex items-center justify-center">
-                                  <Download className="w-5 h-5 text-white" />
-                                </div>
-                                <div>
-                                  <p className="font-medium text-[#030E18]">
-                                    {url.split("/").pop() ||
-                                      `Attachment ${index + 1}`}
-                                  </p>
-                                  <p className="text-sm text-[#878787]">
-                                    Click to view attachment
-                                  </p>
-                                </div>
-                              </a>
-                            )
-                          )}
-                        </div>
-                      </div>
-                    )}
+              {/* Info List */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-[#003366]" />
+                  <span className="font-medium text-[#030E18]">Term</span>
+                  <span className="bg-gray-100 text-[#0A2343] text-xs font-semibold rounded px-3 py-1">
+                    {curriculum.term?.name || "First term"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-[#030E18]">Teacher</span>
+                  <User className="w-5 h-5 text-[#003366]" />
+                  <span className="bg-gray-100 text-[#0A2343] text-xs font-semibold rounded px-3 py-1">
+                    {curriculum.course?.teacherName || "Assurance Oshiobugie"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <School className="w-5 h-5 text-[#003366]" />
+                  <span className="font-medium text-[#030E18]">School</span>
+                  <span className="bg-gray-100 text-[#0A2343] text-xs font-semibold rounded px-3 py-1">
+                    {curriculum.course?.schoolName || "New School"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-[#003366]" />
+                  <span className="font-medium text-[#030E18]">
+                    Last Updated
+                  </span>
+                  <span className="bg-gray-100 text-[#0A2343] text-xs font-semibold rounded px-3 py-1">
+                    {curriculum.updatedAt
+                      ? new Date(curriculum.updatedAt).toLocaleDateString()
+                      : "9/27/2025"}
+                  </span>
+                </div>
+              </div>
 
-                  {/* Metadata */}
-                  <div className="border-t border-[#F0F0F0] pt-6">
-                    <div className="flex flex-wrap gap-6 text-sm text-[#878787]">
-                      <div>
-                        <span className="font-medium">Created:</span>{" "}
-                        {curriculum.createdAt
-                          ? new Date(curriculum.createdAt).toLocaleDateString()
-                          : "N/A"}
-                      </div>
-                      <div>
-                        <span className="font-medium">Last Modified:</span>{" "}
-                        {curriculum.updatedAt
-                          ? new Date(curriculum.updatedAt).toLocaleDateString()
-                          : "N/A"}
-                      </div>
+              {/* Curriculum Content */}
+              <div className="mb-6">
+                <h2 className="text-lg font-semibold mb-2">
+                  Curriculum Content
+                </h2>
+                <div className="bg-[#F8F8F8] rounded-xl p-5">
+                  {curriculum.content && curriculum.content.trim() !== "" ? (
+                    <div
+                      className="text-[#030E18] leading-relaxed mb-4"
+                      dangerouslySetInnerHTML={{ __html: curriculum.content }}
+                    />
+                  ) : (
+                    <div className="text-[#6F6F6F] font-medium mb-2">
+                      No content added yet
                     </div>
-                  </div>
+                  )}
+                  {/* Example image below content */}
+                  <img
+                    src="https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=600&q=80"
+                    alt="Curriculum visual"
+                    className="rounded-xl w-full h-40 object-cover mt-3"
+                  />
+                </div>
+              </div>
+
+              {/* Metadata */}
+              <div className="flex flex-wrap gap-8 text-sm text-[#878787] mt-6">
+                <div>
+                  <span className="font-medium">Created:</span>{" "}
+                  {curriculum.createdAt
+                    ? new Date(curriculum.createdAt).toLocaleDateString()
+                    : "7/14/2025"}
+                </div>
+                <div>
+                  <span className="font-medium">Last Modified:</span>{" "}
+                  {curriculum.updatedAt
+                    ? new Date(curriculum.updatedAt).toLocaleDateString()
+                    : "9/27/2025"}
                 </div>
               </div>
             </div>
