@@ -6,6 +6,7 @@ import StudentProfile from "@/components/students/StudentProfile";
 import { useAuth } from "@/app/hooks/useAuth";
 import { Student } from "@/types/student";
 import { fetchStudent } from "@/app/services/api.service";
+import LoadingCard from "@/components/LoadingCard";
 
 const StudentPage: React.FC = () => {
   const [student, setStudent] = useState<Student | null>(null);
@@ -32,9 +33,45 @@ const StudentPage: React.FC = () => {
     if (id) loadStudent();
   }, [id]);
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
-  if (!student) return <div>No student found.</div>;
+  if (loading)
+    return (
+      <Layout>
+        <div className="bg-[#F8F8F8] min-h-screen">
+          <div className="container mx-auto py-6 space-y-6 max-w-[95%]">
+            <LoadingCard height="h-48" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <LoadingCard key={i} height="h-48" />
+              ))}
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  if (error)
+    return (
+      <Layout>
+        <div className="bg-[#F8F8F8] min-h-screen">
+          <div className="container mx-auto py-6 max-w-[95%]">
+            <div className="bg-white border border-[#F0F0F0] rounded-xl p-6 text-center text-red-600">
+              Error: {error}
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  if (!student)
+    return (
+      <Layout>
+        <div className="bg-[#F8F8F8] min-h-screen">
+          <div className="container mx-auto py-6 max-w-[95%]">
+            <div className="bg-white border border-[#F0F0F0] rounded-xl p-6 text-center">
+              No student found.
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
 
   return (
     <Layout>
