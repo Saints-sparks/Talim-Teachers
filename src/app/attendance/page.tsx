@@ -315,7 +315,6 @@ const AttendancePage: React.FC = () => {
         {
           studentId: student.id,
           classId,
-          recordedBy: user.userId,
           date,
           status,
           termId: term._id,
@@ -374,7 +373,6 @@ const AttendancePage: React.FC = () => {
       const payload = {
         studentId: student.id,
         classId,
-        recordedBy: user.userId,
         date,
         status: "Absent", // Note: Ensure your API expects "Absent" (capitalized)
         termId: term._id,
@@ -455,25 +453,23 @@ const AttendancePage: React.FC = () => {
       <div className="min-h-screen bg-[#F8F8F8]">
         <div className="p-3 sm:p-6">
           {/* Header */}
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 mb-6 sm:mb-8">
-            <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6 sm:mb-8">
+            <div className="flex items-start gap-3 sm:gap-4">
               {viewMode !== "classes" && (
                 <button
                   onClick={handleBackToClasses}
-                  className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full text-[#6F6F6F] hover:bg-[#F8F8F8] hover:text-[#030E18] transition-all duration-200"
+                  className="mt-0.5 flex items-center justify-center w-9 h-9 rounded-full text-[#6F6F6F] hover:bg-[#F0F0F0] hover:text-[#030E18] transition-all duration-200"
                 >
-                  <ArrowLeft size={16} className="sm:w-[18px] sm:h-[18px]" />
+                  <ArrowLeft size={16} />
                 </button>
               )}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 sm:gap-3 mb-1 ">
-                  <h1 className="text-xl sm:text-2xl font-semibold text-[#030E18] truncate">
-                    {viewMode === "classes"
-                      ? "Attendance"
-                      : selectedClass?.name || "Attendance"}
-                  </h1>
-                </div>
-                <p className="text-sm sm:text-base text-[#6F6F6F] leading-tight">
+              <div className="min-w-0">
+                <h1 className="text-xl sm:text-2xl font-semibold text-[#030E18] truncate">
+                  {viewMode === "classes"
+                    ? "Attendance"
+                    : selectedClass?.name || "Attendance"}
+                </h1>
+                <p className="text-sm text-[#6F6F6F] leading-tight mt-1">
                   {viewMode === "classes"
                     ? "Select a class to manage attendance"
                     : viewMode === "mark-attendance"
@@ -486,8 +482,8 @@ const AttendancePage: React.FC = () => {
             {/* Search Bar and Refresh - Only show when viewing students */}
             {(viewMode === "mark-attendance" ||
               viewMode === "view-attendance") && (
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                <div className="flex items-center bg-white border border-[#F0F0F0] rounded-xl px-3 sm:px-4 py-2 flex-1 sm:max-w-96">
+              <div className="flex w-full md:w-auto">
+                <div className="flex items-center bg-white border border-[#F0F0F0] rounded-xl px-3 py-2 w-full md:w-[320px]">
                   <Search
                     className="text-[#878787] mr-2 sm:mr-3 flex-shrink-0"
                     size={18}
@@ -542,49 +538,63 @@ const AttendancePage: React.FC = () => {
                 ) : (
                   <div className="space-y-3 sm:space-y-4">
                     {/* Header with Stats */}
-                    <div className="bg-white rounded-xl border border-[#F0F0F0] p-4 sm:p-6 md:p-8">
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-5 gap-4 sm:gap-6 md:gap-8">
-                        <div className="text-center">
-                          <div className="text-lg sm:text-2xl font-bold text-[#030E18]">
-                            {attendanceStatus?.totalStudents || data.length}
-                          </div>
-                          <div className="text-xs sm:text-sm text-[#878787]">
+                    <div className="rounded-2xl border border-[#E6EDF5] bg-gradient-to-br from-[#F6F9FC] via-white to-[#F8FBFF] p-4 sm:p-5">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
+                        <div className="rounded-xl border border-[#E6EDF5] bg-white/80 p-3 text-left">
+                          <div className="text-[11px] uppercase tracking-wide text-[#6F6F6F]">
                             Total
                           </div>
+                          <div className="mt-1 text-lg sm:text-xl font-semibold text-[#030E18]">
+                            {attendanceStatus?.totalStudents || data.length}
+                          </div>
+                          <div className="mt-2 h-1.5 w-full rounded-full bg-[#EEF3F9]">
+                            <div className="h-1.5 w-full rounded-full bg-[#003366]" />
+                          </div>
                         </div>
-                        <div className="text-center">
-                          <div className="text-lg sm:text-2xl font-bold text-green-600">
+
+                        <div className="rounded-xl border border-green-200 bg-green-50/60 p-3 text-left">
+                          <div className="text-[11px] uppercase tracking-wide text-green-700">
+                            Present
+                          </div>
+                          <div className="mt-1 text-lg sm:text-xl font-semibold text-green-700">
                             {attendanceStatus?.presentCount ||
                               data.filter((s) => s.status === "present").length}
                           </div>
-                          <div className="text-xs sm:text-sm text-[#878787]">
-                            Present
+                          <div className="mt-2 h-1.5 w-full rounded-full bg-green-100">
+                            <div className="h-1.5 w-3/4 rounded-full bg-green-600" />
                           </div>
                         </div>
-                        <div className="text-center col-span-2 sm:col-span-1">
-                          <div className="text-lg sm:text-2xl font-bold text-red-600">
+
+                        <div className="rounded-xl border border-red-200 bg-red-50/60 p-3 text-left">
+                          <div className="text-[11px] uppercase tracking-wide text-red-700">
+                            Absent
+                          </div>
+                          <div className="mt-1 text-lg sm:text-xl font-semibold text-red-700">
                             {attendanceStatus?.absentCount ||
                               data.filter((s) => s.status === "absent").length}
                           </div>
-                          <div className="text-xs sm:text-sm text-[#878787]">
-                            Absent
+                          <div className="mt-2 h-1.5 w-full rounded-full bg-red-100">
+                            <div className="h-1.5 w-1/3 rounded-full bg-red-600" />
                           </div>
                         </div>
-                        <div className="text-center">
-                          <div className="text-lg sm:text-2xl font-bold text-[#003366]">
+
+                        <div className="rounded-xl border border-[#D7E6F6] bg-[#EAF2FB]/60 p-3 text-left">
+                          <div className="text-[11px] uppercase tracking-wide text-[#003366]">
+                            Marked
+                          </div>
+                          <div className="mt-1 text-lg sm:text-xl font-semibold text-[#003366]">
                             {attendanceStatus?.attendanceMarked ||
                               submittedStudents.size}
                           </div>
-                          <div className="text-xs sm:text-sm text-[#878787]">
-                            Marked
+                          <div className="mt-2 h-1.5 w-full rounded-full bg-[#DDEAF7]">
+                            <div className="h-1.5 w-2/3 rounded-full bg-[#003366]" />
                           </div>
                         </div>
-                        
                       </div>
                     </div>
 
                     {/* Students Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                       {filteredData.map((student) => {
                         const isSubmitted =
                           student.isSubmitted ||
@@ -594,72 +604,56 @@ const AttendancePage: React.FC = () => {
                             key={student.id}
                             className="overflow-hidden border transition-all duration-200 border-[#F0F0F0] bg-white hover:border-[#003366]/20"
                           >
-                            <CardContent className="p-4 sm:p-5 md:p-6 lg:p-7">
+                            <CardContent className="p-3 sm:p-4">
                               {/* Student Info */}
-                              <div className="mb-4 sm:mb-5 md:mb-6">
-                                <div className="flex items-center gap-3 sm:gap-4 mb-3">
-                                  <div className="w-12 h-12 sm:w-13 sm:h-13 md:w-14 md:h-14 bg-gradient-to-r from-[#003366] to-[#004080] rounded-full flex items-center justify-center text-white font-semibold text-base sm:text-lg flex-shrink-0">
-                                    {student.name
-                                      .split(" ")
-                                      .map((n) => n[0])
-                                      .join("")}
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <h3 className="font-semibold text-[#030E18] text-base sm:text-lg truncate mb-1">
-                                      {student.name}
-                                    </h3>
-                                    {/* Show attendance details when marked, otherwise show student info */}
-                                    {(isSubmitted &&
-                                      attendanceStatus?.students &&
-                                      (() => {
-                                        const studentAttendance =
-                                          attendanceStatus.students.find(
-                                            (s: any) =>
-                                              s.studentId === student.id &&
-                                              s.attendanceMarked
-                                          );
-                                        if (studentAttendance) {
-                                          return (
-                                            <div className="space-y-1">
-                                              <p className="text-sm text-[#878787]">
-                                                Marked at{" "}
-                                                {new Date(
-                                                  studentAttendance.recordedAt
-                                                ).toLocaleTimeString([], {
-                                                  hour: "2-digit",
-                                                  minute: "2-digit",
-                                                })}
-                                              </p>
-                                            </div>
-                                          );
-                                        } else if (isSubmitted) {
-                                          // Fallback to current time if marked but no data from API yet
-                                          return (
-                                            <div className="space-y-1">
-                                              <p className="text-sm text-[#878787]">
-                                                Marked at{" "}
-                                                {new Date().toLocaleTimeString(
-                                                  [],
-                                                  {
-                                                    hour: "2-digit",
-                                                    minute: "2-digit",
-                                                  }
-                                                )}
-                                              </p>
-                                            </div>
-                                          );
-                                        } else {
-                                          return {
-                                            /* Student ID removed from UI as requested */
-                                          };
-                                        }
-                                      })()) || (
-                                      <p className="text-sm text-[#878787]">
-                                        {/* Student ID removed from UI as requested */}
-                                      </p>
-                                    )}
-                                  </div>
+                              <div className="mb-3 text-center">
+                                <div className="mx-auto mb-2 w-10 h-10 bg-gradient-to-r from-[#003366] to-[#004080] rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                                  {student.name
+                                    .split(" ")
+                                    .map((n) => n[0])
+                                    .join("")}
                                 </div>
+                                <h3 className="font-semibold text-[#030E18] text-sm sm:text-base truncate">
+                                  {student.name}
+                                </h3>
+                                {/* Show attendance details when marked, otherwise show student info */}
+                                {(isSubmitted &&
+                                  attendanceStatus?.students &&
+                                  (() => {
+                                    const studentAttendance =
+                                      attendanceStatus.students.find(
+                                        (s: any) =>
+                                          s.studentId === student.id &&
+                                          s.attendanceMarked
+                                      );
+                                    if (studentAttendance) {
+                                      return (
+                                        <p className="mt-1 text-xs text-[#878787]">
+                                          Marked at{" "}
+                                          {new Date(
+                                            studentAttendance.recordedAt
+                                          ).toLocaleTimeString([], {
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                          })}
+                                        </p>
+                                      );
+                                    } else if (isSubmitted) {
+                                      // Fallback to current time if marked but no data from API yet
+                                      return (
+                                        <p className="mt-1 text-xs text-[#878787]">
+                                          Marked at{" "}
+                                          {new Date().toLocaleTimeString([], {
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                          })}
+                                        </p>
+                                      );
+                                    } else {
+                                      return null;
+                                    }
+                                  })()) || null}
+                              </div>
 
                                 {/* Status Button - Only show when attendance is marked */}
                                 {isSubmitted && (
@@ -673,11 +667,11 @@ const AttendancePage: React.FC = () => {
                                               s.attendanceMarked
                                           );
                                         return studentAttendance ? (
-                                          <button className="bg-white border border-gray-300 text-gray-700 px-4 sm:px-5 md:px-6 py-2 md:py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+                                          <button className="bg-white border border-gray-300 text-gray-700 px-3 py-1.5 rounded-md text-xs font-medium hover:bg-gray-50 transition-colors">
                                             {studentAttendance.attendanceStatus}
                                           </button>
                                         ) : (
-                                          <button className="bg-white border border-gray-300 text-gray-700 px-4 sm:px-5 md:px-6 py-2 md:py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
+                                          <button className="bg-white border border-gray-300 text-gray-700 px-3 py-1.5 rounded-md text-xs font-medium hover:bg-gray-50 transition-colors">
                                             {student.status === "present"
                                               ? "Present"
                                               : "Absent"}
@@ -686,12 +680,12 @@ const AttendancePage: React.FC = () => {
                                       })()}
                                   </div>
                                 )}
-                              </div>
+                              
 
                               {!isSubmitted && (
-                                <div className="space-y-4 sm:space-y-5">
+                                <div className="space-y-3">
                                   {/* Attendance Buttons */}
-                                  <div className="grid grid-cols-2 gap-3 sm:gap-4 md:gap-5">
+                                  <div className="grid grid-cols-2 gap-2 sm:gap-3">
                                     <button
                                       onClick={() =>
                                         handleStatusChange(
@@ -699,34 +693,34 @@ const AttendancePage: React.FC = () => {
                                           "present"
                                         )
                                       }
-                                      className={`flex items-center justify-center gap-2 p-3 sm:p-4 md:p-5 rounded-lg font-medium transition-all duration-200 text-sm sm:text-base ${
+                                      className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-md font-medium transition-all duration-200 text-sm ${
                                         student.status === "present"
                                           ? "bg-green-600 text-white"
                                           : "bg-green-50 text-green-700 border border-green-200 hover:bg-green-100"
                                       }`}
                                     >
-                                      <Check className="w-4 h-4 md:w-5 md:h-5" />
+                                      <Check className="w-4 h-4" />
                                       Present
                                     </button>
                                     <button
                                       onClick={() =>
                                         handleStatusChange(student.id, "absent")
                                       }
-                                      className={`flex items-center justify-center gap-2 p-3 sm:p-4 md:p-5 rounded-lg font-medium transition-all duration-200 text-sm sm:text-base ${
+                                      className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-md font-medium transition-all duration-200 text-sm ${
                                         student.status === "absent"
                                           ? "bg-red-600 text-white"
                                           : "bg-red-50 text-red-700 border border-red-200 hover:bg-red-100"
                                       }`}
                                     >
-                                      <X className="w-4 h-4 md:w-5 md:h-5" />
+                                      <X className="w-4 h-4" />
                                       Absent
                                     </button>
                                   </div>
 
                                   {/* Absence Reason Input - Shows when student is marked absent */}
                                   {student.status === "absent" && (
-                                    <div className="space-y-3">
-                                      <label className="text-sm font-medium text-red-700 block">
+                                    <div className="space-y-2">
+                                      <label className="text-xs font-medium text-red-700 block">
                                         Reason for Absence *
                                       </label>
                                       <textarea
@@ -738,8 +732,8 @@ const AttendancePage: React.FC = () => {
                                           }))
                                         }
                                         placeholder="Enter reason for absence..."
-                                        className="w-full p-3 sm:p-4 md:p-5 border border-red-200 rounded-lg bg-red-50 text-red-900 placeholder-red-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none text-sm"
-                                        rows={3}
+                                        className="w-full p-2.5 border border-red-200 rounded-md bg-red-50 text-red-900 placeholder-red-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none text-sm"
+                                        rows={2}
                                       />
                                     </div>
                                   )}
@@ -766,7 +760,7 @@ const AttendancePage: React.FC = () => {
                                       (!absentReasons[student.id] ||
                                         absentReasons[student.id].trim() === "")
                                     }
-                                    className={`w-full p-3 sm:p-4 md:p-5 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 sm:gap-3 text-sm sm:text-base ${
+                                    className={`w-full px-3 py-2.5 rounded-md font-medium transition-all duration-200 flex items-center justify-center gap-2 text-sm ${
                                       student.status === "absent" &&
                                       (!absentReasons[student.id] ||
                                         absentReasons[student.id].trim() === "")
@@ -774,7 +768,7 @@ const AttendancePage: React.FC = () => {
                                         : "bg-[#003366] text-white hover:bg-[#002244]"
                                     }`}
                                   >
-                                    <Send className="w-4 h-4 md:w-5 md:h-5" />
+                                    <Send className="w-4 h-4" />
                                     <span className="hidden sm:inline">
                                       {student.status === "absent"
                                         ? "Submit with Reason"
@@ -801,8 +795,8 @@ const AttendancePage: React.FC = () => {
                                         );
                                       return studentAttendance?.absenceReason;
                                     })())) && (
-                                  <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                                    <p className="text-sm text-yellow-800">
+                                  <div className="mt-3 p-2.5 bg-yellow-50 border border-yellow-200 rounded-md">
+                                    <p className="text-xs text-yellow-800">
                                       <strong>Reason for absence:</strong>{" "}
                                       {student.reasonForAbsence ||
                                         (() => {
@@ -854,12 +848,12 @@ const AttendancePage: React.FC = () => {
                 ) : (
                   <div className="space-y-4 sm:space-y-6">
                     {/* Summary Statistics */}
-                    <div className="bg-white rounded-xl border border-[#F0F0F0] p-6 sm:p-8">
-                      <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-xl font-semibold text-[#030E18]">
-                          Today's Attendance Overview
+                    <div className="bg-white rounded-xl border border-[#F0F0F0] p-4 sm:p-5">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+                        <h3 className="text-lg font-semibold text-[#030E18]">
+                          Today’s Overview
                         </h3>
-                        <span className="text-sm text-[#6F6F6F] bg-[#F8F8F8] px-3 py-1 rounded-full">
+                        <span className="text-xs text-[#6F6F6F] bg-[#F8F8F8] px-2 py-1 rounded-full w-fit">
                           {new Date().toLocaleDateString("en-US", {
                             weekday: "long",
                             year: "numeric",
@@ -868,36 +862,36 @@ const AttendancePage: React.FC = () => {
                           })}
                         </span>
                       </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 sm:gap-6">
-                        <div className="text-center p-4 bg-[#F8F8F8] rounded-lg border border-[#F0F0F0]">
-                          <div className="text-2xl font-bold text-[#030E18] mb-1">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
+                        <div className="text-center p-3 bg-[#F8F8F8] rounded-lg border border-[#F0F0F0]">
+                          <div className="text-xl font-semibold text-[#030E18] mb-1">
                             {attendanceStatus.totalStudents}
                           </div>
-                          <div className="text-sm text-[#6F6F6F] font-medium">
-                            Total Students
+                          <div className="text-xs text-[#6F6F6F] font-medium">
+                            Total
                           </div>
                         </div>
-                        <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
-                          <div className="text-2xl font-bold text-green-700 mb-1">
+                        <div className="text-center p-3 bg-green-50 rounded-lg border border-green-200">
+                          <div className="text-xl font-semibold text-green-700 mb-1">
                             {attendanceStatus.presentCount}
                           </div>
-                          <div className="text-sm text-green-600 font-medium">
+                          <div className="text-xs text-green-600 font-medium">
                             Present
                           </div>
                         </div>
-                        <div className="text-center p-4 bg-red-50 rounded-lg border border-red-200">
-                          <div className="text-2xl font-bold text-red-700 mb-1">
+                        <div className="text-center p-3 bg-red-50 rounded-lg border border-red-200">
+                          <div className="text-xl font-semibold text-red-700 mb-1">
                             {attendanceStatus.absentCount}
                           </div>
-                          <div className="text-sm text-red-600 font-medium">
+                          <div className="text-xs text-red-600 font-medium">
                             Absent
                           </div>
                         </div>
-                        <div className="text-center p-4 bg-[#003366]/5 rounded-lg border border-[#003366]/20">
-                          <div className="text-2xl font-bold text-[#003366] mb-1">
+                        <div className="text-center p-3 bg-[#003366]/5 rounded-lg border border-[#003366]/20">
+                          <div className="text-xl font-semibold text-[#003366] mb-1">
                             {attendanceStatus.attendanceMarked}
                           </div>
-                          <div className="text-sm text-[#003366] font-medium">
+                          <div className="text-xs text-[#003366] font-medium">
                             Marked
                           </div>
                         </div>
@@ -906,23 +900,23 @@ const AttendancePage: React.FC = () => {
                     </div>
 
                     {/* Students Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                       {filteredStudents.map((student: any) => (
                         <Card
                           key={student.studentId}
-                          className="group hover:shadow-xl transition-all duration-300 border-[#F0F0F0] hover:border-[#003366]/30 overflow-hidden bg-white"
+                          className="group hover:shadow-md transition-all duration-300 border-[#F0F0F0] hover:border-[#003366]/30 overflow-hidden bg-white"
                         >
-                          <CardHeader className="pb-4 bg-gradient-to-br from-[#F8F8F8] via-white to-[#F8F8F8] border-b border-[#F0F0F0]">
-                            <div className="flex items-center gap-3">
-                              <div className="relative">
-                                <div className="w-14 h-14 bg-gradient-to-br from-[#003366] to-[#004080] rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg group-hover:scale-105 transition-transform duration-300">
+                          <CardHeader className="pb-3 bg-white border-b border-[#F0F0F0]">
+                            <div className="text-center">
+                              <div className="relative inline-flex">
+                                <div className="w-11 h-11 bg-gradient-to-br from-[#003366] to-[#004080] rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-sm">
                                   {student.firstName[0]}
                                   {student.lastName[0]}
                                 </div>
                                 {/* Status indicator dot */}
                                 {student.attendanceMarked && (
                                   <div
-                                    className={`absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${
+                                    className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${
                                       student.attendanceStatus === "Present"
                                         ? "bg-green-500"
                                         : student.attendanceStatus === "Absent"
@@ -932,30 +926,28 @@ const AttendancePage: React.FC = () => {
                                   ></div>
                                 )}
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <CardTitle className="text-lg font-semibold text-[#030E18] truncate mb-1">
-                                  {student.firstName} {student.lastName}
-                                </CardTitle>
-                                <p className="text-sm text-[#6F6F6F] truncate">
-                                  {student.email}
-                                </p>
-                              </div>
+                              <CardTitle className="mt-2 text-sm font-semibold text-[#030E18] truncate">
+                                {student.firstName} {student.lastName}
+                              </CardTitle>
+                              <p className="text-xs text-[#6F6F6F] truncate">
+                                {student.email}
+                              </p>
                             </div>
                           </CardHeader>
-                          <CardContent className="p-6">
-                            <div className="space-y-4">
+                          <CardContent className="p-4">
+                            <div className="space-y-3">
                               {/* Attendance Status */}
                               {student.attendanceMarked ? (
                                 <div
-                                  className={`p-4 rounded-xl border-2 transition-all duration-300 ${
+                                  className={`p-3 rounded-lg border transition-all duration-300 ${
                                     student.attendanceStatus === "Present"
-                                      ? "bg-green-50 border-green-200 shadow-green-100 shadow-sm"
+                                      ? "bg-green-50 border-green-200"
                                       : student.attendanceStatus === "Absent"
-                                      ? "bg-red-50 border-red-200 shadow-red-100 shadow-sm"
-                                      : "bg-yellow-50 border-yellow-200 shadow-yellow-100 shadow-sm"
+                                      ? "bg-red-50 border-red-200"
+                                      : "bg-yellow-50 border-yellow-200"
                                   }`}
                                 >
-                                  <div className="flex items-center justify-between mb-3">
+                                  <div className="flex items-center justify-between mb-2">
                                     <div className="flex items-center gap-2">
                                       <div
                                         className={`w-2 h-2 rounded-full ${
@@ -967,12 +959,12 @@ const AttendancePage: React.FC = () => {
                                             : "bg-yellow-500"
                                         }`}
                                       ></div>
-                                      <span className="font-semibold text-sm text-[#030E18]">
+                                      <span className="font-semibold text-xs text-[#030E18]">
                                         Attendance Status
                                       </span>
                                     </div>
                                     <span
-                                      className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                      className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
                                         student.attendanceStatus === "Present"
                                           ? "bg-green-100 text-green-800 border border-green-200"
                                           : student.attendanceStatus ===
@@ -985,7 +977,7 @@ const AttendancePage: React.FC = () => {
                                     </span>
                                   </div>
                                   <div className="space-y-1">
-                                    <p className="text-sm text-[#6F6F6F] flex items-center gap-2">
+                                    <p className="text-xs text-[#6F6F6F] flex items-center gap-2">
                                       <span className="font-medium">Time:</span>
                                       {new Date(
                                         student.recordedAt
@@ -997,12 +989,12 @@ const AttendancePage: React.FC = () => {
                                   </div>
                                 </div>
                               ) : (
-                                <div className="p-4 bg-gradient-to-r from-orange-50 to-yellow-50 border-2 border-orange-200 rounded-xl">
+                                <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
                                   <div className="text-center">
                                     <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-2">
                                       <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
                                     </div>
-                                    <span className="text-orange-700 font-semibold text-sm block mb-1">
+                                    <span className="text-orange-700 font-semibold text-xs block mb-1">
                                       Attendance Pending
                                     </span>
                                     <p className="text-xs text-orange-600">
@@ -1017,7 +1009,7 @@ const AttendancePage: React.FC = () => {
                                 onClick={() =>
                                   handleViewAnalytics(student.studentId)
                                 }
-                                className="w-full bg-gradient-to-r from-[#003366] to-[#004080] hover:from-[#002244] hover:to-[#003366] text-white transition-all duration-300 font-semibold py-3 text-sm shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                                className="w-full bg-[#003366] hover:bg-[#002244] text-white transition-all duration-200 font-medium py-2.5 text-sm shadow-none"
                                 size="sm"
                               >
                                 <Eye size={16} className="mr-2" />

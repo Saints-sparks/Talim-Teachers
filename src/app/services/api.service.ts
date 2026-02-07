@@ -239,10 +239,10 @@ export const submitAttendance = async (
   payload: {
     studentId: string;
     classId: string;
-    recordedBy: string;
     date: string;
     status: string;
     termId: string;
+    absenceReason?: string;
   },
   token: string
 ) => {
