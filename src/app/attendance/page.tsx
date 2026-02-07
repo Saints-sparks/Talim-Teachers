@@ -30,6 +30,7 @@ import { useAppContext } from "../context/AppContext";
 import LoadingCard from "@/components/LoadingCard";
 import ClassCard from "@/components/ClassCard";
 import { useRouter } from "next/navigation";
+import { toast } from "react-hot-toast";
 
 type AttendanceStatus = "present" | "absent";
 type ViewMode =
@@ -304,7 +305,7 @@ const AttendancePage: React.FC = () => {
 
       const student = data.find((student) => student.id === studentId);
       if (!student) {
-        alert("Student not found.");
+        toast.error("Student not found.");
         return;
       }
 
@@ -327,7 +328,7 @@ const AttendancePage: React.FC = () => {
           `Error submitting attendance for ${student.name}:`,
           response
         );
-        alert(`Failed to submit attendance for ${student.name}.`);
+        toast.error(`Failed to submit attendance for ${student.name}.`);
         return;
       }
 
@@ -339,10 +340,10 @@ const AttendancePage: React.FC = () => {
         )
       );
 
-      alert(`Attendance submitted successfully for ${student.name} ✅`);
+      toast.success(`Attendance submitted for ${student.name}`);
     } catch (error) {
       console.error("Error submitting attendance:", error);
-      alert("Failed to submit attendance. Please try again.");
+      toast.error("Failed to submit attendance. Please try again.");
     }
   };
 
@@ -365,7 +366,7 @@ const AttendancePage: React.FC = () => {
 
       const student = data.find((student) => student.id === studentId);
       if (!student) {
-        alert("Student not found.");
+        toast.error("Student not found.");
         return;
       }
 
@@ -386,7 +387,7 @@ const AttendancePage: React.FC = () => {
           `Error submitting attendance for ${student.name}:`,
           response
         );
-        alert(`Failed to submit attendance for ${student.name}.`);
+        toast.error(`Failed to submit attendance for ${student.name}.`);
         return;
       }
 
@@ -407,10 +408,10 @@ const AttendancePage: React.FC = () => {
         return updated;
       });
 
-      alert(`Attendance submitted successfully for ${student.name} ✅`);
+      toast.success(`Attendance submitted for ${student.name}`);
     } catch (error) {
       console.error("Error submitting attendance:", error);
-      alert("Failed to submit attendance. Please try again.");
+      toast.error("Failed to submit attendance. Please try again.");
     }
   };
 
@@ -745,7 +746,7 @@ const AttendancePage: React.FC = () => {
                                         const reason =
                                           absentReasons[student.id];
                                         if (!reason || reason.trim() === "") {
-                                          alert(
+                                          toast.error(
                                             "Please provide a reason for absence before submitting."
                                           );
                                           return;
