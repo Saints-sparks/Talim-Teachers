@@ -18,7 +18,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
   useEffect(() => {
     const userId = user?.userId || user?._id;
     
-    if (isAuthenticated && userId && !webSocket.isConnected && webSocket.connectionStatus !== 'connecting') {
+    if (isAuthenticated && userId && !webSocket.isConnected && webSocket.connectionStatus !== 'connecting' && webSocket.connectionStatus !== 'error') {
       webSocket.connect(userId);
     } else if (!isAuthenticated && webSocket.isConnected) {
       webSocket.disconnect();

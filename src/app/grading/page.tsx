@@ -12,6 +12,7 @@ import {
   FileText,
   RefreshCw,
 } from "lucide-react";
+import SectionHeader from "@/components/ui/section-header";
 import CourseTeacherView from "@/components/grading/CourseTeacherView-new";
 import ClassTeacherView from "@/components/grading/ClassTeacherView-lean";
 import { gradeRecordsApi } from "@/app/services/grade-records.service";
@@ -82,36 +83,34 @@ const GradingPage: React.FC = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gray-50 p-8">
-        {/* Top row: title + actions */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-semibold">Grading</h1>
-
-            {/* Optional role selector (kept minimal here) */}
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Button
-              onClick={fetchKpis}
-              disabled={loading}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2 border-[#F0F0F0] text-[#6F6F6F] hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-              Refresh KPIs
-            </Button>
-
-            <Button
-              variant="default"
-              size="sm"
-              className="bg-blue-900 text-white px-3 py-2"
-            >
-              Batch Upload (Excel) <span className="ml-2">📄</span>
-            </Button>
-          </div>
-        </div>
+      <div className="min-h-screen bg-[#F8F8F8] p-3 sm:p-6">
+        <SectionHeader
+          title="Grading"
+          subtitle="Manage assessments and class performance with clarity"
+          actions={
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={fetchKpis}
+                disabled={loading}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2 border-[#F0F0F0] text-[#6F6F6F] hover:bg-[#F8FAFF]"
+              >
+                <RefreshCw
+                  className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+                />
+                Refresh
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                className="bg-[#003366] text-white hover:bg-[#002244]"
+              >
+                Batch Upload
+              </Button>
+            </div>
+          }
+        />
 
         {/* Error banner */}
         {error && (
@@ -122,96 +121,84 @@ const GradingPage: React.FC = () => {
           </div>
         )}
 
-        {/* Stats Cards Row */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
-          <Card className="overflow-hidden bg-white shadow-none border-[#F0F0F0]">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-50 rounded-lg">
-                  <GraduationCap className="h-6 w-6 text-blue-600" />
-                </div>
-                <div>
-                  <div className="text-2xl font-medium text-gray-900">
-                    {loading ? "..." : kpiData.totalAssessments}
-                  </div>
-                  <p className="text-sm text-[#878787]">Total Assessments</p>
-                </div>
+        <div className="rounded-2xl border border-[#E6EDF5] bg-gradient-to-br from-[#F6F9FC] via-white to-[#F8FBFF] p-4 sm:p-5 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="rounded-xl border border-[#E6EDF5] bg-white/80 p-3 text-left">
+              <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-[#6F6F6F]">
+                <GraduationCap className="h-4 w-4 text-[#003366]" />
+                Total Assessments
               </div>
-            </CardContent>
-          </Card>
+              <div className="mt-1 text-lg sm:text-xl font-semibold text-[#030E18]">
+                {loading ? "..." : kpiData.totalAssessments}
+              </div>
+              <div className="mt-2 h-1.5 w-full rounded-full bg-[#EEF3F9]">
+                <div className="h-1.5 w-full rounded-full bg-[#003366]" />
+              </div>
+            </div>
 
-          <Card className="overflow-hidden bg-white shadow-none border-[#F0F0F0]">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-50 rounded-lg">
-                  <Users className="h-6 w-6 text-green-600" />
-                </div>
-                <div>
-                  <div className="text-2xl font-medium text-gray-900">
-                    {loading ? "..." : kpiData.studentsGraded}
-                  </div>
-                  <p className="text-sm text-[#878787]">Students Graded</p>
-                </div>
+            <div className="rounded-xl border border-green-200 bg-green-50/60 p-3 text-left">
+              <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-green-700">
+                <Users className="h-4 w-4 text-green-700" />
+                Students Graded
               </div>
-            </CardContent>
-          </Card>
+              <div className="mt-1 text-lg sm:text-xl font-semibold text-green-700">
+                {loading ? "..." : kpiData.studentsGraded}
+              </div>
+              <div className="mt-2 h-1.5 w-full rounded-full bg-green-100">
+                <div className="h-1.5 w-3/4 rounded-full bg-green-600" />
+              </div>
+            </div>
 
-          <Card className="overflow-hidden bg-white shadow-none border-[#F0F0F0]">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-50 rounded-lg">
-                  <TrendingUp className="h-6 w-6 text-purple-600" />
-                </div>
-                <div>
-                  <div className="text-2xl font-medium text-gray-900">
-                    {loading ? "..." : `${kpiData.averageScore}%`}
-                  </div>
-                  <p className="text-sm text-[#878787]">Average Score</p>
-                </div>
+            <div className="rounded-xl border border-[#D7E6F6] bg-[#EAF2FB]/60 p-3 text-left">
+              <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-[#003366]">
+                <TrendingUp className="h-4 w-4 text-[#003366]" />
+                Average Score
               </div>
-            </CardContent>
-          </Card>
+              <div className="mt-1 text-lg sm:text-xl font-semibold text-[#003366]">
+                {loading ? "..." : `${kpiData.averageScore}%`}
+              </div>
+              <div className="mt-2 h-1.5 w-full rounded-full bg-[#DDEAF7]">
+                <div className="h-1.5 w-2/3 rounded-full bg-[#003366]" />
+              </div>
+            </div>
 
-          <Card className="overflow-hidden bg-white shadow-none border-[#F0F0F0]">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-orange-50 rounded-lg">
-                  <FileText className="h-6 w-6 text-orange-600" />
-                </div>
-                <div>
-                  <div className="text-2xl font-medium text-gray-900">
-                    {loading ? "..." : kpiData.pendingReviews}
-                  </div>
-                  <p className="text-sm text-[#878787]">Pending Reviews</p>
-                </div>
+            <div className="rounded-xl border border-orange-200 bg-orange-50/60 p-3 text-left">
+              <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-orange-700">
+                <FileText className="h-4 w-4 text-orange-600" />
+                Pending Reviews
               </div>
-            </CardContent>
-          </Card>
+              <div className="mt-1 text-lg sm:text-xl font-semibold text-orange-700">
+                {loading ? "..." : kpiData.pendingReviews}
+              </div>
+              <div className="mt-2 h-1.5 w-full rounded-full bg-orange-100">
+                <div className="h-1.5 w-1/3 rounded-full bg-orange-500" />
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Role Selector */}
         <div className="flex items-center gap-3 mb-6">
           <span className="text-sm font-medium text-[#2F2F2F]">View as:</span>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 bg-white border border-[#F0F0F0] rounded-xl p-1">
             <Button
-              variant={activeRole === "course" ? "default" : "outline"}
+              variant="ghost"
               onClick={() => setActiveRole("course")}
               className={`flex items-center gap-2 text-sm shadow-none ${
                 activeRole === "course"
-                  ? "bg-blue-600 hover:bg-blue-700 text-white"
-                  : "border-[#F0F0F0] text-[#6F6F6F] hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"
+                  ? "bg-[#003366] text-white hover:bg-[#002244]"
+                  : "text-[#6F6F6F] hover:bg-[#F8FAFF]"
               }`}
             >
               <BookOpen className="h-4 w-4" />
               Course Teacher
             </Button>
             <Button
-              variant={activeRole === "class" ? "default" : "outline"}
+              variant="ghost"
               onClick={() => setActiveRole("class")}
               className={`flex items-center gap-2 text-sm shadow-none ${
                 activeRole === "class"
-                  ? "bg-purple-600 hover:bg-purple-700 text-white"
-                  : "border-[#F0F0F0] text-[#6F6F6F] hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200"
+                  ? "bg-[#003366] text-white hover:bg-[#002244]"
+                  : "text-[#6F6F6F] hover:bg-[#F8FAFF]"
               }`}
             >
               <Users className="h-4 w-4" />

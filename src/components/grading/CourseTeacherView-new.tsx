@@ -39,6 +39,7 @@ import { gradeRecordsApi } from "@/app/services/grade-records.service";
 import TermSelector from "@/components/grading/shared/TermSelector";
 import AssessmentGradeForm from "@/components/grading/course/AssessmentGradeForm";
 import { getStudentsByClass } from "@/app/services/api.service";
+import SectionHeader from "@/components/ui/section-header";
 interface Assessment {
   _id: string;
   name: string;
@@ -374,45 +375,39 @@ const CourseTeacherView: React.FC = () => {
 
   return (
     <div className="p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-xl font-medium text-[#030E18] flex items-center gap-2">
-            <BookOpen className="h-6 w-6 text-blue-600" />
-            Course Teacher Dashboard
-          </h2>
-          <p className="text-sm text-[#6F6F6F] mt-1">
-            Manage assessments and course grades
-          </p>
-        </div>
+      <SectionHeader
+        title="Course Grading"
+        subtitle="Manage assessments and course grades"
+        icon={<BookOpen className="h-6 w-6 text-[#003366]" />}
+        actions={
+          <div className="flex items-center gap-2">
+            {viewMode !== "overview" && (
+              <Button
+                variant="outline"
+                onClick={handleBackToOverview}
+                className="flex items-center gap-2 shadow-none border-[#F0F0F0] text-[#6F6F6F] hover:bg-[#F8FAFF]"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back
+              </Button>
+            )}
 
-        <div className="flex items-center gap-2">
-          {viewMode !== "overview" && (
             <Button
               variant="outline"
-              onClick={handleBackToOverview}
-              className="flex items-center gap-2 shadow-none border-[#F0F0F0] text-[#6F6F6F] hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"
+              onClick={loadInitialData}
+              disabled={initialLoading}
+              className="flex items-center gap-2 shadow-none border-[#F0F0F0] text-[#6F6F6F] hover:bg-[#F8FAFF]"
             >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Overview
+              {initialLoading ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#003366]"></div>
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              Refresh
             </Button>
-          )}
-
-          <Button
-            variant="outline"
-            onClick={loadInitialData}
-            disabled={initialLoading}
-            className="flex items-center gap-2 shadow-none border-[#F0F0F0] text-[#6F6F6F] hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"
-          >
-            {initialLoading ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
-            ) : (
-              <RefreshCw className="h-4 w-4" />
-            )}
-            Refresh
-          </Button>
-        </div>
-      </div>
+          </div>
+        }
+      />
 
       {viewMode === "overview" && (
         <div className="space-y-6">

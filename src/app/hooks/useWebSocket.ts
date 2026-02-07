@@ -157,6 +157,10 @@ export const useWebSocket = (): WebSocketContextType => {
   const lastFetchTimeRef = useRef<number>(0);
   const fetchCooldownMs = 2000; // 2 seconds cooldown between fetches
   const isFetchingRef = useRef<boolean>(false);
+  const reconnectAttemptsRef = useRef<number>(0);
+  const maxReconnectAttempts = 3;
+  const connectionFailureCountRef = useRef<number>(0);
+  const maxToastFailures = 2;
 
   // Debug state changes
   useEffect(() => {
@@ -183,9 +187,9 @@ export const useWebSocket = (): WebSocketContextType => {
         query: { userId },
         transports: ["websocket", "polling"],
         timeout: 20000,
-        reconnection: true,
+        reconnection: false, // Disable automatic reconnection, we'll handle it manually
         reconnectionDelay: 1000,
-        reconnectionAttempts: 10,
+        reconnectionAttempts: 0, // Disable built-in attempts
       });
 
       // Connection successful
@@ -193,6 +197,10 @@ export const useWebSocket = (): WebSocketContextType => {
         setIsConnected(true);
         setConnectionStatus("connected");
         toast.success("Connected to real-time services");
+
+        // Reset retry counters on successful connection
+        reconnectAttemptsRef.current = 0;
+        connectionFailureCountRef.current = 0;
 
         // Clear any pending reconnection attempts
         if (reconnectTimeoutRef.current) {
@@ -205,7 +213,13 @@ export const useWebSocket = (): WebSocketContextType => {
       socket.on("connect_error", (error) => {
         setIsConnected(false);
         setConnectionStatus("error");
-        toast.error("Failed to connect to real-time services");
+        
+        connectionFailureCountRef.current += 1;
+        
+        // Only show toast for first few failures to avoid spam
+        if (connectionFailureCountRef.current <= maxToastFailures) {
+          toast.error("Failed to connect to real-time services");
+        }
       });
 
       // Disconnection
@@ -215,13 +229,19 @@ export const useWebSocket = (): WebSocketContextType => {
 
         // Don't show toast for intentional disconnections
         if (reason !== "io client disconnect") {
-          toast.error("Connection lost");
+          // Only show connection lost toast for first few failures
+          if (connectionFailureCountRef.current <= maxToastFailures) {
+            toast.error("Connection lost");
+          }
 
-          // Attempt to reconnect after a delay
-          if (userIdRef.current && reason !== "io server disconnect") {
+          // Attempt to reconnect after a delay, but limit attempts
+          if (userIdRef.current && reason !== "io server disconnect" && reconnectAttemptsRef.current < maxReconnectAttempts) {
+            reconnectAttemptsRef.current += 1;
+            const delay = Math.min(3000 * Math.pow(2, reconnectAttemptsRef.current - 1), 30000); // Exponential backoff, max 30 seconds
+            
             reconnectTimeoutRef.current = setTimeout(() => {
               reconnect();
-            }, 3000);
+            }, delay);
           }
         }
       });
@@ -233,7 +253,10 @@ export const useWebSocket = (): WebSocketContextType => {
 
       // Reconnection events
       socket.on("reconnect", (attemptNumber) => {
-        toast.success("Reconnected to real-time services");
+        // Only show success toast if we haven't exceeded failure limit
+        if (connectionFailureCountRef.current <= maxToastFailures) {
+          toast.success("Reconnected to real-time services");
+        }
       });
 
       socket.on("reconnect_error", (error) => {
@@ -241,7 +264,10 @@ export const useWebSocket = (): WebSocketContextType => {
       });
 
       socket.on("reconnect_failed", () => {
-        toast.error("Unable to reconnect. Please refresh the page.");
+        // Only show final failure toast if we haven't exceeded toast limit
+        if (connectionFailureCountRef.current <= maxToastFailures) {
+          toast.error("Unable to reconnect. Please refresh the page.");
+        }
         setConnectionStatus("error");
       });
 
@@ -267,6 +293,10 @@ export const useWebSocket = (): WebSocketContextType => {
     setIsConnected(false);
     setConnectionStatus("disconnected");
     userIdRef.current = null;
+    
+    // Reset counters on manual disconnect
+    reconnectAttemptsRef.current = 0;
+    connectionFailureCountRef.current = 0;
   }, []);
 
   // Reconnect to WebSocket

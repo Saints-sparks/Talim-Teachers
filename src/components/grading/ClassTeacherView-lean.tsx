@@ -20,6 +20,7 @@ import { useAppContext } from "@/app/context/AppContext";
 import { useAuth } from "@/app/hooks/useAuth";
 import { gradeRecordsApi } from "@/app/services/grade-records.service";
 import { getCurrentTerm, getStudentsByClass } from "@/app/services/api.service";
+import SectionHeader from "@/components/ui/section-header";
 
 interface Student {
   _id: string;
@@ -452,28 +453,23 @@ const ClassTeacherView: React.FC = () => {
 
   return (
     <div className="p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-xl font-medium text-[#030E18]">
-            Class Teacher Dashboard
-          </h2>
-          <p className="text-sm text-[#6F6F6F] mt-1">
-            Manage student cumulative grades and class performance
-          </p>
-        </div>
-
-        {viewMode === "student-details" && (
-          <Button
-            variant="outline"
-            onClick={handleBackToOverview}
-            className="flex items-center gap-2 shadow-none border-[#F0F0F0] text-[#6F6F6F] hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Class
-          </Button>
-        )}
-      </div>
+      <SectionHeader
+        title="Class Grading"
+        subtitle="Manage cumulative grades and class performance"
+        icon={<Users className="w-6 h-6 text-[#003366]" />}
+        actions={
+          viewMode === "student-details" ? (
+            <Button
+              variant="outline"
+              onClick={handleBackToOverview}
+              className="flex items-center gap-2 shadow-none border-[#F0F0F0] text-[#6F6F6F] hover:bg-[#F8FAFF]"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </Button>
+          ) : null
+        }
+      />
 
       {/* Class Selection */}
       <Card className="bg-white shadow-none border-[#F0F0F0] mb-6">
