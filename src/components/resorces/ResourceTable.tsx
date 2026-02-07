@@ -24,6 +24,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Checkbox } from "../ui/checkbox";
 import { useState } from "react";
 import { useAuth } from "@/app/hooks/useAuth";
@@ -60,6 +68,8 @@ export function ResourcesTable({
     null
   );
   const [resourceList, setResourceList] = useState(resources);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<Resource | null>(null);
 
   const [loading, setLoading] = useState<string | null>(null);
   const getClassName = (classId: string) => {
@@ -95,10 +105,6 @@ export function ResourcesTable({
       alert("Authentication required.");
       return;
     }
-    const confirmDelete = window.confirm(
-      "Are you sure you want to delete this resource?"
-    );
-    if (!confirmDelete) return;
 
     const token = getAccessToken();
 
@@ -110,6 +116,18 @@ export function ResourcesTable({
       onResourceDelete(id);
     }
     setLoading(null);
+  };
+
+  const openDeleteConfirm = (resource: Resource) => {
+    setPendingDelete(resource);
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete?._id) return;
+    await handleDelete(pendingDelete._id);
+    setConfirmOpen(false);
+    setPendingDelete(null);
   };
 
   return (
@@ -164,7 +182,7 @@ export function ResourcesTable({
                     variant="outline"
                     size="icon"
                     className="border-none shadow-none"
-                    onClick={() => resource._id && handleDelete(resource._id)}
+                    onClick={() => openDeleteConfirm(resource)}
                     disabled={loading === resource._id}
                   >
                     <Trash2 className="text-[#D92D20]" />
@@ -238,7 +256,7 @@ export function ResourcesTable({
                 variant="ghost"
                 size="sm"
                 className="p-1 text-red-500 hover:bg-red-100"
-                onClick={() => resource._id && handleDelete(resource._id)}
+                onClick={() => openDeleteConfirm(resource)}
                 disabled={loading === resource._id}
               >
                 <Trash2 size={16} />
@@ -247,6 +265,36 @@ export function ResourcesTable({
           </div>
         ))}
       </div>
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>Delete resource?</DialogTitle>
+            <DialogDescription>
+              This will permanently remove{" "}
+              <span className="font-medium text-[#030E18]">
+                {pendingDelete?.name || "this resource"}
+              </span>
+              . You can’t undo this action.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setConfirmOpen(false)}
+              className="border-[#F0F0F0] hover:bg-[#F0F0F0]"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmDelete}
+              className="bg-[#D92D20] hover:bg-[#B42318] text-white"
+              disabled={loading === pendingDelete?._id}
+            >
+              {loading === pendingDelete?._id ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

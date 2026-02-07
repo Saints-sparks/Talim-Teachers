@@ -1,9 +1,9 @@
-import axios, { AxiosInstance } from 'axios';
+import { AxiosInstance } from 'axios';
 import { Subject } from '../../types/types';
 import { Course } from '../../types/types';
 import { ResponseMessageDto } from '../../types/response-message';
 import { CreateSubjectDto, UpdateSubjectDto, CreateCourseDto, UpdateCourseDto } from '../../types/dtos';
-import { API_BASE_URL } from '../lib/api/config';
+import { createApiClient } from '../lib/api/apiClient';
 
 export class SubjectService {
   private readonly axiosInstance: AxiosInstance;
@@ -11,13 +11,7 @@ export class SubjectService {
 
   constructor(token: string | null) {
     this.token = token;
-    this.axiosInstance = axios.create({
-      baseURL: API_BASE_URL,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token && { Authorization: `Bearer ${token}` }),
-      },
-    });
+    this.axiosInstance = createApiClient(token);
   }
 
   // Fetch all subjects by school

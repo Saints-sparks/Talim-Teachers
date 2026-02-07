@@ -7,7 +7,7 @@ import nookies from "nookies";
 import { authService } from "../services/auth.service";
 import { LoginCredentials, User } from "../../types/auth";
 import { API_BASE_URL } from "../lib/api/config";
-import axios from "axios";
+import { apiClient } from "../lib/api/apiClient";
 
 export interface UseAuthReturn {
   login: (credentials: LoginCredentials) => Promise<any>;
@@ -94,6 +94,7 @@ export const useAuth = (): UseAuthReturn => {
     // Clear old auth cookies before setting new ones
     nookies.destroy(undefined, "access_token", { path: "/" });
     nookies.destroy(undefined, "refresh_token", { path: "/" });
+    nookies.destroy(undefined, "refreshToken", { path: "/" });
     setIsLoading(true);
     try {
       const response = await authService.login(credentials);
@@ -119,6 +120,12 @@ export const useAuth = (): UseAuthReturn => {
         sameSite: "lax",
         secure: false,
       });
+      nookies.set(undefined, "refreshToken", response.refresh_token, {
+        maxAge: 30 * 24 * 60 * 60, // 30 days
+        path: "/",
+        sameSite: "lax",
+        secure: false,
+      });
 
       // Immediately check if cookies are set
       const cookiesAfterSet = nookies.get(undefined);
@@ -129,7 +136,7 @@ export const useAuth = (): UseAuthReturn => {
         throw new Error("Login failed: Token not saved.");
       }
 
-      const introspection = await axios.post(
+      const introspection = await apiClient.post(
         `${API_BASE_URL}/auth/introspect`,
         {
           token: response.access_token,
@@ -199,6 +206,7 @@ export const useAuth = (): UseAuthReturn => {
     // Clear cookies
     nookies.destroy(undefined, "access_token", { path: "/" });
     nookies.destroy(undefined, "refresh_token", { path: "/" });
+    nookies.destroy(undefined, "refreshToken", { path: "/" });
 
     // Clear local storage
     localStorage.removeItem("user");
@@ -232,7 +240,7 @@ export const useAuth = (): UseAuthReturn => {
 
   const getRefreshToken = (): string | null => {
     const cookies = nookies.get(undefined);
-    return cookies.refresh_token || null;
+    return cookies.refreshToken || cookies.refresh_token || null;
   };
 
   return {

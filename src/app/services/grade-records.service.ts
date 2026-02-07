@@ -1,5 +1,5 @@
-import axios from "axios";
 import { API_BASE_URL } from "../lib/api/config";
+import { apiClient } from "../lib/api/apiClient";
 import {
   AssessmentGradeRecord,
   CourseGradeRecord,
@@ -26,7 +26,7 @@ export class GradeRecordsApiService {
     token: string
   ): Promise<CourseGradeRecordWithDetails[]> {
     try {
-      const response = await axios.get(
+      const response = await apiClient.get(
         `${API_BASE_URL}/grade-records/course-grade-records/student/${studentId}/term/${termId}`,
         this.getAuthHeaders(token)
       );
@@ -59,7 +59,7 @@ export class GradeRecordsApiService {
     token: string
   ): Promise<AssessmentGradeRecord> {
     try {
-      const response = await axios.post(
+      const response = await apiClient.post(
         `${API_BASE_URL}/grade-records`,
         data,
         this.getAuthHeaders(token)
@@ -82,7 +82,7 @@ export class GradeRecordsApiService {
     courseId: string
   ): Promise<AssessmentGradeRecordWithDetails[]> {
     try {
-      const response = await axios.get(
+      const response = await apiClient.get(
         `${API_BASE_URL}/grade-records/assessment/${assessmentId}/course/${courseId}`,
         this.getAuthHeaders(token)
       );
@@ -104,7 +104,7 @@ export class GradeRecordsApiService {
     token: string
   ): Promise<AssessmentGradeRecord[]> {
     try {
-      const response = await axios.get(
+      const response = await apiClient.get(
         `${API_BASE_URL}/grade-records/course/${courseId}`,
         this.getAuthHeaders(token)
       );
@@ -127,7 +127,7 @@ export class GradeRecordsApiService {
     token: string
   ): Promise<AssessmentGradeRecord> {
     try {
-      const response = await axios.put(
+      const response = await apiClient.put(
         `${API_BASE_URL}/grade-records/${gradeId}`,
         data,
         this.getAuthHeaders(token)
@@ -146,7 +146,7 @@ export class GradeRecordsApiService {
    */
   async deleteAssessmentGrade(gradeId: string, token: string): Promise<void> {
     try {
-      await axios.delete(
+      await apiClient.delete(
         `${API_BASE_URL}/grade-records/${gradeId}`,
         this.getAuthHeaders(token)
       );
@@ -166,7 +166,7 @@ export class GradeRecordsApiService {
     token: string
   ): Promise<BulkGradeResult> {
     try {
-      const response = await axios.post(
+      const response = await apiClient.post(
         `${API_BASE_URL}/grade-records/bulk`,
         { grades },
         this.getAuthHeaders(token)
@@ -194,7 +194,7 @@ export class GradeRecordsApiService {
     token: string
   ): Promise<CourseGradeRecordWithDetails[]> {
     try {
-      const response = await axios.get(
+      const response = await apiClient.get(
         `${API_BASE_URL}/grade-records/course-grade-records/course/${courseId}/term/${termId}`,
         this.getAuthHeaders(token)
       );
@@ -232,7 +232,7 @@ export class GradeRecordsApiService {
     token: string
   ): Promise<CourseGradeRecordWithDetails> {
     try {
-      const response = await axios.get(
+      const response = await apiClient.get(
         `${API_BASE_URL}/grade-records/course-grade-records/student/${studentId}/course/${courseId}/term/${termId}`,
         this.getAuthHeaders(token)
       );
@@ -253,7 +253,7 @@ export class GradeRecordsApiService {
     token: string
   ): Promise<CourseGradeRecord> {
     try {
-      const response = await axios.post(
+      const response = await apiClient.post(
         `${API_BASE_URL}/grade-records/course-grade-record`,
         data,
         this.getAuthHeaders(token)
@@ -326,7 +326,7 @@ export class GradeRecordsApiService {
         percentage,
       };
 
-      const response = await axios.post(
+      const response = await apiClient.post(
         `${API_BASE_URL}/grade-records/course-grade-record`,
         courseGradeData,
         this.getAuthHeaders(token)
@@ -444,7 +444,7 @@ export class GradeRecordsApiService {
     token: string
   ): Promise<CourseGradeRecordWithDetails[]> {
     try {
-      const response = await axios.get(
+      const response = await apiClient.get(
         `${API_BASE_URL}/grade-records/course-grade-records/student/${studentId}/term/${termId}`,
         this.getAuthHeaders(token)
       );
@@ -474,7 +474,7 @@ export class GradeRecordsApiService {
       );
       const url = `${API_BASE_URL}/grade-records/student-cumulative-term-grade-records/${studentId}/${termId}`;
       console.log("Request URL:", url);
-      const response = await axios.get(url, this.getAuthHeaders(token));
+      const response = await apiClient.get(url, this.getAuthHeaders(token));
       return response.data.data;
     } catch (error: any) {
       console.error("Error fetching student cumulative:", error);
@@ -494,7 +494,7 @@ export class GradeRecordsApiService {
     token: string
   ): Promise<StudentCumulativeTermGradeRecord> {
     try {
-      const response = await axios.post(
+      const response = await apiClient.post(
         `${API_BASE_URL}/grade-records/student-cumulative-term-grade-records/calculate/${studentId}/${termId}`,
         {},
         this.getAuthHeaders(token)
@@ -522,7 +522,7 @@ export class GradeRecordsApiService {
     token: string
   ): Promise<ClassCumulativeTermGradeRecord> {
     try {
-      const response = await axios.get(
+      const response = await apiClient.get(
         `${API_BASE_URL}/grade-records/class-cumulative-term-grade-records/${classId}/${termId}`,
         this.getAuthHeaders(token)
       );
@@ -545,7 +545,7 @@ export class GradeRecordsApiService {
     token: string
   ): Promise<ClassCumulativeTermGradeRecord> {
     try {
-      const response = await axios.post(
+      const response = await apiClient.post(
         `${API_BASE_URL}/grade-records/class-cumulative-term-grade-records/calculate/${classId}/${termId}`,
         {},
         this.getAuthHeaders(token)
@@ -569,7 +569,7 @@ export class GradeRecordsApiService {
    */
   async getStudentsForCourse(classId: string, token: string) {
     try {
-      const response = await axios.get(
+      const response = await apiClient.get(
         `${API_BASE_URL}/students/by-class/${classId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -619,7 +619,7 @@ export class GradeRecordsApiService {
    */
   async getCurrentTerm(token: string) {
     try {
-      const response = await axios.get(
+      const response = await apiClient.get(
         `${API_BASE_URL}/academic-year-term/term/current`,
         this.getAuthHeaders(token)
       );
@@ -637,7 +637,7 @@ export class GradeRecordsApiService {
    */
   async getAssessmentsForTerm(termId: string, token: string) {
     try {
-      const response = await axios.get(
+      const response = await apiClient.get(
         `${API_BASE_URL}/assessments/term/${termId}/active`,
         this.getAuthHeaders(token)
       );
@@ -675,7 +675,7 @@ export class GradeRecordsApiService {
     pendingReviews: number;
   }> {
     try {
-      const response = await axios.get(
+      const response = await apiClient.get(
         `${API_BASE_URL}/grade-records/kpis`,
         this.getAuthHeaders(token)
       );
@@ -702,7 +702,7 @@ export class GradeRecordsApiService {
     pendingReviews: number;
   }> {
     try {
-      const response = await axios.get(
+      const response = await apiClient.get(
         `${API_BASE_URL}/grade-records/kpis/class/${classId}`,
         this.getAuthHeaders(token)
       );

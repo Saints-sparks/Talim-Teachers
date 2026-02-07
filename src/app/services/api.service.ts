@@ -1,6 +1,6 @@
-import axios from "axios";
 import { API_BASE_URL } from "../lib/api/config";
 import { Student } from "@/types/student";
+import { apiClient } from "../lib/api/apiClient";
 
 // Simple cache for current term to prevent repeated requests
 let currentTermCache: { data: any; timestamp: number } | null = null;
@@ -15,7 +15,7 @@ export const clearCurrentTermCache = () => {
 // Fetch classes assigned to a teacher
 export const getAssignedClasses = async (userId: string, token: string) => {
   try {
-    const teacherResponse = await axios.get(
+    const teacherResponse = await apiClient.get(
       `${API_BASE_URL}/teachers/${userId}`,
       {
         headers: { Authorization: `Bearer ${token}` },
@@ -28,7 +28,7 @@ export const getAssignedClasses = async (userId: string, token: string) => {
     }
 
     const classPromises = assignedClassIds.map((classId) =>
-      axios
+      apiClient
         .get(`${API_BASE_URL}/classes/${classId}`, {
           headers: { Authorization: `Bearer ${token}` },
         })
@@ -45,7 +45,7 @@ export const getAssignedClasses = async (userId: string, token: string) => {
 // Fetch courses assigned to a teacher
 export const getTeacherCourses = async (teacherId: string, token: string) => {
   try {
-    const response = await axios.get(
+    const response = await apiClient.get(
       `${API_BASE_URL}/teachers/${teacherId}/courses`,
       {
         headers: { Authorization: `Bearer ${token}` },
@@ -61,7 +61,7 @@ export const getTeacherCourses = async (teacherId: string, token: string) => {
 // Fetch students by class
 export const getStudentsByClass = async (classId: string, token: string) => {
   try {
-    const response = await axios.get(
+    const response = await apiClient.get(
       `${API_BASE_URL}/students/by-class/${classId}`,
       {
         headers: { Authorization: `Bearer ${token}` },
@@ -86,7 +86,7 @@ export const fetchStudent = async (
   if (!token) throw new Error("Unauthorized: No token found.");
 
   try {
-    const response = await axios.get(`${API_BASE_URL}/students/${id}`, {
+    const response = await apiClient.get(`${API_BASE_URL}/students/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -103,7 +103,7 @@ export const fetchTeacherDetails = async (id: string, token: string) => {
   if (!token) throw new Error("Unauthorized: No token found.");
 
   try {
-    const response = await axios.get(`${API_BASE_URL}/teachers/${id}`, {
+    const response = await apiClient.get(`${API_BASE_URL}/teachers/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -122,7 +122,7 @@ export const fetchResources = async (token: string, teacherId?: string) => {
       ? `${API_BASE_URL}/resources/user/${teacherId}`
       : `${API_BASE_URL}/resources`;
 
-    const response = await axios.get(endpoint, {
+    const response = await apiClient.get(endpoint, {
       headers: { Authorization: `Bearer ${token}` },
     });
     return response.data || [];
@@ -134,7 +134,7 @@ export const fetchResources = async (token: string, teacherId?: string) => {
 
 export const deleteResource = async (id: string, token: string) => {
   try {
-    await axios.delete(`${API_BASE_URL}/resources/${id}`, {
+    await apiClient.delete(`${API_BASE_URL}/resources/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     return true;
@@ -155,24 +155,13 @@ export const getCurrentTerm = async (token: string) => {
       return currentTermCache.data;
     }
 
-    const response = await fetch(
+    const response = await apiClient.get(
       `${API_BASE_URL}/academic-year-term/term/current`,
       {
         headers: { Authorization: `Bearer ${token}` },
-        cache: "no-cache", // Prevent browser caching
       }
     );
-
-    if (response.status === 304) {
-      // Handle 304: Return cached data or retry without caching headers
-      console.log("Resource not modified, using cached data or retrying");
-      return currentTermCache?.data || null;
-    }
-
-    if (!response.ok)
-      throw new Error(`Failed to fetch current term: ${response.status}`);
-
-    const data = await response.json();
+    const data = response.data;
 
     // Update cache
     currentTermCache = {
@@ -195,19 +184,13 @@ export const getCurrentTerm = async (token: string) => {
 
 export const uploadResource = async (data: any, token: string) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/resources`, {
-      method: "POST",
+    const response = await apiClient.post(`${API_BASE_URL}/resources`, data, {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(data),
     });
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || "Failed to upload resource");
-    }
-    return await response.json();
+    return response.data;
   } catch (error) {
     console.error("Error uploading resource:", error);
     throw error;
@@ -216,7 +199,7 @@ export const uploadResource = async (data: any, token: string) => {
 
 export const createResource = async (resourceData: any, token: string) => {
   try {
-    const response = await axios.post(
+    const response = await apiClient.post(
       `${API_BASE_URL}/resources`,
       resourceData,
       {
@@ -239,18 +222,17 @@ export const updateResource = async (
   data: any,
   token: string
 ) => {
-  const response = await fetch(`${API_BASE_URL}/resources/${resourceId}`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(data),
-  });
-  if (!response.ok) {
-    throw new Error("Failed to update resource");
-  }
-  return response.json();
+  const response = await apiClient.put(
+    `${API_BASE_URL}/resources/${resourceId}`,
+    data,
+    {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  return response.data;
 };
 
 export const submitAttendance = async (
@@ -264,25 +246,18 @@ export const submitAttendance = async (
   },
   token: string
 ) => {
-  const res = await fetch(`${API_BASE_URL}/attendance`, {
-    method: "POST",
+  const res = await apiClient.post(`${API_BASE_URL}/attendance`, payload, {
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify(payload),
   });
-
-  if (!res.ok) {
-    throw new Error("Failed to submit attendance");
-  }
-
-  return await res.json();
+  return res.data;
 };
 
 export const getTeacherTimetable = async (teacherId: string, token: string) => {
   try {
-    const response = await fetch(
+    const response = await apiClient.get(
       `${API_BASE_URL}/timetable/teacher/${teacherId}`,
       {
         headers: {
@@ -290,13 +265,7 @@ export const getTeacherTimetable = async (teacherId: string, token: string) => {
         },
       }
     );
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch timetable");
-    }
-
-    const data = await response.json();
-    return data;
+    return response.data;
   } catch (error) {
     console.error("Error fetching timetable:", error);
     throw error;
@@ -305,7 +274,7 @@ export const getTeacherTimetable = async (teacherId: string, token: string) => {
 
 // Fetch a single course (subject) by its ID
 export const fetchCourseById = async (courseId: string, token: string) => {
-  const res = await axios.get(`${API_BASE_URL}/courses/${courseId}`, {
+  const res = await apiClient.get(`${API_BASE_URL}/courses/${courseId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return res.data.data; // adjust if your API wraps differently
@@ -317,7 +286,7 @@ export const getActiveAssessmentsByTerm = async (
   token: string
 ) => {
   try {
-    const response = await axios.get(
+    const response = await apiClient.get(
       `${API_BASE_URL}/assessments/term/${termId}/active`,
       {
         headers: { Authorization: `Bearer ${token}` },
@@ -338,7 +307,7 @@ export const getClassAttendanceStatus = async (
 ) => {
   try {
     const dateQuery = date ? `?date=${date}` : "";
-    const response = await axios.get(
+    const response = await apiClient.get(
       `${API_BASE_URL}/attendance/class/${classId}/status${dateQuery}`,
       {
         headers: { Authorization: `Bearer ${token}` },
@@ -372,7 +341,7 @@ export const getStudentAttendanceKPIs = async (
       queryString ? `?${queryString}` : ""
     }`;
 
-    const response = await axios.get(url, {
+    const response = await apiClient.get(url, {
       headers: { Authorization: `Bearer ${token}` },
     });
     return response.data;
@@ -388,7 +357,7 @@ export const getTeacherDashboardKPIs = async (
   token: string
 ) => {
   try {
-    const response = await axios.get(
+    const response = await apiClient.get(
       `${API_BASE_URL}/teachers/${teacherId}/dashboard/kpis`,
       {
         headers: { Authorization: `Bearer ${token}` },
@@ -404,7 +373,7 @@ export const getTeacherDashboardKPIs = async (
 // Fetch all teachers dashboard KPIs
 export const getAllTeachersDashboardKPIs = async (token: string) => {
   try {
-    const response = await axios.get(
+    const response = await apiClient.get(
       `${API_BASE_URL}/teachers/dashboard/kpis/all`,
       {
         headers: { Authorization: `Bearer ${token}` },

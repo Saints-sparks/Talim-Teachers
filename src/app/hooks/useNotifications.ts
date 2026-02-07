@@ -1,7 +1,7 @@
-import { useState, useEffect, use } from "react";
-import axios from "axios";
+import { useState, useEffect } from "react";
 import { API_BASE_URL } from "../lib/api/config";
 import { useAuth } from "./useAuth";
+import { apiClient } from "../lib/api/apiClient";
 
 const useNotifications = () => {
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -24,7 +24,7 @@ const useNotifications = () => {
         // **Fetch fresh notifications**
         const token = getAccessToken();
         if (!token) throw new Error("No authentication token found");
-        const response = await axios.get(
+        const response = await apiClient.get(
           `${API_BASE_URL}/notifications/announcements/receiver/${userId}`,
           {
             headers: { Authorization: `Bearer ${token}` },

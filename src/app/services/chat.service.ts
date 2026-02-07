@@ -1,6 +1,6 @@
-import axios from "axios";
 import { API_BASE_URL } from "../lib/api/config";
 import { ChatRoom, ChatMessage, ChatRoomType, SendMessagePayload } from "@/types/chat";
+import { apiClient } from "../lib/api/apiClient";
 
 // Types for chat service
 export interface CreateGroupChatPayload {
@@ -32,7 +32,7 @@ export const createGroupChat = async (
       throw new Error("Authentication token is required");
     }
 
-    const response = await axios.post(
+    const response = await apiClient.post(
       `${API_BASE_URL}/chat/groups`,
       payload,
       {
@@ -70,7 +70,7 @@ export const getChatRooms = async (token: string): Promise<ChatRoom[]> => {
       throw new Error("Authentication token is required");
     }
 
-    const response = await axios.get(
+    const response = await apiClient.get(
       `${API_BASE_URL}/chat/rooms`,
       {
         headers: {
@@ -107,7 +107,7 @@ export const searchChatRooms = async (
     if (searchTerm) params.searchTerm = searchTerm;
     if (type) params.type = type;
 
-    const response = await axios.get(
+    const response = await apiClient.get(
       `${API_BASE_URL}/chat/rooms/search`,
       {
         headers: {
@@ -143,7 +143,7 @@ export const getChatMessages = async (
       throw new Error("Authentication token is required");
     }
 
-    const response = await axios.get(
+    const response = await apiClient.get(
       `${API_BASE_URL}/chat/rooms/${roomId}/messages`,
       {
         headers: {
@@ -180,7 +180,7 @@ export const sendMessage = async (
       throw new Error("Authentication token is required");
     }
 
-    const response = await axios.post(
+    const response = await apiClient.post(
       `${API_BASE_URL}/chat/rooms/${roomId}/messages`,
       { content: message },
       {

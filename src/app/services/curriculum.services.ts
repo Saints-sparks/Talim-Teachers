@@ -1,7 +1,7 @@
 // Fetch curriculum by course and term
 
-import axios from "axios";
 import { API_BASE_URL } from "../lib/api/config";
+import { apiClient } from "../lib/api/apiClient";
 
 // Cache for curricula to prevent excessive API calls
 let curriculaCache: {
@@ -16,7 +16,7 @@ let currentRequest: Promise<any> | null = null; // Prevent duplicate requests
 // Create a new curriculum
 export const createCurriculum = async (curriculumData: any, token: string) => {
   try {
-    const response = await axios.post(
+    const response = await apiClient.post(
       `${API_BASE_URL}/curriculum`,
       curriculumData,
       {
@@ -62,7 +62,7 @@ export const getCurricula = async (
     }
 
     // Make the request and cache it
-    currentRequest = axios
+    currentRequest = apiClient
       .get(`${API_BASE_URL}/curriculum`, {
         params: filters,
         headers: { Authorization: `Bearer ${token}` },
@@ -105,7 +105,7 @@ export const clearCurriculaCache = () => {
 // Fetch a curriculum by its ID
 export const getCurriculumById = async (id: string, token: string) => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/curriculum/${id}`, {
+    const response = await apiClient.get(`${API_BASE_URL}/curriculum/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     return response.data;
@@ -125,7 +125,7 @@ export const updateCurriculum = async (
   token: string
 ) => {
   try {
-    const response = await axios.patch(
+    const response = await apiClient.patch(
       `${API_BASE_URL}/curriculum/${id}`,
       updatedData,
       {
@@ -152,7 +152,7 @@ export const getCurriculumByCourse = async (
   token: string
 ) => {
   try {
-    const response = await axios.get(
+    const response = await apiClient.get(
       `${API_BASE_URL}/curriculum/course/${courseId}`,
       {
         headers: { Authorization: `Bearer ${token}` },
@@ -174,7 +174,7 @@ export const getCurriculumByCourse = async (
 // Delete a curriculum by its ID
 export const deleteCurriculum = async (id: string, token: string) => {
   try {
-    const response = await axios.delete(`${API_BASE_URL}/curriculum/${id}`, {
+    const response = await apiClient.delete(`${API_BASE_URL}/curriculum/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -201,7 +201,7 @@ export const getCurriculumByCourseAndTerm = async ({
   token: string;
 }) => {
   try {
-    const response = await axios.post(
+    const response = await apiClient.post(
       `${API_BASE_URL}/curriculum/by-course-term`,
       { courseId, termId },
       { headers: { Authorization: `Bearer ${token}` } }
