@@ -16,6 +16,12 @@ interface Course {
   title: string;
   courseCode: string;
   description: string;
+  timetable?: Array<{
+    day?: string;
+    startTime?: string;
+    endTime?: string;
+    time?: string;
+  }>;
   // …any other fields your API returns
 }
 
@@ -75,6 +81,7 @@ const SubjectGrid: React.FC = () => {
         title: course.title,
         courseCode: course.courseCode,
         description: course.description,
+        timetable: course.timetable || [],
       }));
 
       console.log("Teachers courses:", teachersCourses);

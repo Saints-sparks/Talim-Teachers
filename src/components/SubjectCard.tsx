@@ -1,6 +1,5 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { BookOpen, Code, GraduationCap, ChevronRight } from "lucide-react";
 import { useCurriculum } from "@/app/hooks/useCurriculum";
 import { getCurriculumByCourseAndTerm } from "@/app/services/curriculum.services";
 import { useAuth } from "@/app/hooks/useAuth";
@@ -8,13 +7,18 @@ import { useState } from "react";
 import CurriculumActionModal from "./curriculum/CurriculumActionModal";
 import { toast } from "react-hot-toast";
 import { getCurrentTerm } from "@/app/services/api.service";
-import { get } from "http";
 
 interface SubjectCardProps {
   _id: string;
   title: string;
   description?: string;
   courseCode?: string;
+  timetable?: Array<{
+    day?: string;
+    startTime?: string;
+    endTime?: string;
+    time?: string;
+  }>;
 }
 
 const getSubjectIcon = (title: string, courseCode?: string) => {
@@ -66,6 +70,7 @@ const SubjectCard: React.FC<SubjectCardProps> = ({
   title,
   description,
   courseCode,
+  timetable,
 }) => {
   const router = useRouter();
   const { fetchCurriculumByCourse, isLoading } = useCurriculum();
@@ -113,14 +118,14 @@ const SubjectCard: React.FC<SubjectCardProps> = ({
       });
       console.log(
         "[SubjectCard] getCurriculumByCourseAndTerm result:",
-        curriculum
+        curriculum,
       );
       if (!curriculum) {
         toast.error("No curriculum found for this course and term.");
         return;
       }
       router.push(
-        `/curriculum/view?courseId=${_id}&termId=${term._id}&curriculumId=${curriculum._id}`
+        `/curriculum/view?courseId=${_id}&termId=${term._id}&curriculumId=${curriculum._id}`,
       );
     } catch (error) {
       console.error("[SubjectCard] Error in handleView:", error);
@@ -160,14 +165,14 @@ const SubjectCard: React.FC<SubjectCardProps> = ({
       });
       console.log(
         "[SubjectCard] getCurriculumByCourseAndTerm result:",
-        curriculum
+        curriculum,
       );
       if (!curriculum) {
         toast.error("No curriculum found for this course and term.");
         return;
       }
       router.push(
-        `/curriculum?courseId=${_id}&termId=${term._id}&mode=edit&curriculumId=${curriculum._id}`
+        `/curriculum?courseId=${_id}&termId=${term._id}&mode=edit&curriculumId=${curriculum._id}`,
       );
     } catch (error) {
       console.error("[SubjectCard] Error in handleEdit:", error);
@@ -182,6 +187,19 @@ const SubjectCard: React.FC<SubjectCardProps> = ({
   const handleViewDetails = (e: React.MouseEvent) => {
     e.stopPropagation();
     setShowActionModal(true);
+  };
+
+  const getTimetableLabel = () => {
+    if (!timetable || timetable.length === 0) return "Schedule not set";
+    const first = timetable[0] || {};
+    const timeRange =
+      first.time ||
+      [first.startTime, first.endTime].filter(Boolean).join(" - ");
+    const label = [first.day, timeRange].filter(Boolean).join(" ");
+    if (timetable.length > 1) {
+      return `${label} +${timetable.length - 1} more`;
+    }
+    return label || "Schedule not set";
   };
 
   // Dummy avatars for demonstration
@@ -228,7 +246,6 @@ const SubjectCard: React.FC<SubjectCardProps> = ({
             </div>
           </div>
           <div>
-            
             <p className="text-[14px] text-[#4D4D4D]">
               {description ||
                 "English Language, you will be learning on grammar, essay writing and comprehension"}
@@ -249,10 +266,7 @@ const SubjectCard: React.FC<SubjectCardProps> = ({
                   d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                 />
               </svg>
-              Wed 08:00AM - 10:00AM
-            </span>
-            <span className="bg-gray-100 text-gray-700 text-xs rounded px-3 py-1">
-              Course
+              {getTimetableLabel()}
             </span>
           </div>
           <div className="flex gap-3 mt-4">
