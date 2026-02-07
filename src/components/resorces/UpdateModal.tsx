@@ -81,7 +81,7 @@ export function UpdateModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px] text-black">
+      <DialogContent className="sm:max-w-[425px] text-black max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Update Resource</DialogTitle>
         </DialogHeader>
@@ -114,21 +114,32 @@ export function UpdateModal({
           {/* Non-editable Fields */}
           <div className="grid gap-2">
             <Label>Term</Label>
-            <p>{resource.termId}</p>
+            <p className="text-sm text-[#6F6F6F] break-all">
+              {resource.termId}
+            </p>
           </div>
           <div className="grid gap-2">
             <Label>Upload Date</Label>
-            <p>{new Date(resource.uploadDate).toLocaleDateString()}</p>
+            <p className="text-sm text-[#6F6F6F]">
+              {new Date(resource.uploadDate).toLocaleDateString()}
+            </p>
           </div>
           <div className="grid gap-2">
             <Label>Image</Label>
-            <p>{resource.image}</p>
+            <p className="text-sm text-[#6F6F6F] break-all">
+              {resource.image}
+            </p>
           </div>
           <div className="grid gap-2">
             <Label>Files</Label>
-            <ul>
+            <ul className="space-y-1 text-sm text-[#6F6F6F]">
               {resource.files.map((file: string, index: number) => (
-                <li key={index}>{file}</li>
+                <li
+                  key={index}
+                  className="break-all bg-[#F8F8F8] border border-[#F0F0F0] rounded-md px-2 py-1"
+                >
+                  {file}
+                </li>
               ))}
             </ul>
           </div>
