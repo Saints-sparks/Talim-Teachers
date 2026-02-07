@@ -113,7 +113,7 @@ export interface WebSocketContextType {
   joinChatRoom: (roomId: string) => void;
   leaveChatRoom: (roomId: string) => void;
   sendChatMessage: (
-    message: Omit<ChatMessage, "_id" | "senderId" | "timestamp" | "readBy">
+    message: Omit<ChatMessage, "_id" | "senderId" | "timestamp" | "readBy">,
   ) => void;
   markMessageAsRead: (messageId: string) => void;
   fetchChatRooms: () => void;
@@ -127,16 +127,16 @@ export interface WebSocketContextType {
   // Event listeners
   onChatMessage: (callback: (message: ChatMessage) => void) => () => void;
   onNotification: (
-    callback: (notification: NotificationData) => void
+    callback: (notification: NotificationData) => void,
   ) => () => void;
   onChatRoomHistory: (
-    callback: (data: { roomId: string; messages: any[] }) => void
+    callback: (data: { roomId: string; messages: any[] }) => void,
   ) => () => void;
   onChatRoomsUpdate: (
-    callback: (data: ChatRoomsUpdateData) => void
+    callback: (data: ChatRoomsUpdateData) => void,
   ) => () => void;
   onChatRoomJoined: (
-    callback: (data: ChatRoomJoinedData) => void
+    callback: (data: ChatRoomJoinedData) => void,
   ) => () => void;
   onMessagesUpdate: (callback: (data: FetchMessagesData) => void) => () => void;
 
@@ -213,9 +213,9 @@ export const useWebSocket = (): WebSocketContextType => {
       socket.on("connect_error", (error) => {
         setIsConnected(false);
         setConnectionStatus("error");
-        
+
         connectionFailureCountRef.current += 1;
-        
+
         // Only show toast for first few failures to avoid spam
         if (connectionFailureCountRef.current <= maxToastFailures) {
           toast.error("Failed to connect to real-time services");
@@ -235,10 +235,17 @@ export const useWebSocket = (): WebSocketContextType => {
           }
 
           // Attempt to reconnect after a delay, but limit attempts
-          if (userIdRef.current && reason !== "io server disconnect" && reconnectAttemptsRef.current < maxReconnectAttempts) {
+          if (
+            userIdRef.current &&
+            reason !== "io server disconnect" &&
+            reconnectAttemptsRef.current < maxReconnectAttempts
+          ) {
             reconnectAttemptsRef.current += 1;
-            const delay = Math.min(3000 * Math.pow(2, reconnectAttemptsRef.current - 1), 30000); // Exponential backoff, max 30 seconds
-            
+            const delay = Math.min(
+              3000 * Math.pow(2, reconnectAttemptsRef.current - 1),
+              30000,
+            ); // Exponential backoff, max 30 seconds
+
             reconnectTimeoutRef.current = setTimeout(() => {
               reconnect();
             }, delay);
@@ -293,7 +300,7 @@ export const useWebSocket = (): WebSocketContextType => {
     setIsConnected(false);
     setConnectionStatus("disconnected");
     userIdRef.current = null;
-    
+
     // Reset counters on manual disconnect
     reconnectAttemptsRef.current = 0;
     connectionFailureCountRef.current = 0;
@@ -326,7 +333,7 @@ export const useWebSocket = (): WebSocketContextType => {
 
   const sendChatMessage = useCallback(
     (
-      message: Omit<ChatMessage, "_id" | "senderId" | "timestamp" | "readBy">
+      message: Omit<ChatMessage, "_id" | "senderId" | "timestamp" | "readBy">,
     ) => {
       if (socketRef.current?.connected) {
         socketRef.current.emit("send-chat-message", message);
@@ -334,7 +341,7 @@ export const useWebSocket = (): WebSocketContextType => {
         toast.error("Not connected to chat service");
       }
     },
-    []
+    [],
   );
 
   const markMessageAsRead = useCallback((messageId: string) => {
@@ -388,7 +395,7 @@ export const useWebSocket = (): WebSocketContextType => {
         toast.error("Not connected to chat service");
       }
     },
-    []
+    [],
   );
 
   // Event listeners
@@ -401,7 +408,7 @@ export const useWebSocket = (): WebSocketContextType => {
         socketRef.current?.off("chat-message", callback);
       };
     },
-    []
+    [],
   );
 
   const onNotification = useCallback(
@@ -422,7 +429,7 @@ export const useWebSocket = (): WebSocketContextType => {
         socketRef.current?.off("notification", callback);
       };
     },
-    []
+    [],
   );
 
   const onChatRoomHistory = useCallback(
@@ -434,7 +441,7 @@ export const useWebSocket = (): WebSocketContextType => {
         socketRef.current?.off("chat-room-history", callback);
       };
     },
-    []
+    [],
   );
 
   const onChatRoomsUpdate = useCallback(
@@ -451,7 +458,7 @@ export const useWebSocket = (): WebSocketContextType => {
         socketRef.current?.off("chat-rooms-update", callback);
       };
     },
-    []
+    [],
   );
 
   const onChatRoomJoined = useCallback(
@@ -466,7 +473,7 @@ export const useWebSocket = (): WebSocketContextType => {
         socketRef.current?.off("chat-room-joined", callback);
       };
     },
-    []
+    [],
   );
 
   const onMessagesUpdate = useCallback(
@@ -481,7 +488,7 @@ export const useWebSocket = (): WebSocketContextType => {
         socketRef.current?.off("messages-fetched", callback);
       };
     },
-    []
+    [],
   );
 
   // Cleanup on unmount
