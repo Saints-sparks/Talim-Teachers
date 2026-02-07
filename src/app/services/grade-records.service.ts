@@ -593,21 +593,18 @@ export class GradeRecordsApiService {
    */
   async getTerms(token: string) {
     try {
-      const response = await fetch(
+      const response = await apiClient.get(
         `${API_BASE_URL}/academic-year-term/term/school`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          cache: "no-cache", // Prevent browser caching
-        }
+        this.getAuthHeaders(token)
       );
-      if (response.status === 304) {
-        // Handle 304: Return cached data or retry without caching headers
-        console.log("Resource not modified, using cached data or retrying");
-        return null; // Or fetch from local storage if cached
-      }
-      if (!response.ok)
-        throw new Error(`Failed to fetch current term: ${response.status}`);
-      return await response.json();
+      const data = response.data;
+      const terms =
+        data?.terms ||
+        data?.data?.terms ||
+        data?.data ||
+        data ||
+        [];
+      return Array.isArray(terms) ? terms : [];
     } catch (error) {
       console.error("Error fetching current term:", error);
       throw error;

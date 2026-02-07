@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
@@ -22,6 +22,7 @@ import {
   ArrowLeft,
   BarChart3
 } from 'lucide-react';
+import SectionHeader from "@/components/ui/section-header";
 import { Course } from '@/types/types';
 import { Student } from '@/types/grading';
 import { 
@@ -59,6 +60,8 @@ const CourseTeacherView: React.FC = () => {
   
   const [teacherCourses, setTeacherCourses] = useState<Course[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [showCoursePicker, setShowCoursePicker] = useState(true);
+  const [courseSearch, setCourseSearch] = useState('');
   const [selectedTerm, setSelectedTerm] = useState<string>('');
   const [selectedAssessment, setSelectedAssessment] = useState<Assessment | null>(null);
   const [terms, setTerms] = useState<Term[]>([]);
@@ -68,7 +71,7 @@ const CourseTeacherView: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState<'overview' | 'assessment-entry' | 'course-grades'>('overview');
+  const [viewMode, setViewMode] = useState<'assessments' | 'assessment-entry' | 'course-grades'>('assessments');
   const [error, setError] = useState<string | null>(null);
 
   // Load teacher's assigned courses on component mount
@@ -117,11 +120,14 @@ const CourseTeacherView: React.FC = () => {
         setTeacherCourses(courses);
       }
 
-      // Set terms
-      setTerms(allTerms);
+      // Set terms (handle wrapped response shapes)
+      const termsData = Array.isArray(allTerms)
+        ? allTerms
+        : allTerms?.terms || allTerms?.data?.terms || [];
+      setTerms(termsData);
       
       // Set current term as default
-      if (currentTerm) {
+      if (currentTerm?._id) {
         setSelectedTerm(currentTerm._id);
       }
       
@@ -179,14 +185,35 @@ const CourseTeacherView: React.FC = () => {
     setViewMode('assessment-entry');
   };
 
+  const handleTermChange = (termId: string) => {
+    setSelectedTerm(termId);
+    setViewMode('assessments');
+  };
+
   const handleViewCourseGrades = () => {
     setViewMode('course-grades');
   };
 
   const handleBackToOverview = () => {
-    setViewMode('overview');
+    setViewMode('assessments');
     setSelectedAssessment(null);
   };
+
+  const handleCourseSelect = (course: Course) => {
+    setSelectedCourse(course);
+    setShowCoursePicker(false);
+  };
+
+  const filteredCourses = useMemo(() => {
+    const q = courseSearch.toLowerCase().trim();
+    if (!q) return teacherCourses;
+    return teacherCourses.filter((course) => {
+      const title = course.title?.toLowerCase() || "";
+      const code = course.courseCode?.toLowerCase() || "";
+      const className = course.className?.toLowerCase() || "";
+      return title.includes(q) || code.includes(q) || className.includes(q);
+    });
+  }, [teacherCourses, courseSearch]);
 
   const getAssessmentStatusBadge = (status: Assessment['status']) => {
     switch (status) {
@@ -242,75 +269,104 @@ const CourseTeacherView: React.FC = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <BookOpen className="h-6 w-6 text-blue-600" />
-            Course Teacher Dashboard
-          </h2>
-          <p className="text-gray-600 mt-1">Manage assessments and course grades</p>
-        </div>
-        
-        {viewMode !== 'overview' && (
-          <Button
-            variant="outline"
-            onClick={handleBackToOverview}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Overview
-          </Button>
-        )}
-      </div>
-
-      {viewMode === 'overview' && (
-        <>
-          {/* Course Selection */}
-          <Card>
+    <div className="p-5 sm:p-6 space-y-6">
+      <SectionHeader
+        title="Course Grading"
+        subtitle="Pick a course, then manage assessments and grades"
+        icon={<BookOpen className="h-6 w-6 text-[#003366]" />}
+        actions={
+          viewMode === 'assessment-entry' ? (
+            <Button
+              variant="outline"
+              onClick={handleBackToOverview}
+              className="flex items-center gap-2 shadow-none border-[#F0F0F0] text-[#6F6F6F] hover:bg-[#F8FAFF]"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Button>
+          ) : null
+        }
+      />
+      {/* Course Selection */}
+      <Card className="bg-white shadow-none border-[#E6EDF5] rounded-2xl">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <GraduationCap className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-2 text-[#030E18]">
+                <GraduationCap className="h-5 w-5 text-[#003366]" />
                 Select Course
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid gap-4">
-                {teacherCourses.length === 0 ? (
-                  <div className="text-center py-8">
-                    <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600">No courses assigned</p>
-                  </div>
-                ) : (
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {teacherCourses.map(course => (
-                      <Card
-                        key={course._id}
-                        className={`cursor-pointer transition-all hover:shadow-md ${
-                          selectedCourse?._id === course._id 
-                            ? 'ring-2 ring-blue-500 bg-blue-50' 
-                            : 'hover:border-blue-300'
-                        }`}
-                        onClick={() => setSelectedCourse(course)}
+            <CardContent className="space-y-4">
+              {teacherCourses.length === 0 ? (
+                <div className="text-center py-8">
+                  <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600">No courses assigned</p>
+                </div>
+              ) : (
+                <>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <div className="flex items-center bg-white border border-[#F0F0F0] rounded-xl px-3 py-2 w-full sm:w-[320px]">
+                      <Search className="text-[#878787] mr-2" size={18} />
+                      <input
+                        className="border-0 focus:outline-none flex-1 placeholder:text-[#878787] text-sm bg-transparent"
+                        placeholder="Search courses..."
+                        value={courseSearch}
+                        onChange={(e) => setCourseSearch(e.target.value)}
+                      />
+                    </div>
+                    {selectedCourse && (
+                      <Button
+                        variant="outline"
+                        className="border-[#F0F0F0] text-[#6F6F6F] hover:bg-[#F8FAFF]"
+                        onClick={() => setShowCoursePicker((prev) => !prev)}
                       >
-                        <CardContent className="p-4">
-                          <div className="flex items-start gap-3">
-                            <div className="p-2 bg-blue-100 rounded-lg">
-                              <BookOpen className="h-5 w-5 text-blue-600" />
-                            </div>
-                            <div className="flex-1">
-                              <h3 className="font-medium text-gray-900">{course.title}</h3>
-                              <p className="text-sm text-gray-600">{course.courseCode}</p>
-                              <p className="text-xs text-gray-500 mt-1">{course.className}</p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                        {showCoursePicker ? "Hide list" : "Change course"}
+                      </Button>
+                    )}
                   </div>
-                )}
-              </div>
+
+                  {selectedCourse && !showCoursePicker ? (
+                    <div className="rounded-xl border border-[#E6EDF5] bg-[#F8FBFF] p-4 flex items-start gap-3">
+                      <div className="p-2 bg-[#EAF2FB] rounded-lg">
+                        <BookOpen className="h-5 w-5 text-[#003366]" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium text-[#030E18]">
+                          {selectedCourse.title}
+                        </div>
+                        <div className="text-sm text-[#6F6F6F]">
+                          {selectedCourse.courseCode} • {selectedCourse.className}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="max-h-[360px] overflow-auto rounded-xl border border-[#F0F0F0]">
+                      {filteredCourses.map((course) => (
+                        <button
+                          key={course._id}
+                          onClick={() => handleCourseSelect(course)}
+                          className={`w-full text-left px-4 py-3 border-b border-[#F0F0F0] hover:bg-[#F8FAFF] transition ${
+                            selectedCourse?._id === course._id
+                              ? "bg-[#EAF2FB]"
+                              : "bg-white"
+                          }`}
+                        >
+                          <div className="font-medium text-[#030E18]">
+                            {course.title}
+                          </div>
+                          <div className="text-xs text-[#6F6F6F]">
+                            {course.courseCode} • {course.className}
+                          </div>
+                        </button>
+                      ))}
+                      {filteredCourses.length === 0 && (
+                        <div className="p-4 text-sm text-[#6F6F6F]">
+                          No matching courses.
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -320,12 +376,39 @@ const CourseTeacherView: React.FC = () => {
               <TermSelector
                 terms={terms}
                 selectedTerm={selectedTerm}
-                onTermChange={setSelectedTerm}
+                onTermChange={handleTermChange}
                 loading={loading}
               />
 
               {selectedTerm && (
                 <>
+                  <div className="flex items-center gap-2 bg-white border border-[#F0F0F0] rounded-xl p-1 w-fit">
+                    <Button
+                      variant="ghost"
+                      onClick={() => setViewMode("assessments")}
+                      className={`text-sm shadow-none ${
+                        viewMode === "assessments"
+                          ? "bg-[#003366] text-white hover:bg-[#002244]"
+                          : "text-[#6F6F6F] hover:bg-[#F8FAFF]"
+                      }`}
+                    >
+                      Assessments
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={() => setViewMode("course-grades")}
+                      className={`text-sm shadow-none ${
+                        viewMode === "course-grades"
+                          ? "bg-[#003366] text-white hover:bg-[#002244]"
+                          : "text-[#6F6F6F] hover:bg-[#F8FAFF]"
+                      }`}
+                    >
+                      Course Grades
+                    </Button>
+                  </div>
+
+                  {viewMode === "assessments" && (
+                    <>
                   {/* Quick Actions */}
                   <div className="grid md:grid-cols-2 gap-4">
                     <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={handleViewCourseGrades}>
@@ -417,15 +500,17 @@ const CourseTeacherView: React.FC = () => {
                       )}
                     </CardContent>
                   </Card>
+                    </>
+                  )}
                 </>
               )}
             </>
           )}
-        </>
-      )}
+   
+   
 
       {/* Assessment Grade Entry */}
-      {viewMode === 'assessment-entry' && selectedAssessment && selectedCourse && (
+      {viewMode === 'assessment-entry' && selectedAssessment && selectedCourse && selectedTerm && (
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -457,7 +542,7 @@ const CourseTeacherView: React.FC = () => {
       )}
 
       {/* Course Grades Overview */}
-      {viewMode === 'course-grades' && selectedCourse && (
+      {viewMode === 'course-grades' && selectedCourse && selectedTerm && (
         <div className="space-y-6">
           <Card>
             <CardHeader>

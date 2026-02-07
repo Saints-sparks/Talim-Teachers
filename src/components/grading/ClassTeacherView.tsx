@@ -26,7 +26,7 @@ import {
 import { useAuth } from '@/app/hooks/useAuth';
 import { useAppContext } from '@/app/context/AppContext';
 import { gradeRecordsApi } from '@/app/services/grade-records.service';
-import TermSelector from './shared/TermSelector';
+import SectionHeader from "@/components/ui/section-header";
 import StudentGradeSummary from './class/StudentGradeSummary';
 import type { 
   StudentCumulativeTermGradeRecord,
@@ -259,68 +259,82 @@ const ClassTeacherView: React.FC = () => {
   };
 
   return (
-    <div className="p-6">
-      {/* Header */}
-      {viewMode !== 'overview' && (
-        <div className="mb-6">
-          <Button
-            variant="outline"
-            onClick={handleBackToOverview}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Class Overview
-          </Button>
-        </div>
-      )}
+    <div className="p-5 sm:p-6 space-y-6">
+      <SectionHeader
+        title="Class Grading"
+        subtitle="Review student performance by class and term"
+        icon={<Users className="h-6 w-6 text-[#003366]" />}
+        actions={
+          viewMode !== "overview" ? (
+            <Button
+              variant="outline"
+              onClick={handleBackToOverview}
+              className="flex items-center gap-2 shadow-none border-[#F0F0F0] text-[#6F6F6F] hover:bg-[#F8FAFF]"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Button>
+          ) : null
+        }
+      />
 
       {/* Class Selection */}
       {viewMode === 'overview' && (
         <>
-          <div className="mb-6">
-            <Card className="border-2 border-purple-100">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-purple-600 flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Select Class
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                {contextLoading ? (
-                  <div className="text-center py-4">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-500 mx-auto mb-2"></div>
-                    <p className="text-sm text-gray-600">Loading classes...</p>
-                  </div>
-                ) : (
-                  <select 
-                    className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    value={selectedClass}
-                    onChange={(e) => setSelectedClass(e.target.value)}
+          <Card className="bg-white shadow-none border-[#E6EDF5] rounded-2xl">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-[#003366] flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Class & Term
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-[#6F6F6F] mb-2">
+                    Class
+                  </label>
+                  {contextLoading ? (
+                    <div className="text-sm text-[#6F6F6F]">Loading classes...</div>
+                  ) : (
+                    <select
+                      className="w-full p-3 border border-[#F0F0F0] rounded-lg focus:ring-2 focus:ring-[#003366] focus:border-transparent"
+                      value={selectedClass}
+                      onChange={(e) => setSelectedClass(e.target.value)}
+                    >
+                      <option value="">Choose a class...</option>
+                      {classes.map((cls) => (
+                        <option key={cls._id} value={cls._id}>
+                          {cls.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-[#6F6F6F] mb-2">
+                    Term
+                  </label>
+                  <select
+                    className="w-full p-3 border border-[#F0F0F0] rounded-lg focus:ring-2 focus:ring-[#003366] focus:border-transparent"
+                    value={selectedTerm}
+                    onChange={(e) => setSelectedTerm(e.target.value)}
+                    disabled={!selectedClass || terms.length === 0}
                   >
-                    <option value="">Choose a class...</option>
-                    {classes.map(cls => (
-                      <option key={cls._id} value={cls._id}>
-                        {cls.name}
+                    <option value="">Choose a term...</option>
+                    {terms.map((term) => (
+                      <option key={term._id} value={term._id}>
+                        {term.name}
                       </option>
                     ))}
                   </select>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {selectedClass && (
             <>
-              {/* Term Selection */}
-              <div className="mb-6">
-                <TermSelector
-                  terms={terms}
-                  selectedTerm={selectedTerm}
-                  onTermChange={setSelectedTerm}
-                  loading={loading}
-                />
-              </div>
-
               {selectedTerm && (
                 <>
                   {/* View Mode Toggle */}

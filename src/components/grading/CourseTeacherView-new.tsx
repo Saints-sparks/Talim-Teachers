@@ -340,7 +340,7 @@ const CourseTeacherView: React.FC = () => {
 
   if (initialLoading) {
     return (
-      <div className="p-6">
+      <div className="p-5 sm:p-6">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
           <p className="text-[#6F6F6F]">Loading course data...</p>
@@ -351,8 +351,8 @@ const CourseTeacherView: React.FC = () => {
 
   if (error) {
     return (
-      <div className="p-6">
-        <Card className="bg-white shadow-none border-[#F0F0F0]">
+      <div className="p-5 sm:p-6">
+        <Card className="bg-white shadow-none border-[#E6EDF5] rounded-2xl">
           <CardContent className="p-6">
             <div className="text-center">
               <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
@@ -362,7 +362,7 @@ const CourseTeacherView: React.FC = () => {
               <p className="text-[#6F6F6F] mb-4">{error}</p>
               <Button
                 onClick={loadInitialData}
-                className="bg-blue-600 hover:bg-blue-700 text-white shadow-none"
+                className="bg-[#003366] hover:bg-[#002244] text-white shadow-none"
               >
                 Try Again
               </Button>
@@ -374,7 +374,7 @@ const CourseTeacherView: React.FC = () => {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-5 sm:p-6 space-y-6">
       <SectionHeader
         title="Course Grading"
         subtitle="Manage assessments and course grades"
@@ -412,7 +412,7 @@ const CourseTeacherView: React.FC = () => {
       {viewMode === "overview" && (
         <div className="space-y-6">
           {/* Course Selection */}
-          <Card className="bg-white shadow-none border-[#F0F0F0]">
+          <Card className="bg-white shadow-none border-[#E6EDF5] rounded-2xl">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-[#030E18] font-medium">
                 <GraduationCap className="h-5 w-5" />
@@ -427,21 +427,21 @@ const CourseTeacherView: React.FC = () => {
                     <p className="text-[#6F6F6F]">No courses assigned</p>
                   </div>
                 ) : (
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {teacherCourses.map((course) => (
                       <Card
                         key={course._id}
                         className={`cursor-pointer transition-all shadow-none ${
                           selectedCourse?._id === course._id
-                            ? "ring-2 ring-blue-500 bg-blue-50 border-blue-200"
-                            : "border-[#F0F0F0] hover:border-blue-300"
+                            ? "ring-2 ring-[#003366] bg-[#EAF2FB] border-[#D7E6F6]"
+                            : "border-[#F0F0F0] hover:border-[#CFE0F2]"
                         }`}
                         onClick={() => setSelectedCourse(course)}
                       >
                         <CardContent className="p-4">
                           <div className="flex items-start gap-3">
-                            <div className="p-2 bg-blue-50 rounded-lg">
-                              <BookOpen className="h-5 w-5 text-blue-600" />
+                            <div className="p-2 bg-[#EAF2FB] rounded-lg">
+                              <BookOpen className="h-5 w-5 text-[#003366]" />
                             </div>
                             <div className="flex-1">
                               <h3 className="font-medium text-[#030E18]">
@@ -467,7 +467,7 @@ const CourseTeacherView: React.FC = () => {
           {selectedCourse && (
             <div className="space-y-6">
               {/* Term Selection */}
-              <Card className="bg-white shadow-none border-[#F0F0F0]">
+              <Card className="bg-white shadow-none border-[#E6EDF5] rounded-2xl">
                 <CardHeader>
                   <CardTitle className="text-[#030E18]">
                     Academic Term
@@ -482,7 +482,7 @@ const CourseTeacherView: React.FC = () => {
                     <select
                       value={selectedTerm}
                       onChange={(e) => setSelectedTerm(e.target.value)}
-                      className="w-full px-3 py-2 border border-[#F0F0F0] rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-[#F0F0F0] rounded-md focus:outline-none focus:ring-2 focus:ring-[#003366]"
                       disabled={loading}
                     >
                       <option value="">Select a term...</option>

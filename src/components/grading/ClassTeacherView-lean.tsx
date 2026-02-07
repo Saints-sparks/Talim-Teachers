@@ -433,14 +433,14 @@ const ClassTeacherView: React.FC = () => {
 
   if (error) {
     return (
-      <div className="p-6">
-        <Card className="bg-white shadow-none border-[#F0F0F0]">
+      <div className="p-5 sm:p-6">
+        <Card className="bg-white shadow-none border-[#E6EDF5] rounded-2xl">
           <CardContent className="pt-6">
             <div className="text-center text-red-600">
               <p>{error}</p>
               <Button
                 onClick={loadInitialData}
-                className="mt-4 bg-blue-600 hover:bg-blue-700 text-white shadow-none"
+                className="mt-4 bg-[#003366] hover:bg-[#002244] text-white shadow-none"
               >
                 Try Again
               </Button>
@@ -452,7 +452,7 @@ const ClassTeacherView: React.FC = () => {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-5 sm:p-6 space-y-6">
       <SectionHeader
         title="Class Grading"
         subtitle="Manage cumulative grades and class performance"
@@ -472,7 +472,7 @@ const ClassTeacherView: React.FC = () => {
       />
 
       {/* Class Selection */}
-      <Card className="bg-white shadow-none border-[#F0F0F0] mb-6">
+      <Card className="bg-white shadow-none border-[#E6EDF5] rounded-2xl">
         <CardContent className="pt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -482,7 +482,7 @@ const ClassTeacherView: React.FC = () => {
               <select
                 value={selectedClass}
                 onChange={(e) => setSelectedClass(e.target.value)}
-                className="w-full px-3 py-2 border border-[#F0F0F0] rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-[#F0F0F0] rounded-md focus:outline-none focus:ring-2 focus:ring-[#003366]"
               >
                 <option value="">Choose a class</option>
                 {classes?.map((cls) => (
@@ -500,7 +500,7 @@ const ClassTeacherView: React.FC = () => {
               <select
                 value={selectedTerm}
                 onChange={(e) => setSelectedTerm(e.target.value)}
-                className="w-full px-3 py-2 border border-[#F0F0F0] rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-[#F0F0F0] rounded-md focus:outline-none focus:ring-2 focus:ring-[#003366]"
               >
                 <option value="">Choose a term</option>
                 {terms.map((term) => (

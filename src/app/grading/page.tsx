@@ -13,8 +13,8 @@ import {
   RefreshCw,
 } from "lucide-react";
 import SectionHeader from "@/components/ui/section-header";
-import CourseTeacherView from "@/components/grading/CourseTeacherView-new";
-import ClassTeacherView from "@/components/grading/ClassTeacherView-lean";
+import CourseTeacherView from "@/components/grading/CourseTeacherView";
+import ClassTeacherView from "@/components/grading/ClassTeacherView";
 import { gradeRecordsApi } from "@/app/services/grade-records.service";
 import { useAuth } from "@/app/hooks/useAuth";
 
