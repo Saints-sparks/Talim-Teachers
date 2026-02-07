@@ -1,16 +1,11 @@
 "use client";
 
 import React, { useEffect, useMemo, useState, useCallback } from "react";
-import {
-  Users,
-  GraduationCap,
-  RefreshCw,
-  Download,
-  Search,
-} from "lucide-react";
+import { Users, RefreshCw, Download, Search, ChevronLeft } from "lucide-react";
 import { Button } from "../ui/button";
 import LoadingCard from "../LoadingCard";
 import StudentCard from "./StudentCard";
+import SectionHeader from "@/components/ui/section-header";
 
 interface ClassStudentsProps {
   selectedClass: any;
@@ -20,6 +15,7 @@ interface ClassStudentsProps {
   searchQuery: string;
   setSearchQuery: (q: string) => void;
   onRetry: () => void;
+  onBack: () => void;
 }
 
 const formatName = (student: any) => {
@@ -36,6 +32,7 @@ const ClassStudents: React.FC<ClassStudentsProps> = ({
   searchQuery,
   setSearchQuery,
   onRetry,
+  onBack,
 }) => {
   // Local search state to provide snappy UI and debounced sync with parent
   const [localSearch, setLocalSearch] = useState(searchQuery || "");
@@ -67,6 +64,7 @@ const ClassStudents: React.FC<ClassStudentsProps> = ({
 
   const totalStudents = students.length;
   const capacity = selectedClass?.classCapacity ?? 0;
+  const available = Math.max(capacity - totalStudents, 0);
 
   const handleExportCSV = useCallback(() => {
     if (!students || students.length === 0) return;
@@ -94,112 +92,76 @@ const ClassStudents: React.FC<ClassStudentsProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Top header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="rounded-lg bg-gradient-to-br from-[#E6F0FA] to-white p-3 flex items-center justify-center">
-            <Users className="w-7 h-7 text-[#003366]" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-semibold text-[#030E18]">
-              {selectedClass?.name || "Class"} Students
-            </h1>
-            <p className="text-sm text-[#6F6F6F]">
-              Manage and browse students in this class
-            </p>
-          </div>
-        </div>
+      <SectionHeader
+        title={`${selectedClass?.name || "Class"} Students`}
+        subtitle={
+          selectedClass?.classDescription ||
+          "Manage and browse students in this class"
+        }
+        icon={<Users className="w-6 h-6 text-[#003366]" />}
+        
+        actions={
+          <>
+            <Button
+              onClick={onBack}
+              variant="ghost"
+              className="border border-[#F0F0F0] hover:bg-[#F8FAFF]"
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              All Classes
+            </Button>
+            <Button
+              onClick={onRetry}
+              variant="outline"
+              className="hidden sm:flex items-center gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Refresh
+            </Button>
+            <Button
+              onClick={handleExportCSV}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Export
+            </Button>
+          </>
+        }
+      />
 
-        <div className="flex items-center gap-2">
-          <div className="hidden sm:flex items-center gap-4 bg-white border border-[#F0F0F0] rounded-lg px-4 py-2">
-            <div className="text-sm text-[#6F6F6F]">
-              <div className="text-xs">Total</div>
-              <div className="font-semibold text-[#030E18]">
-                {totalStudents}
-              </div>
-            </div>
-            <div className="text-sm text-[#6F6F6F]">
-              <div className="text-xs">Capacity</div>
-              <div className="font-semibold text-[#030E18]">{capacity}</div>
-            </div>
-            <div className="text-sm text-[#6F6F6F]">
-              <div className="text-xs">Available</div>
-              <div className="font-semibold text-[#030E18]">
-                {Math.max(capacity - totalStudents, 0)}
-              </div>
-            </div>
-          </div>
-
-          <Button
-            onClick={onRetry}
-            variant="ghost"
-            className="hidden sm:flex items-center gap-2 border border-[#F0F0F0] hover:bg-[#F8FAFF]"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Refresh
-          </Button>
-
-          <Button
-            onClick={handleExportCSV}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            <Download className="w-4 h-4" />
-            Export
-          </Button>
-        </div>
-      </div>
-
-      {/* Info Card */}
-      <div className="bg-white border border-[#F0F0F0] rounded-xl p-4">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="p-2 bg-[#F8FAFF] rounded-lg">
-              <GraduationCap className="w-5 h-5 text-[#003366]" />
-            </div>
-            <div>
-              <h3 className="text-base font-medium text-[#030E18]">
-                {selectedClass?.name}
-              </h3>
-              <p className="text-sm text-[#6F6F6F]">
-                {selectedClass?.classDescription ||
-                  "Class details and description"}
-              </p>
+      <div className="bg-white border border-[#F0F0F0] rounded-xl p-3">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div className="flex-1">
+            <label className="sr-only">Search students</label>
+            <div className="flex items-center border border-[#F0F0F0] rounded-lg bg-white px-3 py-2">
+              <Search className="w-4 h-4 text-[#878787]" />
+              <input
+                value={localSearch}
+                onChange={(e) => setLocalSearch(e.target.value)}
+                placeholder="Search by name, admission no or email"
+                className="ml-3 w-full text-sm bg-transparent focus:outline-none"
+              />
+              {localSearch && (
+                <button
+                  onClick={() => setLocalSearch("")}
+                  className="text-sm text-[#6F6F6F] ml-2"
+                  aria-label="Clear search"
+                >
+                  Clear
+                </button>
+              )}
             </div>
           </div>
 
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            <div className="flex-1 md:flex-none">
-              <label className="sr-only">Search students</label>
-              <div className="flex items-center border border-[#F0F0F0] rounded-lg bg-white px-3 py-2">
-                <Search className="w-4 h-4 text-[#878787]" />
-                <input
-                  value={localSearch}
-                  onChange={(e) => setLocalSearch(e.target.value)}
-                  placeholder="Search by name, admission no or email"
-                  className="ml-3 w-full text-sm bg-transparent focus:outline-none"
-                />
-                {localSearch && (
-                  <button
-                    onClick={() => setLocalSearch("")}
-                    className="text-sm text-[#6F6F6F] ml-2"
-                    aria-label="Clear search"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className="hidden md:flex items-center gap-2">
-              <Button
-                onClick={() => setLocalSearch("")}
-                variant="ghost"
-                className="border border-[#F0F0F0] hover:bg-[#F8FAFF]"
-              >
-                Reset
-              </Button>
-            </div>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => setLocalSearch("")}
+              variant="ghost"
+              className="border border-[#F0F0F0] hover:bg-[#F8FAFF]"
+            >
+              Reset
+            </Button>
           </div>
         </div>
       </div>

@@ -4,10 +4,7 @@ import ClassList from "./ClassList";
 import ClassStudents from "./ClassStudents";
 import { useAuth } from "../../app/hooks/useAuth";
 import { getStudentsByClass } from "../../app/services/api.service";
-import { Button } from "../ui/button";
 import { useAppContext } from "@/app/context/AppContext";
-import ClassCard from "@/components/ClassCard";
-import LoadingCard from "../LoadingCard";
 
 const StudentGrid: React.FC = () => {
   const {
@@ -77,6 +74,7 @@ const StudentGrid: React.FC = () => {
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           onRetry={() => handleClassSelect(selectedClass)}
+          onBack={handleBackToClasses}
         />
       )}
     </div>

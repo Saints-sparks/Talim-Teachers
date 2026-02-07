@@ -3,6 +3,7 @@ import ClassCard from "@/components/ClassCard";
 import { Button } from "../ui/button";
 import { GraduationCap } from "lucide-react";
 import LoadingCard from "../LoadingCard";
+import SectionHeader from "@/components/ui/section-header";
 
 interface ClassListProps {
   classes: any[];
@@ -19,16 +20,20 @@ const ClassList: React.FC<ClassListProps> = ({
 }) => {
   return (
     <div className="space-y-6">
-      {/* Talim-style header */}
-      <div className="flex items-center gap-3 mb-2">
-        <GraduationCap className="w-7 h-7 text-[#003366]" />
-        <div>
-          <h1 className="text-xl font-bold text-[#030E18]">My Classes</h1>
-          <p className="text-[#6F6F6F] text-sm">
-            View all the classes you teach
-          </p>
-        </div>
-      </div>
+      <SectionHeader
+        title="My Classes"
+        subtitle="Classes you teach, all in one place"
+        icon={<GraduationCap className="w-6 h-6 text-[#003366]" />}
+        actions={
+          <Button
+            variant="outline"
+            onClick={refreshClasses}
+            className="border-[#F0F0F0] text-[#030E18] hover:bg-[#F0F0F0]"
+          >
+            Refresh
+          </Button>
+        }
+      />
       {/* Classes grid or states */}
       {contextLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
