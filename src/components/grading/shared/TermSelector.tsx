@@ -65,7 +65,12 @@ const TermSelector: React.FC<TermSelectorProps> = ({
             <option value="">Select a term...</option>
             {safeTerms.map(term => (
               <option key={term._id} value={term._id}>
-                {term.name} ({formatDate(term.startDate)} - {formatDate(term.endDate)})
+                {(term.name && term.name.trim().length > 0
+                  ? term.name
+                  : `${formatDate(term.startDate)} - ${formatDate(term.endDate)}`)}
+                {term.name && term.name.trim().length > 0
+                  ? ` (${formatDate(term.startDate)} - ${formatDate(term.endDate)})`
+                  : ""}
                 {term.isActive ? ' • Active' : ''}
               </option>
             ))}
@@ -82,7 +87,11 @@ const TermSelector: React.FC<TermSelectorProps> = ({
         <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
           <div className="flex items-center gap-2 text-sm text-blue-700">
             <Calendar className="h-4 w-4" />
-            <span className="font-medium">{selectedTermData.name}</span>
+            <span className="font-medium">
+              {selectedTermData.name && selectedTermData.name.trim().length > 0
+                ? selectedTermData.name
+                : "Term"}
+            </span>
             <span className="text-blue-600">
               {formatDate(selectedTermData.startDate)} - {formatDate(selectedTermData.endDate)}
             </span>

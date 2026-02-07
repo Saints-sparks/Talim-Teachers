@@ -16,6 +16,7 @@ import {
 } from "@/types/grade-records";
 
 export class GradeRecordsApiService {
+  private termsCache: any[] | null = null;
   /**
    * Get grader records for a student in a term
    * Protected endpoint: /grade-records/course-grade-records/student/:studentId/term/:termId
@@ -597,6 +598,9 @@ export class GradeRecordsApiService {
         `${API_BASE_URL}/academic-year-term/term/school`,
         this.getAuthHeaders(token)
       );
+      if (response.status === 304 && this.termsCache) {
+        return this.termsCache;
+      }
       const data = response.data;
       const terms =
         data?.terms ||
@@ -604,9 +608,12 @@ export class GradeRecordsApiService {
         data?.data ||
         data ||
         [];
-      return Array.isArray(terms) ? terms : [];
+      const normalized = Array.isArray(terms) ? terms : [];
+      this.termsCache = normalized;
+      return normalized;
     } catch (error) {
       console.error("Error fetching current term:", error);
+      if (this.termsCache) return this.termsCache;
       throw error;
     }
   }

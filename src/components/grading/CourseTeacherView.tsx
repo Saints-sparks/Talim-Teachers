@@ -97,11 +97,11 @@ const CourseTeacherView: React.FC = () => {
       if (!token) throw new Error("No auth token");
 
       // Load teacher courses and terms in parallel
-      const [teacherData, currentTerm, allTerms] = await Promise.all([
+      const [teacherData, currentTerm, allTerms] = (await Promise.all([
         fetchTeacherDetails(user.userId, token),
         getCurrentTerm(token),
-        gradeRecordsApi.getTerms(token)
-      ]);
+        gradeRecordsApi.getTerms(token),
+      ])) as [any, any, any[]];
 
       // Set courses
       if (teacherData.assignedCourses && Array.isArray(teacherData.assignedCourses)) {
@@ -121,9 +121,7 @@ const CourseTeacherView: React.FC = () => {
       }
 
       // Set terms (handle wrapped response shapes)
-      const termsData = Array.isArray(allTerms)
-        ? allTerms
-        : allTerms?.terms || allTerms?.data?.terms || [];
+      const termsData = Array.isArray(allTerms) ? allTerms : [];
       setTerms(termsData);
       
       // Set current term as default
