@@ -10,6 +10,7 @@ type AppContextType = {
   refreshClasses: () => Promise<void>;
   isLoading: boolean;
   courses: any[];
+  updateUser: (updates: Record<string, any>) => void;
 };
 
 const AppContext = createContext<AppContextType>({
@@ -19,6 +20,7 @@ const AppContext = createContext<AppContextType>({
   refreshClasses: async () => {},
   isLoading: false,
   courses: [],
+  updateUser: () => {},
 });
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -38,6 +40,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       setUser(storedUser);
     }
   }, []);
+
+  const updateUser = (updates: Record<string, any>) => {
+    setUser((prev: any) => {
+      const next = { ...(prev || {}), ...updates };
+      if (typeof window !== "undefined") {
+        localStorage.setItem("user", JSON.stringify(next));
+        window.dispatchEvent(new Event("user-updated"));
+      }
+      return next;
+    });
+  };
 
   const fetchTeacherAndClasses = async () => {
     if (!user || isLoading) return; // Prevent duplicate calls if already loading
@@ -95,6 +108,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         refreshClasses: fetchTeacherAndClasses,
         isLoading,
         courses,
+        updateUser,
       }}
     >
       {children}

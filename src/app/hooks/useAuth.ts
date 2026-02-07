@@ -65,6 +65,31 @@ export const useAuth = (): UseAuthReturn => {
     checkAuth();
   }, []);
 
+  useEffect(() => {
+    const syncUser = () => {
+      const userData = getUser();
+      const token = getAccessToken();
+      if (token && userData) {
+        setIsAuthenticated(true);
+        setUser(userData);
+      } else {
+        setIsAuthenticated(false);
+        setUser(null);
+      }
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === "user") syncUser();
+    };
+
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener("user-updated", syncUser as EventListener);
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("user-updated", syncUser as EventListener);
+    };
+  }, []);
+
   const login = async (credentials: LoginCredentials) => {
     // Clear old auth cookies before setting new ones
     nookies.destroy(undefined, "access_token", { path: "/" });

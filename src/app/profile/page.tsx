@@ -33,7 +33,7 @@ const tabs = [
 ];
 
 export default function Profile() {
-  const { user } = useAppContext();
+  const { user, updateUser } = useAppContext();
   const { getAccessToken } = useAuth(); // Get logged-in teacher's info
   const [teacher, setTeacher] = useState<Teacher | null>(null);
   const [loading, setLoading] = useState(true);
@@ -92,11 +92,14 @@ export default function Profile() {
         body: JSON.stringify({ avatarUrl }),
       });
       if (!apiRes.ok) throw new Error("Failed to update avatar");
-      // Optionally: reload or update user context
+      updateUser({ userAvatar: avatarUrl });
     } catch (err: any) {
       setErrorMsg(err.message || "Upload failed");
     } finally {
       setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
