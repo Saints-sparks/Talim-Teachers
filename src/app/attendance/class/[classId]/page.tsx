@@ -391,70 +391,78 @@ const AttendanceClassPage: React.FC = () => {
       <div className="min-h-screen bg-[#F8F8F8]">
         <div className="p-3 sm:p-6">
           {/* Header */}
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6 sm:mb-8">
-            <div className="flex items-start gap-3">
-              <button
-                onClick={() => router.push("/attendance")}
-                className="mt-0.5 flex items-center justify-center w-9 h-9 rounded-full text-[#6F6F6F] hover:bg-[#F0F0F0] hover:text-[#030E18] transition-all duration-200"
-              >
-                <ArrowLeft size={16} />
-              </button>
-              <div className="min-w-0">
-                <h1 className="text-xl sm:text-2xl font-semibold text-[#030E18] truncate">
-                  {selectedClass?.name || "Attendance"}
-                </h1>
-                <p className="text-sm text-[#6F6F6F] leading-tight mt-1">
-                  {viewMode === "mark-attendance"
-                    ? "Mark attendance for today"
-                    : "View attendance analytics"}
-                </p>
+          <div className="bg-white border border-[#E6EDF5] rounded-2xl p-4 sm:p-5 mb-6 sm:mb-8">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <button
+                  onClick={() => router.push("/attendance")}
+                  className="mt-0.5 flex items-center justify-center w-9 h-9 rounded-full text-[#6F6F6F] hover:bg-[#F0F0F0] hover:text-[#030E18] transition-all duration-200"
+                  aria-label="Back to classes"
+                >
+                  <ArrowLeft size={16} />
+                </button>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h1 className="text-xl sm:text-2xl font-semibold text-[#030E18] truncate">
+                      {selectedClass?.name || "Attendance"}
+                    </h1>
+                    <span className="text-xs text-[#003366] bg-[#EAF2FB] border border-[#D7E6F6] rounded-full px-2 py-1">
+                      {viewMode === "mark-attendance" ? "Marking" : "Viewing"}
+                    </span>
+                  </div>
+                  <p className="text-sm text-[#6F6F6F] leading-tight mt-1">
+                    {viewMode === "mark-attendance"
+                      ? "Mark attendance for today"
+                      : "View attendance analytics"}
+                  </p>
+                </div>
               </div>
-            </div>
 
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
-              <div className="flex items-center bg-white border border-[#F0F0F0] rounded-xl px-3 py-2 w-full md:w-[260px]">
-                <Search className="text-[#878787] mr-2" size={18} />
-                <Input
-                  className="border-0 focus-visible:ring-0 focus:outline-none flex-1 placeholder:text-[#878787] shadow-none text-sm"
-                  placeholder="Search students..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant={viewMode === "mark-attendance" ? "default" : "outline"}
-                  className={
-                    viewMode === "mark-attendance"
-                      ? "bg-[#003366] text-white hover:bg-[#002244]"
-                      : "border-[#F0F0F0]"
-                  }
-                  onClick={() => setViewMode("mark-attendance")}
-                >
-                  Mark
-                </Button>
-                <Button
-                  variant={viewMode === "view-attendance" ? "default" : "outline"}
-                  className={
-                    viewMode === "view-attendance"
-                      ? "bg-[#003366] text-white hover:bg-[#002244]"
-                      : "border-[#F0F0F0]"
-                  }
-                  onClick={() => setViewMode("view-attendance")}
-                >
-                  View
-                </Button>
-                {viewMode === "mark-attendance" && (
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+                <div className="flex items-center bg-white border border-[#F0F0F0] rounded-xl px-3 py-2 w-full sm:w-[260px]">
+                  <Search className="text-[#878787] mr-2" size={18} />
+                  <Input
+                    className="border-0 focus-visible:ring-0 focus:outline-none flex-1 placeholder:text-[#878787] shadow-none text-sm"
+                    placeholder="Search students..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
                   <Button
-                    variant="outline"
-                    className="border-[#F0F0F0]"
-                    onClick={handleRefreshAttendance}
-                    disabled={loadingStudents}
+                    variant={viewMode === "mark-attendance" ? "default" : "outline"}
+                    className={
+                      viewMode === "mark-attendance"
+                        ? "bg-[#003366] text-white hover:bg-[#002244]"
+                        : "border-[#F0F0F0]"
+                    }
+                    onClick={() => setViewMode("mark-attendance")}
                   >
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Refresh
+                    Mark
                   </Button>
-                )}
+                  <Button
+                    variant={viewMode === "view-attendance" ? "default" : "outline"}
+                    className={
+                      viewMode === "view-attendance"
+                        ? "bg-[#003366] text-white hover:bg-[#002244]"
+                        : "border-[#F0F0F0]"
+                    }
+                    onClick={() => setViewMode("view-attendance")}
+                  >
+                    View
+                  </Button>
+                  {viewMode === "mark-attendance" && (
+                    <Button
+                      variant="outline"
+                      className="border-[#F0F0F0]"
+                      onClick={handleRefreshAttendance}
+                      disabled={loadingStudents}
+                    >
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Refresh
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
