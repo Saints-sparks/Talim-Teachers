@@ -76,6 +76,20 @@ export function ResourcesTable({
     }).format(date);
   };
   const { getAccessToken } = useAuth(); // Get logged-in teacher's info
+  const getResourceUrl = (resource: Resource) => {
+    if (resource.files && resource.files.length > 0) return resource.files[0];
+    if (resource.image) return resource.image;
+    return "";
+  };
+
+  const handleView = (resource: Resource) => {
+    const url = getResourceUrl(resource);
+    if (!url) {
+      alert("No file available for this resource.");
+      return;
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
   const handleDelete = async (id: string) => {
     if (!getAccessToken()) {
       alert("Authentication required.");
@@ -132,7 +146,9 @@ export function ResourcesTable({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>View</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleView(resource)}>
+                          View
+                        </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => {
                             setSelectedResource(resource);
@@ -198,17 +214,26 @@ export function ResourcesTable({
               </div>
             </div>
             <div className="mt-4 flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="p-1"
-                onClick={() => {
-                  setSelectedResource(resource);
-                  setEditModalOpen(true);
-                }}
-              >
-                <Info size={16} />
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="p-1">
+                    <Info size={16} />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleView(resource)}>
+                    View
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setSelectedResource(resource);
+                      setEditModalOpen(true);
+                    }}
+                  >
+                    Edit
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button
                 variant="ghost"
                 size="sm"
