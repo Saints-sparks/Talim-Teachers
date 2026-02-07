@@ -505,13 +505,7 @@ const AttendancePage: React.FC = () => {
 
           {/* Content */}
           <div className="space-y-4 sm:space-y-6">
-            {/* Debug Info - Remove in production */}
-            {process.env.NODE_ENV === "development" && (
-              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
-                Debug: viewMode={viewMode}, actionModalOpen={actionModalOpen},
-                selectedClass={selectedClass?.name}
-              </div>
-            )}
+         
 
             {viewMode === "classes" && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
