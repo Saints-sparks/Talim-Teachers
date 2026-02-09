@@ -302,6 +302,20 @@ export default function GroupChat({
       const id = senderData._id || senderData.userId || senderData.id || "";
       return { name, id };
     } else if (typeof senderId === "string") {
+      // Handle "Stringified Object" case directly first
+      if (senderId.trim().startsWith("{") && senderId.includes("firstName")) {
+         // It's a stringified object, try to extract name via regex
+         const firstNameMatch = senderId.match(/firstName:\s*'([^']+)'/);
+         const lastNameMatch = senderId.match(/lastName:\s*'([^']+)'/);
+         const idMatch = senderId.match(/_id:\s*new\s*ObjectId\('([^']+)'\)/) || senderId.match(/_id:\s*'([^']+)'/);
+         
+         if (firstNameMatch) {
+             const fName = firstNameMatch[1];
+             const lName = lastNameMatch ? lastNameMatch[1] : '';
+             return { name: `${fName} ${lName}`.trim(), id: idMatch ? idMatch[1] : '' };
+         }
+      }
+
       // Handle string sender ID - try to get name from senderName parameter or participants
       let name = "Unknown";
 

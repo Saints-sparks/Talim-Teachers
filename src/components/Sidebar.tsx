@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation"; // Correct hook for Next.js 13 Ap
 import { ChevronLeft } from "lucide-react";
 import { useAuth } from "@/app/hooks/useAuth";
 import { useAppContext } from "@/app/context/AppContext";
+import { useChat } from "@/app/context/ChatContext";
 
 // Type for Menu Item
 type MenuItem = {
@@ -47,6 +48,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const { logout } = useAuth();
   const pathname = usePathname(); // usePathname is the correct hook for App Router
   const { user } = useAppContext();
+  const { chatRooms } = useChat();
+
+  const totalUnread = chatRooms.reduce((acc, room) => acc + (room.unreadCount || 0), 0);
 
   if (!user) {
     return null; // or return <Spinner/> or some placeholder
@@ -105,6 +109,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           <ul>
             {menuItems.map((item) => {
               const isActive = pathname === item.link; // Check if the current pathname matches the link
+              const notificationCount = item.label === "Messages" && totalUnread > 0 ? totalUnread : item.notification;
 
               return (
                 <li key={item.label} className="mb-4">
@@ -125,11 +130,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                       <span className="font-manrope text-base ml-3 font-medium">
                         {item.label}
                       </span>
-                      {item.notification && (
+                      {notificationCount ? (
                         <span className="ml-auto bg-blue-900 text-white text-sm w-5 h-5 flex items-center justify-center rounded-full">
-                          {item.notification}
+                          {notificationCount}
                         </span>
-                      )}
+                      ) : null}
                     </div>
                   </Link>
                 </li>
