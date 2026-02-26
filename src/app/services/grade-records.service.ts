@@ -630,6 +630,33 @@ export class GradeRecordsApiService {
     }
   }
 
+  /**
+   * Get all student cumulative records for a class and term
+   * Uses endpoint: GET /grade-records/student-cumulative-term-grade-records/class/:classId/term/:termId
+   */
+  async getStudentCumulativeByClass(
+    classId: string,
+    termId: string,
+    token: string,
+  ): Promise<any[]> {
+    try {
+      const response = await apiClient.get(
+        `${API_BASE_URL}/grade-records/student-cumulative-term-grade-records/class/${classId}/term/${termId}`,
+        this.getAuthHeaders(token),
+      );
+      return response.data || [];
+    } catch (error: any) {
+      console.error("Error fetching student cumulative records by class:", error);
+      if (error.response?.status === 404) {
+        return [];
+      }
+      throw new Error(
+        error.response?.data?.message ||
+          "Failed to fetch student cumulative records by class",
+      );
+    }
+  }
+
   // ===============================
   // CLASS CUMULATIVE GRADE RECORDS
   // ===============================

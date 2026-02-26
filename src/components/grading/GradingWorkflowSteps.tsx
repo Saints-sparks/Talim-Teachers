@@ -34,8 +34,27 @@ interface GradingWorkflowStepProps {
 
 /**
  * Complete Grading Workflow Component
- * Guides teachers through the 4-step grading process:
- * 1. Assessment Scores → 2. Course Grades → 3. Student Term Grades → 4. Class Reports
+ * 
+ * Follows the exact 4-step grading process with correct API endpoints:
+ * 
+ * Step 1: Record Assessment Scores 📝
+ *   - POST /grade-records (individual) ✅
+ *   - POST /grade-records/bulk (multiple students) ✅
+ * 
+ * Step 2: Generate Course Grades 📊
+ *   - POST /grade-records/course-grade-record (aggregates assessment grades) ✅
+ * 
+ * Step 3: Generate Student Term Summaries 👤
+ *   - POST /grade-records/student-cumulative-term-grade-records/calculate/:studentId/:termId ✅
+ *   - GET /grade-records/student-cumulative-term-grade-records/class/:classId/term/:termId (progress tracking) ✅
+ * 
+ * Step 4: Generate Class Reports 📈
+ *   - POST /grade-records/class-cumulative-term-grade-records/calculate/:classId/:termId ✅
+ * 
+ * Supporting endpoints used:
+ *   - GET /teachers/:id/courses (for teacher's courses) ✅
+ *   - GET /students/by-class/:classId (for class students) ✅
+ *   - GET /grade-records/assessment/:assessmentId/course/:courseId (for existing grades) ✅
  */
 const GradingWorkflowSteps: React.FC<GradingWorkflowStepProps> = ({
   course,
@@ -133,23 +152,34 @@ const GradingWorkflowSteps: React.FC<GradingWorkflowStepProps> = ({
     try {
       setLoading((prev) => ({ ...prev, assessments: true }));
 
-      // Load assessments for this term
+      // Load assessments for this term using GET /assessments/term/:termId
       const assessments = await gradeRecordsApi.getAssessmentsForTerm(
         termId,
         token,
       );
 
-      // Load existing grades if any
+      // Load existing course grades using GET /grade-records/course-grade-records/course/:courseId/term/:termId
       const courseGrades = await gradeRecordsApi.getCourseGrades(
         course._id,
         termId,
         token,
       );
 
+      // Load class-level progress using GET /grade-records/kpis/class/:classId
+      let classKpis = null;
+      if (course.classId) {
+        try {
+          classKpis = await gradeRecordsApi.getClassKpis(course.classId, token);
+        } catch (error) {
+          console.log("Class KPIs not available yet");
+        }
+      }
+
       setStepData((prev) => ({
         ...prev,
         assessments,
         courseGrades,
+        classReport: classKpis,
       }));
 
       // Calculate progress for each step
@@ -166,34 +196,68 @@ const GradingWorkflowSteps: React.FC<GradingWorkflowStepProps> = ({
     if (!token) return;
 
     try {
-      // Get students count
+      // Get students using the correct endpoint: GET /students/by-class/:classId
       const students = await gradeRecordsApi.getStudentsForCourse(
-        course._id,
+        course.classId,
         token,
       );
       const totalStudents = students.length;
 
-      // Calculate assessment grading progress
-      const assessmentGrades =
-        await gradeRecordsApi.getAssessmentGradesByCourse(course._id, token);
+      // Step 1: Assessment grading progress using GET /grade-records/course/:courseId
+      const assessmentGrades = await gradeRecordsApi.getAssessmentGradesByCourse(
+        course._id,
+        token,
+      );
 
       const assessmentsCount = stepData.assessments.length;
       const expectedGrades = totalStudents * assessmentsCount;
       const actualGrades = assessmentGrades.length;
-      const step1Progress =
-        expectedGrades > 0 ? (actualGrades / expectedGrades) * 100 : 0;
+      const step1Progress = expectedGrades > 0 ? (actualGrades / expectedGrades) * 100 : 0;
 
-      // Calculate course grades progress
-      const step2Progress =
-        totalStudents > 0
-          ? (stepData.courseGrades.length / totalStudents) * 100
-          : 0;
+      // Step 2: Course grades progress using GET /grade-records/course-grade-records/course/:courseId/term/:termId
+      const courseGrades = await gradeRecordsApi.getCourseGrades(
+        course._id,
+        termId,
+        token,
+      );
+      const step2Progress = totalStudents > 0 ? (courseGrades.length / totalStudents) * 100 : 0;
+
+      // Step 3: Student term summaries progress using GET /grade-records/student-cumulative-term-grade-records/class/:classId/term/:termId
+      let step3Progress = 0;
+      if (course.classId && totalStudents > 0) {
+        try {
+          const studentTermSummaries = await gradeRecordsApi.getStudentCumulativeByClass(
+            course.classId,
+            termId,
+            token,
+          );
+          step3Progress = (studentTermSummaries.length / totalStudents) * 100;
+        } catch (error) {
+          // Student term summaries haven't been generated yet
+          step3Progress = 0;
+        }
+      }
+
+      // Step 4: Class report progress using GET /grade-records/class-cumulative-term-grade-records/:classId/:termId
+      let step4Progress = 0;
+      if (course.classId) {
+        try {
+          const classReport = await gradeRecordsApi.getClassCumulative(
+            course.classId,
+            termId,
+            token,
+          );
+          step4Progress = classReport ? 100 : 0;
+        } catch (error) {
+          step4Progress = 0;
+        }
+      }
 
       setProgress({
         step1: Math.min(step1Progress, 100),
         step2: Math.min(step2Progress, 100),
-        step3: 0, // Will be calculated when implementing student term grades
-        step4: 0, // Will be calculated when implementing class reports
+        step3: Math.min(step3Progress, 100),
+        step4: Math.min(step4Progress, 100),
       });
     } catch (error) {
       console.error("Error calculating progress:", error);
@@ -214,24 +278,44 @@ const GradingWorkflowSteps: React.FC<GradingWorkflowStepProps> = ({
           break;
 
         case 2:
-          // Auto-generate course grades for all students
+          // Step 2: Generate Course Grades using POST /grade-records/course-grade-record
           const students = await gradeRecordsApi.getStudentsForCourse(
-            course._id,
+            course.classId,
             token,
           );
 
           for (const student of students) {
             try {
-              await gradeRecordsApi.autoCalculateCourseGrade(
-                student._id,
+              // Get all assessment grades for this student in this course
+              const assessmentGrades = await gradeRecordsApi.getAssessmentGradesByCourse(
                 course._id,
-                termId,
                 token,
-                course.classId,
               );
+              
+              // Filter to get this student's grades only
+              const studentAssessmentGrades = assessmentGrades.filter((grade: any) => {
+                const gradeStudentId = typeof grade.studentId === 'object' 
+                  ? grade.studentId._id 
+                  : grade.studentId;
+                return gradeStudentId === student._id;
+              });
+
+              if (studentAssessmentGrades.length > 0) {
+                // Create/update course grade using the correct endpoint
+                await gradeRecordsApi.createCourseGrade(
+                  {
+                    courseId: course._id,
+                    studentId: student._id,
+                    termId: termId,
+                    schoolId: course.schoolId || "", // Add required schoolId
+                    classId: course.classId,
+                  },
+                  token,
+                );
+              }
             } catch (error) {
               console.error(
-                `Failed to calculate course grade for student ${student._id}:`,
+                `Failed to generate course grade for student ${student._id}:`,
                 error,
               );
             }
@@ -254,15 +338,16 @@ const GradingWorkflowSteps: React.FC<GradingWorkflowStepProps> = ({
           break;
 
         case 3:
-          // Auto-calculate student cumulative grades (for class teachers)
+          // Step 3: Generate Student Term Summaries using POST /grade-records/student-cumulative-term-grade-records/calculate/:studentId/:termId
           if (course.classId) {
             const students = await gradeRecordsApi.getStudentsForCourse(
-              course._id,
+              course.classId,
               token,
             );
 
             for (const student of students) {
               try {
+                // Use the correct auto-calculate endpoint for student term summaries
                 await gradeRecordsApi.autoCalculateStudentCumulative(
                   student._id,
                   termId,
@@ -270,7 +355,7 @@ const GradingWorkflowSteps: React.FC<GradingWorkflowStepProps> = ({
                 );
               } catch (error) {
                 console.error(
-                  `Failed to calculate student cumulative for ${student._id}:`,
+                  `Failed to generate student term summary for ${student._id}:`,
                   error,
                 );
               }
@@ -281,7 +366,7 @@ const GradingWorkflowSteps: React.FC<GradingWorkflowStepProps> = ({
           break;
 
         case 4:
-          // Auto-calculate class cumulative report
+          // Step 4: Generate Class Reports using POST /grade-records/class-cumulative-term-grade-records/calculate/:classId/:termId
           if (course.classId) {
             await gradeRecordsApi.autoCalculateClassCumulative(
               course.classId,
