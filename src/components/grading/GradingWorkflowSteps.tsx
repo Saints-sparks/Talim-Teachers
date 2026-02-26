@@ -826,9 +826,19 @@ const AssessmentGradingModal: React.FC<{
 
         {/* Students List */}
         <div className="space-y-3">
-          <h3 className="font-medium text-gray-700">
-            Students ({students.length})
-          </h3>
+          <div className="flex items-center justify-between">
+            <h3 className="font-medium text-gray-700">
+              Students ({students.length})
+            </h3>
+            <div className="flex gap-4 text-sm">
+              <span className="text-green-600 font-medium">
+                Graded: {existingGrades.length}
+              </span>
+              <span className="text-gray-600">
+                Remaining: {students.length - existingGrades.length}
+              </span>
+            </div>
+          </div>
 
           {students.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
@@ -839,25 +849,36 @@ const AssessmentGradingModal: React.FC<{
             <div className="grid gap-3">
               {students.map((student) => {
                 const existingGrade = existingGrades.find(
-                  (grade) => grade.studentId === student._id,
+                  (grade) => grade.studentId._id === student._id,
                 );
 
                 return (
                   <div
                     key={student._id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
+                    className={`flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 ${
+                      existingGrade ? "bg-green-50 border-green-200" : ""
+                    }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                        <User className="h-5 w-5 text-blue-600" />
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                        existingGrade ? "bg-green-100" : "bg-blue-100"
+                      }`}>
+                        {existingGrade ? (
+                          <CheckCircle className="h-5 w-5 text-green-600" />
+                        ) : (
+                          <User className="h-5 w-5 text-blue-600" />
+                        )}
                       </div>
                       <div>
                         <h4 className="font-medium">
-                          {student.firstName} {student.lastName}
+                          {student.userId.firstName} {student.userId.lastName}
                         </h4>
                         <p className="text-sm text-gray-600">
-                          ID: {student.studentId || student._id}
+                          ID: {student.userId.email}
                         </p>
+                        {existingGrade && (
+                          <Badge text="Graded" color="green" className="mt-1" />
+                        )}
                       </div>
                     </div>
 
@@ -957,7 +978,7 @@ const StudentGradeEntryModal: React.FC<{
           {/* Student Info */}
           <div className="bg-gray-50 p-3 rounded-lg">
             <div className="font-medium">
-              {student.firstName} {student.lastName}
+              {student.userId.firstName} {student.userId.lastName}
             </div>
             <div className="text-sm text-gray-600">
               {assessment.name} - {course.title}
