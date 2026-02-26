@@ -26,9 +26,18 @@ import ClassTeacherView from "@/components/grading/ClassTeacherView";
 import { gradeRecordsApi } from "@/app/services/grade-records.service";
 import { useAuth } from "@/app/hooks/useAuth";
 import { useAppContext } from "@/app/context/AppContext";
+import { getTeacherCourses, getCurrentTerm } from "@/app/services/api.service";
 import { Course } from "@/types/types";
 import { Student } from "@/types/grading";
 import { BulkGradeResult } from "@/types/grade-records";
+
+interface Term {
+  _id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  isActive?: boolean;
+}
 
 type TeacherRole = "course" | "class";
 type ViewMode =
@@ -50,6 +59,10 @@ const ImprovedGradingPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("dashboard");
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [selectedTermId, setSelectedTermId] = useState<string>("");
+  const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
+  const [availableTerms, setAvailableTerms] = useState<Term[]>([]);
+  const [coursesLoading, setCoursesLoading] = useState(false);
+  const [termsLoading, setTermsLoading] = useState(false);
   const [kpiData, setKpiData] = useState<KpiData>({
     totalAssessments: 0,
     studentsGraded: 0,
@@ -113,9 +126,60 @@ const ImprovedGradingPage: React.FC = () => {
     }
   };
 
+  const fetchAvailableCourses = async () => {
+    if (!user?._id) return;
+
+    setCoursesLoading(true);
+    try {
+      const token = getAccessToken();
+      if (!token) throw new Error("No authentication token");
+
+      const courses = await getTeacherCourses(user._id, token);
+      setAvailableCourses(courses);
+
+      // Auto-select first course if available and none selected
+      if (courses.length > 0 && !selectedCourse) {
+        setSelectedCourse(courses[0]);
+      }
+    } catch (err: any) {
+      console.error("Error fetching courses:", err);
+      setError(err?.message ?? "Failed to fetch courses");
+    } finally {
+      setCoursesLoading(false);
+    }
+  };
+
+  const fetchAvailableTerms = async () => {
+    setTermsLoading(true);
+    try {
+      const token = getAccessToken();
+      if (!token) throw new Error("No authentication token");
+
+      const currentTerm = await getCurrentTerm(token);
+      // For now, we'll use the current term. In a full implementation,
+      // you might want to fetch all available terms
+      if (currentTerm) {
+        setAvailableTerms([currentTerm]);
+        if (!selectedTermId) {
+          setSelectedTermId(currentTerm._id);
+        }
+      }
+    } catch (err: any) {
+      console.error("Error fetching terms:", err);
+      setError(err?.message ?? "Failed to fetch terms");
+    } finally {
+      setTermsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchKpis();
   }, [activeRole, selectedCourse]);
+
+  useEffect(() => {
+    fetchAvailableCourses();
+    fetchAvailableTerms();
+  }, [user]);
 
   const handleBulkGradingStart = (
     assessmentId: string,
@@ -152,9 +216,116 @@ const ImprovedGradingPage: React.FC = () => {
             }}
           />
         ) : (
-          <div className="text-center py-8 text-gray-500">
-            <Workflow className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Select a course and term to start the grading workflow</p>
+          <div className="space-y-6">
+            <div className="text-center py-8">
+              <Workflow className="h-12 w-12 mx-auto mb-4 text-blue-500" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Start Grading Workflow
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Select a course and term to begin the 4-step grading process
+              </p>
+            </div>
+
+            {/* Course and Term Selection */}
+            <Card className="max-w-2xl mx-auto">
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  {/* Course Selection */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Select Course
+                    </label>
+                    {coursesLoading ? (
+                      <div className="flex items-center space-x-2 p-3 border rounded-lg bg-gray-50">
+                        <RefreshCw className="h-4 w-4 animate-spin text-gray-500" />
+                        <span className="text-sm text-gray-500">
+                          Loading courses...
+                        </span>
+                      </div>
+                    ) : availableCourses.length > 0 ? (
+                      <select
+                        value={selectedCourse?._id || ""}
+                        onChange={(e) => {
+                          const course = availableCourses.find(
+                            (c) => c._id === e.target.value,
+                          );
+                          setSelectedCourse(course || null);
+                        }}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Choose a course...</option>
+                        {availableCourses.map((course) => (
+                          <option key={course._id} value={course._id}>
+                            {course.title} ({course.courseCode}) -{" "}
+                            {course.className || course.classId}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="p-3 border border-gray-300 rounded-lg bg-gray-50">
+                        <p className="text-sm text-gray-500">
+                          No courses available
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Term Selection */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Select Term
+                    </label>
+                    {termsLoading ? (
+                      <div className="flex items-center space-x-2 p-3 border rounded-lg bg-gray-50">
+                        <RefreshCw className="h-4 w-4 animate-spin text-gray-500" />
+                        <span className="text-sm text-gray-500">
+                          Loading terms...
+                        </span>
+                      </div>
+                    ) : availableTerms.length > 0 ? (
+                      <select
+                        value={selectedTermId}
+                        onChange={(e) => setSelectedTermId(e.target.value)}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Choose a term...</option>
+                        {availableTerms.map((term) => (
+                          <option key={term._id} value={term._id}>
+                            {term.name} (
+                            {new Date(term.startDate).toLocaleDateString()} -{" "}
+                            {new Date(term.endDate).toLocaleDateString()})
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="p-3 border border-gray-300 rounded-lg bg-gray-50">
+                        <p className="text-sm text-gray-500">
+                          No terms available
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Start Workflow Button */}
+                  {selectedCourse && selectedTermId && (
+                    <div className="pt-4">
+                      <Button
+                        onClick={() => {
+                          // The workflow will now render since we have both selections
+                          // This is just a visual confirmation
+                        }}
+                        className="w-full bg-blue-600 hover:bg-blue-700"
+                        size="lg"
+                      >
+                        <Workflow className="h-5 w-5 mr-2" />
+                        Start Grading Workflow
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         );
 
