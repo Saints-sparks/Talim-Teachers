@@ -30,7 +30,7 @@ const menuItems: MenuItem[] = [
   {
     label: "Grading",
     iconPath: "/icons/results.svg",
-    link: "/grading",
+    link: "/grading-improved",
   },
   {
     label: "Messages",
@@ -50,7 +50,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const { user } = useAppContext();
   const { chatRooms } = useChat();
 
-  const totalUnread = chatRooms.reduce((acc, room) => acc + (room.unreadCount || 0), 0);
+  const totalUnread = chatRooms.reduce(
+    (acc, room) => acc + (room.unreadCount || 0),
+    0,
+  );
 
   if (!user) {
     return null; // or return <Spinner/> or some placeholder
@@ -109,7 +112,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           <ul>
             {menuItems.map((item) => {
               const isActive = pathname === item.link; // Check if the current pathname matches the link
-              const notificationCount = item.label === "Messages" && totalUnread > 0 ? totalUnread : item.notification;
+              const notificationCount =
+                item.label === "Messages" && totalUnread > 0
+                  ? totalUnread
+                  : item.notification;
 
               return (
                 <li key={item.label} className="mb-4">
