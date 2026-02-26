@@ -67,7 +67,7 @@ const SubjectDetailPage: React.FC = () => {
   // Function to handle saving and show the popup
   const handleSave = () => {
     // Simulate saving process
-    console.log("Content saved:", content);
+    
 
     // Show the popup
     setShowSavedPopup(true);

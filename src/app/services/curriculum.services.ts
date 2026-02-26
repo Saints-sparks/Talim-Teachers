@@ -51,13 +51,13 @@ export const getCurricula = async (
       Date.now() - curriculaCache.timestamp < CACHE_DURATION &&
       curriculaCache.filters === filterKey
     ) {
-      console.log("Returning cached curricula data");
+     
       return curriculaCache.data;
     }
 
     // If there's already a request in progress, wait for it
     if (currentRequest) {
-      console.log("Waiting for existing request...");
+     
       return await currentRequest;
     }
 

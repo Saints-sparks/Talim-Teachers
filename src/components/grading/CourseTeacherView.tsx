@@ -159,11 +159,7 @@ const CourseTeacherView: React.FC = () => {
       setStudents(Array.isArray(studentsData) ? studentsData : []);
       setCourseGrades(Array.isArray(courseGradesData) ? courseGradesData : []);
       
-      console.log('Loaded term data:', {
-        assessments: assessmentsData?.length || 0,
-        students: studentsData?.length || 0,
-        courseGrades: courseGradesData?.length || 0
-      });
+    
       
     } catch (error) {
       console.error('Error loading term data:', error);

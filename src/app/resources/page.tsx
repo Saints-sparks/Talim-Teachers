@@ -43,16 +43,16 @@ export default function ResourcePage() {
       const token = getAccessToken();
       if (!token) throw new Error("No token found");
 
-      console.log("Fetching resources for teacher:", user.userId);
+     
 
       const resourceData = await fetchResources(token, user.userId);
-      console.log("Fetched resources:", resourceData);
+
 
       setResources(resourceData);
       setHasLoadedData(true);
     } catch (err) {
       setError("Failed to load data");
-      console.error("Error loading resources:", err);
+     
     } finally {
       setLoading(false);
     }

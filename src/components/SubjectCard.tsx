@@ -80,7 +80,7 @@ const SubjectCard: React.FC<SubjectCardProps> = ({
   const [hasCurriculum, setHasCurriculum] = useState<boolean | null>(null);
   const [curriculumData, setCurriculumData] = useState<any>(null);
 
-  console.log("SubjectCard props:", { _id, title, description, courseCode });
+ 
 
   // Show modal on card click
   // Open the action modal immediately on card click
@@ -90,36 +90,29 @@ const SubjectCard: React.FC<SubjectCardProps> = ({
 
   // Handler for modal actions
   const handleView = async () => {
-    console.log("[SubjectCard] handleView called for courseId:", _id);
+   
     const token = getAccessToken();
     if (!token) {
-      console.log("[SubjectCard] No token found");
+      
       toast.error("You must be logged in to view curriculum.");
       return;
     }
     try {
       const term = await getCurrentTerm(token);
-      console.log("[SubjectCard] getCurrentTerm result:", term);
+     
       if (!term || !term._id) {
-        console.log("[SubjectCard] No current term found");
+       
         toast.error("No current term selected.");
         return;
       }
-      // Log the exact parameters being sent to the API
-      console.log("[SubjectCard] Calling getCurriculumByCourseAndTerm with:", {
-        courseId: _id,
-        termId: term._id,
-        token: token ? "***" : "MISSING",
-      });
+     
+      
       const curriculum = await getCurriculumByCourseAndTerm({
         courseId: _id,
         termId: term._id,
         token,
       });
-      console.log(
-        "[SubjectCard] getCurriculumByCourseAndTerm result:",
-        curriculum,
-      );
+     
       if (!curriculum) {
         toast.error("No curriculum found for this course and term.");
         return;
@@ -128,45 +121,35 @@ const SubjectCard: React.FC<SubjectCardProps> = ({
         `/curriculum/view?courseId=${_id}&termId=${term._id}&curriculumId=${curriculum._id}`,
       );
     } catch (error) {
-      console.error("[SubjectCard] Error in handleView:", error);
+     
       const err = error as any;
-      if (err?.response) {
-        console.error("[SubjectCard] API error response:", err.response);
-      }
+     
       toast.error("Failed to fetch curriculum.");
     }
   };
   const handleEdit = async () => {
-    console.log("[SubjectCard] handleEdit called for courseId:", _id);
+  
     const token = getAccessToken();
     if (!token) {
-      console.log("[SubjectCard] No token found");
+     
       toast.error("You must be logged in to edit curriculum.");
       return;
     }
     try {
       const term = await getCurrentTerm(token);
-      console.log("[SubjectCard] getCurrentTerm result:", term);
+     
       if (!term || !term._id) {
-        console.log("[SubjectCard] No current term found");
+       
         toast.error("No current term selected.");
         return;
       }
-      // Log the exact parameters being sent to the API
-      console.log("[SubjectCard] Calling getCurriculumByCourseAndTerm with:", {
-        courseId: _id,
-        termId: term._id,
-        token: token ? "***" : "MISSING",
-      });
+    
       const curriculum = await getCurriculumByCourseAndTerm({
         courseId: _id,
         termId: term._id,
         token,
       });
-      console.log(
-        "[SubjectCard] getCurriculumByCourseAndTerm result:",
-        curriculum,
-      );
+    
       if (!curriculum) {
         toast.error("No curriculum found for this course and term.");
         return;
@@ -175,19 +158,13 @@ const SubjectCard: React.FC<SubjectCardProps> = ({
         `/curriculum?courseId=${_id}&termId=${term._id}&mode=edit&curriculumId=${curriculum._id}`,
       );
     } catch (error) {
-      console.error("[SubjectCard] Error in handleEdit:", error);
+      
       const err = error as any;
-      if (err?.response) {
-        console.error("[SubjectCard] API error response:", err.response);
-      }
+     
       toast.error("Failed to fetch curriculum for editing.");
     }
   };
 
-  const handleViewDetails = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowActionModal(true);
-  };
 
   const getTimetableLabel = () => {
     if (!timetable || timetable.length === 0) return "Schedule not set";

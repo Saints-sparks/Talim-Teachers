@@ -67,11 +67,11 @@ const SubjectGrid: React.FC = () => {
 
       // 1) Fetch teacher, grab assignedCourses (array of course objects)
       const teacher = await fetchTeacherDetails(user.userId, token);
-      console.log("Fetched teacher details:", teacher);
+     
 
       // Check if assignedCourses exists and is an array
       if (!teacher.assignedCourses || !Array.isArray(teacher.assignedCourses)) {
-        console.log("No assigned courses found");
+       
         setSubjects([]);
         return;
       }
@@ -84,7 +84,7 @@ const SubjectGrid: React.FC = () => {
         timetable: course.timetable || [],
       }));
 
-      console.log("Teachers courses:", teachersCourses);
+     
 
       if (teachersCourses.length === 0) {
         setSubjects([]);
@@ -92,9 +92,9 @@ const SubjectGrid: React.FC = () => {
       }
 
       setSubjects(teachersCourses);
-      // console.log(courses);
+      
     } catch (err: any) {
-      console.error("Failed to load subjects:", err);
+     
       setError(err.message || "Something went wrong");
     } finally {
       setLoading(false);
@@ -105,7 +105,7 @@ const SubjectGrid: React.FC = () => {
     loadSubjects();
   }, [user]);
 
-  console.log("Subjects state:", subjects);
+  
 
   if (loading) {
     return (

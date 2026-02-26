@@ -32,17 +32,10 @@ export const useAuth = (): UseAuthReturn => {
       const token = getAccessToken();
       const userData = getUser();
 
-      console.log("🔍 [Auth] Checking token and userData:", {
-        token,
-        hasToken: !!token,
-        hasUserData: !!userData,
-        userData: userData,
-      });
+    
 
       if (!token) {
-        console.error(
-          "❌ [Auth] Authentication token not available after login!"
-        );
+      
         toast.error(
           "Authentication token not available. Please try logging in again."
         );
@@ -50,15 +43,11 @@ export const useAuth = (): UseAuthReturn => {
       if (token && userData) {
         setIsAuthenticated(true);
         setUser(userData);
-        console.log("🔍 [Auth] Auth state set:", {
-          isAuthenticated: true,
-          userId: userData._id,
-          userObject: userData,
-        });
+       
       } else {
         setIsAuthenticated(false);
         setUser(null);
-        console.log("🔍 [Auth] Auth state cleared - missing token or userData");
+       
       }
     };
 
@@ -99,10 +88,7 @@ export const useAuth = (): UseAuthReturn => {
     try {
       const response = await authService.login(credentials);
 
-      console.log(
-        "🔑 [Login] Setting access_token cookie:",
-        response.access_token
-      );
+     
       nookies.set(undefined, "access_token", response.access_token, {
         maxAge: 30 * 24 * 60 * 60, // 30 days
         path: "/",
@@ -110,10 +96,7 @@ export const useAuth = (): UseAuthReturn => {
         secure: false,
       });
 
-      console.log(
-        "🔑 [Login] Setting refresh_token cookie:",
-        response.refresh_token
-      );
+     
       nookies.set(undefined, "refresh_token", response.refresh_token, {
         maxAge: 30 * 24 * 60 * 60, // 30 days
         path: "/",
@@ -129,9 +112,9 @@ export const useAuth = (): UseAuthReturn => {
 
       // Immediately check if cookies are set
       const cookiesAfterSet = nookies.get(undefined);
-      console.log("🔍 [Login] Cookies after set:", cookiesAfterSet);
+     
       if (!cookiesAfterSet.access_token) {
-        console.error("❌ [Login] access_token cookie not set!");
+        
         toast.error("Login failed: Token not saved.");
         throw new Error("Login failed: Token not saved.");
       }
@@ -149,12 +132,7 @@ export const useAuth = (): UseAuthReturn => {
 
       const userData = introspection.data.user;
 
-      console.log("🔍 [Login] userData from introspection:", userData);
-      console.log("🔍 [Login] User ID fields:", {
-        _id: userData._id,
-        userId: userData.userId,
-        preferredId: userData.userId || userData._id,
-      });
+     
 
       // Store user data in localStorage
       localStorage.setItem("user", JSON.stringify(userData));
@@ -163,12 +141,7 @@ export const useAuth = (): UseAuthReturn => {
       setIsAuthenticated(true);
       setUser(userData);
 
-      console.log("🔍 [Login] Auth state updated:", {
-        isAuthenticated: true,
-        userId: userData._id,
-        userObject: userData,
-      });
-
+    
       toast.success("Login successful!");
 
       // Ensure cookies are set before redirecting
@@ -176,18 +149,18 @@ export const useAuth = (): UseAuthReturn => {
         try {
           router.push("/dashboard");
           if (window.location.pathname !== "/dashboard") {
-            console.log("Fallback to window.location...");
+          
             window.location.href = "/dashboard";
           }
         } catch (navError) {
-          console.error("Navigation error:", navError);
+        
           window.location.href = "/dashboard";
         }
       }, 300); // Slight delay to ensure cookies are set
 
       return response;
     } catch (error) {
-      console.error("Login error:", error);
+     
       const errorMessage =
         error instanceof Error ? error.message : "Login failed";
       toast.error(errorMessage);

@@ -157,7 +157,7 @@ const Timetable: React.FC = () => {
   // Export timetable to PDF/CSV (placeholder)
   const exportTimetable = () => {
     // Implementation for export functionality
-    console.log("Exporting timetable...");
+    return
   };
 
   return (

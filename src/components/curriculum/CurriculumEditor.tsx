@@ -303,14 +303,7 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
   };
 
   const handleSave = async () => {
-    console.log(
-      "Attempting to save with - Term ID:",
-      termId,
-      "Course ID:",
-      courseId,
-      "Attachments:",
-      attachments
-    );
+   
 
     if (!courseId) {
       toast.error("Please select a course");
@@ -348,7 +341,7 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
         attachments,
       };
 
-      console.log("Curriculum data:", curriculumData);
+    
 
       if (editingCurriculumId) {
         // Update existing curriculum

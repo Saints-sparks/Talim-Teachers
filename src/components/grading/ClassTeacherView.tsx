@@ -132,7 +132,7 @@ const ClassTeacherView: React.FC = () => {
       if (!token) throw new Error('No access token');
 
       const termsResponse = await getCurrentTerm(token);
-      console.log('Current term:', termsResponse);
+     
       
       if (!termsResponse) {
         console.error('Failed to load terms');
@@ -194,14 +194,14 @@ const ClassTeacherView: React.FC = () => {
       if (response.ok) {
         const data = await response.json();
         const studentsData = data.students || data || [];
-        console.log('Loaded students:', studentsData);
+        
         setStudents(studentsData);
       } else {
-        console.error('Failed to load students:', response.status);
+       
         setStudents([]);
       }
     } catch (error) {
-      console.error('Error loading students:', error);
+    
       setStudents([]);
     } finally {
       setStudentsLoading(false);

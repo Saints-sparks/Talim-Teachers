@@ -61,7 +61,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       if (!token) return;
 
       const teacherDetails = await fetchTeacherDetails(user.userId, token);
-      console.log("Teacher details fetched:", teacherDetails?.firstName);
+     
 
       setTeacherData(teacherDetails);
 
@@ -70,10 +70,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         teacherDetails?.classTeacherClasses ||
         teacherDetails?.assignedClasses ||
         [];
-      console.log(
-        "Extracted teacher classes count:",
-        teacherClasses?.length || 0
-      );
+     
       setClasses(teacherClasses);
 
       // Extract courses from teacher data - use assignedCourses first, then fallback to classTeacherCourses
@@ -81,10 +78,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         teacherDetails?.assignedCourses ||
         teacherDetails?.classTeacherCourses ||
         [];
-      console.log(
-        "Extracted teacher courses count:",
-        teacherCourses?.length || 0
-      );
+     
       setCourses(teacherCourses);
     } catch (error) {
       console.error("Error fetching teacher data:", error);

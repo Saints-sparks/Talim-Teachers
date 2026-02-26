@@ -65,7 +65,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     (typeof user.schoolId === "object" && user.schoolId?.name) ||
     "Your School";
 
-  console.log("School name:", schoolName);
+  
 
   return (
     <div className=" w-[280px] font-manrope px-4 h-full bg-white pb-4 bg-[#FBFBFB] flex flex-col justify-between border-r overflow-y-auto scrollbar-hide">

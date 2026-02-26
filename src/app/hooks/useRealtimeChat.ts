@@ -221,14 +221,10 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     const unsubscribe = onChatRoomsUpdate((data: ChatRoomsUpdateData) => {
       if (!mountedRef.current) return;
 
-      console.log("📨 Chat rooms data received:", {
-        roomsCount: data?.rooms?.length || 0,
-        firstRoom: data?.rooms?.[0],
-        firstRoomLastMessage: data?.rooms?.[0]?.lastMessage,
-      });
+     
 
       if (!data || !data.rooms || !Array.isArray(data.rooms)) {
-        console.log("⚠️ Invalid chat rooms data format:", data);
+       
         setError("Invalid chat rooms data received");
         setIsLoading(false);
         return;
@@ -236,12 +232,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
 
       const transformedRooms = data.rooms.map(transformChatRoom);
 
-      console.log("📝 Transformed rooms:", {
-        count: transformedRooms.length,
-        firstRoomData: transformedRooms[0],
-        hasLastMessage: !!transformedRooms[0]?.lastMessage,
-      });
-
+     
       // Sort rooms by last message time (newest first)
       transformedRooms.sort((a, b) => {
         const timeA = a.lastMessage?.timestamp
@@ -268,13 +259,6 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     const unsubscribe = onChatMessage((message: ChatMessage) => {
       if (!mountedRef.current) return;
 
-      console.log("📨 Real-time message received:", {
-        roomId: message.roomId,
-        senderId: message.senderId,
-        content: message.content,
-        timestamp: message.timestamp,
-      });
-
       // Show notification for messages not from current user
       if (message.senderId !== (user?.userId || user?._id)) {
         toast.success(`New message from ${message.senderName}`, {
@@ -285,14 +269,11 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
 
       // Update chat rooms to reflect new message
       setChatRooms((prevRooms) => {
-        console.log("🔄 Updating chat rooms with new message...");
+       
 
         const updatedRooms = prevRooms.map((room) => {
           if (room.roomId === message.roomId) {
-            console.log(
-              "✅ Found matching room, updating last message:",
-              room.displayName
-            );
+           
             return {
               ...room,
               lastMessage: {
@@ -324,13 +305,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
           return timeB - timeA;
         });
 
-        console.log(
-          "📝 Chat rooms updated, new order:",
-          sortedRooms.map((r) => ({
-            name: r.displayName,
-            lastMsg: r.lastMessage?.content,
-          }))
-        );
+      
         return sortedRooms;
       });
     });
@@ -340,7 +315,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
 
   // Chat room operations
   const refreshChatRooms = useCallback(() => {
-    console.log("🔄 Manual refresh triggered");
+    
     if (isConnected) {
       setIsLoading(true);
       fetchChatRooms();

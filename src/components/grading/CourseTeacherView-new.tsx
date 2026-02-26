@@ -141,7 +141,7 @@ const CourseTeacherView: React.FC = () => {
       const token = getAccessToken();
       if (!token) throw new Error("No auth token");
 
-      console.log("Loading initial data for user:", user.userId);
+      
 
       // Load teacher courses and terms in parallel
       const [teacherData, currentTerm] = await Promise.all([
@@ -149,8 +149,6 @@ const CourseTeacherView: React.FC = () => {
         getCurrentTerm(token),
       ]);
 
-      console.log("Teacher data:", teacherData);
-      console.log("Current term:", currentTerm);
 
       // Set courses
       if (
@@ -170,7 +168,7 @@ const CourseTeacherView: React.FC = () => {
           className: course.class?.name || course.className,
         }));
         setTeacherCourses(courses);
-        console.log("Set courses:", courses);
+       
       }
 
       // Set terms - handle both single term and array responses
@@ -185,17 +183,17 @@ const CourseTeacherView: React.FC = () => {
         }
 
         setTerms(termsData);
-        console.log("Set terms:", termsData);
+        
 
         // Set current term as default if we have terms
         if (termsData.length > 0) {
           const termId = termsData[0]._id;
           setSelectedTerm(termId);
-          console.log("Set selected term:", termId);
+          
         }
       }
     } catch (error) {
-      console.error("Error loading initial data:", error);
+
       setError("Failed to load data. Please try again.");
     } finally {
       setInitialLoading(false);
@@ -204,10 +202,7 @@ const CourseTeacherView: React.FC = () => {
 
   const loadTermData = async () => {
     if (!selectedTerm || !selectedCourse) {
-      console.log("Missing required data:", {
-        selectedTerm,
-        selectedCourse: selectedCourse?._id,
-      });
+     
       return;
     }
 
@@ -218,14 +213,7 @@ const CourseTeacherView: React.FC = () => {
       const token = getAccessToken();
       if (!token) throw new Error("No auth token");
 
-      console.log(
-        "Loading term data for course:",
-        selectedCourse._id,
-        "term:",
-        selectedTerm
-      );
-      console.log("Selected course details:", selectedCourse);
-
+     
       // Load assessments, students, and course grades in parallel
       const [assessmentsData, studentsData, courseGradesData] =
         await Promise.all([
@@ -238,11 +226,7 @@ const CourseTeacherView: React.FC = () => {
           ),
         ]);
 
-      console.log("Loaded data:", {
-        assessments: assessmentsData,
-        students: studentsData,
-        courseGrades: courseGradesData,
-      });
+     
 
       // Ensure all data is arrays to prevent undefined errors
       setAssessments(Array.isArray(assessmentsData) ? assessmentsData : []);
@@ -267,7 +251,7 @@ const CourseTeacherView: React.FC = () => {
       setStudents(validStudents);
       setCourseGrades(Array.isArray(courseGradesData) ? courseGradesData : []);
     } catch (error) {
-      console.error("Error loading term data:", error);
+     
       setError("Failed to load term data. Please try again.");
 
       // Set empty arrays on error to prevent crashes

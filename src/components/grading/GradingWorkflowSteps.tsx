@@ -16,6 +16,8 @@ import {
   RefreshCw,
   AlertCircle,
   Target,
+  User,
+  X,
 } from "lucide-react";
 import Badge from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -91,6 +93,34 @@ const GradingWorkflowSteps: React.FC<GradingWorkflowStepProps> = ({
       color: "bg-orange-500",
     },
   ];
+
+  // Grading modal state
+  const [gradingModal, setGradingModal] = useState<{
+    isOpen: boolean;
+    assessment: Assessment | null;
+    student: any | null;
+    students?: any[];
+    existingGrades?: any[];
+  }>({
+    isOpen: false,
+    assessment: null,
+    student: null,
+    students: [],
+    existingGrades: [],
+  });
+
+  // Individual student grading modal
+  const [studentGradingModal, setStudentGradingModal] = useState<{
+    isOpen: boolean;
+    student: any | null;
+    assessment: Assessment | null;
+    existingGrade: any | null;
+  }>({
+    isOpen: false,
+    student: null,
+    assessment: null,
+    existingGrade: null,
+  });
 
   useEffect(() => {
     loadStepData();
@@ -270,6 +300,38 @@ const GradingWorkflowSteps: React.FC<GradingWorkflowStepProps> = ({
     }
   };
 
+  const handleGradeAssessment = async (assessment: Assessment) => {
+    try {
+      const token = getAccessToken();
+      if (!token) throw new Error("No authentication token");
+
+      // Fetch students for this course (using classId from course)
+      const students = await gradeRecordsApi.getStudentsForCourse(
+        course.classId,
+        token,
+      );
+
+      // Fetch existing grades for this assessment in this course
+      const existingGrades = await gradeRecordsApi.getAssessmentGrades(
+        assessment._id,
+        token,
+        course._id,
+      );
+
+      setGradingModal({
+        isOpen: true,
+        assessment,
+        student: null,
+        students,
+        existingGrades,
+      });
+    } catch (error) {
+      console.error("Error loading grading data:", error);
+      // Show alert as fallback
+      alert(`Error loading grading data: ${(error as Error).message}`);
+    }
+  };
+
   const getStepStatus = (
     stepId: number,
   ): "completed" | "in-progress" | "pending" => {
@@ -395,6 +457,7 @@ const GradingWorkflowSteps: React.FC<GradingWorkflowStepProps> = ({
               termId={termId}
               assessments={stepData.assessments}
               onProgress={calculateProgress}
+              onGradeAssessment={handleGradeAssessment}
             />
           )}
 
@@ -427,6 +490,87 @@ const GradingWorkflowSteps: React.FC<GradingWorkflowStepProps> = ({
           )}
         </CardContent>
       </Card>
+
+      {/* Assessment Grading Modal */}
+      {gradingModal.isOpen && (
+        <AssessmentGradingModal
+          assessment={gradingModal.assessment!}
+          course={course}
+          students={gradingModal.students || []}
+          existingGrades={gradingModal.existingGrades || []}
+          onClose={() =>
+            setGradingModal({ isOpen: false, assessment: null, student: null })
+          }
+          onGradeStudent={(student, existingGrade) => {
+            setStudentGradingModal({
+              isOpen: true,
+              student,
+              assessment: gradingModal.assessment,
+              existingGrade,
+            });
+          }}
+          onRefresh={() => {
+            // Refresh the assessment grading data
+            handleGradeAssessment(gradingModal.assessment!);
+          }}
+        />
+      )}
+
+      {/* Individual Student Grading Modal */}
+      {studentGradingModal.isOpen && (
+        <StudentGradeEntryModal
+          student={studentGradingModal.student!}
+          assessment={studentGradingModal.assessment!}
+          course={course}
+          existingGrade={studentGradingModal.existingGrade}
+          onClose={() =>
+            setStudentGradingModal({
+              isOpen: false,
+              student: null,
+              assessment: null,
+              existingGrade: null,
+            })
+          }
+          onSave={async (gradeData) => {
+            try {
+              const token = getAccessToken();
+              if (!token) throw new Error("No authentication token");
+
+              if (studentGradingModal.existingGrade) {
+                // Update existing grade
+                await gradeRecordsApi.updateAssessmentGrade(
+                  studentGradingModal.existingGrade._id,
+                  gradeData,
+                  token,
+                );
+              } else {
+                // Create new grade
+                await gradeRecordsApi.createAssessmentGrade(
+                  {
+                    courseId: course._id,
+                    studentId: studentGradingModal.student._id,
+                    assessmentId: studentGradingModal.assessment!._id,
+                    ...gradeData,
+                  },
+                  token,
+                );
+              }
+
+              // Close modal and refresh data
+              setStudentGradingModal({
+                isOpen: false,
+                student: null,
+                assessment: null,
+                existingGrade: null,
+              });
+              handleGradeAssessment(gradingModal.assessment!);
+              calculateProgress();
+            } catch (error) {
+              console.error("Error saving grade:", error);
+            }
+          }}
+        />
+      )}
     </div>
   );
 };
@@ -437,7 +581,8 @@ const AssessmentGradingStep: React.FC<{
   termId: string;
   assessments: Assessment[];
   onProgress: () => void;
-}> = ({ course, termId, assessments, onProgress }) => {
+  onGradeAssessment: (assessment: Assessment) => void;
+}> = ({ course, termId, assessments, onProgress, onGradeAssessment }) => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -465,7 +610,7 @@ const AssessmentGradingStep: React.FC<{
             </div>
             <div className="flex items-center gap-2">
               <Badge text={assessment.status} color="blue" />
-              <Button size="sm">
+              <Button size="sm" onClick={() => onGradeAssessment(assessment)}>
                 <Eye className="h-4 w-4 mr-2" />
                 Grade Students
               </Button>
@@ -639,3 +784,241 @@ const ClassReportStep: React.FC<{
 };
 
 export default GradingWorkflowSteps;
+
+// Assessment Grading Modal Component
+const AssessmentGradingModal: React.FC<{
+  assessment: Assessment;
+  course: Course;
+  students: any[];
+  existingGrades: any[];
+  onClose: () => void;
+  onGradeStudent: (student: any, existingGrade?: any) => void;
+  onRefresh: () => void;
+}> = ({
+  assessment,
+  course,
+  students,
+  existingGrades,
+  onClose,
+  onGradeStudent,
+  onRefresh,
+}) => {
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[80vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-semibold">Grade Students</h2>
+            <p className="text-gray-600">
+              {assessment.name} - {course.title}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={onRefresh}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+            <Button variant="outline" size="sm" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Students List */}
+        <div className="space-y-3">
+          <h3 className="font-medium text-gray-700">
+            Students ({students.length})
+          </h3>
+
+          {students.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No students found for this course</p>
+            </div>
+          ) : (
+            <div className="grid gap-3">
+              {students.map((student) => {
+                const existingGrade = existingGrades.find(
+                  (grade) => grade.studentId === student._id,
+                );
+
+                return (
+                  <div
+                    key={student._id}
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                        <User className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium">
+                          {student.firstName} {student.lastName}
+                        </h4>
+                        <p className="text-sm text-gray-600">
+                          ID: {student.studentId || student._id}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      {existingGrade && (
+                        <div className="text-right">
+                          <div className="font-medium">
+                            {existingGrade.actualScore}/{existingGrade.maxScore}
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            (
+                            {Math.round(
+                              (existingGrade.actualScore /
+                                existingGrade.maxScore) *
+                                100,
+                            )}
+                            %)
+                          </div>
+                        </div>
+                      )}
+
+                      <Button
+                        size="sm"
+                        variant={existingGrade ? "outline" : "default"}
+                        onClick={() => onGradeStudent(student, existingGrade)}
+                      >
+                        {existingGrade ? "Edit Grade" : "Add Grade"}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-end mt-6 pt-4 border-t">
+          <Button variant="outline" onClick={onClose}>
+            Close
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Individual Student Grade Entry Modal
+const StudentGradeEntryModal: React.FC<{
+  student: any;
+  assessment: Assessment;
+  course: Course;
+  existingGrade?: any;
+  onClose: () => void;
+  onSave: (gradeData: any) => void;
+}> = ({ student, assessment, course, existingGrade, onClose, onSave }) => {
+  const [actualScore, setActualScore] = useState(
+    existingGrade?.actualScore || 0,
+  );
+  const [maxScore, setMaxScore] = useState(existingGrade?.maxScore || 100);
+  const [loading, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (actualScore < 0 || actualScore > maxScore) {
+      alert("Score must be between 0 and maximum score");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await onSave({
+        actualScore: parseFloat(actualScore.toString()),
+        maxScore: parseFloat(maxScore.toString()),
+      });
+    } catch (error) {
+      console.error("Error saving grade:", error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const percentage =
+    maxScore > 0 ? Math.round((actualScore / maxScore) * 100) : 0;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold">
+            {existingGrade ? "Edit" : "Add"} Grade
+          </h2>
+          <Button variant="outline" size="sm" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <div className="space-y-4">
+          {/* Student Info */}
+          <div className="bg-gray-50 p-3 rounded-lg">
+            <div className="font-medium">
+              {student.firstName} {student.lastName}
+            </div>
+            <div className="text-sm text-gray-600">
+              {assessment.name} - {course.title}
+            </div>
+          </div>
+
+          {/* Score Input */}
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Score Obtained
+              </label>
+              <input
+                type="number"
+                min="0"
+                max={maxScore}
+                value={actualScore}
+                onChange={(e) =>
+                  setActualScore(parseFloat(e.target.value) || 0)
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter score"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Maximum Score
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={maxScore}
+                onChange={(e) => setMaxScore(parseFloat(e.target.value) || 100)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter maximum score"
+              />
+            </div>
+
+            {/* Percentage Display */}
+            <div className="bg-blue-50 p-3 rounded-lg">
+              <div className="text-sm text-gray-600">Percentage</div>
+              <div className="text-2xl font-bold text-blue-600">
+                {percentage}%
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
+          <Button variant="outline" onClick={onClose} disabled={loading}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={loading}>
+            {loading ? (
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+            ) : null}
+            {existingGrade ? "Update" : "Save"} Grade
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};

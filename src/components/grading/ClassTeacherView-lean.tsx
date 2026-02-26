@@ -167,12 +167,7 @@ const ClassTeacherView: React.FC = () => {
       const token = getAccessToken();
       if (!token) throw new Error("No auth token");
 
-      console.log(
-        "Loading class data for:",
-        selectedClass,
-        "and term:",
-        selectedTerm
-      );
+    
       // Load students for the class
       const studentsData = await getStudentsByClass(selectedClass, token);
 
@@ -193,7 +188,7 @@ const ClassTeacherView: React.FC = () => {
           })
         : [];
 
-      console.log("Valid students loaded:", validStudents.length);
+     
       setStudents(validStudents);
 
       // Load all students' cumulative records
@@ -240,9 +235,7 @@ const ClassTeacherView: React.FC = () => {
           }
           return null;
         } catch (error) {
-          console.log(
-            `No cumulative record for student ${getStudentName(student)}`
-          );
+         
           return null;
         }
       });
@@ -259,10 +252,10 @@ const ClassTeacherView: React.FC = () => {
         return posA - posB;
       });
 
-      console.log("Loaded cumulative records:", validRecords);
+     
       setAllStudentsCumulative(validRecords as any);
     } catch (error) {
-      console.error("Error loading students cumulative records:", error);
+    
       setAllStudentsCumulative([]);
     }
   };
@@ -272,10 +265,10 @@ const ClassTeacherView: React.FC = () => {
   setViewMode("student-details");
 
   const token = getAccessToken();
-  console.log("DEBUG token, studentId, selectedTerm:", { token, studentId: student._id, selectedTerm });
+  
 
   if (!token || !selectedTerm) {
-    console.warn("Missing token or term:", { token, selectedTerm });
+   
     return;
   }
 
@@ -287,7 +280,7 @@ const ClassTeacherView: React.FC = () => {
     let rawCourseGrades: any = undefined;
     try {
       rawCourseGrades = await gradeRecordsApi.getGraderRecords(student._id, selectedTerm, token);
-      console.log("getStudentTermGrades returned:", rawCourseGrades);
+     
     } catch (e) {
       console.error("getStudentTermGrades threw:", e);
     }
@@ -295,7 +288,7 @@ const ClassTeacherView: React.FC = () => {
     let rawCumulative: any = undefined;
     try {
       rawCumulative = await gradeRecordsApi.getGraderRecords(student._id, selectedTerm, token);
-      console.log("getStudentCumulative returned:", rawCumulative);
+     
     } catch (e) {
       console.error("getStudentCumulative threw:", e);
     }
@@ -308,7 +301,7 @@ const ClassTeacherView: React.FC = () => {
     else if (rawCourseGrades && typeof rawCourseGrades === "object")
       parsedGrades = [rawCourseGrades];
 
-    console.log("parsedGrades:", parsedGrades);
+   
 
     setStudentCourseGrades(parsedGrades);
     setStudentCumulative(rawCumulative as any);

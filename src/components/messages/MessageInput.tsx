@@ -43,7 +43,7 @@ export default function MessageInput({
     if (onSend) {
       onSend();
     } else {
-      console.log("Message sent:", message);
+     
       setMessage("");
     }
   };

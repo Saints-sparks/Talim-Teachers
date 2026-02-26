@@ -26,7 +26,7 @@ export function useCurriculum() {
     async (filters: { course?: string; term?: string; teacherId?: string }) => {
       // Prevent multiple calls if one is already in progress
       if (isLoadingRef.current) {
-        console.log("Fetch already in progress, skipping...");
+       
         return;
       }
 

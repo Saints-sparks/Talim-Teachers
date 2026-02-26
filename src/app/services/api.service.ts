@@ -9,7 +9,7 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 // Function to clear the current term cache
 export const clearCurrentTermCache = () => {
   currentTermCache = null;
-  console.log("Current term cache cleared");
+ 
 };
 
 // Fetch classes assigned to a teacher
@@ -19,7 +19,7 @@ export const getAssignedClasses = async (userId: string, token: string) => {
       `${API_BASE_URL}/teachers/${userId}`,
       {
         headers: { Authorization: `Bearer ${token}` },
-      }
+      },
     );
 
     const assignedClassIds = teacherResponse.data.assignedClasses || [];
@@ -32,12 +32,12 @@ export const getAssignedClasses = async (userId: string, token: string) => {
         .get(`${API_BASE_URL}/classes/${classId}`, {
           headers: { Authorization: `Bearer ${token}` },
         })
-        .then((res) => res.data)
+        .then((res) => res.data),
     );
 
     return await Promise.all(classPromises);
   } catch (error) {
-    console.error("Error fetching assigned classes:", error);
+   
     return [];
   }
 };
@@ -47,8 +47,11 @@ export const getTeacherCourses = async (teacherId: string, token: string) => {
   try {
     const teacherData = await fetchTeacherDetails(teacherId, token);
 
-    if (!teacherData.assignedCourses || !Array.isArray(teacherData.assignedCourses)) {
-      console.log("No assigned courses found for teacher");
+    if (
+      !teacherData.assignedCourses ||
+      !Array.isArray(teacherData.assignedCourses)
+    ) {
+     
       return [];
     }
 
@@ -80,7 +83,7 @@ export const getStudentsByClass = async (classId: string, token: string) => {
           page: 1,
           limit: 10,
         },
-      }
+      },
     );
     return response.data.data || [];
   } catch (error) {
@@ -91,7 +94,7 @@ export const getStudentsByClass = async (classId: string, token: string) => {
 
 export const fetchStudent = async (
   id: string,
-  token: string
+  token: string,
 ): Promise<Student | null> => {
   if (!id) throw new Error("Student ID is missing.");
   if (!token) throw new Error("Unauthorized: No token found.");
@@ -104,7 +107,7 @@ export const fetchStudent = async (
     return response.data.data[0] || null; // Assuming student is in `data.data[0]`
   } catch (err) {
     throw new Error(
-      (err as any).response?.data?.message || "Failed to fetch student data."
+      (err as any).response?.data?.message || "Failed to fetch student data.",
     );
   }
 };
@@ -121,7 +124,7 @@ export const fetchTeacherDetails = async (id: string, token: string) => {
     return response.data || null;
   } catch (err) {
     throw new Error(
-      (err as any).response?.data?.message || "Failed to fetch teacher data."
+      (err as any).response?.data?.message || "Failed to fetch teacher data.",
     );
   }
 };
@@ -162,7 +165,7 @@ export const getCurrentTerm = async (token: string) => {
       currentTermCache &&
       Date.now() - currentTermCache.timestamp < CACHE_DURATION
     ) {
-      console.log("Using cached current term data");
+   
       return currentTermCache.data;
     }
 
@@ -170,7 +173,7 @@ export const getCurrentTerm = async (token: string) => {
       `${API_BASE_URL}/academic-year-term/term/current`,
       {
         headers: { Authorization: `Bearer ${token}` },
-      }
+      },
     );
     const data = response.data;
 
@@ -180,13 +183,13 @@ export const getCurrentTerm = async (token: string) => {
       timestamp: Date.now(),
     };
 
-    console.log("Fetched and cached new current term data");
+  
     return data;
   } catch (error) {
-    console.error("Error fetching current term:", error);
+   
     // Return cached data if available, even if expired
     if (currentTermCache) {
-      console.log("Using expired cache due to error");
+     
       return currentTermCache.data;
     }
     throw error;
@@ -218,7 +221,7 @@ export const createResource = async (resourceData: any, token: string) => {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-      }
+      },
     );
     return response.data;
   } catch (error) {
@@ -231,7 +234,7 @@ export const createResource = async (resourceData: any, token: string) => {
 export const updateResource = async (
   resourceId: string,
   data: any,
-  token: string
+  token: string,
 ) => {
   const response = await apiClient.put(
     `${API_BASE_URL}/resources/${resourceId}`,
@@ -241,7 +244,7 @@ export const updateResource = async (
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-    }
+    },
   );
   return response.data;
 };
@@ -255,7 +258,7 @@ export const submitAttendance = async (
     termId: string;
     absenceReason?: string;
   },
-  token: string
+  token: string,
 ) => {
   const res = await apiClient.post(`${API_BASE_URL}/attendance`, payload, {
     headers: {
@@ -274,7 +277,7 @@ export const getTeacherTimetable = async (teacherId: string, token: string) => {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      }
+      },
     );
     return response.data;
   } catch (error) {
@@ -294,14 +297,14 @@ export const fetchCourseById = async (courseId: string, token: string) => {
 // Get active assessments by term
 export const getActiveAssessmentsByTerm = async (
   termId: string,
-  token: string
+  token: string,
 ) => {
   try {
     const response = await apiClient.get(
       `${API_BASE_URL}/assessments/term/${termId}/active`,
       {
         headers: { Authorization: `Bearer ${token}` },
-      }
+      },
     );
     return response.data || [];
   } catch (error) {
@@ -314,7 +317,7 @@ export const getActiveAssessmentsByTerm = async (
 export const getClassAttendanceStatus = async (
   classId: string,
   token: string,
-  date?: string
+  date?: string,
 ) => {
   try {
     const dateQuery = date ? `?date=${date}` : "";
@@ -322,7 +325,7 @@ export const getClassAttendanceStatus = async (
       `${API_BASE_URL}/attendance/class/${classId}/status${dateQuery}`,
       {
         headers: { Authorization: `Bearer ${token}` },
-      }
+      },
     );
     return response.data;
   } catch (error) {
@@ -339,7 +342,7 @@ export const getStudentAttendanceKPIs = async (
     termId?: string;
     startDate?: string;
     endDate?: string;
-  }
+  },
 ) => {
   try {
     const queryParams = new URLSearchParams();
@@ -365,14 +368,14 @@ export const getStudentAttendanceKPIs = async (
 // Fetch teacher dashboard KPIs
 export const getTeacherDashboardKPIs = async (
   teacherId: string,
-  token: string
+  token: string,
 ) => {
   try {
     const response = await apiClient.get(
       `${API_BASE_URL}/teachers/${teacherId}/dashboard/kpis`,
       {
         headers: { Authorization: `Bearer ${token}` },
-      }
+      },
     );
     return response.data;
   } catch (error) {
@@ -388,7 +391,7 @@ export const getAllTeachersDashboardKPIs = async (token: string) => {
       `${API_BASE_URL}/teachers/dashboard/kpis/all`,
       {
         headers: { Authorization: `Bearer ${token}` },
-      }
+      },
     );
     return response.data;
   } catch (error) {

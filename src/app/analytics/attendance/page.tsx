@@ -58,9 +58,9 @@ const AttendanceAnalyticsContent: React.FC = () => {
         }
 
         setStudentData(kpiData);
-        console.log("Student attendance KPIs loaded:", kpiData);
+       
       } catch (error) {
-        console.error("Error loading student attendance data:", error);
+       
         setError("Failed to load attendance data");
       } finally {
         setLoading(false);

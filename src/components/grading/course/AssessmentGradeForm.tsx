@@ -131,26 +131,25 @@ const AssessmentGradeForm: React.FC<AssessmentGradeFormProps> = ({
         token,
         courseId
       );
-      console.log("Assessment grades received:", assessmentGrades);
+     
 
-      // Fetch all assessment grades for this course to show complete history
-      console.log("Fetching all course assessments...");
+     
       const allCourseAssessments =
         await gradeRecordsApi.getAssessmentGradesByCourse(courseId, token);
-      console.log("All course assessments received:", allCourseAssessments);
+    
 
       if (!termId) {
         throw new Error("Term ID is required to load course grades.");
       }
 
       // Fetch course grade records for this course and term
-      console.log("Fetching course grades...");
+     
       const courseGrades = await gradeRecordsApi.getCourseGrades(
         courseId,
         termId,
         token
       );
-      console.log("Course grades received:", courseGrades);
+    
 
       const studentData: StudentCourseGradeData[] = students.map((student) => {
         // Get all assessment grades for this student in this course
@@ -219,13 +218,11 @@ const AssessmentGradeForm: React.FC<AssessmentGradeFormProps> = ({
         };
       });
 
-      console.log("Processing student data...", {
-        studentCount: students.length,
-      });
+     
       setStudentGradeData(studentData);
-      console.log("Student data processed successfully:", studentData);
+     
     } catch (error) {
-      console.error("Error loading course assessment data:", error);
+     
 
       // More detailed error message
       let errorMessage = "Failed to load course assessment data. ";

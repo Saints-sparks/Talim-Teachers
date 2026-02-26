@@ -98,7 +98,7 @@ const Timetable: React.FC = () => {
       if (response) {
         // The API returns data grouped by days
         const timetableByDays = response || {};
-        console.log("Received timetable data:", timetableByDays); // Debug log
+       
         setTimetableData(timetableByDays);
 
         // Check if there are any scheduled classes
@@ -108,7 +108,7 @@ const Timetable: React.FC = () => {
           0
         );
 
-        console.log("Total classes found:", totalClasses); // Debug log
+      
 
         if (totalClasses === 0) {
           setError({
@@ -179,28 +179,14 @@ const Timetable: React.FC = () => {
   const getTimetableEntry = (day: string, timeSlot: string) => {
     const dayEntries = timetableData[day] || [];
 
-    // Debug logging
-    if (day === "Tuesday" && dayEntries.length > 0) {
-      console.log(`Looking for ${day} ${timeSlot}:`, {
-        dayEntries,
-        timeSlot,
-        availableEntries: dayEntries.map((e) => ({
-          time: e.time,
-          startTime: e.startTime || e.startTIme,
-          endTime: e.endTime,
-        })),
-      });
-    }
-
+ 
     // First, try exact matches
     let entry = dayEntries.find((entry) => {
       const startTime = entry.startTime || entry.startTIme || "";
       const exactMatch =
         entry.time === timeSlot ||
         `${startTime} - ${entry.endTime}` === timeSlot;
-      if (exactMatch && day === "Tuesday") {
-        console.log("Found exact match:", entry);
-      }
+      
       return exactMatch;
     });
 
@@ -223,14 +209,7 @@ const Timetable: React.FC = () => {
         entryStartHour === slotStartHour &&
         Math.abs(entryStartMinute - slotStartMinute) <= 30; // Allow 30-minute tolerance
 
-      if (match && day === "Tuesday") {
-        console.log("Found time-based match:", entry, {
-          slotStart,
-          startTime,
-          hourMatch: entryStartHour === slotStartHour,
-          minuteDiff: Math.abs(entryStartMinute - slotStartMinute),
-        });
-      }
+   
 
       return match;
     });

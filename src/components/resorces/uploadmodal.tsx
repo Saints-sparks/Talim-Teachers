@@ -71,9 +71,7 @@ export function UploadModal({
   useEffect(() => {
     if (!user || !isOpen) return;
 
-    // Only log once when modal opens
-    console.log("Upload modal opened - User:", user?.userId);
-
+  
     const fetchData = async () => {
       const token = getAccessToken();
       if (!token) return;
@@ -85,7 +83,7 @@ export function UploadModal({
           const term = await getCurrentTerm(token);
           setCurrentTerm(term);
           setTermFetched(true);
-          console.log("Fetched current term:", term?.name);
+         
           setTermLoading(false);
         }
 
@@ -95,12 +93,12 @@ export function UploadModal({
           !contextLoading &&
           localClasses.length === 0
         ) {
-          console.log("Fetching classes for upload modal...");
+         
           setClassesLoading(true);
           try {
             const teacherId = user?.teacherId || user?.userId;
             const classDetails = await getAssignedClasses(teacherId, token);
-            console.log("Fetched classes count:", classDetails?.length || 0);
+         
             setLocalClasses(classDetails);
           } catch (error) {
             console.error("Error fetching classes:", error);
@@ -111,12 +109,12 @@ export function UploadModal({
 
         // Fetch teacher courses only once per modal session
         if (!coursesFetched && courses.length === 0) {
-          console.log("Fetching courses for upload modal...");
+         
           setCoursesLoading(true);
           try {
             const teacherId = user?.teacherId || user?.userId;
             const teacherCourses = await getTeacherCourses(teacherId, token);
-            console.log("Fetched courses count:", teacherCourses?.length || 0);
+           
             setCourses(teacherCourses);
             setCoursesFetched(true);
           } catch (error) {
@@ -203,7 +201,7 @@ export function UploadModal({
         files: [fileUrl],
       };
 
-      console.log("Uploading resource with teacher ID:", teacherId);
+    
 
       // Step 3. Upload the resource data to your backend
       const uploadedResource = await createResource(resourceData, token);

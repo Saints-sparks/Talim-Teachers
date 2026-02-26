@@ -360,20 +360,20 @@ export const useWebSocket = (): WebSocketContextType => {
 
     // Prevent duplicate requests if already fetching
     if (isFetchingRef.current) {
-      console.log("📨 fetchChatRooms: Already fetching, skipping request");
+     
       return;
     }
 
     // Rate limiting: prevent requests too close together
     if (now - lastFetchTimeRef.current < fetchCooldownMs) {
-      console.log("📨 fetchChatRooms: Rate limited, skipping request");
+     
       return;
     }
 
     isFetchingRef.current = true;
     lastFetchTimeRef.current = now;
 
-    console.log("📨 fetchChatRooms: Emitting request");
+   
     socketRef.current.emit("fetch-chat-rooms");
 
     // Reset fetching flag after a short delay

@@ -128,19 +128,19 @@ const ImprovedGradingPage: React.FC = () => {
 
   const fetchAvailableCourses = async () => {
     if (!user?.userId) {
-      console.log("fetchAvailableCourses: No user ID available, user:", user);
+     
       return;
     }
 
-    console.log("fetchAvailableCourses: Starting to fetch courses for user:", user.userId);
+    
     setCoursesLoading(true);
     try {
       const token = getAccessToken();
       if (!token) throw new Error("No authentication token");
 
-      console.log("fetchAvailableCourses: Calling getTeacherCourses with teacherId:", user.userId);
+    
       const courses = await getTeacherCourses(user.userId, token);
-      console.log("fetchAvailableCourses: Received courses:", courses);
+     
       setAvailableCourses(courses);
 
       // Don't auto-select - let user choose manually
@@ -148,7 +148,7 @@ const ImprovedGradingPage: React.FC = () => {
       //   setSelectedCourse(courses[0]);
       // }
     } catch (err: any) {
-      console.error("Error fetching courses:", err);
+     
       setError(err?.message ?? "Failed to fetch courses");
     } finally {
       setCoursesLoading(false);
@@ -156,15 +156,15 @@ const ImprovedGradingPage: React.FC = () => {
   };
 
   const fetchAvailableTerms = async () => {
-    console.log("fetchAvailableTerms: Starting to fetch terms");
+   
     setTermsLoading(true);
     try {
       const token = getAccessToken();
       if (!token) throw new Error("No authentication token");
 
-      console.log("fetchAvailableTerms: Calling getCurrentTerm");
+     
       const currentTerm = await getCurrentTerm(token);
-      console.log("fetchAvailableTerms: Received current term:", currentTerm);
+     
       // For now, we'll use the current term. In a full implementation,
       // you might want to fetch all available terms
       if (currentTerm) {
@@ -174,7 +174,7 @@ const ImprovedGradingPage: React.FC = () => {
         }
       }
     } catch (err: any) {
-      console.error("Error fetching terms:", err);
+      
       setError(err?.message ?? "Failed to fetch terms");
     } finally {
       setTermsLoading(false);
@@ -186,7 +186,7 @@ const ImprovedGradingPage: React.FC = () => {
   }, [activeRole, selectedCourse]);
 
   useEffect(() => {
-    console.log("useEffect triggered with user:", user);
+   
     fetchAvailableCourses();
     fetchAvailableTerms();
   }, [user]);
@@ -210,7 +210,7 @@ const ImprovedGradingPage: React.FC = () => {
     // Refresh KPIs after bulk operation
     fetchKpis();
     // Show success/error message
-    console.log("Bulk grading completed:", result);
+   
   };
 
   const renderViewContent = () => {
@@ -221,7 +221,7 @@ const ImprovedGradingPage: React.FC = () => {
             course={selectedCourse}
             termId={selectedTermId}
             onStepComplete={(step) => {
-              console.log(`Step ${step} completed`);
+             
               fetchKpis(); // Refresh KPIs when steps are completed
             }}
           />

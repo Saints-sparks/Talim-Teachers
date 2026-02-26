@@ -79,13 +79,7 @@ export default function GroupChat({
     // When user authentication state changes from null to a user object,
     // the component will automatically re-render and message positioning will be corrected
     if (user) {
-      console.log(
-        "✅ User authenticated, message positioning should now work correctly:",
-        {
-          userId: user.userId || user._id,
-          fullName: `${user.firstName} ${user.lastName}`.trim(),
-        }
-      );
+      
 
       // If we have messages but they might need re-evaluation, trigger it
       if (messages.length > 0) {
@@ -95,9 +89,7 @@ export default function GroupChat({
         });
 
         if (needsCorrection) {
-          console.log(
-            "🔄 Triggering message re-evaluation due to user authentication"
-          );
+         
           setMessagesNeedRevaluation(true);
         }
       }
@@ -144,7 +136,7 @@ export default function GroupChat({
       );
 
       if (hasUpdates) {
-        console.log("📝 Messages updated, forcing re-render");
+       
         // Reset the re-evaluation flag
         setMessagesNeedRevaluation(false);
         // Return a completely new array to ensure React re-renders
@@ -163,7 +155,7 @@ export default function GroupChat({
   // Helper to get current user ID with fallback options
   const getCurrentUserId = (): string | undefined => {
     if (!user) {
-      console.log("⚠️ No user object available yet (still loading)");
+     
       return undefined;
     }
 
@@ -179,7 +171,7 @@ export default function GroupChat({
       return possibleIds[0];
     }
 
-    console.log("⚠️ No valid user ID found in user object");
+   
     return undefined;
   };
 
@@ -200,44 +192,36 @@ export default function GroupChat({
     // If we don't have a current user ID yet, we can't determine ownership
     // Return false for now, this will be re-evaluated when user loads
     if (!currentUserId) {
-      console.log(
-        "⚠️ Cannot determine message ownership - user not loaded yet"
-      );
+     
       return false;
     }
 
     // First try: direct ID match
     if (currentUserId && senderId && senderId === currentUserId) {
-      console.log("✅ Matched by ID:", { senderId, currentUserId });
+      
       return true;
     }
 
     // Second try: match by name if user object is available
     if (user && user.firstName && user.lastName && senderName) {
       const currentUserName = `${user.firstName} ${user.lastName}`.trim();
-      console.log("🔍 Trying name match:", { currentUserName, senderName });
+     
 
       if (currentUserName === senderName) {
-        console.log("✅ Matched by name:", { currentUserName, senderName });
+       
         return true;
       }
 
       // Also try matching with trimmed names to handle spacing issues
       if (currentUserName.toLowerCase() === senderName.toLowerCase().trim()) {
-        console.log("✅ Matched by name (case insensitive):", {
-          currentUserName,
-          senderName,
-        });
+       
         return true;
       }
     }
 
     // Third try: match by email if available
     if (user && user.email && senderName === user.email) {
-      console.log("✅ Matched by email:", {
-        userEmail: user.email,
-        senderName,
-      });
+     
       return true;
     }
 
@@ -248,10 +232,7 @@ export default function GroupChat({
         user.firstName.toLowerCase().includes("assurance") &&
         senderName.toLowerCase().includes("assurance")
       ) {
-        console.log("✅ Matched by development workaround (Assurance):", {
-          userFirstName: user.firstName,
-          senderName,
-        });
+      
         return true;
       }
     }
@@ -267,10 +248,7 @@ export default function GroupChat({
         messageSenderName.includes(userFirstName) ||
         userFirstName.includes(messageSenderName)
       ) {
-        console.log("⚠️ Fallback match by partial name:", {
-          userFirstName: user.firstName,
-          senderName,
-        });
+      
         return true;
       }
     }
@@ -401,7 +379,7 @@ export default function GroupChat({
     const roomId = room.roomId;
     let isMounted = true;
 
-    console.log("🏠 Setting up room for:", roomId);
+   
 
     setIsLoading(true);
     setError(null);
@@ -412,18 +390,14 @@ export default function GroupChat({
 
     // Set up room joined listener to receive initial messages and room data
     const roomJoinedListener = (data: any) => {
-      console.log("📨 Room joined data received:", data);
+     
 
       if (!isMounted || data.roomId !== roomId) {
-        console.log("🚫 Ignoring room data - not current room or unmounted", {
-          isMounted,
-          dataRoomId: data.roomId,
-          currentRoomId: roomId,
-        });
+       
         return;
       }
 
-      console.log("✅ Processing room data for current room:", roomId);
+     
 
       if (data.messages && Array.isArray(data.messages)) {
         // Sort messages by timestamp (oldest first, newest last)
@@ -477,9 +451,7 @@ export default function GroupChat({
 
         // If user wasn't loaded when processing messages, flag them for re-evaluation
         if (!user && formattedMessages.length > 0) {
-          console.log(
-            "⚠️ Messages processed without user context, flagging for re-evaluation"
-          );
+       
           setMessagesNeedRevaluation(true);
         }
 
@@ -494,7 +466,7 @@ export default function GroupChat({
         // Mark room as fully loaded after processing initial messages
         setIsRoomLoaded(true);
       } else {
-        console.log("📭 No messages in room data");
+       
         setMessages([]);
         // Still mark room as loaded even if no messages
         setIsRoomLoaded(true);
@@ -511,7 +483,7 @@ export default function GroupChat({
 
     // Clean up event listeners when component unmounts or room changes
     return () => {
-      console.log("🧹 Cleaning up room listeners for:", roomId);
+     
       isMounted = false;
       setIsRoomLoaded(false); // Reset room loaded state
       webSocket.leaveChatRoom(roomId);
@@ -529,32 +501,19 @@ export default function GroupChat({
     }
   }, [messages, isLoadingMore]);
 
-  // Debug WebSocket connection status
-  useEffect(() => {
-    console.log("🔌 WebSocket status changed:", {
-      isConnected: webSocket.isConnected,
-      connectionStatus: webSocket.connectionStatus,
-      hasSocket: !!webSocket.socket,
-      socketConnected: webSocket.socket?.connected,
-    });
-  }, [webSocket.isConnected, webSocket.connectionStatus]);
+
 
   // Handle new incoming messages via WebSocket
   const handleNewMessage = useCallback(
     (newMessage: WebSocketChatMessage) => {
-      console.log("📨 New message received:", newMessage);
+     
 
       // Get room ID from either roomId or chatRoomId (backend inconsistency)
       const messageRoomId = newMessage.roomId || (newMessage as any).chatRoomId;
 
       // Only process messages for the current room
       if (messageRoomId !== room?.roomId) {
-        console.log(
-          "🚫 Message not for current room:",
-          messageRoomId,
-          "vs",
-          room?.roomId
-        );
+       
         return;
       }
 
@@ -563,7 +522,7 @@ export default function GroupChat({
         newMessage.senderId,
         newMessage.senderName
       );
-      const currentUserId = getCurrentUserId();
+     
 
       // Enhanced check for current user - particularly important for real-time messages
       const isMyMessage = isCurrentUser(senderId, senderName);
@@ -571,7 +530,7 @@ export default function GroupChat({
       // Additional fallback: if we just sent a message and this message content matches what we just sent,
       // it's very likely our own message coming back through WebSocket
       const messageContent = newMessage.content || (newMessage as any).text;
-      const isRecentlySent = isSending && messageContent; // Simple check - could be enhanced with timestamp comparison
+     
 
       // Format the incoming message
       const formattedMessage: Message = {
@@ -651,11 +610,7 @@ export default function GroupChat({
         });
 
         if (messageExists) {
-          console.log("⚠️ Message already exists, skipping duplicate:", {
-            messageId: formattedMessage._id,
-            content: formattedMessage.text,
-            sender: formattedMessage.sender,
-          });
+
           return prevMessages;
         }
 
@@ -671,9 +626,7 @@ export default function GroupChat({
   // Set up message listener for real-time messages (separate from room joining)
   useEffect(() => {
     if (!webSocket.isConnected || !room?.roomId) {
-      console.log(
-        "⚠️ WebSocket not connected or no room, skipping message listener setup"
-      );
+     
       return;
     }
 
@@ -692,19 +645,14 @@ export default function GroupChat({
   // Handle sending a new message
   const handleSendMessage = useCallback(() => {
     if (!messageInput.trim() || !room || isSending || !webSocket.isConnected) {
-      console.log("❌ Cannot send message:", {
-        hasInput: !!messageInput.trim(),
-        hasRoom: !!room,
-        isSending,
-        isConnected: webSocket.isConnected,
-      });
+     
       return;
     }
 
     const roomId = room.roomId;
     const messageContent = messageInput.trim();
 
-    console.log("📤 Sending message:", messageContent);
+  
     setIsSending(true);
 
     try {
@@ -726,9 +674,9 @@ export default function GroupChat({
       // Clear input field immediately for better UX
       setMessageInput("");
 
-      console.log("✅ Message sent successfully");
+     
     } catch (err: any) {
-      console.error("❌ Error sending message:", err);
+      
       // Show error to user - you could add a toast notification here
       setError("Failed to send message. Please try again.");
     } finally {
@@ -889,7 +837,7 @@ export default function GroupChat({
 
   const getParticipantsText = () => {
     if (!room?.participants || !Array.isArray(room.participants)) {
-      //   console.log("⚠️ No participants found in room:", room);
+     
       return "";
     }
 
@@ -902,13 +850,7 @@ export default function GroupChat({
         const participantId =
           participantData.userId || participantData._id || p.userId || p._id;
         const isNotCurrent = participantId !== currentUserId;
-        // console.log("🔍 Participant filter:", {
-        //   participantId,
-        //   currentUserId,
-        //   isNotCurrent,
-        //   participant: p,
-        //   participantData,
-        // });
+       
         return isNotCurrent;
       })
       .map((p: any) => {
@@ -1015,7 +957,7 @@ export default function GroupChat({
       sortedGrouped[date] = grouped[date];
     });
 
-    // console.log("📅 Final grouped messages:", sortedGrouped);
+   
     return sortedGrouped;
   };
 

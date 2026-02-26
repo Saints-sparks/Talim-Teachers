@@ -25,7 +25,7 @@ export const useChat = (): UseChatReturn => {
 
     // Rate limiting for REST API calls
     if (now - lastFetchRef.current < fetchCooldownMs) {
-      console.log("🔄 fetchChatRooms (REST): Rate limited, skipping request");
+     
       return;
     }
 
@@ -39,12 +39,12 @@ export const useChat = (): UseChatReturn => {
         throw new Error("No authentication token found");
       }
 
-      console.log("🔄 fetchChatRooms (REST): Making API request");
+     
       const rooms = await getChatRooms(token);
       setChatRooms(rooms);
     } catch (err: any) {
       setError(err.message || "Failed to fetch chat rooms");
-      console.error("Error fetching chat rooms:", err);
+    
     } finally {
       setIsLoading(false);
     }

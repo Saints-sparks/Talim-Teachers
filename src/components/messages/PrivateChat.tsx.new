@@ -81,7 +81,7 @@ export default function PrivateChat({
         
         // Fetch messages using REST API
         const data = await getChatMessages(roomId, token);
-        console.log('📥 Fetched messages:', data);
+      
         
         if (isMounted && data && Array.isArray(data.messages)) {
           const formattedMessages = data.messages.map((msg: any) => ({

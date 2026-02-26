@@ -234,12 +234,7 @@ export class GradeRecordsApiService {
 
       // Check if it's a 404 (no grades found) and return empty array
       if (error.response?.status === 404) {
-        console.log(
-          "No course grades found for course:",
-          courseId,
-          "term:",
-          termId,
-        );
+       
         return [];
       }
 
@@ -521,18 +516,13 @@ export class GradeRecordsApiService {
     token: string,
   ): Promise<StudentCumulativeWithDetails> {
     try {
-      console.log(
-        "Fetching student cumulative record for:",
-        studentId,
-        "and term:",
-        termId,
-      );
+    
       const url = `${API_BASE_URL}/grade-records/student-cumulative-term-grade-records/${studentId}/${termId}`;
-      console.log("Request URL:", url);
+    
       const response = await apiClient.get(url, this.getAuthHeaders(token));
       return response.data.data;
     } catch (error: any) {
-      console.error("Error fetching student cumulative:", error);
+     
       throw new Error(
         error.response?.data?.message ||
           "Failed to fetch student cumulative record",
@@ -757,7 +747,7 @@ export class GradeRecordsApiService {
           headers: { Authorization: `Bearer ${token}` },
           params: {
             page: 1,
-            limit: 10,
+            limit: 100, // Increased to get more students
           },
         },
       );
@@ -766,6 +756,24 @@ export class GradeRecordsApiService {
       console.error("Error fetching students for course:", error);
       throw new Error(
         error.response?.data?.message || "Failed to fetch students for course",
+      );
+    }
+  }
+
+  /**
+   * Get existing grades for an assessment
+   */
+  async getGradesByAssessment(assessmentId: string, token: string) {
+    try {
+      const response = await apiClient.get(
+        `${API_BASE_URL}/grade-records/assessment/${assessmentId}`,
+        this.getAuthHeaders(token),
+      );
+      return response.data.data || response.data || [];
+    } catch (error: any) {
+      console.error("Error fetching grades by assessment:", error);
+      throw new Error(
+        error.response?.data?.message || "Failed to fetch assessment grades",
       );
     }
   }
@@ -831,12 +839,12 @@ export class GradeRecordsApiService {
 
       // Check if it's a 404 (no assessments found) and return empty array
       if (error.response?.status === 404) {
-        console.log("No assessments found for term:", termId);
+       
         return [];
       }
 
       // For other errors, still return empty array to prevent crashes
-      console.warn("Returning empty array due to error:", error.message);
+     
       return [];
     }
   }

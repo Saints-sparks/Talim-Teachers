@@ -126,10 +126,10 @@ export default function CreateGroupModal({
         payload.courseId = item._id || item.id;
       }
 
-      console.log("Creating group with payload:", payload);
+     
 
       const response = await createGroupChat(payload, token);
-      console.log("Group created successfully:", response);
+      
 
       // Refresh chat rooms after creating a group
       refreshChatRooms();
@@ -172,15 +172,7 @@ export default function CreateGroupModal({
         .includes(searchTerm.toLowerCase())
     ) || [];
 
-  // Debug logging
-  useEffect(() => {
-    if (open) {
-      console.log("Modal opened - Debug info:");
-      console.log("Classes:", classes);
-      console.log("Courses:", courses);
-      console.log("Filtered courses:", filteredCourses);
-    }
-  }, [open, classes, courses, filteredCourses]);
+
 
   const renderSelectionStep = () => (
     <div className="space-y-6">
