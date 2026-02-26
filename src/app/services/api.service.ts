@@ -45,13 +45,24 @@ export const getAssignedClasses = async (userId: string, token: string) => {
 // Fetch courses assigned to a teacher
 export const getTeacherCourses = async (teacherId: string, token: string) => {
   try {
-    const response = await apiClient.get(
-      `${API_BASE_URL}/teachers/${teacherId}/courses`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-    return response.data || [];
+    const teacherData = await fetchTeacherDetails(teacherId, token);
+
+    if (!teacherData.assignedCourses || !Array.isArray(teacherData.assignedCourses)) {
+      console.log("No assigned courses found for teacher");
+      return [];
+    }
+
+    // Map the assignedCourses to the expected format
+    const courses = teacherData.assignedCourses.map((course: any) => ({
+      _id: course._id,
+      title: course.title,
+      courseCode: course.courseCode,
+      description: course.description,
+      classId: course.classId,
+      timetable: course.timetable || [],
+    }));
+
+    return courses;
   } catch (error) {
     console.error("Error fetching teacher courses:", error);
     return [];

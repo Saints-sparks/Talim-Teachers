@@ -127,20 +127,26 @@ const ImprovedGradingPage: React.FC = () => {
   };
 
   const fetchAvailableCourses = async () => {
-    if (!user?._id) return;
+    if (!user?.userId) {
+      console.log("fetchAvailableCourses: No user ID available, user:", user);
+      return;
+    }
 
+    console.log("fetchAvailableCourses: Starting to fetch courses for user:", user.userId);
     setCoursesLoading(true);
     try {
       const token = getAccessToken();
       if (!token) throw new Error("No authentication token");
 
-      const courses = await getTeacherCourses(user._id, token);
+      console.log("fetchAvailableCourses: Calling getTeacherCourses with teacherId:", user.userId);
+      const courses = await getTeacherCourses(user.userId, token);
+      console.log("fetchAvailableCourses: Received courses:", courses);
       setAvailableCourses(courses);
 
-      // Auto-select first course if available and none selected
-      if (courses.length > 0 && !selectedCourse) {
-        setSelectedCourse(courses[0]);
-      }
+      // Don't auto-select - let user choose manually
+      // if (courses.length > 0 && !selectedCourse) {
+      //   setSelectedCourse(courses[0]);
+      // }
     } catch (err: any) {
       console.error("Error fetching courses:", err);
       setError(err?.message ?? "Failed to fetch courses");
@@ -150,12 +156,15 @@ const ImprovedGradingPage: React.FC = () => {
   };
 
   const fetchAvailableTerms = async () => {
+    console.log("fetchAvailableTerms: Starting to fetch terms");
     setTermsLoading(true);
     try {
       const token = getAccessToken();
       if (!token) throw new Error("No authentication token");
 
+      console.log("fetchAvailableTerms: Calling getCurrentTerm");
       const currentTerm = await getCurrentTerm(token);
+      console.log("fetchAvailableTerms: Received current term:", currentTerm);
       // For now, we'll use the current term. In a full implementation,
       // you might want to fetch all available terms
       if (currentTerm) {
@@ -177,6 +186,7 @@ const ImprovedGradingPage: React.FC = () => {
   }, [activeRole, selectedCourse]);
 
   useEffect(() => {
+    console.log("useEffect triggered with user:", user);
     fetchAvailableCourses();
     fetchAvailableTerms();
   }, [user]);
