@@ -78,15 +78,21 @@ export default function ChatHeader({
         )}
 
         {/* Avatar */}
-        <Avatar className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex-shrink-0">
-          <AvatarImage src={avatar} />
-          <AvatarFallback 
-            className="text-white font-medium text-sm"
-            style={{ backgroundColor: generateColorFromString(name) }}
-          >
-            {getUserInitials(name)}
-          </AvatarFallback>
-        </Avatar>
+        <div className="relative">
+          <Avatar className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex-shrink-0">
+            <AvatarImage src={avatar} />
+            <AvatarFallback 
+              className="text-white font-medium text-sm"
+              style={{ backgroundColor: generateColorFromString(name) }}
+            >
+              {getUserInitials(name)}
+            </AvatarFallback>
+          </Avatar>
+          {/* Online Indicator */}
+          {(status === "Online" || status === "Active Now") && (
+            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-500 border-2 border-white rounded-full"></span>
+          )}
+        </div>
 
         {/* Chat Info */}
         <div

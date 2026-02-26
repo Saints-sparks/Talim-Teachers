@@ -80,6 +80,20 @@ export default function PrivateChat({
     } 
     // If senderId is a string, try to get name from senderName or participants
     else if (typeof msgSenderId === 'string') {
+       // Helper for stringified objects
+       if (msgSenderId.trim().startsWith("{") && msgSenderId.includes("firstName")) {
+         const firstNameMatch = msgSenderId.match(/firstName:\s*'([^']+)'/);
+         const lastNameMatch = msgSenderId.match(/lastName:\s*'([^']+)'/);
+         const idMatch = msgSenderId.match(/_id:\s*new\s*ObjectId\('([^']+)'\)/) || msgSenderId.match(/_id:\s*'([^']+)'/);
+         if (firstNameMatch) {
+             const fName = firstNameMatch[1];
+             const lName = lastNameMatch ? lastNameMatch[1] : '';
+             senderName = `${fName} ${lName}`.trim();
+             senderId = idMatch ? idMatch[1] : '';
+             return { name: senderName, id: senderId };
+         }
+      }
+
       senderId = msgSenderId;
       if (msgSenderName && msgSenderName.trim()) {
         senderName = msgSenderName;
