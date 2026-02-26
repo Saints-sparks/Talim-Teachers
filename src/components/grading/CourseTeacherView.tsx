@@ -528,6 +528,7 @@ const CourseTeacherView: React.FC = () => {
             courseId={selectedCourse._id}
             classId={selectedCourse.classId}
             schoolId={selectedCourse.schoolId}
+            termId={selectedTerm}
             token={getAccessToken() || ''}
             onSave={() => {
               // Reload course grades after saving
@@ -570,6 +571,35 @@ const CourseTeacherView: React.FC = () => {
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto mb-2"></div>
                   <p className="text-gray-600">Loading course grades...</p>
+                </div>
+              ) : courseGrades.length > 0 && courseGrades.every(g => !g.studentId) ? (
+                <div className="space-y-3">
+                  {courseGrades.map((grade) => (
+                    <div
+                      key={grade._id}
+                      className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">
+                          Unknown student
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Recorded {new Date(grade.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium text-green-600">
+                          {grade.percentage}%
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {grade.gradeLevel}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  <p className="text-xs text-[#6F6F6F]">
+                    These records are missing student IDs from the API response.
+                  </p>
                 </div>
               ) : filteredStudents.length === 0 ? (
                 <div className="text-center py-8">

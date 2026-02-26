@@ -195,6 +195,7 @@ export class GradeRecordsApiService {
     token: string
   ): Promise<CourseGradeRecordWithDetails[]> {
     try {
+      if (!termId) return [];
       const response = await apiClient.get(
         `${API_BASE_URL}/grade-records/course-grade-records/course/${courseId}/term/${termId}`,
         this.getAuthHeaders(token)
@@ -382,46 +383,51 @@ export class GradeRecordsApiService {
     }>;
   }> {
     try {
-      // Since the bulk endpoint expects fully calculated grades, we'll use individual auto-calculation
-      // calls for each student to let the backend handle the calculation logic
-      const results = [];
-      let successful = 0;
-      let failed = 0;
+      const assessmentGrades = await this.getAssessmentGradesByCourse(
+        data.courseId,
+        token
+      );
 
-      for (const studentId of data.studentIds) {
-        try {
-          await this.autoCalculateCourseGrade(
-            studentId,
-            data.courseId,
-            data.termId,
-            token,
-            data.classId
-          );
+      const grades = data.studentIds
+        .map((studentId) => {
+          const studentGrades = assessmentGrades.filter((grade: any) => {
+            const gradeStudentId =
+              typeof grade.studentId === "object"
+                ? grade.studentId._id
+                : grade.studentId;
+            return gradeStudentId === studentId;
+          });
 
-          results.push({
+          if (studentGrades.length === 0) return null;
+
+          return {
+            courseId: data.courseId,
             studentId,
-            success: true,
-            message: "Course grade calculated successfully",
-          });
-          successful++;
-        } catch (error: any) {
-          console.error(
-            `Error creating course grade for student ${studentId}:`,
-            error
-          );
-          results.push({
-            studentId,
-            success: false,
-            message: error.message || "Failed to calculate course grade",
-          });
-          failed++;
-        }
+            assessmentGradeRecords: studentGrades.map((g: any) => g._id),
+            classId: data.classId,
+            termId: data.termId,
+          };
+        })
+        .filter(Boolean);
+
+      if (grades.length === 0) {
+        return { successful: 0, failed: data.studentIds.length, results: [] };
       }
 
+      await apiClient.post(
+        `${API_BASE_URL}/grade-records/course-grade-records/bulk`,
+        { grades },
+        this.getAuthHeaders(token)
+      );
+
       return {
-        successful,
-        failed,
-        results,
+        successful: grades.length,
+        failed: data.studentIds.length - grades.length,
+        results: grades.map((g: any) => ({
+          studentId: g.studentId,
+          success: true,
+          message: "Course grade created successfully",
+        })),
       };
     } catch (error: any) {
       console.error("Error bulk creating course grade records:", error);

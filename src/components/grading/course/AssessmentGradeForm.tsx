@@ -121,18 +121,11 @@ const AssessmentGradeForm: React.FC<AssessmentGradeFormProps> = ({
     setLoading(true);
     setSaveError(null); // Clear any previous errors
     try {
-      if (!termId) {
-        throw new Error("Term ID is required to load course assessment data.");
-      }
 
-      console.log("Loading course assessment data...", {
-        assessmentId,
-        courseId,
-        termId,
-      });
+     
 
       // Fetch assessment grades for this specific assessment and course
-      console.log("Fetching assessment grades...");
+      
       const assessmentGrades = await gradeRecordsApi.getAssessmentGrades(
         assessmentId,
         token,
@@ -145,6 +138,10 @@ const AssessmentGradeForm: React.FC<AssessmentGradeFormProps> = ({
       const allCourseAssessments =
         await gradeRecordsApi.getAssessmentGradesByCourse(courseId, token);
       console.log("All course assessments received:", allCourseAssessments);
+
+      if (!termId) {
+        throw new Error("Term ID is required to load course grades.");
+      }
 
       // Fetch course grade records for this course and term
       console.log("Fetching course grades...");
@@ -371,7 +368,7 @@ const AssessmentGradeForm: React.FC<AssessmentGradeFormProps> = ({
         );
       } else {
         // Create new grade
-        await gradeRecordsApi.bulkCreateAssessmentGrades([gradeData], token);
+        await gradeRecordsApi.createAssessmentGrade(gradeData, token);
       }
 
       // Reload data to get fresh state
