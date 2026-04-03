@@ -25,20 +25,9 @@ import { useAppContext } from "@/app/context/AppContext";
 import LoadingCard from "@/components/LoadingCard";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "react-hot-toast";
-
-type AttendanceStatus = "present" | "absent";
+import { AttendanceRecord, AttendanceStatus } from "@/types/attendance";
 
 type ViewMode = "mark-attendance" | "view-attendance";
-
-export interface AttendanceRecord {
-  id: string;
-  name: string;
-  date: string;
-  status: AttendanceStatus;
-  isAbsent?: boolean;
-  reasonForAbsence?: string;
-  isSubmitted?: boolean;
-}
 
 const AttendanceClassPage: React.FC = () => {
   const params = useParams();
