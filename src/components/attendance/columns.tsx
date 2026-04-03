@@ -1,7 +1,7 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { X, Check, CheckCircle, Send } from "lucide-react";
+import { CheckCircle, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AttendanceRecord, AttendanceStatus } from "@/types/attendance";
 
@@ -45,7 +45,6 @@ export const columns = ({
     cell: ({ row }) => {
       const student = row.original;
       const isAbsent = student.status === "absent";
-      const isPresent = student.status === "present";
       const isSubmitted = student.isSubmitted || submittedStudents.has(student.id);
 
       if (isSubmitted) {
