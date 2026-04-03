@@ -3,20 +3,7 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { X, Check, CheckCircle, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { AttendanceRecord } from "@/app/attendance/page";
-
-type AttendanceStatus = "present" | "absent";
-
-export type Attendance = {
-  id: string;
-  name: string;
-  date: string;
-  examScore: number;
-  status: AttendanceStatus;
-  isAbsent?: boolean;
-  reasonForAbsence?: string;
-  isSubmitted?: boolean;
-};
+import { AttendanceRecord, AttendanceStatus } from "@/types/attendance";
 
 interface ColumnsProps {
   onCancel: (studentId: string) => void;
