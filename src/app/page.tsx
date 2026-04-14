@@ -2,23 +2,20 @@
 
 import { FormEvent, useState } from "react";
 import Image from "next/image";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
+import { Eye, EyeOff, ShieldAlert, AlertCircle, Loader2 } from "lucide-react";
 import { Toaster } from "react-hot-toast";
 import { useAuth } from "./hooks/useAuth";
 
-interface FormData {
-  email: string;
-  password: string;
-  rememberMe: boolean;
-}
+type LoginError =
+  | { kind: "access_denied"; message: string }
+  | { kind: "invalid_credentials" }
+  | { kind: "unknown"; message: string };
 
 const LoginPage: React.FC = () => {
   const { login, isLoading } = useAuth();
-  const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [formData, setFormData] = useState<FormData>({
+  const [showPassword, setShowPassword] = useState(false);
+  const [loginError, setLoginError] = useState<LoginError | null>(null);
+  const [formData, setFormData] = useState({
     email: "",
     password: "",
     rememberMe: false,
@@ -26,83 +23,141 @@ const LoginPage: React.FC = () => {
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setLoginError(null);
 
-    await login({
-      email: formData.email,
-      password: formData.password,
-      deviceToken: "web-token", // You can implement proper device token generation
-      platform: "web",
-    });
-  };
-
-  const togglePasswordVisibility = () => {
-    setShowPassword((prev) => !prev);
+    try {
+      await login({
+        email: formData.email,
+        password: formData.password,
+        deviceToken: "web-token",
+        platform: "web",
+      });
+    } catch (err: any) {
+      const msg: string = err?.message || "";
+      if (
+        msg.toLowerCase().includes("access denied") ||
+        msg.toLowerCase().includes("registered as")
+      ) {
+        setLoginError({ kind: "access_denied", message: msg });
+      } else if (
+        msg.toLowerCase().includes("incorrect") ||
+        msg.toLowerCase().includes("invalid") ||
+        msg.toLowerCase().includes("credentials")
+      ) {
+        setLoginError({ kind: "invalid_credentials" });
+      } else {
+        setLoginError({
+          kind: "unknown",
+          message: msg || "An unexpected error occurred. Please try again.",
+        });
+      }
+    }
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col lg:flex-row">
+    <div className="min-h-screen grid lg:grid-cols-2">
       <Toaster position="top-right" />
-      {/* Login Form */}
-      <div className="relative flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 py-12 lg:py-24">
-        <div className="lg:absolute lg:top-16">
-          <Image
-            src="/icons/login/tree.svg"
-            alt="Tree Logo"
-            width={64}
-            height={64}
-            className="h-[80px] w-[76.32px]"
-            priority
-          />
-        </div>
-        <div className="w-full max-w-[400px] space-y-8">
-          <div className="font-manrope space-y-4 text-center">
-            <h1 className="text-3xl font-medium text-[#030E18]">
-              Welcome back
-            </h1>
-            <p className="text-lg text-[#444444] font-normal">
-              Sign in to continue your learning journey.
-            </p>
+
+      {/* ── Left panel — Form ── */}
+      <div className="flex flex-col justify-center items-center px-8 py-12 sm:px-16 bg-white">
+        <div className="w-full max-w-sm">
+          {/* Logo */}
+          <div className="flex items-center gap-3 mb-8">
+            <Image
+              src="/icons/login/tree.svg"
+              alt="Talim Logo"
+              width={40}
+              height={40}
+              className="h-10 w-10"
+              priority
+            />
+            <span className="text-xl font-bold text-[#030E18]">Talim</span>
+            <span className="ml-0.5 rounded-full bg-[#EAF2FB] px-2.5 py-0.5 text-xs font-semibold text-[#003366]">
+              Teachers
+            </span>
           </div>
 
-          <form
-            onSubmit={handleSubmit}
-            className="space-y-6 pt-[45px] font-manrope"
-          >
-            {/* Email Input */}
-            <div className="space-y-2">
-              <Label
+          <h1 className="text-2xl font-bold text-[#030E18]">Welcome back</h1>
+          <p className="mt-1 text-sm text-[#6F6F6F]">
+            Sign in to continue your learning journey.
+          </p>
+
+          {/* RBAC / Access denied banner */}
+          {loginError?.kind === "access_denied" && (
+            <div className="mt-6 rounded-xl border border-red-100 bg-red-50 p-4">
+              <div className="flex items-start gap-3">
+                <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+                <div>
+                  <p className="text-sm font-semibold text-red-700">
+                    Access denied
+                  </p>
+                  <p className="mt-1 text-xs text-red-600 leading-relaxed">
+                    {loginError.message}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Invalid credentials banner */}
+          {loginError?.kind === "invalid_credentials" && (
+            <div className="mt-6 rounded-xl border border-amber-100 bg-amber-50 p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                <p className="text-sm text-amber-700">
+                  Incorrect email or password. Please double-check your
+                  credentials and try again.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Unknown error banner */}
+          {loginError?.kind === "unknown" && (
+            <div className="mt-6 rounded-xl border border-gray-200 bg-gray-50 p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-gray-500" />
+                <p className="text-sm text-gray-600">{loginError.message}</p>
+              </div>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="mt-8 space-y-5" noValidate>
+            {/* Email */}
+            <div className="space-y-1.5">
+              <label
                 htmlFor="email"
-                className="text-lg font-medium text-[#030E18]"
+                className="block text-sm font-medium text-[#030E18]"
               >
-                Email
-              </Label>
-              <Input
+                Email address
+              </label>
+              <input
                 id="email"
                 type="email"
-                placeholder="Enter your email"
-                className="w-full px-3 h-[50px] text-black"
+                placeholder="you@school.com"
                 value={formData.email}
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, email: e.target.value }))
                 }
                 required
+                disabled={isLoading}
+                className="w-full h-10 px-3 border border-[#E5E7EB] bg-[#F9FAFB] rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003366]/30 focus:border-[#003366] transition-all disabled:opacity-60"
               />
             </div>
 
-            {/* Password Input */}
-            <div className="space-y-2">
-              <Label
+            {/* Password */}
+            <div className="space-y-1.5">
+              <label
                 htmlFor="password"
-                className="text-lg font-medium text-[#030E18]"
+                className="block text-sm font-medium text-[#030E18]"
               >
                 Password
-              </Label>
+              </label>
               <div className="relative">
-                <Input
+                <input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="Enter your password"
-                  className="w-full px-3 h-[50px] text-black"
+                  placeholder="••••••••"
                   value={formData.password}
                   onChange={(e) =>
                     setFormData((prev) => ({
@@ -111,104 +166,102 @@ const LoginPage: React.FC = () => {
                     }))
                   }
                   required
+                  disabled={isLoading}
+                  className="w-full h-10 px-3 pr-10 border border-[#E5E7EB] bg-[#F9FAFB] rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003366]/30 focus:border-[#003366] transition-all disabled:opacity-60"
                 />
                 <button
                   type="button"
-                  onClick={togglePasswordVisibility}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                  tabIndex={-1}
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.5}
-                      stroke="currentColor"
-                      className="w-5 h-5"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                    </svg>
+                    <EyeOff className="h-4 w-4" />
                   ) : (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.5}
-                      stroke="currentColor"
-                      className="w-5 h-5"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"
-                      />
-                    </svg>
+                    <Eye className="h-4 w-4" />
                   )}
                 </button>
               </div>
             </div>
 
-            {/* Remember Me Checkbox */}
-            <div className="flex items-center space-x-2 pb-12">
-              <Checkbox
-                id="remember"
-                checked={formData.rememberMe}
-                onCheckedChange={(checked) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    rememberMe: checked === true,
-                  }))
-                }
-              />
-              <Label
-                htmlFor="remember"
-                className="text-base font-normal text-[#030E18]"
-              >
-                Keep me signed in for easy access
-              </Label>
-            </div>
-
-            {/* Submit Button */}
-            <Button
-              type="submit"
-              className="w-full bg-[#003366] hover:bg-[#002B5B]/90 text-white h-[50px] rounded-lg text-lg font-medium"
-              disabled={isLoading}
-            >
-              {isLoading ? "Signing in..." : "Sign in"}
-            </Button>
-
-            {/* Forgot Password Link */}
-            <div className="text-center">
+            {/* Remember me + Forgot */}
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={formData.rememberMe}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      rememberMe: e.target.checked,
+                    }))
+                  }
+                  className="h-4 w-4 rounded border-gray-300 accent-[#003366]"
+                />
+                Keep me signed in
+              </label>
               <a
                 href="/forgot-password"
                 className="text-sm text-[#003366] hover:underline"
               >
-                Forgot your password?
+                Forgot password?
               </a>
             </div>
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full h-11 bg-[#003366] hover:bg-[#002244] text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Signing in…
+                </>
+              ) : (
+                "Sign in"
+              )}
+            </button>
           </form>
+
+          <p className="mt-10 text-center text-xs text-gray-400">
+            © Talim {new Date().getFullYear()} ·{" "}
+            <a
+              href="mailto:help@talim.com"
+              className="hover:underline text-[#003366]"
+            >
+              help@talim.com
+            </a>
+          </p>
         </div>
       </div>
 
-      {/* Illustration */}
-      <div className="flex-1 relative hidden lg:block">
-        <Image
-          src="/icons/login/school-illustration.svg"
-          alt="High school illustration"
-          fill
-          className="lg:w-[700px] lg:h-[500px]"
-          priority
-        />
+      {/* ── Right panel — Blue brand panel ── */}
+      <div className="hidden lg:flex flex-col items-center justify-center bg-[#003366] p-12">
+        <div className="relative w-full max-w-md aspect-square opacity-90">
+          <Image
+            src="/icons/login/school-illustration.svg"
+            alt="Teacher portal illustration"
+            fill
+            priority
+            className="object-contain"
+          />
+        </div>
+        <div className="mt-8 text-center">
+          <p className="text-xl font-bold text-white">Talim Teacher Portal</p>
+          <p className="mt-2 text-sm text-white/70 max-w-xs leading-relaxed">
+            Manage your classes, students, attendance, and curriculum — all in
+            one place.
+          </p>
+        </div>
+        {/* Decorative dots (static indicator bar) */}
+        <div className="mt-10 flex gap-2">
+          <div className="h-2 w-8 rounded-full bg-white/60" />
+          <div className="h-2 w-2 rounded-full bg-white/30" />
+          <div className="h-2 w-2 rounded-full bg-white/30" />
+        </div>
       </div>
     </div>
   );
