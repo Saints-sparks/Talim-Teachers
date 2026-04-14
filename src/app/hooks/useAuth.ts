@@ -132,7 +132,19 @@ export const useAuth = (): UseAuthReturn => {
 
       const userData = introspection.data.user;
 
-     
+      // RBAC: only teacher role is permitted in this portal
+      if (userData.role !== "teacher") {
+        // Destroy the cookies we just set — this login is not allowed
+        nookies.destroy(undefined, "access_token", { path: "/" });
+        nookies.destroy(undefined, "refresh_token", { path: "/" });
+        nookies.destroy(undefined, "refreshToken", { path: "/" });
+        const friendlyRole = userData.role.replace(/_/g, " ");
+        throw new Error(
+          `Access denied. This portal is for teachers only. ` +
+          `Your account is registered as "${friendlyRole}". ` +
+          `Please use the correct Talim app for your role.`
+        );
+      }
 
       // Store user data in localStorage
       localStorage.setItem("user", JSON.stringify(userData));
@@ -141,7 +153,6 @@ export const useAuth = (): UseAuthReturn => {
       setIsAuthenticated(true);
       setUser(userData);
 
-    
       toast.success("Login successful!");
 
       // Ensure cookies are set before redirecting
@@ -161,8 +172,13 @@ export const useAuth = (): UseAuthReturn => {
       return response;
     } catch (error) {
      
-      const errorMessage =
-        error instanceof Error ? error.message : "Login failed";
+      const rawMsg = error instanceof Error ? error.message : "Login failed";
+      const errorMessage = rawMsg.toLowerCase().includes("incorrect") ||
+        rawMsg.toLowerCase().includes("invalid") ||
+        rawMsg.toLowerCase().includes("credentials") ||
+        rawMsg === "Login failed"
+        ? "Incorrect email or password. Please check your credentials and try again."
+        : rawMsg;
       toast.error(errorMessage);
 
       // Update state on login failure
