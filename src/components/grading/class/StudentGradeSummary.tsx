@@ -13,7 +13,7 @@ import {
   RefreshCw,
   AlertCircle
 } from 'lucide-react';
-import { Student } from '@/types/grading';
+import { Student } from '@/types/grade-records';
 import { 
   CourseGradeRecordWithDetails,
   StudentCumulativeWithDetails
@@ -37,7 +37,7 @@ const StudentGradeSummary: React.FC<StudentGradeSummaryProps> = ({
   onGenerateCumulative
 }) => {
   const [courseGrades, setCourseGrades] = useState<CourseGradeRecordWithDetails[]>([]);
-  const [studentCumulative, setStudentCumulative] = useState<StudentCumulativeWithDetails | null>(null);
+  const [studentCumulative, setStudentCumulative] = useState<StudentCumulativeWithDetails | null | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,7 +63,8 @@ const StudentGradeSummary: React.FC<StudentGradeSummaryProps> = ({
       }
 
       if (cumulativeData.status === 'fulfilled') {
-        setStudentCumulative(cumulativeData.value);
+        // API returns null (200) when no record exists yet — treat null as "not created"
+        setStudentCumulative(cumulativeData.value ?? null);
       } else {
         console.error('Error loading cumulative data:', cumulativeData.reason);
         setStudentCumulative(null);
@@ -137,7 +138,7 @@ const StudentGradeSummary: React.FC<StudentGradeSummaryProps> = ({
               
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-gradient-to-r from-purple-400 to-blue-500 rounded-full flex items-center justify-center text-white font-medium text-lg">
-                  {student.name.charAt(0)}
+                  {(student.name || 'S').charAt(0)}
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-gray-900">{student.name}</h2>
@@ -152,17 +153,22 @@ const StudentGradeSummary: React.FC<StudentGradeSummaryProps> = ({
                 variant="outline"
                 size="sm"
                 disabled={loading}
+                className="border-[#E6EDF5] text-[#6F6F6F] hover:bg-[#F8FAFF] shadow-none"
               >
                 <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
-              
+
               <Button
                 onClick={handleGenerateCumulative}
                 disabled={loading || courseGrades.length === 0}
-                className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+                className={`shadow-none ${
+                  !studentCumulative
+                    ? 'bg-[#003366] text-white hover:bg-[#002244]'
+                    : 'bg-white border border-[#E6EDF5] text-[#003366] hover:bg-[#F8FAFF]'
+                }`}
               >
-                Generate Cumulative Report
+                {!studentCumulative ? 'Generate Cumulative Report' : 'Recalculate Report'}
               </Button>
             </div>
           </div>
@@ -225,6 +231,29 @@ const StudentGradeSummary: React.FC<StudentGradeSummaryProps> = ({
           </CardContent>
         </Card>
       </div>
+
+      {/* Cumulative prompt when not generated yet */}
+      {studentCumulative === null && courseGrades.length > 0 && (
+        <Card className="border-[#E6EDF5] bg-[#F8FBFF] shadow-none rounded-2xl">
+          <CardContent className="flex items-center gap-4 p-5">
+            <Award className="h-8 w-8 text-[#003366] shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-[#030E18]">No cumulative report yet</p>
+              <p className="text-xs text-[#6F6F6F] mt-0.5">
+                {courseGrades.length} course grade{courseGrades.length !== 1 ? 's' : ''} recorded. Generate a cumulative report to compute the overall grade and class position.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              onClick={handleGenerateCumulative}
+              disabled={loading}
+              className="bg-[#003366] text-white hover:bg-[#002244] shadow-none shrink-0"
+            >
+              Generate Now
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Cumulative Record */}
       {studentCumulative && (

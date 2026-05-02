@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import SectionHeader from "@/components/ui/section-header";
 import { Course } from '@/types/types';
-import { Student } from '@/types/grading';
+import { Student } from '@/types/grade-records';
 import { 
   AssessmentGradeRecordWithDetails,
   CourseGradeRecordWithDetails
@@ -150,7 +150,7 @@ const CourseTeacherView: React.FC = () => {
       // Load assessments and students for the selected course and term
       const [assessmentsData, studentsData, courseGradesData] = await Promise.all([
         gradeRecordsApi.getAssessmentsForTerm(selectedTerm, token),
-        gradeRecordsApi.getStudentsForCourse(selectedCourse._id, token),
+        gradeRecordsApi.getStudentsForCourse(selectedCourse.classId || selectedCourse._id, token),
         gradeRecordsApi.getCourseGrades(selectedCourse._id, selectedTerm, token)
       ]);
 
@@ -614,7 +614,7 @@ const CourseTeacherView: React.FC = () => {
                       >
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-medium">
-                            {student.name.charAt(0)}
+                            {(student.name || 'S').charAt(0)}
                           </div>
                           <div>
                             <h3 className="font-medium text-gray-900">{student.name}</h3>
@@ -638,16 +638,19 @@ const CourseTeacherView: React.FC = () => {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => {
-                                  // Auto-calculate course grade
-                                  gradeRecordsApi.autoCalculateCourseGrade(
-                                    student._id,
-                                    selectedCourse._id,
-                                    selectedTerm,
-                                    getAccessToken() || ''
-                                  ).then(() => {
-                                    loadTermData();
-                                  });
+                                onClick={async () => {
+                                  try {
+                                    await gradeRecordsApi.autoCalculateCourseGrade(
+                                      student._id,
+                                      selectedCourse._id,
+                                      selectedTerm,
+                                      getAccessToken() || '',
+                                      selectedCourse.classId
+                                    );
+                                    await loadTermData();
+                                  } catch (err) {
+                                    console.error('Failed to calculate course grade:', err);
+                                  }
                                 }}
                               >
                                 Calculate

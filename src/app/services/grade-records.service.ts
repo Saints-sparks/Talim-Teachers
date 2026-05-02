@@ -443,12 +443,19 @@ export class GradeRecordsApiService {
 
           if (studentGrades.length === 0) return null;
 
+          const cumulativeScore = studentGrades.reduce((sum: number, g: any) => sum + g.actualScore, 0);
+          const maxScore = studentGrades.reduce((sum: number, g: any) => sum + g.maxScore, 0);
+          const percentage = maxScore > 0 ? (cumulativeScore / maxScore) * 100 : 0;
+
           return {
             courseId: data.courseId,
             studentId,
             assessmentGradeRecords: studentGrades.map((g: any) => g._id),
             classId: data.classId,
             termId: data.termId,
+            cumulativeScore,
+            maxScore,
+            percentage,
           };
         })
         .filter(Boolean);
@@ -498,35 +505,30 @@ export class GradeRecordsApiService {
         `${API_BASE_URL}/grade-records/course-grade-records/student/${studentId}/term/${termId}`,
         this.getAuthHeaders(token),
       );
-      return response.data.data;
+      const data = response.data?.data || response.data || [];
+      return Array.isArray(data) ? data : [];
     } catch (error: any) {
       console.error("Error fetching student term grades:", error);
-      throw new Error(
-        error.response?.data?.message || "Failed to fetch student term grades",
-      );
+      if (error.response?.status === 404) return [];
+      return [];
     }
   }
 
   /**
-   * Get student cumulative record
+   * Get student cumulative record. Returns null if not yet created (API returns 200 + null).
    */
   async getStudentCumulative(
     studentId: string,
     termId: string,
     token: string,
-  ): Promise<StudentCumulativeWithDetails> {
+  ): Promise<StudentCumulativeWithDetails | null> {
     try {
-    
       const url = `${API_BASE_URL}/grade-records/student-cumulative-term-grade-records/${studentId}/${termId}`;
-    
       const response = await apiClient.get(url, this.getAuthHeaders(token));
-      return response.data.data;
+      return response.data?.data ?? response.data ?? null;
     } catch (error: any) {
-     
-      throw new Error(
-        error.response?.data?.message ||
-          "Failed to fetch student cumulative record",
-      );
+      console.error("Error fetching student cumulative:", error);
+      return null;
     }
   }
 
@@ -662,25 +664,22 @@ export class GradeRecordsApiService {
   // ===============================
 
   /**
-   * Get class cumulative record
+   * Get class cumulative record. Returns null if not yet created (API returns 200 + null).
    */
   async getClassCumulative(
     classId: string,
     termId: string,
     token: string,
-  ): Promise<ClassCumulativeTermGradeRecord> {
+  ): Promise<ClassCumulativeTermGradeRecord | null> {
     try {
       const response = await apiClient.get(
         `${API_BASE_URL}/grade-records/class-cumulative-term-grade-records/${classId}/${termId}`,
         this.getAuthHeaders(token),
       );
-      return response.data.data;
+      return response.data?.data ?? response.data ?? null;
     } catch (error: any) {
       console.error("Error fetching class cumulative:", error);
-      throw new Error(
-        error.response?.data?.message ||
-          "Failed to fetch class cumulative record",
-      );
+      return null;
     }
   }
 

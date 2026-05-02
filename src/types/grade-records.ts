@@ -1,5 +1,22 @@
 // New grading system types based on the backend API structure
 
+export interface Student {
+  _id: string;
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+  studentId?: string;
+  email?: string;
+  classId?: string;
+  userId?: {
+    name?: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    studentId?: string;
+  };
+}
+
 export interface AssessmentGradeRecord {
   _id: string;
   courseId: string;

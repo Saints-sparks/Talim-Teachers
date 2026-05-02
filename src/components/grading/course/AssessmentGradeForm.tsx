@@ -22,7 +22,7 @@ import {
   CreateAssessmentGradeRecordDto,
   AssessmentGradeRecordWithDetails,
 } from "@/types/grade-records";
-import { Student } from "@/types/grading";
+import { Student } from "@/types/grade-records";
 import GradeInput from "@/components/grading/shared/GradeInput";
 import GradeDisplay from "@/components/grading/shared/GradeDisplay";
 import { gradeRecordsApi } from "@/app/services/grade-records.service";

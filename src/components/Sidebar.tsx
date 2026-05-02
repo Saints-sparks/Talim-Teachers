@@ -30,7 +30,7 @@ const menuItems: MenuItem[] = [
   {
     label: "Grading",
     iconPath: "/icons/results.svg",
-    link: "/grading-improved",
+    link: "/grading",
   },
   {
     label: "Messages",
