@@ -193,6 +193,19 @@ export interface GradeRecordsApiResponse<T> {
   };
 }
 
+export interface GradingStatus {
+  gradedCount: number;
+  totalStudents: number;
+  completionPercentage: number;
+  isFullyGraded: boolean;
+  ungradedStudents: { studentId: string; studentName: string }[];
+}
+
+export interface AssessmentGradesResponse {
+  grades: AssessmentGradeRecordWithDetails[];
+  gradingStatus: GradingStatus;
+}
+
 export interface BulkGradeResult {
   success: boolean;
   created: number;

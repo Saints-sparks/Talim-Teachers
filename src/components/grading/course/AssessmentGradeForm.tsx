@@ -21,8 +21,9 @@ import {
   AssessmentGradeRecord,
   CreateAssessmentGradeRecordDto,
   AssessmentGradeRecordWithDetails,
+  GradingStatus,
+  Student,
 } from "@/types/grade-records";
-import { Student } from "@/types/grade-records";
 import GradeInput from "@/components/grading/shared/GradeInput";
 import GradeDisplay from "@/components/grading/shared/GradeDisplay";
 import { gradeRecordsApi } from "@/app/services/grade-records.service";
@@ -69,6 +70,7 @@ const AssessmentGradeForm: React.FC<AssessmentGradeFormProps> = ({
   const [studentGradeData, setStudentGradeData] = useState<
     StudentCourseGradeData[]
   >([]);
+  const [gradingStatus, setGradingStatus] = useState<GradingStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(
@@ -124,13 +126,10 @@ const AssessmentGradeForm: React.FC<AssessmentGradeFormProps> = ({
 
      
 
-      // Fetch assessment grades for this specific assessment and course
-      
-      const assessmentGrades = await gradeRecordsApi.getAssessmentGrades(
-        assessmentId,
-        token,
-        courseId
-      );
+      // Fetch assessment grades + grading status for this assessment and course
+      const { grades: assessmentGrades, gradingStatus: status } =
+        await gradeRecordsApi.getAssessmentGrades(assessmentId, token, courseId);
+      setGradingStatus(status);
      
 
      
@@ -564,92 +563,62 @@ const AssessmentGradeForm: React.FC<AssessmentGradeFormProps> = ({
           </div>
         </CardTitle>
 
-        {/* Course Grade Overview Card */}
-        <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <TrendingUp className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-blue-900">
-                  Course Grade Records
-                </h3>
-                <p className="text-sm text-blue-700">
-                  Cumulative grades calculated from all term assessments
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-6">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">
-                  {
-                    studentGradeData.filter((data) => data.courseGradeRecord)
-                      .length
-                  }
+        {/* Assessment Grading Progress — server-authoritative */}
+        {gradingStatus && (
+          <div className="mt-4 rounded-xl border border-[#E6EDF5] bg-[#F8FBFF] p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  {gradingStatus.isFullyGraded ? (
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                  ) : (
+                    <AlertCircle className="h-5 w-5 text-orange-500" />
+                  )}
+                  <span className="text-sm font-semibold text-[#030E18]">
+                    Assessment Progress
+                  </span>
                 </div>
-                <div className="text-xs text-gray-600">Completed</div>
+                <span className="text-sm text-[#6F6F6F]">
+                  {gradingStatus.gradedCount} of {gradingStatus.totalStudents} graded
+                </span>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-orange-600">
-                  {
-                    studentGradeData.filter(
-                      (data) =>
-                        data.assessmentGrades.length > 0 &&
-                        !data.courseGradeRecord
-                    ).length
-                  }
-                </div>
-                <div className="text-xs text-gray-600">Ready</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-gray-600">
-                  {
-                    studentGradeData.filter(
-                      (data) => data.assessmentGrades.length === 0
-                    ).length
-                  }
-                </div>
-                <div className="text-xs text-gray-600">Pending</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Progress Bar */}
-          <div className="mt-3">
-            <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
-              <span>Course Grade Progress</span>
-              <span>
-                {
-                  studentGradeData.filter((data) => data.courseGradeRecord)
-                    .length
-                }{" "}
-                of {studentGradeData.length} complete
+              <span className={`text-sm font-bold ${
+                gradingStatus.isFullyGraded ? 'text-green-700' : 'text-orange-600'
+              }`}>
+                {gradingStatus.completionPercentage.toFixed(0)}%
               </span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
+
+            {/* Progress bar */}
+            <div className="w-full bg-[#EEF3F9] rounded-full h-1.5">
               <div
-                className="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full transition-all duration-300"
-                style={{
-                  width: `${
-                    studentGradeData.length > 0
-                      ? (studentGradeData.filter(
-                          (data) => data.courseGradeRecord
-                        ).length /
-                          studentGradeData.length) *
-                        100
-                      : 0
-                  }%`,
-                }}
+                className={`h-1.5 rounded-full transition-all duration-300 ${
+                  gradingStatus.isFullyGraded ? 'bg-green-500' : 'bg-[#003366]'
+                }`}
+                style={{ width: `${gradingStatus.completionPercentage}%` }}
               />
             </div>
+
+            {/* Ungraded students list */}
+            {gradingStatus.ungradedStudents.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                <span className="text-xs text-[#6F6F6F] self-center">Still pending:</span>
+                {gradingStatus.ungradedStudents.map(s => (
+                  <span
+                    key={s.studentId}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800"
+                  >
+                    {s.studentName}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
-        </div>
+        )}
 
         {/* Error Display */}
         {saveError && (
-          <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-xl">
             <div className="flex items-center gap-2">
               <AlertCircle className="h-4 w-4 text-red-500" />
               <span className="text-sm text-red-700">{saveError}</span>
@@ -663,34 +632,15 @@ const AssessmentGradeForm: React.FC<AssessmentGradeFormProps> = ({
           </div>
         )}
 
-        {/* Summary Stats */}
-        <div className="flex items-center gap-6 text-sm text-gray-600 mt-2">
-          <div className="flex items-center gap-2">
+        {/* Course grade quick stats */}
+        <div className="flex items-center gap-5 text-sm text-[#6F6F6F] mt-3">
+          <div className="flex items-center gap-1.5">
             <CheckCircle className="h-4 w-4 text-green-500" />
-            <span>
-              {
-                studentGradeData.filter((data) => data.currentAssessmentGrade)
-                  .length
-              }{" "}
-              assessed for this assignment
-            </span>
+            <span>{studentGradeData.filter(d => d.courseGradeRecord).length} with course grades</span>
           </div>
-          <div className="flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 text-orange-500" />
-            <span>
-              {
-                studentGradeData.filter((data) => !data.currentAssessmentGrade)
-                  .length
-              }{" "}
-              pending
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-purple-500" />
-            <span>
-              {studentGradeData.filter((data) => data.courseGradeRecord).length}{" "}
-              have course grades
-            </span>
+          <div className="flex items-center gap-1.5">
+            <TrendingUp className="h-4 w-4 text-[#003366]" />
+            <span>{studentGradeData.filter(d => d.assessmentGrades.length > 0 && !d.courseGradeRecord).length} ready to generate</span>
           </div>
         </div>
       </CardHeader>

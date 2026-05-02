@@ -11,6 +11,8 @@ import {
   GradeRecordsApiResponse,
   BulkGradeResult,
   AssessmentGradeRecordWithDetails,
+  AssessmentGradesResponse,
+  GradingStatus,
   CourseGradeRecordWithDetails,
   StudentCumulativeWithDetails,
 } from "@/types/grade-records";
@@ -106,14 +108,22 @@ export class GradeRecordsApiService {
     assessmentId: string,
     token: string,
     courseId: string,
-  ): Promise<AssessmentGradeRecordWithDetails[]> {
+  ): Promise<AssessmentGradesResponse> {
     try {
       const response = await apiClient.get(
         `${API_BASE_URL}/grade-records/assessment/${assessmentId}/course/${courseId}`,
         this.getAuthHeaders(token),
       );
-      // Handle both wrapped and direct response formats
-      return response.data.data || response.data || [];
+      const payload = response.data;
+      const grades: AssessmentGradeRecordWithDetails[] = payload.data || payload || [];
+      const gradingStatus: GradingStatus = payload.gradingStatus ?? {
+        gradedCount: grades.length,
+        totalStudents: grades.length,
+        completionPercentage: grades.length > 0 ? 100 : 0,
+        isFullyGraded: true,
+        ungradedStudents: [],
+      };
+      return { grades, gradingStatus };
     } catch (error: any) {
       console.error("Error fetching assessment grades:", error);
       throw new Error(
