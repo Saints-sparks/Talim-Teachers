@@ -317,14 +317,12 @@ export class GradeRecordsApiService {
         token,
       );
 
-      // Filter to get this student's grades
-      const studentGrades = assessmentGrades.filter((grade: any) => {
-        const gradeStudentId =
-          typeof grade.studentId === "object"
-            ? grade.studentId._id
-            : grade.studentId;
-        return gradeStudentId === studentId;
-      });
+      // Filter to get this student's grades (studentId may be populated or a plain string)
+      const resolveId = (val: any) =>
+        val != null && typeof val === "object" ? val._id : val;
+      const studentGrades = assessmentGrades.filter(
+        (grade: any) => resolveId(grade.studentId) === studentId,
+      );
 
       if (studentGrades.length === 0) {
         throw new Error(
@@ -441,15 +439,13 @@ export class GradeRecordsApiService {
         token,
       );
 
+      const resolveId = (val: any) =>
+        val != null && typeof val === "object" ? val._id : val;
       const grades = data.studentIds
         .map((studentId) => {
-          const studentGrades = assessmentGrades.filter((grade: any) => {
-            const gradeStudentId =
-              typeof grade.studentId === "object"
-                ? grade.studentId._id
-                : grade.studentId;
-            return gradeStudentId === studentId;
-          });
+          const studentGrades = assessmentGrades.filter(
+            (grade: any) => resolveId(grade.studentId) === studentId,
+          );
 
           if (studentGrades.length === 0) return null;
 

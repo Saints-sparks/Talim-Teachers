@@ -119,6 +119,10 @@ const AssessmentGradeForm: React.FC<AssessmentGradeFormProps> = ({
     loadCourseAssessmentData();
   }, [courseId, termId, students]);
 
+  // Safely resolve a field that may be a populated object or a plain ID string
+  const resolveId = (val: any): string | undefined =>
+    val != null && typeof val === "object" ? val._id : val;
+
   const loadCourseAssessmentData = async () => {
     setLoading(true);
     setSaveError(null); // Clear any previous errors
@@ -153,34 +157,19 @@ const AssessmentGradeForm: React.FC<AssessmentGradeFormProps> = ({
       const studentData: StudentCourseGradeData[] = students.map((student) => {
         // Get all assessment grades for this student in this course
         const studentAssessmentGrades = allCourseAssessments.filter(
-          (grade: any) => {
-            // Handle both populated and non-populated studentId
-            const gradeStudentId =
-              typeof grade.studentId === "object"
-                ? grade.studentId._id
-                : grade.studentId;
-            return gradeStudentId === student._id;
-          }
+          (grade: any) => resolveId(grade.studentId) === student._id
         );
 
         // Get current assessment grade if exists
-        const currentAssessmentGrade = assessmentGrades.find((grade: any) => {
-          const gradeStudentId =
-            typeof grade.studentId === "object"
-              ? grade.studentId._id
-              : grade.studentId;
-          const gradeAssessmentId =
-            typeof grade.assessmentId === "object"
-              ? grade.assessmentId._id
-              : grade.assessmentId;
-          return (
-            gradeStudentId === student._id && gradeAssessmentId === assessmentId
-          );
-        });
+        const currentAssessmentGrade = assessmentGrades.find(
+          (grade: any) =>
+            resolveId(grade.studentId) === student._id &&
+            resolveId(grade.assessmentId) === assessmentId
+        );
 
-        // Get course grade record for this student
+        // Get course grade record — studentId may be a populated object or a plain string
         const courseGradeRecord = courseGrades.find(
-          (cg: any) => cg.studentId === student._id
+          (cg: any) => resolveId(cg.studentId) === student._id
         );
 
         // Calculate cumulative scores from all assessments
