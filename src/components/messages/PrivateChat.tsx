@@ -240,27 +240,17 @@ export default function PrivateChat({
     }
   }, [messages]);
   
-  // Handle WebSocket connection changes
-  useEffect(() => {
-    if (webSocket.isConnected && room) {
-      const roomId = room.roomId;
-      
-      webSocket.joinChatRoom(roomId);
-      
-      // Set up chat message listener and store cleanup function
-      const unsubscribe = webSocket.onChatMessage(handleNewMessage);
-      cleanupRef.current = unsubscribe;
-      
-      // Return cleanup function
-      return unsubscribe;
-    }
-  }, [webSocket.isConnected]);
-  
   // Handle new incoming messages via WebSocket
   const handleNewMessage = (newMessage: WebSocketChatMessage) => {
     if (!newMessage || !room) return;
 
     const currentUserId = user?.userId || user?._id;
+
+    // Mark as read on the server so unread counts clear properly
+    if (newMessage.senderId !== currentUserId && newMessage._id) {
+      webSocket.markMessageAsRead(newMessage._id);
+    }
+
     const formattedMessage: Message = {
         _id: newMessage._id,
         sender: newMessage.senderName || 'Unknown',

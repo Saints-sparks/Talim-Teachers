@@ -57,3 +57,10 @@ export const useWebSocketContext = (): WebSocketContextType => {
   }
   return context;
 };
+
+// Safe variant — returns null instead of throwing when used outside the provider.
+// Use this anywhere hooks must be called unconditionally (e.g. inside custom hooks
+// that want to degrade gracefully rather than crash the tree).
+export const useWebSocketContextSafe = (): WebSocketContextType | null => {
+  return useContext(WebSocketContext);
+};

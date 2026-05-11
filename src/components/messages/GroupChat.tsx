@@ -527,6 +527,11 @@ export default function GroupChat({
       // Enhanced check for current user - particularly important for real-time messages
       const isMyMessage = isCurrentUser(senderId, senderName);
 
+      // Mark as read on the server so unread counts clear properly
+      if (!isMyMessage && newMessage._id) {
+        webSocket.markMessageAsRead(newMessage._id);
+      }
+
       // Additional fallback: if we just sent a message and this message content matches what we just sent,
       // it's very likely our own message coming back through WebSocket
       const messageContent = newMessage.content || (newMessage as any).text;

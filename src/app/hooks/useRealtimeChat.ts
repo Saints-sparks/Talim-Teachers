@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ChatRoomData, ChatMessage, ChatRoomsUpdateData } from "./useWebSocket";
-import { useWebSocketContext } from "../contexts/WebSocketContext";
+import { useWebSocketContextSafe } from "../contexts/WebSocketContext";
 import { useAuth } from "./useAuth";
 import { toast } from "react-hot-toast";
 
@@ -56,34 +56,13 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
 
   const { user } = useAuth();
 
-  // Get WebSocket context with error handling
-  let webSocketContext;
-  try {
-    webSocketContext = useWebSocketContext();
-  } catch (error) {
-    // Return a default state if context is not available
-    return {
-      chatRooms: [],
-      isLoading: false,
-      isConnected: false,
-      error: "WebSocket not available",
-      refreshChatRooms: () => {},
-      searchChatRooms: () => [],
-      getFilteredChatRooms: () => [],
-      selectedRoomId: null,
-      selectRoom: () => {},
-      unselectRoom: () => {},
-      sendMessage: () => {},
-      markAsRead: () => {},
-      onNewMessage: () => () => {},
-      onRoomUpdate: () => () => {},
-    };
-  }
-
+  // Called unconditionally so React's hook call order is stable across renders.
+  // Returns null when used outside a WebSocketProvider; all effects guard with
+  // `if (!isConnected)` so no-op defaults are safe.
+  const webSocketContext = useWebSocketContextSafe();
   const {
     socket,
     isConnected,
-    connectionStatus,
     fetchChatRooms,
     onChatRoomsUpdate,
     onChatMessage,
@@ -91,10 +70,29 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     joinChatRoom,
     leaveChatRoom,
     markMessageAsRead,
-  } = webSocketContext;
+    onUnreadMessagesUpdate,
+  } = (webSocketContext ?? {
+    socket: null,
+    isConnected: false,
+    fetchChatRooms: () => {},
+    onChatRoomsUpdate: (_cb: any) => () => {},
+    onChatMessage: (_cb: any) => () => {},
+    sendChatMessage: () => {},
+    joinChatRoom: () => {},
+    leaveChatRoom: () => {},
+    markMessageAsRead: () => {},
+    onUnreadMessagesUpdate: (_cb: any) => () => {},
+  });
 
   const searchTermRef = useRef<string>("");
   const mountedRef = useRef(true);
+  const selectedRoomIdRef = useRef<string | null>(null);
+
+  // Keep ref in sync so event-handler closures can read the current room without
+  // causing stale-closure bugs or adding selectedRoomId to every effect dep array.
+  useEffect(() => {
+    selectedRoomIdRef.current = selectedRoomId;
+  }, [selectedRoomId]);
 
   // Initial chat rooms fetch when connected
   useEffect(() => {
@@ -230,9 +228,17 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
         return;
       }
 
-      const transformedRooms = data.rooms.map(transformChatRoom);
+      const transformedRooms = data.rooms.map((roomData) => {
+        const transformed = transformChatRoom(roomData);
+        // The currently open room was already zeroed locally by selectRoom().
+        // Don't let the server response overwrite that with the stale DB count —
+        // the server count clears once markMessageAsRead calls are processed.
+        if (transformed.roomId === selectedRoomIdRef.current) {
+          return { ...transformed, unreadCount: 0 };
+        }
+        return transformed;
+      });
 
-     
       // Sort rooms by last message time (newest first)
       transformedRooms.sort((a, b) => {
         const timeA = a.lastMessage?.timestamp
@@ -321,6 +327,19 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
       fetchChatRooms();
     }
   }, [isConnected, fetchChatRooms]);
+
+  // Sync total unread counts when the backend pushes an update.
+  // refreshChatRooms is rate-limited (2 s cooldown) so this won't spam the server.
+  useEffect(() => {
+    if (!isConnected) return;
+
+    const unsubscribe = onUnreadMessagesUpdate(() => {
+      if (!mountedRef.current) return;
+      refreshChatRooms();
+    });
+
+    return unsubscribe;
+  }, [isConnected, onUnreadMessagesUpdate, refreshChatRooms]);
 
   const searchChatRooms = useCallback(
     (searchTerm: string): RealtimeChatRoom[] => {
@@ -431,8 +450,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
   );
 
   const onRoomUpdate = useCallback(
-    (callback: (roomId: string, room: RealtimeChatRoom) => void) => {
-      // This can be enhanced to provide more granular room updates
+    (_callback: (roomId: string, room: RealtimeChatRoom) => void) => {
       return () => {};
     },
     []
