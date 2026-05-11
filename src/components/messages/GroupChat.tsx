@@ -69,6 +69,7 @@ export default function GroupChat({
   // Refs for scroll management
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const currentRoomIdRef = useRef<string | null>(null);
 
   const { getAccessToken, user } = useAuth();
   const { classes, courses } = useAppContext();
@@ -148,9 +149,6 @@ export default function GroupChat({
       return prevMessages;
     });
   }, [user, messagesNeedRevaluation]); // Dependencies to trigger re-evaluation
-
-  // Cleanup function reference
-  const cleanupRef = useRef<(() => void) | null>(null);
 
   // Helper to get current user ID with fallback options
   const getCurrentUserId = (): string | undefined => {
@@ -503,41 +501,34 @@ export default function GroupChat({
 
 
 
-  // Handle new incoming messages via WebSocket
-  const handleNewMessage = useCallback(
-    (newMessage: WebSocketChatMessage) => {
-     
+  // Keep ref current so the message listener always reads the active room
+  useEffect(() => {
+    currentRoomIdRef.current = room?.roomId ?? null;
+  }, [room?.roomId]);
 
-      // Get room ID from either roomId or chatRoomId (backend inconsistency)
+  // Set up message listener for real-time messages — registered once per room,
+  // not on every user-state change, so no messages are missed during re-renders.
+  useEffect(() => {
+    if (!webSocket.isConnected || !room?.roomId) return;
+
+    const unsubscribe = webSocket.onChatMessage((newMessage: WebSocketChatMessage) => {
       const messageRoomId = newMessage.roomId || (newMessage as any).chatRoomId;
+      // Guard with ref so stale closures can't route messages to the wrong room
+      if (messageRoomId !== currentRoomIdRef.current) return;
 
-      // Only process messages for the current room
-      if (messageRoomId !== room?.roomId) {
-       
-        return;
-      }
-
-      // Resolve sender name using helper function
       const { name: senderName, id: senderId } = resolveSenderName(
         newMessage.senderId,
         newMessage.senderName
       );
-     
 
-      // Enhanced check for current user - particularly important for real-time messages
       const isMyMessage = isCurrentUser(senderId, senderName);
 
-      // Mark as read on the server so unread counts clear properly
       if (!isMyMessage && newMessage._id) {
         webSocket.markMessageAsRead(newMessage._id);
       }
 
-      // Additional fallback: if we just sent a message and this message content matches what we just sent,
-      // it's very likely our own message coming back through WebSocket
       const messageContent = newMessage.content || (newMessage as any).text;
-     
 
-      // Format the incoming message
       const formattedMessage: Message = {
         _id: newMessage._id || (newMessage as any).id,
         sender: senderName,
@@ -550,24 +541,20 @@ export default function GroupChat({
           newMessage.timestamp ||
           (newMessage as any).createdAt ||
           new Date()
-        ).toString(), // Store original timestamp
+        ).toString(),
         timestamp: (
           newMessage.timestamp ||
           (newMessage as any).createdAt ||
           new Date()
-        ).toString(), // Store original timestamp
+        ).toString(),
         type: newMessage.type || "text",
         senderType: isMyMessage ? "self" : getUserRole(senderId),
         color: getColorForUser(senderId, senderName),
-        avatar: "", // Let GroupMessageBubble handle avatar fallback
+        avatar: "",
       };
 
-      // Add new message to the end (newest messages at bottom)
       setMessages((prevMessages) => {
-        // Check if message already exists to prevent duplicates
-        // Enhanced duplicate detection with multiple checks
         const messageExists = prevMessages.some((msg) => {
-          // Check by ID if both messages have IDs
           if (
             msg._id &&
             formattedMessage._id &&
@@ -576,37 +563,26 @@ export default function GroupChat({
             return true;
           }
 
-          // Check by content, sender, and time proximity for better duplicate detection
           const contentMatch = msg.text === formattedMessage.text;
           const senderMatch =
             msg.senderId === formattedMessage.senderId ||
             msg.sender === formattedMessage.sender;
           const timeMatch = msg.time === formattedMessage.time;
 
-          // If content, sender, and time all match, it's likely a duplicate
           if (contentMatch && senderMatch && timeMatch) {
             return true;
           }
 
-          // Additional check for very recent messages (within 2 seconds)
-          if (
-            contentMatch &&
-            senderMatch &&
-            msg.time &&
-            formattedMessage.time
-          ) {
+          if (contentMatch && senderMatch && msg.time && formattedMessage.time) {
             try {
               const msgTime = new Date(`1970-01-01 ${msg.time}`).getTime();
               const newMsgTime = new Date(
                 `1970-01-01 ${formattedMessage.time}`
               ).getTime();
-              const timeDiff = Math.abs(msgTime - newMsgTime);
-              if (timeDiff < 2000) {
-                // 2 seconds tolerance
+              if (Math.abs(msgTime - newMsgTime) < 2000) {
                 return true;
               }
             } catch (e) {
-              // If time parsing fails, fall back to exact match
               return false;
             }
           }
@@ -614,38 +590,13 @@ export default function GroupChat({
           return false;
         });
 
-        if (messageExists) {
-
-          return prevMessages;
-        }
-
-        // Add new message at the end
-        const updatedMessages = [...prevMessages, formattedMessage];
-
-        return updatedMessages;
+        if (messageExists) return prevMessages;
+        return [...prevMessages, formattedMessage];
       });
-    },
-    [room?.roomId, getCurrentUserId()]
-  );
+    });
 
-  // Set up message listener for real-time messages (separate from room joining)
-  useEffect(() => {
-    if (!webSocket.isConnected || !room?.roomId) {
-     
-      return;
-    }
-
-    // Only set up listener if we don't already have one for this room
-    const unsubscribe = webSocket.onChatMessage(handleNewMessage);
-    cleanupRef.current = unsubscribe;
-
-    return () => {
-      if (cleanupRef.current) {
-        cleanupRef.current();
-        cleanupRef.current = null;
-      }
-    };
-  }, [webSocket.isConnected, room?.roomId, handleNewMessage]);
+    return unsubscribe;
+  }, [webSocket.isConnected, room?.roomId]);
 
   // Handle sending a new message
   const handleSendMessage = useCallback(() => {

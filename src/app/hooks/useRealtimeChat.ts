@@ -164,7 +164,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
           avatarInfo = {
             type: "initials",
             value: initials,
-            bgColor: generateColorFromString(room.roomId),
+            bgColor: generateColorFromString(displayName),
           };
           break;
         }
@@ -179,7 +179,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
           avatarInfo = {
             type: "initials",
             value: initials,
-            bgColor: generateColorFromString(room.roomId),
+            bgColor: generateColorFromString(displayName),
           };
           break;
         }
