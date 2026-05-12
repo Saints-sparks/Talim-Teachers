@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
-import { toast } from "react-hot-toast";
+import { toast } from "@/components/CustomToast";
 import { API_BASE_URL } from "../lib/api/config";
 
 // WebSocket connection configuration - Socket.IO can handle HTTP/HTTPS URLs directly

@@ -3,7 +3,6 @@
 import { FormEvent, useState } from "react";
 import Image from "next/image";
 import { Eye, EyeOff, ShieldAlert, AlertCircle, Loader2 } from "lucide-react";
-import { Toaster } from "react-hot-toast";
 import { useAuth } from "./hooks/useAuth";
 
 type LoginError =
@@ -56,7 +55,6 @@ const LoginPage: React.FC = () => {
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
-      <Toaster position="top-right" />
 
       {/* ── Left panel — Form ── */}
       <div className="flex flex-col justify-center items-center px-8 py-12 sm:px-16 bg-white">

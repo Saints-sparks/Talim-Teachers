@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { ChatRoomData, ChatMessage, ChatRoomsUpdateData } from "./useWebSocket";
 import { useWebSocketContextSafe } from "../contexts/WebSocketContext";
 import { useAuth } from "./useAuth";
-import { toast } from "react-hot-toast";
+import { toast } from "@/components/CustomToast";
 
 export interface RealtimeChatRoom extends ChatRoomData {
   displayName: string;

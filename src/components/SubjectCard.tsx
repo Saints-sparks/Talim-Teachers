@@ -5,7 +5,7 @@ import { getCurriculumByCourseAndTerm } from "@/app/services/curriculum.services
 import { useAuth } from "@/app/hooks/useAuth";
 import { useState } from "react";
 import CurriculumActionModal from "./curriculum/CurriculumActionModal";
-import { toast } from "react-hot-toast";
+import { toast } from "@/components/CustomToast";
 import { getCurrentTerm } from "@/app/services/api.service";
 
 interface SubjectCardProps {

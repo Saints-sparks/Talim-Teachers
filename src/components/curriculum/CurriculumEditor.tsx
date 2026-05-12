@@ -47,7 +47,7 @@ import {
   AlertCircle,
   X,
 } from "lucide-react";
-import { toast } from "react-hot-toast";
+import { toast } from "@/components/CustomToast";
 import { useCurriculum } from "../../app/hooks/useCurriculum";
 import { useAuth } from "../../app/hooks/useAuth";
 

@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useAuth } from './useAuth';
-import { toast } from 'react-hot-toast';
+import { toast } from "@/components/CustomToast";
 import { Subject } from '../../types/types';
 import SubjectService from '../services/subject.services';
 

@@ -16,7 +16,7 @@ import { Button } from "./ui/button";
 import { useAuth } from "@/app/hooks/useAuth";
 import { useAppContext } from "@/app/context/AppContext";
 import { getTeacherTimetable } from "@/app/services/api.service";
-import { toast } from "react-hot-toast";
+import { toast } from "@/components/CustomToast";
 
 // Define a TypeScript interface for a single timetable entry.
 interface TimetableEntry {

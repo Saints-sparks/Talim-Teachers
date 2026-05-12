@@ -4,8 +4,8 @@ import { Manrope } from "next/font/google";
 import { AppProvider } from "@/app/context/AppContext";
 import { WebSocketProvider } from "@/app/contexts/WebSocketContext";
 import { ChatProvider } from "@/app/context/ChatContext";
-import { Toaster } from "react-hot-toast";
 import OnboardingShell from "./onboarding-provider";
+import { ToastViewport } from "@/components/CustomToast";
 
 const manrope = Manrope({ subsets: ["latin"] });
 
@@ -32,7 +32,7 @@ export default function RootLayout({
             <WebSocketProvider>
               <ChatProvider>
                 {children}
-                <Toaster position="top-right" />
+                <ToastViewport />
               </ChatProvider>
             </WebSocketProvider>
           </OnboardingShell>

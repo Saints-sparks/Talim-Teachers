@@ -24,7 +24,7 @@ import {
 import { useAppContext } from "@/app/context/AppContext";
 import LoadingCard from "@/components/LoadingCard";
 import { useRouter, useParams } from "next/navigation";
-import { toast } from "react-hot-toast";
+import { toast } from "@/components/CustomToast";
 import { AttendanceRecord, AttendanceStatus } from "@/types/attendance";
 import { useTeacherOnboarding } from "@/app/context/OnboardingContext";
 

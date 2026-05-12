@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "react-hot-toast";
+import { toast } from "@/components/CustomToast";
 import nookies from "nookies";
 import { authService } from "../services/auth.service";
 import { LoginCredentials, User } from "../../types/auth";
