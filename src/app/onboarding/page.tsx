@@ -32,6 +32,8 @@ export default function TeacherOnboardingPhase1() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const userId = user?.userId || user?._id || user?.id;
+  const userAvatar = user?.userAvatar;
 
   useEffect(() => {
     if (isHydrated && phase1Completed) {
@@ -44,7 +46,6 @@ export default function TeacherOnboardingPhase1() {
 
     const loadTeacher = async () => {
       const token = getAccessToken();
-      const userId = user?.userId || user?._id;
       if (!token || !userId) {
         setLoading(false);
         return;
@@ -55,7 +56,7 @@ export default function TeacherOnboardingPhase1() {
         const data = await fetchTeacherDetails(userId, token);
         if (cancelled) return;
         setTeacher(data);
-        setAvatarPreview(user?.userAvatar || data?.userId?.userAvatar || null);
+        setAvatarPreview(userAvatar || data?.userId?.userAvatar || null);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -65,7 +66,7 @@ export default function TeacherOnboardingPhase1() {
     return () => {
       cancelled = true;
     };
-  }, [getAccessToken, user]);
+  }, [userId, userAvatar]);
 
   const teacherInfo = useMemo(() => {
     const teacherUser = teacher?.userId || user || {};
