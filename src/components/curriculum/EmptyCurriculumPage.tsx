@@ -3,9 +3,17 @@ import React from 'react';
 
 interface EmptyCurriculumPageProps {
   onCreateClick: () => void;
+  title?: string;
+  description?: string;
+  actionLabel?: string;
 }
 
-const EmptyCurriculumPage: React.FC<EmptyCurriculumPageProps> = ({ onCreateClick }) => {
+const EmptyCurriculumPage: React.FC<EmptyCurriculumPageProps> = ({
+  onCreateClick,
+  title = "No Curriculum Found",
+  description = "Get started by creating your first curriculum",
+  actionLabel = "Create Curriculum",
+}) => {
   return (
     <div className="min-h-screen bg-white flex items-center justify-center">
       <div className="text-center">
@@ -14,13 +22,13 @@ const EmptyCurriculumPage: React.FC<EmptyCurriculumPageProps> = ({ onCreateClick
           alt="Empty Curriculum Illustration"
           className="mx-auto mb-6 w-22 h-22"
         />
-        <h2 className="text-2xl font-semibold text-gray-800 mb-4">No Curriculum Found</h2>
-        <p className="text-gray-600 mb-6">Get started by creating your first curriculum</p>
+        <h2 className="text-2xl font-semibold text-gray-800 mb-4">{title}</h2>
+        <p className="text-gray-600 mb-6">{description}</p>
         <button
           onClick={onCreateClick}
           className="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-[#003366] transition"
         >
-          Create Curriculum
+          {actionLabel}
         </button>
       </div>
     </div>

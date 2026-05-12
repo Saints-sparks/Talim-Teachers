@@ -166,7 +166,6 @@ const CurriculumContent = () => {
     curricula,
     isLoading,
     error,
-    fetchCurricula,
     fetchCurriculumByCourse,
     showEditor,
     setShowEditor,
@@ -175,7 +174,6 @@ const CurriculumContent = () => {
     fetchCurriculumById,
   } = useCurriculum();
   const { isAuthenticated, getAccessToken } = useAuth();
-  const hasInitialized = useRef(false);
   const [selectedCurriculum, setSelectedCurriculum] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCurriculumId, setEditingCurriculumId] = useState<string | null>(
@@ -208,58 +206,56 @@ const CurriculumContent = () => {
     );
   }
   useEffect(() => {
-    if (isAuthenticated && !hasInitialized.current) {
-      hasInitialized.current = true;
-      // Fetch teacher courses and current term
-      fetchTeacherData();
+    if (!isAuthenticated) return;
 
-      // If in view or edit mode and curriculumId, courseId, and termId are present, fetch the curriculum
-      if (
-        (mode === "view" || mode === "edit") &&
-        curriculumId &&
-        courseId &&
-        termId
-      ) {
-        (async () => {
-          try {
-            const curriculum = await getCurriculumByCourseAndTerm({
-              courseId,
-              termId,
-              token,
-            });
-            setSelectedCurriculum(curriculum);
-            if (mode === "edit") {
-              setEditingCurriculumId(curriculum?._id || null);
-              setShowEditor(true);
-            }
-          } catch (error) {
-            setSelectedCurriculum(null);
-          }
-        })();
-      } else if (courseId) {
-        // If courseId is provided, fetch curricula for this specific course
-        if (termId) {
-          setCurrentTerm((prev: any) => prev || { _id: termId, name: "Current Term" });
-        }
-        getCurrentTerm(token).then((term) => {
-          if (term) {
-            setCurrentTerm(term);
-          }
-        });
-        if (courseTitle) {
-          setCourseInfo({
-            _id: courseId,
-            name: decodeURIComponent(courseTitle),
-            courseCode: courseCode ? decodeURIComponent(courseCode) : "",
+    fetchTeacherData();
+
+    if (
+      (mode === "view" || mode === "edit") &&
+      curriculumId &&
+      courseId &&
+      termId
+    ) {
+      (async () => {
+        try {
+          const curriculum = await getCurriculumByCourseAndTerm({
+            courseId,
+            termId,
+            token,
           });
+          setSelectedCurriculum(curriculum);
+          if (mode === "edit") {
+            setEditingCurriculumId(curriculum?._id || null);
+            setShowEditor(true);
+          }
+        } catch (error) {
+          setSelectedCurriculum(null);
         }
-        if (mode === "create") {
-          setShowEditor(true);
-        }
-      } else {
-        // If no courseId, fetch all curricula (original behavior)
-        fetchCurricula({});
+      })();
+    } else if (courseId) {
+      if (termId) {
+        setCurrentTerm((prev: any) => prev || { _id: termId, name: "Current Term" });
       }
+      getCurrentTerm(token).then((term) => {
+        if (term) {
+          setCurrentTerm(term);
+        }
+      });
+      if (courseTitle) {
+        setCourseInfo({
+          _id: courseId,
+          name: decodeURIComponent(courseTitle),
+          courseCode: courseCode ? decodeURIComponent(courseCode) : "",
+        });
+      }
+      fetchCurriculumForCourse(courseId);
+      if (mode === "create") {
+        setShowEditor(true);
+      }
+    } else {
+      setCourseCurricula([]);
+      setCourseInfo(null);
+      setSelectedCurriculum(null);
     }
   }, [isAuthenticated, courseId, mode, curriculumId, termId]);
 
@@ -293,8 +289,14 @@ const CurriculumContent = () => {
 
   const fetchCurriculumForCourse = async (courseId: string) => {
     try {
-      const curricula = await fetchCurriculumByCourse(courseId);
-      setCourseCurricula(curricula || []);
+      const curriculaForCourse = await fetchCurriculumByCourse(courseId);
+      setCourseCurricula(
+        Array.isArray(curriculaForCourse)
+          ? curriculaForCourse
+          : curriculaForCourse
+          ? [curriculaForCourse]
+          : []
+      );
     } catch (error) {
       console.error("Failed to fetch course curricula:", error);
       setCourseCurricula([]);
@@ -342,8 +344,7 @@ const CurriculumContent = () => {
     if (courseId) {
       fetchCurriculumForCourse(courseId);
     } else {
-      // Otherwise refresh all curricula
-      fetchCurricula({});
+      router.push("/subjects");
     }
   };
 
@@ -380,17 +381,19 @@ const CurriculumContent = () => {
     );
   }
 
-  if (error) {
+  if (error && courseId) {
     return (
       <Layout>
         <div className="min-h-screen bg-gray-50 p-8 flex items-center justify-center">
           <div className="text-center bg-white p-6 rounded-lg shadow-none border border-[#F0F0F0]">
             <p className="text-[#878787] text-lg mb-4">Error: {error}</p>
             <button
-              onClick={() => fetchCurricula({})}
+              onClick={() =>
+                courseId ? fetchCurriculumForCourse(courseId) : router.push("/subjects")
+              }
               className="px-4 py-2 bg-[#003366] text-white rounded-lg hover:bg-[#002244] transition-colors duration-200"
             >
-              Retry
+              {courseId ? "Retry" : "Choose Course"}
             </button>
           </div>
         </div>
@@ -439,7 +442,12 @@ const CurriculumContent = () => {
           curriculum={selectedCurriculum}
         />
         {displayCurricula.length === 0 && !isCoursePage ? (
-          <EmptyCurriculumPage onCreateClick={() => setShowEditor(true)} />
+          <EmptyCurriculumPage
+            title="Select a Course First"
+            description="Choose one of your assigned courses before creating or editing a curriculum."
+            actionLabel="Choose Course"
+            onCreateClick={() => router.push("/subjects")}
+          />
         ) : (
           <div className="max-w-7xl mx-auto">
             <div className="flex justify-between items-center mb-8">
@@ -459,11 +467,13 @@ const CurriculumContent = () => {
                 </h1>
               </div>
               <button
-                onClick={() => setShowEditor(true)}
+                onClick={() =>
+                  isCoursePage ? setShowEditor(true) : router.push("/subjects")
+                }
                 className="bg-[#003366] text-white px-6 py-2 rounded-lg hover:bg-[#002244] transition-colors duration-200 shadow-none flex items-center gap-2"
               >
                 <Plus className="w-5 h-5" />
-                {isCoursePage ? "Create Curriculum" : "Create New Curriculum"}
+                {isCoursePage ? "Create Curriculum" : "Select Course"}
               </button>
             </div>
             {displayCurricula.length === 0 && isCoursePage ? (
