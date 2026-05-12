@@ -1,55 +1,79 @@
 import { useState, useEffect } from "react";
-import { API_BASE_URL } from "../lib/api/config";
 import { useAuth } from "./useAuth";
 import { apiClient } from "../lib/api/apiClient";
+
+const getUserId = (user: any): string => {
+  if (!user) return "";
+  return user.userId || user._id || user.id || "";
+};
+
+const getNotificationItems = (payload: any): any[] => {
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.announcements)) return payload.announcements;
+  if (Array.isArray(payload)) return payload;
+  return [];
+};
 
 const useNotifications = () => {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { user, getAccessToken } = useAuth();
-  const userId = user?.userId;
+  const { user, getAccessToken, getUser } = useAuth();
+  const userId = getUserId(user || getUser());
 
   useEffect(() => {
     const fetchNotifications = async () => {
+      const token = getAccessToken();
+
+      if (!token) {
+        setNotifications([]);
+        setError("You need to sign in to view notifications.");
+        setLoading(false);
+        return;
+      }
+
+      if (!userId) {
+        setNotifications([]);
+        setError(null);
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
+        setError(null);
 
         // **Check localStorage first**
-        const cachedNotifications = localStorage.getItem("notifications");
+        const cacheKey = `notifications:${userId}`;
+        const cachedNotifications = localStorage.getItem(cacheKey);
         if (cachedNotifications) {
           setNotifications(JSON.parse(cachedNotifications));
         }
 
         // **Fetch fresh notifications**
-        const token = getAccessToken();
-        if (!token) throw new Error("No authentication token found");
         const response = await apiClient.get(
-          `${API_BASE_URL}/notifications/announcements/receiver/${userId}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          `/notifications/announcements/receiver/${userId}`
         );
 
-        if (!response.data || !Array.isArray(response.data.data)) {
+        const items = getNotificationItems(response.data);
+        if (!response.data || !Array.isArray(items)) {
           throw new Error("Unexpected response format");
         }
 
-        const formattedNotifications = response.data.data.map((notif: any) => ({
+        const formattedNotifications = items.map((notif: any) => ({
           id: notif._id,
           title: notif.title || "No title",
-          message: notif.message || "No message",
-          senderId: notif.senderId || null,
+          message: notif.message || notif.content || "No message",
+          senderId: notif.senderId || notif.createdBy || null,
           createdAt: notif.createdAt,
-          unread: notif.readBy?.length === 0, // Assuming unread notifications have no readBy data
+          unread: Array.isArray(notif.readBy)
+            ? !notif.readBy.some((reader: any) => getUserId(reader) === userId)
+            : false,
         }));
 
         // **Update state & cache**
         setNotifications(formattedNotifications);
-        localStorage.setItem(
-          "notifications",
-          JSON.stringify(formattedNotifications)
-        );
+        localStorage.setItem(cacheKey, JSON.stringify(formattedNotifications));
       } catch (error) {
         console.error("Failed to fetch notifications:", error);
         setError("Failed to load notifications. Please try again.");
