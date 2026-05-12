@@ -104,7 +104,7 @@ export default function ChatSidebar({ onSelectChat, className = "" }: ChatSideba
       </div>
 
       {/* Search Section */}
-      <div className="p-3 sm:p-4 space-y-3 bg-white border-b border-gray-50">
+      <div className="p-3 sm:p-4 space-y-3 bg-white border-b border-gray-50" data-guide="messages-search">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
           <Input
@@ -159,7 +159,7 @@ export default function ChatSidebar({ onSelectChat, className = "" }: ChatSideba
       {/* Chat List */}
       <div className="flex-1 overflow-y-auto bg-white">
         {/* Create Group Button */}
-        <div className="px-3 sm:px-4 mb-2">
+        <div className="px-3 sm:px-4 mb-2" data-guide="messages-create-group">
           <button
             className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 active:bg-gray-100 rounded-xl transition-colors text-left group touch-manipulation"
             onClick={() => setIsCreateGroupModalOpen(true)}
@@ -202,7 +202,7 @@ export default function ChatSidebar({ onSelectChat, className = "" }: ChatSideba
         )}
 
         {/* Chat Items */}
-        <div className="px-2 sm:px-3">
+        <div className="px-2 sm:px-3" data-guide="messages-list">
           {displayRooms.map((room) => {
             const roomInitials = getUserInitials(room.displayName);
             const roomBgColor = generateColorFromString(room.displayName);

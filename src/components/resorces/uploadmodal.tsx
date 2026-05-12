@@ -227,7 +227,7 @@ export function UploadModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px] text-black p-0 overflow-hidden shadow-none border border-[#F0F0F0]">
+      <DialogContent className="sm:max-w-[500px] text-black p-0 overflow-hidden shadow-none border border-[#F0F0F0]" data-guide="resources-upload-modal">
         {/* Header */}
         <div className="bg-[#003366] p-6 text-white">
           <div className="flex items-center justify-between">
@@ -273,7 +273,7 @@ export function UploadModal({
           ) : (
             <>
               {/* Resource Name */}
-              <div className="space-y-2">
+              <div className="space-y-2" data-guide="resources-upload-name">
                 <Label
                   htmlFor="resource-name"
                   className="text-sm font-medium text-[#030E18]"
@@ -290,7 +290,7 @@ export function UploadModal({
               </div>
 
               {/* Class Selection */}
-              <div className="space-y-2">
+              <div className="space-y-2" data-guide="resources-upload-class">
                 <Label
                   htmlFor="class"
                   className="text-sm font-medium text-[#030E18]"
@@ -354,7 +354,7 @@ export function UploadModal({
               </div>
 
               {/* Course Selection */}
-              <div className="space-y-2">
+              <div className="space-y-2" data-guide="resources-upload-course">
                 <Label
                   htmlFor="course"
                   className="text-sm font-medium text-[#030E18]"
@@ -412,7 +412,7 @@ export function UploadModal({
               </div>
 
               {/* File Upload */}
-              <div className="space-y-2">
+              <div className="space-y-2" data-guide="resources-upload-file">
                 <Label className="text-sm font-medium text-[#030E18]">
                   Upload File
                 </Label>

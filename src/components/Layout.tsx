@@ -1,7 +1,8 @@
 "use client";
-import { ReactNode, useState } from "react";
+import { ReactNode, Suspense, useState } from "react";
 import Sidebar from "./Sidebar";
 import { Header } from "./HeaderTwo";
+import AppGuide from "./onboarding/AppGuide";
 
 interface LayoutProps {
   children: ReactNode;
@@ -32,6 +33,9 @@ function Layout({ children }: LayoutProps) {
         <Header onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
         <div className="flex-1 h-full overflow-y-auto">{children}</div>
       </div>
+      <Suspense fallback={null}>
+        <AppGuide />
+      </Suspense>
     </div>
   );
 }

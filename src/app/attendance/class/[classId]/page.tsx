@@ -384,7 +384,7 @@ const AttendanceClassPage: React.FC = () => {
       <div className="min-h-screen bg-[#F8F8F8]">
         <div className="p-3 sm:p-6">
           {/* Header */}
-          <div className="bg-white border border-[#E6EDF5] rounded-2xl p-4 sm:p-5 mb-6 sm:mb-8">
+          <div className="bg-white border border-[#E6EDF5] rounded-2xl p-4 sm:p-5 mb-6 sm:mb-8" data-guide="attendance-register-header">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div className="flex items-start gap-3">
                 <button
@@ -421,7 +421,7 @@ const AttendanceClassPage: React.FC = () => {
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2" data-guide="attendance-mode-controls">
                   <Button
                     variant={viewMode === "mark-attendance" ? "default" : "outline"}
                     className={
@@ -478,7 +478,7 @@ const AttendanceClassPage: React.FC = () => {
                 </Card>
               ) : (
                 <div className="space-y-3 sm:space-y-4">
-                  <div className="rounded-2xl border border-[#E6EDF5] bg-gradient-to-br from-[#F6F9FC] via-white to-[#F8FBFF] p-4 sm:p-5">
+                  <div className="rounded-2xl border border-[#E6EDF5] bg-gradient-to-br from-[#F6F9FC] via-white to-[#F8FBFF] p-4 sm:p-5" data-guide="attendance-overview">
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
                       <div className="rounded-xl border border-[#E6EDF5] bg-white/80 p-3 text-left">
                         <div className="text-[11px] uppercase tracking-wide text-[#6F6F6F]">
@@ -533,7 +533,7 @@ const AttendanceClassPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4" data-guide="attendance-student-cards">
                     {filteredData.map((student) => {
                       const isSubmitted =
                         student.isSubmitted || submittedStudents.has(student.id);

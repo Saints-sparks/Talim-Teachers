@@ -402,7 +402,7 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
       <div className="max-w-7xl mx-auto p-3 md:p-6">
         <div className="bg-white rounded-xl shadow-none border border-[#F0F0F0] overflow-hidden">
           {/* Talim Header */}
-          <div className="bg-[#003366] p-4 md:p-6 text-white">
+          <div className="bg-[#003366] p-4 md:p-6 text-white" data-guide="curriculum-editor-header">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 md:gap-4">
                 <div className="p-2 md:p-3 bg-white/20 rounded-lg backdrop-blur-sm">
@@ -437,7 +437,7 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
           </div>
 
           {/* Mobile/Tablet Configuration Cards - Top */}
-          <div className="lg:hidden bg-[#F8F8F8] border-b border-[#F0F0F0] p-4">
+          <div className="lg:hidden bg-[#F8F8F8] border-b border-[#F0F0F0] p-4" data-guide="curriculum-editor-config">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Course Selection Card */}
               {!initialCourseId ? (
@@ -563,7 +563,7 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
 
           <div className="flex flex-col lg:flex-row">
             {/* Desktop Sidebar - Course Configuration */}
-            <div className="hidden lg:block w-80 bg-[#F8F8F8] border-r border-[#F0F0F0] p-6 space-y-6">
+            <div className="hidden lg:block w-80 bg-[#F8F8F8] border-r border-[#F0F0F0] p-6 space-y-6" data-guide="curriculum-editor-config">
               <div className="space-y-4">
                 {/* Course Selection Card */}
                 {!initialCourseId ? (
@@ -767,7 +767,7 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col">
               {/* Enhanced Toolbar */}
-              <div className="p-4 bg-white border-b border-[#F0F0F0]">
+              <div className="p-4 bg-white border-b border-[#F0F0F0]" data-guide="curriculum-editor-toolbar">
                 <div className="flex flex-wrap gap-1 items-center">
                   {/* Font Controls */}
                   <div className="flex items-center gap-2 pr-3 border-r border-[#F0F0F0]">
@@ -1084,7 +1084,7 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
               </div>
 
               {/* Editor Content */}
-              <div className="flex-1 p-6 bg-gray-50">
+              <div className="flex-1 p-6 bg-gray-50" data-guide="curriculum-editor-canvas">
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 min-h-[600px]">
                   <EditorContent
                     editor={editor}
@@ -1098,7 +1098,7 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
               </div>
 
               {/* Action Bar */}
-              <div className="p-6 bg-white border-t border-gray-200 flex justify-between items-center">
+              <div className="p-6 bg-white border-t border-gray-200 flex justify-between items-center" data-guide="curriculum-editor-actions">
                 <div className="flex items-center gap-2">
                   {courseId &&
                   termId &&

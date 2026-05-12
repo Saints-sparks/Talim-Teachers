@@ -98,7 +98,7 @@ const ClassStudents: React.FC<ClassStudentsProps> = ({
   return (
     <div className="space-y-5">
       {/* ── Page header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3" data-guide="students-list-header">
         <div className="flex items-center gap-3">
           <button
             onClick={onBack}
@@ -173,7 +173,7 @@ const ClassStudents: React.FC<ClassStudentsProps> = ({
       </div>
 
       {/* ── Search & filter bar ── */}
-      <div className="bg-white rounded-xl border border-gray-100 px-4 py-3 flex flex-col sm:flex-row gap-3">
+      <div className="bg-white rounded-xl border border-gray-100 px-4 py-3 flex flex-col sm:flex-row gap-3" data-guide="students-search-filter">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
@@ -241,7 +241,7 @@ const ClassStudents: React.FC<ClassStudentsProps> = ({
           )}
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden" data-guide="students-roster">
           {/* Table header */}
           <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
             <p className="text-sm font-semibold text-gray-700">

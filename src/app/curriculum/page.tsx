@@ -450,7 +450,7 @@ const CurriculumContent = () => {
           />
         ) : (
           <div className="max-w-7xl mx-auto">
-            <div className="flex justify-between items-center mb-8">
+            <div className="flex justify-between items-center mb-8" data-guide="curriculum-header">
               <div className="flex items-center gap-4">
                 {isCoursePage && (
                   <button
@@ -471,13 +471,14 @@ const CurriculumContent = () => {
                   isCoursePage ? setShowEditor(true) : router.push("/subjects")
                 }
                 className="bg-[#003366] text-white px-6 py-2 rounded-lg hover:bg-[#002244] transition-colors duration-200 shadow-none flex items-center gap-2"
+                data-guide="curriculum-primary-action"
               >
                 <Plus className="w-5 h-5" />
                 {isCoursePage ? "Create Curriculum" : "Select Course"}
               </button>
             </div>
             {displayCurricula.length === 0 && isCoursePage ? (
-              <div className="bg-white rounded-xl p-8 text-center shadow-none border border-[#F0F0F0]">
+              <div className="bg-white rounded-xl p-8 text-center shadow-none border border-[#F0F0F0]" data-guide="curriculum-list">
                 <div className="max-w-md mx-auto">
                   <h3 className="text-xl font-semibold text-[#030E18] mb-2">
                     No Curriculum Found
@@ -496,7 +497,7 @@ const CurriculumContent = () => {
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-guide="curriculum-list">
                 {displayCurricula.map((curriculum) => (
                   <div
                     key={curriculum._id}

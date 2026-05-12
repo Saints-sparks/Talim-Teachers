@@ -70,7 +70,7 @@ export default function MessagesLayout({
           : selectedChat 
             ? 'flex flex-1' 
             : 'hidden lg:flex lg:flex-1'
-      } flex-col bg-white h-full`}>
+      } flex-col bg-white h-full`} data-guide="messages-chat-area">
         {selectedChat ? (
           selectedChat.type === "group" ? (
             <GroupChat

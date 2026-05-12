@@ -39,3 +39,23 @@ body {
   font-family: 'Montserrat', sans-serif;
   font-weight: 300;
 }
+
+.talim-guide-card {
+  animation: talim-guide-enter 220ms ease-out;
+}
+
+@keyframes talim-guide-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 640px) {
+  .talim-guide-card {
+    max-width: calc(100vw - 2rem);
+  }
+}

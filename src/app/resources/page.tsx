@@ -179,7 +179,7 @@ export default function ResourcePage() {
       <div className="space-y-4 sm:space-y-6 bg-[#F8F8F8] min-h-screen p-3 sm:p-6">
         <div className="bg-white rounded-lg shadow-none border border-[#F0F0F0] p-3 sm:p-6">
           {/* Header Section */}
-          <div className="flex flex-col gap-4 mb-4 sm:mb-6">
+          <div className="flex flex-col gap-4 mb-4 sm:mb-6" data-guide="resources-header">
             <div className="flex items-center space-x-3 sm:space-x-4">
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#003366] rounded-xl flex items-center justify-center">
                 <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
@@ -208,6 +208,7 @@ export default function ResourcePage() {
               <Button
                 onClick={() => setIsUploadModalOpen(true)}
                 className="bg-[#003366] hover:bg-[#002244] text-white shadow-none transition-all duration-300 w-full sm:w-auto sm:self-start"
+                data-guide="resources-upload-button"
               >
                 <Upload className="h-4 w-4 mr-2" />
                 <span className="text-sm sm:text-base">Upload Resource</span>
@@ -216,7 +217,7 @@ export default function ResourcePage() {
           </div>
 
           {/* Statistics Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6" data-guide="resources-stats">
             <Card className="border-0 shadow-none bg-white border border-[#F0F0F0]">
               <CardContent className="p-3 sm:p-4">
                 <div className="flex items-center justify-between">
@@ -286,7 +287,7 @@ export default function ResourcePage() {
           </div>
         </div>
         {/* Resources Content */}
-        <div className="bg-white rounded-lg shadow-none border border-[#F0F0F0] p-6">
+        <div className="bg-white rounded-lg shadow-none border border-[#F0F0F0] p-6" data-guide="resources-list">
           {loading ? (
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
