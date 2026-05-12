@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { Resource } from "@/types/student";
 import { useAppContext } from "@/app/context/AppContext";
+import { useTeacherOnboarding } from "@/app/context/OnboardingContext";
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -46,6 +47,7 @@ export function UploadModal({
 }: UploadModalProps) {
   const { user, classes, isLoading: contextLoading } = useAppContext(); // Get loading state from context
   const { getAccessToken } = useAuth();
+  const { markStepComplete } = useTeacherOnboarding();
   const [localClasses, setLocalClasses] = useState<any[]>([]); // Fallback local classes
   const [courses, setCourses] = useState<any[]>([]);
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
@@ -207,6 +209,7 @@ export function UploadModal({
       const uploadedResource = await createResource(resourceData, token);
 
       setUploadSuccess(true);
+      markStepComplete("upload-resource");
       // Update the resource list in the parent component
       onNewResourceUpload(uploadedResource);
 

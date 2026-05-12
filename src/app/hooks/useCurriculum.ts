@@ -10,9 +10,11 @@ import {
 } from "../services/curriculum.services";
 import { useAuth } from "./useAuth";
 import { getCurrentTerm } from "../services/api.service";
+import { useTeacherOnboarding } from "@/app/context/OnboardingContext";
 
 export function useCurriculum() {
   const { getAccessToken } = useAuth();
+  const { markStepComplete } = useTeacherOnboarding();
   const [curricula, setCurricula] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +66,7 @@ export function useCurriculum() {
       }
       const newCurriculum = await createCurriculum(curriculumData, token);
       setCurricula((prev) => [...prev, newCurriculum]);
+      markStepComplete("create-curriculum");
       return newCurriculum;
     } catch (error: any) {
       setError(error.message);

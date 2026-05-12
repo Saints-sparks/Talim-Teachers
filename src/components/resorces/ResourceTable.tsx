@@ -72,9 +72,28 @@ export function ResourcesTable({
   const [pendingDelete, setPendingDelete] = useState<Resource | null>(null);
 
   const [loading, setLoading] = useState<string | null>(null);
-  const getClassName = (classId: string) => {
-    const cls = classes.find((c) => c._id === classId);
-    return cls ? cls.name : "Unknown Class";
+  const getClassName = (classId: Resource["classId"]) => {
+    if (!classId) return "Unassigned Class";
+
+    if (typeof classId === "object") {
+      if ("name" in classId && classId.name) return classId.name;
+      const id = classId._id || (classId as any).id;
+      const cls = classes.find((c) => c._id === id || c.id === id);
+      return cls?.name || "Unassigned Class";
+    }
+
+    const cls = classes.find((c) => c._id === classId || c.id === classId);
+    return cls?.name || "Unassigned Class";
+  };
+
+  const getCourseName = (courseId: Resource["courseId"]) => {
+    if (!courseId) return "No course";
+    if (typeof courseId === "object") {
+      const title = "title" in courseId ? courseId.title : undefined;
+      const code = "courseCode" in courseId ? courseId.courseCode : undefined;
+      return [code, title].filter(Boolean).join(" - ") || "No course";
+    }
+    return "Course selected";
   };
 
   const formatDate = (dateString: string) => {
@@ -138,6 +157,7 @@ export function ResourcesTable({
             <TableRow>
               <TableHead className="flex gap-2 items-center">Name</TableHead>
               <TableHead>Class</TableHead>
+              <TableHead>Course</TableHead>
               <TableHead>Upload Date</TableHead>
               <TableHead className="flex justify-center">Actions</TableHead>
             </TableRow>
@@ -152,6 +172,7 @@ export function ResourcesTable({
                   </div>
                 </TableCell>
                 <TableCell>{getClassName(resource.classId)}</TableCell>
+                <TableCell>{getCourseName(resource.courseId)}</TableCell>
                 <TableCell className="text-[#616161]">
                   {formatDate(resource.uploadDate)}
                 </TableCell>
@@ -220,6 +241,12 @@ export function ResourcesTable({
                 <p className="text-[12px] text-black font-medium">Class</p>
                 <p className="text-[14px] text-[#676767]">
                   {getClassName(resource.classId)}
+                </p>
+              </div>
+              <div>
+                <p className="text-[12px] text-black font-medium">Course</p>
+                <p className="text-[14px] text-[#676767]">
+                  {getCourseName(resource.courseId)}
                 </p>
               </div>
               <div>

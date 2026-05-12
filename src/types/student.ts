@@ -84,7 +84,8 @@ export interface Teacher {
 export interface Resource {
   _id?: string;
   name: string;
-  classId: string;
+  classId: string | Class | { _id?: string; id?: string; name?: string };
+  courseId?: string | Course | { _id?: string; id?: string; title?: string; courseCode?: string };
   termId: string;
   uploadDate: string;
   image: string;

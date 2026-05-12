@@ -26,6 +26,7 @@ import LoadingCard from "@/components/LoadingCard";
 import { useRouter, useParams } from "next/navigation";
 import { toast } from "react-hot-toast";
 import { AttendanceRecord, AttendanceStatus } from "@/types/attendance";
+import { useTeacherOnboarding } from "@/app/context/OnboardingContext";
 
 type ViewMode = "mark-attendance" | "view-attendance";
 
@@ -34,6 +35,7 @@ const AttendanceClassPage: React.FC = () => {
   const classId = params?.classId as string;
   const { classes, refreshClasses } = useAppContext();
   const { getAccessToken } = useAuth();
+  const { markStepComplete } = useTeacherOnboarding();
   const [viewMode, setViewMode] = useState<ViewMode>("mark-attendance");
   const [students, setStudents] = useState<any[]>([]);
   const [data, setData] = useState<AttendanceRecord[]>([]);
@@ -268,6 +270,7 @@ const AttendanceClassPage: React.FC = () => {
         )
       );
 
+      markStepComplete("mark-attendance");
       toast.success(`Attendance submitted for ${student.name}`);
     } catch (error) {
       console.error("Error submitting attendance:", error);
@@ -323,6 +326,7 @@ const AttendanceClassPage: React.FC = () => {
         return updated;
       });
 
+      markStepComplete("mark-attendance");
       toast.success(`Attendance submitted for ${student.name}`);
     } catch (error) {
       console.error("Error submitting attendance:", error);

@@ -100,7 +100,8 @@ export default function ResourcePage() {
             ) {
               return (
                 (resource.classId as any)._id ||
-                (resource.classId as any).toString()
+                (resource.classId as any).id ||
+                null
               );
             }
             return resource.classId as string;

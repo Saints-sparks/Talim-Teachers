@@ -384,9 +384,18 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
     );
   }
 
-  const selectedCourse = teacherCourses.find(
-    (course) => course._id === courseId
-  );
+  const selectedCourse =
+    teacherCourses.find((course) => course._id === courseId) ||
+    (courseInfo
+      ? {
+          _id: courseInfo._id || courseId,
+          title: courseInfo.title || courseInfo.name,
+          name: courseInfo.name || courseInfo.title,
+          courseCode: courseInfo.courseCode || courseInfo.code,
+          code: courseInfo.code || courseInfo.courseCode,
+          description: courseInfo.description || "Course curriculum",
+        }
+      : null);
 
   return (
     <div className="min-h-screen bg-[#F8F8F8]">
@@ -471,7 +480,7 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
                       Course Description
                     </span>
                     <span className="font-semibold text-[#030E18] text-sm">
-                      {selectedCourse.description}
+                      {selectedCourse?.description || "Course curriculum"}
                     </span>
                   </div>
                 </div>
@@ -597,7 +606,7 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
                         Course Description
                       </span>
                       <span className="font-semibold text-[#030E18]">
-                        {selectedCourse.description}
+                        {selectedCourse?.description || "Course curriculum"}
                       </span>
                     </div>
                   </div>

@@ -5,6 +5,7 @@ import Timetable from "@/components/Timetable";
 import { useTeacherKPIs } from "../hooks/useTeacherKPIs";
 import { Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import TeacherSetupProgressWidget from "@/components/TeacherSetupProgressWidget";
 
 import React from "react";
 
@@ -53,6 +54,8 @@ const DashboardPage: React.FC = () => {
     <Layout>
       <div>
         <div className="p-6 space-y-6">
+          <TeacherSetupProgressWidget />
+
           {/* Teacher Profile Header */}
           {/* {kpis && (
             <div className="bg-white rounded-xl p-6 border border-[#F1F1F1]">

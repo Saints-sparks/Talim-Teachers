@@ -26,6 +26,7 @@ import {
   createGroupChat,
   CreateGroupChatPayload,
 } from "@/app/services/chat.service";
+import { useTeacherOnboarding } from "@/app/context/OnboardingContext";
 
 // Utility function to get course icon based on course name
 const getCourseIcon = (courseName: string) => {
@@ -71,6 +72,7 @@ export default function CreateGroupModal({
   const { classes, courses, isLoading, user, refreshChatRooms } =
     useAppContext() as any;
   const { getAccessToken } = useAuth();
+  const { markStepComplete } = useTeacherOnboarding();
 
   // Fetch current term when modal opens
   useEffect(() => {
@@ -133,6 +135,7 @@ export default function CreateGroupModal({
 
       // Refresh chat rooms after creating a group
       refreshChatRooms();
+      markStepComplete("create-group-chat");
 
       // Show success notification
       setNotification({

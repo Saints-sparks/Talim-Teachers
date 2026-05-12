@@ -8,6 +8,7 @@ import { authService } from "../services/auth.service";
 import { LoginCredentials, User } from "../../types/auth";
 import { API_BASE_URL } from "../lib/api/config";
 import { apiClient } from "../lib/api/apiClient";
+import { TEACHER_ONBOARDING_STEPS } from "../context/OnboardingContext";
 
 export interface UseAuthReturn {
   login: (credentials: LoginCredentials) => Promise<any>;
@@ -158,14 +159,28 @@ export const useAuth = (): UseAuthReturn => {
       // Ensure cookies are set before redirecting
       setTimeout(() => {
         try {
-          router.push("/dashboard");
-          if (window.location.pathname !== "/dashboard") {
-          
-            window.location.href = "/dashboard";
+          const onboardingRequiredSteps = TEACHER_ONBOARDING_STEPS.filter(
+            (step) => step.required
+          );
+          const onboardingRaw = localStorage.getItem(
+            `teacher_onboarding_${userData.userId || userData._id || userData.id}`
+          );
+          const onboardingState = onboardingRaw ? JSON.parse(onboardingRaw) : null;
+          const completedSteps = onboardingState?.completedSteps || [];
+          const hasCompletedSetup = onboardingRequiredSteps.every((step) =>
+            completedSteps.includes(step.id)
+          );
+          const destination = !onboardingState?.phase1Completed
+            ? "/onboarding"
+            : hasCompletedSetup
+            ? "/dashboard"
+            : "/onboarding/setup";
+          router.push(destination);
+          if (window.location.pathname !== destination) {
+            window.location.href = destination;
           }
         } catch (navError) {
-        
-          window.location.href = "/dashboard";
+          window.location.href = "/onboarding";
         }
       }, 300); // Slight delay to ensure cookies are set
 

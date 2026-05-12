@@ -5,6 +5,7 @@ import { AppProvider } from "@/app/context/AppContext";
 import { WebSocketProvider } from "@/app/contexts/WebSocketContext";
 import { ChatProvider } from "@/app/context/ChatContext";
 import { Toaster } from "react-hot-toast";
+import OnboardingShell from "./onboarding-provider";
 
 const manrope = Manrope({ subsets: ["latin"] });
 
@@ -27,12 +28,14 @@ export default function RootLayout({
       </head>
       <body className={manrope.className}>
         <AppProvider>
-          <WebSocketProvider>
-            <ChatProvider>
-              {children}
-              <Toaster position="top-right" />
-            </ChatProvider>
-          </WebSocketProvider>
+          <OnboardingShell>
+            <WebSocketProvider>
+              <ChatProvider>
+                {children}
+                <Toaster position="top-right" />
+              </ChatProvider>
+            </WebSocketProvider>
+          </OnboardingShell>
         </AppProvider>
       </body>
     </html>

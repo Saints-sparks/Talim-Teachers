@@ -238,6 +238,9 @@ const CurriculumContent = () => {
         })();
       } else if (courseId) {
         // If courseId is provided, fetch curricula for this specific course
+        if (termId) {
+          setCurrentTerm((prev: any) => prev || { _id: termId, name: "Current Term" });
+        }
         getCurrentTerm(token).then((term) => {
           if (term) {
             setCurrentTerm(term);

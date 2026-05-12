@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { CheckCheck, ChevronDown, Loader2, Search } from "lucide-react";
 import React from "react";
 import useNotifications from "@/app/hooks/useNotifications";
+import { useTeacherOnboarding } from "@/app/context/OnboardingContext";
 
 type Notification = {
   id: string;
@@ -30,9 +31,14 @@ type Notification = {
 
 function Page() {
   const router = useRouter();
+  const { markStepComplete } = useTeacherOnboarding();
 
   // Fetch notifications from the API on component mount
   const { notifications, loading, error } = useNotifications();
+
+  React.useEffect(() => {
+    markStepComplete("view-notifications");
+  }, [markStepComplete]);
 
   return (
     <Layout>

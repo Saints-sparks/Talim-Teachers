@@ -80,7 +80,30 @@ const SubjectCard: React.FC<SubjectCardProps> = ({
   const [hasCurriculum, setHasCurriculum] = useState<boolean | null>(null);
   const [curriculumData, setCurriculumData] = useState<any>(null);
 
- 
+  const getCurriculumCreatePath = (termId: string) => {
+    const params = new URLSearchParams({
+      courseId: _id,
+      termId,
+      mode: "create",
+      courseTitle: title,
+      ...(courseCode ? { courseCode } : {}),
+    });
+
+    return `/curriculum?${params.toString()}`;
+  };
+
+  const getCurriculumEditPath = (termId: string, curriculumId: string) => {
+    const params = new URLSearchParams({
+      courseId: _id,
+      termId,
+      mode: "edit",
+      curriculumId,
+      courseTitle: title,
+      ...(courseCode ? { courseCode } : {}),
+    });
+
+    return `/curriculum?${params.toString()}`;
+  };
 
   // Show modal on card click
   // Open the action modal immediately on card click
@@ -90,11 +113,12 @@ const SubjectCard: React.FC<SubjectCardProps> = ({
 
   // Handler for modal actions
   const handleView = async () => {
-   
+    setIsCheckingCurriculum(true);
     const token = getAccessToken();
     if (!token) {
       
       toast.error("You must be logged in to view curriculum.");
+      setIsCheckingCurriculum(false);
       return;
     }
     try {
@@ -114,7 +138,8 @@ const SubjectCard: React.FC<SubjectCardProps> = ({
       });
      
       if (!curriculum) {
-        toast.error("No curriculum found for this course and term.");
+        toast("No curriculum exists yet. Opening the editor to create one.");
+        router.push(getCurriculumCreatePath(term._id));
         return;
       }
       router.push(
@@ -125,14 +150,17 @@ const SubjectCard: React.FC<SubjectCardProps> = ({
       const err = error as any;
      
       toast.error("Failed to fetch curriculum.");
+    } finally {
+      setIsCheckingCurriculum(false);
     }
   };
   const handleEdit = async () => {
-  
+    setIsCheckingCurriculum(true);
     const token = getAccessToken();
     if (!token) {
      
       toast.error("You must be logged in to edit curriculum.");
+      setIsCheckingCurriculum(false);
       return;
     }
     try {
@@ -151,17 +179,18 @@ const SubjectCard: React.FC<SubjectCardProps> = ({
       });
     
       if (!curriculum) {
-        toast.error("No curriculum found for this course and term.");
+        toast("No curriculum exists yet. Opening the editor to create one.");
+        router.push(getCurriculumCreatePath(term._id));
         return;
       }
-      router.push(
-        `/curriculum?courseId=${_id}&termId=${term._id}&mode=edit&curriculumId=${curriculum._id}`,
-      );
+      router.push(getCurriculumEditPath(term._id, curriculum._id));
     } catch (error) {
       
       const err = error as any;
      
       toast.error("Failed to fetch curriculum for editing.");
+    } finally {
+      setIsCheckingCurriculum(false);
     }
   };
 
