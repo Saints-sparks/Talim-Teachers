@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search } from "lucide-react";
+import { GraduationCap, RefreshCw, Search } from "lucide-react";
 import Layout from "@/components/Layout";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "../hooks/useAuth";
@@ -21,7 +21,10 @@ const AttendancePage: React.FC = () => {
     const fetchClasses = async () => {
       setLoading(true);
       const token = getAccessToken();
-      if (!token) return;
+      if (!token) {
+        setLoading(false);
+        return;
+      }
       await refreshClasses();
       setLoading(false);
     };
@@ -65,19 +68,48 @@ const AttendancePage: React.FC = () => {
           </div>
 
           {/* Classes Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6" data-guide="attendance-class-grid">
-            {loading
-              ? Array.from({ length: 8 }).map((_, i) => (
-                  <LoadingCard key={i} height="h-40 sm:h-48" />
-                ))
-              : filteredClasses.map((c) => (
-                  <ClassCard
-                    key={c._id}
-                    classItem={c}
-                    onView={handleClassSelect}
-                  />
-                ))}
-          </div>
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6" data-guide="attendance-class-grid">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <LoadingCard key={i} height="h-40 sm:h-48" />
+              ))}
+            </div>
+          ) : filteredClasses.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6" data-guide="attendance-class-grid">
+              {filteredClasses.map((c) => (
+                <ClassCard
+                  key={c._id}
+                  classItem={c}
+                  onView={handleClassSelect}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="min-h-[420px] flex items-center justify-center">
+              <div className="max-w-md text-center rounded-2xl border border-[#F0F0F0] bg-white p-8">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-[#EAF2FB] text-[#003366]">
+                  <GraduationCap className="h-7 w-7" />
+                </div>
+                <h2 className="text-lg font-semibold text-[#030E18]">
+                  {classes.length === 0
+                    ? "No Classes Assigned"
+                    : "No Matching Classes"}
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-[#6F6F6F]">
+                  {classes.length === 0
+                    ? "You do not have any assigned classes yet. Once your school admin assigns a class, it will appear here for attendance."
+                    : "No assigned class matches your search. Try a different class name."}
+                </p>
+                <button
+                  onClick={refreshClasses}
+                  className="mt-5 inline-flex items-center gap-2 rounded-lg border border-[#F0F0F0] bg-white px-4 py-2 text-sm font-semibold text-[#030E18] hover:bg-[#F8F8F8]"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Refresh
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </Layout>

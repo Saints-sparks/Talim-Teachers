@@ -33,6 +33,7 @@ import {
 import { Resource } from "@/types/student";
 import { useAppContext } from "@/app/context/AppContext";
 import { useTeacherOnboarding } from "@/app/context/OnboardingContext";
+import { toast } from "@/components/CustomToast";
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -65,6 +66,33 @@ export function UploadModal({
 
   // Use classes from context, fallback to local classes
   const availableClasses = classes.length > 0 ? classes : localClasses;
+
+  const getId = (value: any) => {
+    if (!value) return null;
+    return typeof value === "string" ? value : value._id || value.id || null;
+  };
+
+  const getName = (value: any, fallback = "Untitled") => {
+    if (!value) return fallback;
+    return typeof value === "string"
+      ? value
+      : value.name || value.title || value.className || fallback;
+  };
+
+  const selectedCourseData = courses.find((course) => course._id === selectedCourse);
+  const selectedCourseClassId = getId(selectedCourseData?.classId);
+  const classesForSelect =
+    selectedCourseData?.classId &&
+    selectedCourseClassId &&
+    !availableClasses.some((cls) => getId(cls) === selectedCourseClassId)
+      ? [
+          ...availableClasses,
+          {
+            _id: selectedCourseClassId,
+            name: getName(selectedCourseData.classId, "Course class"),
+          },
+        ]
+      : availableClasses;
 
   // Replace these with your actual Cloudinary details
   const CLOUD_NAME = "ddbs7m7nt";
@@ -156,15 +184,15 @@ export function UploadModal({
   };
 
   const handleUpload = async () => {
-    if (!selectedClass || !resourceName || !selectedFile) {
-      alert("Please fill all fields and select a file");
+    if (!resourceName || !selectedFile || (!selectedClass && !selectedCourse)) {
+      toast.error("Please add a resource name, select a class or course, and choose a file.");
       return;
     }
 
     setUploading(true);
     const token = getAccessToken();
     if (!token) {
-      alert("Authentication token is missing.");
+      toast.error("Authentication token is missing.");
       setUploading(false);
       return;
     }
@@ -194,8 +222,8 @@ export function UploadModal({
       const teacherId = user?.teacherId || user?.userId;
       const resourceData = {
         name: resourceName,
-        classId: selectedClass,
-        courseId: selectedCourse, // Use selected course instead of hardcoded value
+        ...(selectedClass ? { classId: selectedClass } : {}),
+        ...(selectedCourse ? { courseId: selectedCourse } : {}),
         uploadedBy: teacherId, // Use teacher ID from context
         termId: currentTerm?._id,
         uploadDate: new Date().toISOString(),
@@ -219,9 +247,18 @@ export function UploadModal({
       }, 2000);
     } catch (error) {
       console.error("Upload failed:", error);
-      alert("Upload failed. Check console for details.");
+      toast.error("Upload failed. Please try again.");
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleCourseChange = (courseId: string) => {
+    setSelectedCourse(courseId);
+    const course = courses.find((item) => item._id === courseId);
+    const classId = getId(course?.classId);
+    if (classId) {
+      setSelectedClass(classId);
     }
   };
 
@@ -298,12 +335,13 @@ export function UploadModal({
                   Class
                 </Label>
                 <Select
+                  value={selectedClass || undefined}
                   onValueChange={setSelectedClass}
                   disabled={
                     contextLoading ||
                     termLoading ||
                     classesLoading ||
-                    availableClasses.length === 0
+                    classesForSelect.length === 0
                   }
                 >
                   <SelectTrigger className="border-[#F0F0F0] focus:border-[#003366] focus:ring-[#003366] shadow-none">
@@ -313,7 +351,7 @@ export function UploadModal({
                         placeholder={
                           contextLoading || termLoading || classesLoading
                             ? "Loading classes..."
-                            : availableClasses.length === 0
+                            : classesForSelect.length === 0
                             ? "No classes available"
                             : "Select a class"
                         }
@@ -321,12 +359,12 @@ export function UploadModal({
                     </div>
                   </SelectTrigger>
                   <SelectContent className="text-[#030E18] bg-white border-[#F0F0F0] shadow-none">
-                    {availableClasses.length > 0 ? (
-                      availableClasses.map((cls) => (
-                        <SelectItem key={cls._id} value={cls._id}>
+                    {classesForSelect.length > 0 ? (
+                      classesForSelect.map((cls) => (
+                        <SelectItem key={getId(cls)} value={getId(cls)}>
                           <div className="flex items-center space-x-2">
                             <div className="w-2 h-2 bg-[#003366] rounded-full"></div>
-                            <span>{cls.name}</span>
+                            <span>{getName(cls, "Class")}</span>
                           </div>
                         </SelectItem>
                       ))
@@ -337,18 +375,18 @@ export function UploadModal({
                     )}
                   </SelectContent>
                 </Select>
-                {availableClasses.length === 0 &&
+                {classesForSelect.length === 0 &&
                   !contextLoading &&
                   !termLoading &&
                   !classesLoading && (
                     <p className="text-xs text-[#878787]">
-                      No classes assigned. Please contact your administrator.
+                      No classes assigned. You can still upload by selecting a course.
                     </p>
                   )}
-                {availableClasses.length > 0 && (
+                {classesForSelect.length > 0 && (
                   <p className="text-xs text-[#6F6F6F]">
-                    {availableClasses.length} class
-                    {availableClasses.length !== 1 ? "es" : ""} available
+                    {classesForSelect.length} class
+                    {classesForSelect.length !== 1 ? "es" : ""} available
                   </p>
                 )}
               </div>
@@ -362,7 +400,8 @@ export function UploadModal({
                   Course
                 </Label>
                 <Select
-                  onValueChange={setSelectedCourse}
+                  value={selectedCourse || undefined}
+                  onValueChange={handleCourseChange}
                   disabled={coursesLoading || courses.length === 0}
                 >
                   <SelectTrigger className="border-[#F0F0F0] focus:border-[#003366] focus:ring-[#003366] shadow-none">
@@ -461,8 +500,7 @@ export function UploadModal({
               onClick={handleUpload}
               disabled={
                 uploading ||
-                !selectedClass ||
-                !selectedCourse ||
+                (!selectedClass && !selectedCourse) ||
                 !resourceName ||
                 !selectedFile
               }
