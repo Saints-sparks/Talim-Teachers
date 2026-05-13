@@ -35,6 +35,7 @@ import { fetchTeacherDetails, getCurrentTerm } from '@/app/services/api.service'
 import { gradeRecordsApi } from '@/app/services/grade-records.service';
 import TermSelector from '@/components/grading/shared/TermSelector';
 import AssessmentGradeForm from '@/components/grading/course/AssessmentGradeForm';
+import { Tooltip } from '@/components/ui/Tooltip';
 
 interface Assessment {
   _id: string;
@@ -263,7 +264,7 @@ const CourseTeacherView: React.FC = () => {
   }
 
   return (
-    <div className="p-5 sm:p-6 space-y-6">
+    <div className="p-5 sm:p-6 space-y-6" data-guide="course-grading-shell">
       <SectionHeader
         title="Course Grading"
         subtitle="Pick a course, then manage assessments and grades"
@@ -282,7 +283,7 @@ const CourseTeacherView: React.FC = () => {
         }
       />
       {/* Course Selection */}
-      <Card className="bg-white shadow-none border-[#E6EDF5] rounded-2xl">
+      <Card className="bg-white shadow-none border-[#E6EDF5] rounded-2xl" data-guide="course-grading-course-selector">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-[#030E18]">
                 <GraduationCap className="h-5 w-5 text-[#003366]" />
@@ -367,16 +368,18 @@ const CourseTeacherView: React.FC = () => {
           {selectedCourse && (
             <>
               {/* Term Selection */}
-              <TermSelector
-                terms={terms}
-                selectedTerm={selectedTerm}
-                onTermChange={handleTermChange}
-                loading={loading}
-              />
+              <div data-guide="course-grading-term-selector">
+                <TermSelector
+                  terms={terms}
+                  selectedTerm={selectedTerm}
+                  onTermChange={handleTermChange}
+                  loading={loading}
+                />
+              </div>
 
               {selectedTerm && (
                 <>
-                  <div className="flex items-center gap-2 bg-white border border-[#F0F0F0] rounded-xl p-1 w-fit">
+                  <div className="flex items-center gap-2 bg-white border border-[#F0F0F0] rounded-xl p-1 w-fit" data-guide="course-grading-tabs">
                     <Button
                       variant="ghost"
                       onClick={() => setViewMode("assessments")}
@@ -388,23 +391,25 @@ const CourseTeacherView: React.FC = () => {
                     >
                       Assessments
                     </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={() => setViewMode("course-grades")}
-                      className={`text-sm shadow-none ${
-                        viewMode === "course-grades"
-                          ? "bg-[#003366] text-white hover:bg-[#002244]"
-                          : "text-[#6F6F6F] hover:bg-[#F8FAFF]"
-                      }`}
-                    >
-                      Course Grades
-                    </Button>
+                    <Tooltip content="Review generated cumulative course grades for this term." side="bottom">
+                      <Button
+                        variant="ghost"
+                        onClick={() => setViewMode("course-grades")}
+                        className={`text-sm shadow-none ${
+                          viewMode === "course-grades"
+                            ? "bg-[#003366] text-white hover:bg-[#002244]"
+                            : "text-[#6F6F6F] hover:bg-[#F8FAFF]"
+                        }`}
+                      >
+                        Course Grades
+                      </Button>
+                    </Tooltip>
                   </div>
 
                   {viewMode === "assessments" && (
                     <>
                   {/* Quick Actions */}
-                  <div className="grid md:grid-cols-2 gap-4">
+                  <div className="grid md:grid-cols-2 gap-4" data-guide="course-grading-overview">
                     <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={handleViewCourseGrades}>
                       <CardContent className="p-6">
                         <div className="flex items-center gap-4">
@@ -439,7 +444,7 @@ const CourseTeacherView: React.FC = () => {
                   </div>
 
                   {/* Assessments List */}
-                  <Card>
+                  <Card data-guide="course-grading-assessment-list">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <Calendar className="h-5 w-5" />
@@ -479,14 +484,16 @@ const CourseTeacherView: React.FC = () => {
                               
                               <div className="flex items-center gap-3">
                                 {getAssessmentStatusBadge(assessment.status)}
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleAssessmentSelect(assessment)}
-                                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
-                                >
-                                  <Edit3 className="h-4 w-4 mr-1" />
-                                  Enter Grades
-                                </Button>
+                                <Tooltip content="Open this assessment to enter student scores." side="left">
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleAssessmentSelect(assessment)}
+                                    className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+                                  >
+                                    <Edit3 className="h-4 w-4 mr-1" />
+                                    Enter Grades
+                                  </Button>
+                                </Tooltip>
                               </div>
                             </div>
                           ))}
@@ -506,9 +513,9 @@ const CourseTeacherView: React.FC = () => {
       {/* Assessment Grade Entry */}
       {viewMode === 'assessment-entry' && selectedAssessment && selectedCourse && selectedTerm && (
         <div className="space-y-6">
-          <Card>
+          <Card data-guide="assessment-entry-shell">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2" data-guide="assessment-grading-header">
                 <Edit3 className="h-5 w-5" />
                 Enter Grades: {selectedAssessment.name}
               </CardTitle>
@@ -539,7 +546,7 @@ const CourseTeacherView: React.FC = () => {
       {/* Course Grades Overview */}
       {viewMode === 'course-grades' && selectedCourse && selectedTerm && (
         <div className="space-y-6">
-          <Card>
+          <Card data-guide="course-grades-overview">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5" />

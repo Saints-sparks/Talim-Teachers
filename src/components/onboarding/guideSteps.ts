@@ -1,9 +1,13 @@
 "use client";
 
 import {
+  Award,
+  BarChart3,
   BookOpen,
+  Calculator,
   ClipboardCheck,
   FileUp,
+  GraduationCap,
   Lightbulb,
   MessageSquareText,
   PencilRuler,
@@ -254,6 +258,170 @@ export const guideConfigs: GuideConfig[] = [
         description:
           "This profile brings together the student’s identity, guardian contact, class details, and academic context.",
         icon: UsersRound,
+      },
+    ],
+  },
+  {
+    id: "grading",
+    pathMatchers: ["/grading"],
+    exactOnly: true,
+    steps: [
+      {
+        target: "grading-header",
+        eyebrow: "Academic results",
+        title: "Grading Flow",
+        description:
+          "Talim grading moves from assessment scores to course grades, then class term results after course grades are ready.",
+        icon: GraduationCap,
+      },
+      {
+        target: "grading-kpis",
+        title: "Track Grading Progress",
+        description:
+          "Use the summary cards to see grading activity, average performance, and work still waiting for review.",
+        icon: BarChart3,
+      },
+      {
+        target: "grading-role-switch",
+        title: "Choose Your Responsibility",
+        description:
+          "Course Teachers enter assessment scores and generate course grades. Class Teachers combine course grades into term summaries.",
+        icon: UsersRound,
+      },
+      {
+        target: "course-grading-shell",
+        eyebrow: "Course teacher",
+        title: "Course Teacher Workflow",
+        description:
+          "Start by choosing a course and term, then grade assessments for the students assigned to that course.",
+        icon: BookOpen,
+      },
+      {
+        target: "course-grading-course-selector",
+        title: "Select the Course",
+        description:
+          "Pick the exact course you teach. The selected course determines which students and course grades are loaded.",
+        icon: BookOpen,
+      },
+      {
+        target: "course-grading-term-selector",
+        title: "Select the Term",
+        description:
+          "Grades are term-based, so assessment scores and generated course grades belong to the selected academic term.",
+        icon: ClipboardCheck,
+      },
+      {
+        target: "course-grading-tabs",
+        title: "Move Between Assessments and Course Grades",
+        description:
+          "Use Assessments to enter scores, then Course Grades to review cumulative course results for the term.",
+        icon: Lightbulb,
+      },
+      {
+        target: "course-grading-assessment-list",
+        title: "Open an Assessment",
+        description:
+          "Choose an active assessment and enter scores for each student in that assessment.",
+        icon: PencilRuler,
+      },
+      {
+        target: "assessment-grading-header",
+        title: "Assessment Grade Entry",
+        description:
+          "This is where the course teacher records student scores and sets the max score for the assessment.",
+        icon: PencilRuler,
+      },
+      {
+        target: "assessment-max-score",
+        title: "Set Max Score",
+        description:
+          "The max score can be set by the teacher for the assessment, then reused across students while grading.",
+        icon: Calculator,
+      },
+      {
+        target: "assessment-progress",
+        title: "Check Who Is Still Pending",
+        description:
+          "The progress panel shows how many students have been graded and who still needs a score.",
+        icon: BarChart3,
+      },
+      {
+        target: "assessment-student-list",
+        title: "Select a Student",
+        description:
+          "Pick a student to view their assessment history, enter the current score, and manage their course grade record.",
+        icon: UsersRound,
+      },
+      {
+        target: "assessment-current-grade",
+        title: "Enter the Assessment Score",
+        description:
+          "Record the actual score and max score, then save the assessment grade for that student.",
+        icon: PencilRuler,
+      },
+      {
+        target: "assessment-course-grade-record",
+        title: "Generate Course Grade",
+        description:
+          "After assessment scores exist, generate the student's cumulative course grade for the term.",
+        icon: Calculator,
+      },
+      {
+        target: "assessment-generate-course-grades",
+        title: "Generate in Bulk",
+        description:
+          "When multiple students are ready, generate course grade records for everyone eligible at once.",
+        icon: Send,
+      },
+      {
+        target: "course-grades-overview",
+        title: "Review Course Grades",
+        description:
+          "Course Grades shows the cumulative course result each student has for the selected term.",
+        icon: Award,
+      },
+      {
+        target: "class-grading-shell",
+        eyebrow: "Class teacher",
+        title: "Class Teacher Workflow",
+        description:
+          "Class Teachers use generated course grades to create class-level term summaries.",
+        icon: UsersRound,
+      },
+      {
+        target: "class-grading-selectors",
+        title: "Choose Class and Term",
+        description:
+          "Pick the class and term whose results you want to compile.",
+        icon: ClipboardCheck,
+      },
+      {
+        target: "class-grading-generate",
+        title: "Generate Class Summary",
+        description:
+          "This combines available course grade records into student cumulative term records and a class term summary.",
+        icon: Calculator,
+      },
+      {
+        target: "class-grading-summary",
+        title: "Review Term Summary",
+        description:
+          "After generation, the summary shows class average, total students, top performers, and students needing attention.",
+        icon: BarChart3,
+      },
+      {
+        target: "class-grading-student-list",
+        title: "Review Student Results",
+        description:
+          "Student rows show generated grade, percentage, position, or Pending when course grades are not ready yet.",
+        icon: UsersRound,
+      },
+      {
+        target: "student-grade-summary",
+        title: "Student Grade Summary",
+        description:
+          "Open a student to inspect their course grades and generate or recalculate their cumulative term report.",
+        icon: Award,
       },
     ],
   },

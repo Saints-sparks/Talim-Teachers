@@ -27,6 +27,7 @@ import {
 import GradeInput from "@/components/grading/shared/GradeInput";
 import GradeDisplay from "@/components/grading/shared/GradeDisplay";
 import { gradeRecordsApi } from "@/app/services/grade-records.service";
+import { Tooltip } from "@/components/ui/Tooltip";
 
 interface AssessmentGradeFormProps {
   students: Student[];
@@ -506,15 +507,17 @@ const AssessmentGradeForm: React.FC<AssessmentGradeFormProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2" data-guide="assessment-max-score">
               <span className="text-sm text-gray-600">Max Score:</span>
-              <input
-                type="number"
-                value={defaultMaxScore}
-                onChange={(e) => setAllMaxScores(Number(e.target.value))}
-                className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
-                min="1"
-              />
+              <Tooltip content="Set the default max score for this assessment before entering student scores." side="bottom">
+                <input
+                  type="number"
+                  value={defaultMaxScore}
+                  onChange={(e) => setAllMaxScores(Number(e.target.value))}
+                  className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+                  min="1"
+                />
+              </Tooltip>
             </div>
 
             {/* Bulk Create Course Grades Button */}
@@ -522,39 +525,42 @@ const AssessmentGradeForm: React.FC<AssessmentGradeFormProps> = ({
               (data) =>
                 data.assessmentGrades.length > 0 && !data.courseGradeRecord
             ).length > 0 && (
-              <Button
-                size="sm"
-                onClick={bulkCreateCourseGrades}
-                disabled={saving}
-                className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-lg"
-              >
-                {saving ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <Calculator className="h-4 w-4 mr-1" />
-                    Generate Course Grades (
-                    {
-                      studentGradeData.filter(
-                        (data) =>
-                          data.assessmentGrades.length > 0 &&
-                          !data.courseGradeRecord
-                      ).length
-                    }
-                    )
-                  </>
-                )}
-              </Button>
+              <Tooltip content="Create cumulative course grade records for all students who have assessment scores." side="bottom">
+                <Button
+                  size="sm"
+                  onClick={bulkCreateCourseGrades}
+                  disabled={saving}
+                  className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-lg"
+                  data-guide="assessment-generate-course-grades"
+                >
+                  {saving ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Calculator className="h-4 w-4 mr-1" />
+                      Generate Course Grades (
+                      {
+                        studentGradeData.filter(
+                          (data) =>
+                            data.assessmentGrades.length > 0 &&
+                            !data.courseGradeRecord
+                        ).length
+                      }
+                      )
+                    </>
+                  )}
+                </Button>
+              </Tooltip>
             )}
           </div>
         </CardTitle>
 
         {/* Assessment Grading Progress — server-authoritative */}
         {gradingStatus && (
-          <div className="mt-4 rounded-xl border border-[#E6EDF5] bg-[#F8FBFF] p-4 space-y-3">
+          <div className="mt-4 rounded-xl border border-[#E6EDF5] bg-[#F8FBFF] p-4 space-y-3" data-guide="assessment-progress">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
@@ -637,7 +643,7 @@ const AssessmentGradeForm: React.FC<AssessmentGradeFormProps> = ({
       <CardContent className="p-0">
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 p-6">
           {/* Students List */}
-          <div className="xl:col-span-1 space-y-3">
+          <div className="xl:col-span-1 space-y-3" data-guide="assessment-student-list">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-gray-900">Students</h3>
               <span className="text-sm text-gray-500">
@@ -853,7 +859,7 @@ const AssessmentGradeForm: React.FC<AssessmentGradeFormProps> = ({
                 </div>
 
                 {/* Current Assessment Grade Entry */}
-                <div className="space-y-4 pt-4 border-t">
+                <div className="space-y-4 pt-4 border-t" data-guide="assessment-current-grade">
                   <h4 className="font-medium text-gray-800">
                     Current Assessment Grade
                   </h4>
@@ -907,25 +913,27 @@ const AssessmentGradeForm: React.FC<AssessmentGradeFormProps> = ({
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <Button
-                          onClick={() =>
-                            handleSaveAssessmentGrade(selectedStudent.studentId)
-                          }
-                          disabled={saving}
-                          className="bg-blue-600 hover:bg-blue-700"
-                        >
-                          {saving ? (
-                            <>
-                              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                              Saving...
-                            </>
-                          ) : (
-                            <>
-                              <Save className="h-4 w-4 mr-2" />
-                              Save Grade
-                            </>
-                          )}
-                        </Button>
+                        <Tooltip content="Save this student’s score for the current assessment." side="bottom">
+                          <Button
+                            onClick={() =>
+                              handleSaveAssessmentGrade(selectedStudent.studentId)
+                            }
+                            disabled={saving}
+                            className="bg-blue-600 hover:bg-blue-700"
+                          >
+                            {saving ? (
+                              <>
+                                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                Saving...
+                              </>
+                            ) : (
+                              <>
+                                <Save className="h-4 w-4 mr-2" />
+                                Save Grade
+                              </>
+                            )}
+                          </Button>
+                        </Tooltip>
                         <Button
                           variant="outline"
                           onClick={() =>
@@ -991,7 +999,7 @@ const AssessmentGradeForm: React.FC<AssessmentGradeFormProps> = ({
 
                 {/* Course Grade Management */}
                 {selectedStudent.currentAssessmentGrade && (
-                  <div className="space-y-4 pt-6 border-t">
+                  <div className="space-y-4 pt-6 border-t" data-guide="assessment-course-grade-record">
                     <div className="flex items-center gap-2">
                       <TrendingUp className="h-5 w-5 text-gray-700" />
                       <h4 className="font-semibold text-gray-800">
@@ -1086,27 +1094,29 @@ const AssessmentGradeForm: React.FC<AssessmentGradeFormProps> = ({
                               </div>
                             </div>
                           </div>
-                          <Button
-                            onClick={() =>
-                              createOrUpdateCourseGrade(
-                                selectedStudent.studentId
-                              )
-                            }
-                            disabled={saving}
-                            className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg"
-                          >
-                            {saving ? (
-                              <>
-                                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                                Generating...
-                              </>
-                            ) : (
-                              <>
-                                <Calculator className="h-4 w-4 mr-2" />
-                                Generate Grade
-                              </>
-                            )}
-                          </Button>
+                          <Tooltip content="Generate this student’s cumulative course grade for the selected term." side="left">
+                            <Button
+                              onClick={() =>
+                                createOrUpdateCourseGrade(
+                                  selectedStudent.studentId
+                                )
+                              }
+                              disabled={saving}
+                              className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg"
+                            >
+                              {saving ? (
+                                <>
+                                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                  Generating...
+                                </>
+                              ) : (
+                                <>
+                                  <Calculator className="h-4 w-4 mr-2" />
+                                  Generate Grade
+                                </>
+                              )}
+                            </Button>
+                          </Tooltip>
                         </div>
                       </div>
                     )}

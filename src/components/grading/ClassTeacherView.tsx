@@ -23,6 +23,7 @@ import { useAppContext } from '@/app/context/AppContext';
 import { gradeRecordsApi } from '@/app/services/grade-records.service';
 import SectionHeader from '@/components/ui/section-header';
 import StudentGradeSummary from './class/StudentGradeSummary';
+import { Tooltip } from '@/components/ui/Tooltip';
 
 interface Student {
   _id: string;
@@ -246,7 +247,7 @@ const ClassTeacherView: React.FC = () => {
   const selectedClassName = classes.find(c => c._id === selectedClass)?.name || '';
 
   return (
-    <div className="p-5 sm:p-6 space-y-5">
+    <div className="p-5 sm:p-6 space-y-5" data-guide="class-grading-shell">
       <SectionHeader
         title="Class Grading"
         subtitle="Review student performance by class and term"
@@ -254,7 +255,7 @@ const ClassTeacherView: React.FC = () => {
       />
 
       {/* Class & Term Selector */}
-      <Card className="bg-white shadow-none border-[#E6EDF5] rounded-2xl">
+      <Card className="bg-white shadow-none border-[#E6EDF5] rounded-2xl" data-guide="class-grading-selectors">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-medium text-[#003366] flex items-center gap-2">
             <Users className="h-4 w-4" />
@@ -322,7 +323,7 @@ const ClassTeacherView: React.FC = () => {
 
           {/* Class Summary Card — if cumulative exists */}
           {classCumulative && (
-            <Card className="bg-gradient-to-br from-[#F6F9FC] via-white to-[#F8FBFF] border-[#E6EDF5] rounded-2xl shadow-none">
+            <Card className="bg-gradient-to-br from-[#F6F9FC] via-white to-[#F8FBFF] border-[#E6EDF5] rounded-2xl shadow-none" data-guide="class-grading-summary">
               <CardContent className="p-5">
                 <div className="flex items-center gap-2 mb-4">
                   <TrendingUp className="h-5 w-5 text-[#003366]" />
@@ -368,7 +369,7 @@ const ClassTeacherView: React.FC = () => {
           )}
 
           {/* Actions Bar */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3" data-guide="class-grading-generate">
             <div className="flex-1 min-w-0">
               {!classCumulative ? (
                 <div className="flex items-center gap-2 text-sm text-[#6F6F6F]">
@@ -394,24 +395,26 @@ const ClassTeacherView: React.FC = () => {
                 <RefreshCw className={`h-4 w-4 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
-              <Button
-                size="sm"
-                onClick={handleGenerateAllReports}
-                disabled={generating || loading || students.length === 0}
-                className="bg-[#003366] text-white hover:bg-[#002244] shadow-none"
-              >
-                {generating ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-1.5 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4 mr-1.5" />
-                    Generate Class Summary
-                  </>
-                )}
-              </Button>
+              <Tooltip content="Generate student cumulative term records, then compile the class term summary." side="top">
+                <Button
+                  size="sm"
+                  onClick={handleGenerateAllReports}
+                  disabled={generating || loading || students.length === 0}
+                  className="bg-[#003366] text-white hover:bg-[#002244] shadow-none"
+                >
+                  {generating ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-1.5 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4 mr-1.5" />
+                      Generate Class Summary
+                    </>
+                  )}
+                </Button>
+              </Tooltip>
             </div>
           </div>
 
@@ -424,7 +427,7 @@ const ClassTeacherView: React.FC = () => {
           )}
 
           {/* Students List */}
-          <Card className="bg-white shadow-none border-[#E6EDF5] rounded-2xl">
+          <Card className="bg-white shadow-none border-[#E6EDF5] rounded-2xl" data-guide="class-grading-student-list">
             <CardHeader className="pb-3">
               <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                 <CardTitle className="text-sm font-semibold text-[#030E18] flex items-center gap-2">

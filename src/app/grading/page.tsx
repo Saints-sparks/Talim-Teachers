@@ -17,6 +17,7 @@ import CourseTeacherView from "@/components/grading/CourseTeacherView";
 import ClassTeacherView from "@/components/grading/ClassTeacherView";
 import { gradeRecordsApi } from "@/app/services/grade-records.service";
 import { useAuth } from "@/app/hooks/useAuth";
+import { Tooltip } from "@/components/ui/Tooltip";
 
 type TeacherRole = "course" | "class";
 
@@ -84,33 +85,39 @@ const GradingPage: React.FC = () => {
   return (
     <Layout>
       <div className="min-h-screen bg-[#F8F8F8] p-3 sm:p-6">
-        <SectionHeader
-          title="Grading"
-          subtitle="Manage assessments and class performance with clarity"
-          actions={
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={fetchKpis}
-                disabled={loading}
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2 border-[#F0F0F0] text-[#6F6F6F] hover:bg-[#F8FAFF]"
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
-                />
-                Refresh
-              </Button>
-              <Button
-                variant="default"
-                size="sm"
-                className="bg-[#003366] text-white hover:bg-[#002244]"
-              >
-                Batch Upload
-              </Button>
-            </div>
-          }
-        />
+        <div data-guide="grading-header">
+          <SectionHeader
+            title="Grading"
+            subtitle="Manage assessments and class performance with clarity"
+            actions={
+              <div className="flex items-center gap-2">
+                <Tooltip content="Reload assessment, grading, and pending-review totals." side="bottom">
+                  <Button
+                    onClick={fetchKpis}
+                    disabled={loading}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2 border-[#F0F0F0] text-[#6F6F6F] hover:bg-[#F8FAFF]"
+                  >
+                    <RefreshCw
+                      className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+                    />
+                    Refresh
+                  </Button>
+                </Tooltip>
+                <Tooltip content="Bulk upload is for larger grading imports when available for your workflow." side="bottom">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="bg-[#003366] text-white hover:bg-[#002244]"
+                  >
+                    Batch Upload
+                  </Button>
+                </Tooltip>
+              </div>
+            }
+          />
+        </div>
 
         {/* Error banner */}
         {error && (
@@ -121,7 +128,7 @@ const GradingPage: React.FC = () => {
           </div>
         )}
 
-        <div className="rounded-2xl border border-[#E6EDF5] bg-gradient-to-br from-[#F6F9FC] via-white to-[#F8FBFF] p-4 sm:p-5 mb-6">
+        <div className="rounded-2xl border border-[#E6EDF5] bg-gradient-to-br from-[#F6F9FC] via-white to-[#F8FBFF] p-4 sm:p-5 mb-6" data-guide="grading-kpis">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
             <div className="rounded-xl border border-[#E6EDF5] bg-white/80 p-3 text-left">
               <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-[#6F6F6F]">
@@ -177,33 +184,37 @@ const GradingPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center gap-3 mb-6" data-guide="grading-role-switch">
           <span className="text-sm font-medium text-[#2F2F2F]">View as:</span>
           <div className="flex items-center gap-2 bg-white border border-[#F0F0F0] rounded-xl p-1">
-            <Button
-              variant="ghost"
-              onClick={() => setActiveRole("course")}
-              className={`flex items-center gap-2 text-sm shadow-none ${
-                activeRole === "course"
-                  ? "bg-[#003366] text-white hover:bg-[#002244]"
-                  : "text-[#6F6F6F] hover:bg-[#F8FAFF]"
-              }`}
-            >
-              <BookOpen className="h-4 w-4" />
-              Course Teacher
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => setActiveRole("class")}
-              className={`flex items-center gap-2 text-sm shadow-none ${
-                activeRole === "class"
-                  ? "bg-[#003366] text-white hover:bg-[#002244]"
-                  : "text-[#6F6F6F] hover:bg-[#F8FAFF]"
-              }`}
-            >
-              <Users className="h-4 w-4" />
-              Class Teacher
-            </Button>
+            <Tooltip content="Use this role to enter assessment scores and generate course grades." side="bottom">
+              <Button
+                variant="ghost"
+                onClick={() => setActiveRole("course")}
+                className={`flex items-center gap-2 text-sm shadow-none ${
+                  activeRole === "course"
+                    ? "bg-[#003366] text-white hover:bg-[#002244]"
+                    : "text-[#6F6F6F] hover:bg-[#F8FAFF]"
+                }`}
+              >
+                <BookOpen className="h-4 w-4" />
+                Course Teacher
+              </Button>
+            </Tooltip>
+            <Tooltip content="Use this role to combine generated course grades into class term results." side="bottom">
+              <Button
+                variant="ghost"
+                onClick={() => setActiveRole("class")}
+                className={`flex items-center gap-2 text-sm shadow-none ${
+                  activeRole === "class"
+                    ? "bg-[#003366] text-white hover:bg-[#002244]"
+                    : "text-[#6F6F6F] hover:bg-[#F8FAFF]"
+                }`}
+              >
+                <Users className="h-4 w-4" />
+                Class Teacher
+              </Button>
+            </Tooltip>
           </div>
         </div>
 

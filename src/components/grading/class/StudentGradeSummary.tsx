@@ -20,6 +20,7 @@ import {
 } from '@/types/grade-records';
 import { gradeRecordsApi } from '@/app/services/grade-records.service';
 import GradeDisplay from '@/components/grading/shared/GradeDisplay';
+import { Tooltip } from '@/components/ui/Tooltip';
 
 interface StudentGradeSummaryProps {
   student: Student;
@@ -121,7 +122,7 @@ const StudentGradeSummary: React.FC<StudentGradeSummaryProps> = ({
   const stats = getOverallStats();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-guide="student-grade-summary">
       {/* Header */}
       <Card>
         <CardHeader>
@@ -159,17 +160,19 @@ const StudentGradeSummary: React.FC<StudentGradeSummaryProps> = ({
                 Refresh
               </Button>
 
-              <Button
-                onClick={handleGenerateCumulative}
-                disabled={loading || courseGrades.length === 0}
-                className={`shadow-none ${
-                  !studentCumulative
-                    ? 'bg-[#003366] text-white hover:bg-[#002244]'
-                    : 'bg-white border border-[#E6EDF5] text-[#003366] hover:bg-[#F8FAFF]'
-                }`}
-              >
-                {!studentCumulative ? 'Generate Cumulative Report' : 'Recalculate Report'}
-              </Button>
+              <Tooltip content="Combine this student’s course grades into their cumulative term report." side="bottom">
+                <Button
+                  onClick={handleGenerateCumulative}
+                  disabled={loading || courseGrades.length === 0}
+                  className={`shadow-none ${
+                    !studentCumulative
+                      ? 'bg-[#003366] text-white hover:bg-[#002244]'
+                      : 'bg-white border border-[#E6EDF5] text-[#003366] hover:bg-[#F8FAFF]'
+                  }`}
+                >
+                  {!studentCumulative ? 'Generate Cumulative Report' : 'Recalculate Report'}
+                </Button>
+              </Tooltip>
             </div>
           </div>
         </CardHeader>
@@ -243,14 +246,16 @@ const StudentGradeSummary: React.FC<StudentGradeSummaryProps> = ({
                 {courseGrades.length} course grade{courseGrades.length !== 1 ? 's' : ''} recorded. Generate a cumulative report to compute the overall grade and class position.
               </p>
             </div>
-            <Button
-              size="sm"
-              onClick={handleGenerateCumulative}
-              disabled={loading}
-              className="bg-[#003366] text-white hover:bg-[#002244] shadow-none shrink-0"
-            >
-              Generate Now
-            </Button>
+            <Tooltip content="Create the cumulative term result for this student." side="left">
+              <Button
+                size="sm"
+                onClick={handleGenerateCumulative}
+                disabled={loading}
+                className="bg-[#003366] text-white hover:bg-[#002244] shadow-none shrink-0"
+              >
+                Generate Now
+              </Button>
+            </Tooltip>
           </CardContent>
         </Card>
       )}
