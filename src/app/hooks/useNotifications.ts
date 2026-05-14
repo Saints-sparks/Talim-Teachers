@@ -53,6 +53,12 @@ const getPersonName = (person: any, fallback = "System Notification") => {
   return name || person.email || fallback;
 };
 
+const getSenderName = (item: any, sender: any, fallback = "System Notification") =>
+  item.senderName || item.senderDisplay?.name || getPersonName(sender, fallback);
+
+const getSenderEmail = (item: any, sender: any) =>
+  item.senderEmail || item.senderDisplay?.email || sender?.email;
+
 const hasReadByUser = (readBy: any, userId: string) => {
   if (!Array.isArray(readBy)) return false;
   return readBy.some((reader: any) => getUserId(reader) === userId);
@@ -128,19 +134,21 @@ const buildRelated = (item: any) => {
 const normalizeAnnouncement = (item: any, userId: string): TeacherNotification => {
   const sender = item.senderId || item.createdBy;
   const createdAt = item.publishedAt || item.createdAt || item.scheduledFor || new Date().toISOString();
+  const isRead =
+    typeof item.isRead === "boolean" ? item.isRead : hasReadByUser(item.readBy, userId);
 
   return {
     id: `announcement:${item._id}`,
     rawId: item._id,
-    source: "school",
-    sourceLabel: "School Announcement",
+    source: item.source || "school",
+    sourceLabel: item.sourceLabel || "School Announcement",
     category: inferCategory(item, "announcement"),
     title: item.title || "School announcement",
     message: item.message || item.content || "No message provided.",
     createdAt,
-    unread: !hasReadByUser(item.readBy, userId),
-    senderName: item.senderName || getPersonName(sender, "School"),
-    senderEmail: sender?.email,
+    unread: !isRead,
+    senderName: getSenderName(item, sender, "School"),
+    senderEmail: getSenderEmail(item, sender),
     attachments: toAttachments(item),
     related: buildRelated(item),
     priority: item.priority,
@@ -165,14 +173,20 @@ const normalizeSystemNotification = (item: any, userId: string): TeacherNotifica
     id: `notification:${item._id}`,
     rawId: item._id,
     source: normalizedSource,
-    sourceLabel: normalizedSource === "talim" ? "Talim Alert" : "System Notification",
+    sourceLabel:
+      item.sourceLabel ||
+      (normalizedSource === "talim"
+        ? "Talim Alert"
+        : normalizedSource === "school"
+          ? "School Notification"
+          : "System Notification"),
     category: inferCategory(item, "other"),
     title: item.title || "Notification",
     message: item.message || item.body || item.content || "No message provided.",
     createdAt: item.createdAt || new Date().toISOString(),
     unread: !isRead,
-    senderName: item.senderName || getPersonName(sender),
-    senderEmail: sender?.email,
+    senderName: getSenderName(item, sender),
+    senderEmail: getSenderEmail(item, sender),
     attachments: toAttachments(item),
     related: buildRelated(item),
     priority: item.priority,
@@ -183,6 +197,18 @@ const normalizeSystemNotification = (item: any, userId: string): TeacherNotifica
 
 const sortByNewest = (items: TeacherNotification[]) =>
   [...items].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+const isSchoolAnnouncementNotification = (item: any) => {
+  const source = item.source || item.metadata?.source;
+  const category = item.category || item.metadata?.category;
+  const type = String(item.type || "").toLowerCase();
+  return (
+    source === "school" &&
+    (category === "announcement" ||
+      type.includes("announcement") ||
+      Boolean(item.metadata?.announcementId))
+  );
+};
 
 const useNotifications = () => {
   const [notifications, setNotifications] = useState<TeacherNotification[]>([]);
@@ -220,8 +246,12 @@ const useNotifications = () => {
       }
 
       const [announcementsResponse, notificationsResponse] = await Promise.allSettled([
-        apiClient.get(`/notifications/announcements/receiver/${userId}`),
-        apiClient.get("/notifications", { params: { recipientId: userId, limit: 50 } }),
+        apiClient.get(`/notifications/announcements/receiver/${userId}`, {
+          params: { page: 1, limit: 50 },
+        }),
+        apiClient.get("/notifications", {
+          params: { recipientId: userId, page: 1, limit: 50 },
+        }),
       ]);
 
       const normalized: TeacherNotification[] = [];
@@ -236,9 +266,9 @@ const useNotifications = () => {
 
       if (notificationsResponse.status === "fulfilled") {
         normalized.push(
-          ...getNotificationItems(notificationsResponse.value.data).map((item) =>
-            normalizeSystemNotification(item, userId),
-          ),
+          ...getNotificationItems(notificationsResponse.value.data)
+            .filter((item) => !isSchoolAnnouncementNotification(item))
+            .map((item) => normalizeSystemNotification(item, userId)),
         );
       }
 
