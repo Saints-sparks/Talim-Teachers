@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "./useAuth";
 import { apiClient } from "../lib/api/apiClient";
+import nookies from "nookies";
 
 export type NotificationSource = "school" | "talim" | "system";
 
@@ -53,8 +54,17 @@ const getPersonName = (person: any, fallback = "System Notification") => {
   return name || person.email || fallback;
 };
 
+const isMissingSenderName = (value?: string) => {
+  const normalized = String(value || "").trim().toLowerCase();
+  return !normalized || normalized === "unknown sender" || normalized === "unknown";
+};
+
 const getSenderName = (item: any, sender: any, fallback = "System Notification") =>
-  item.senderName || item.senderDisplay?.name || getPersonName(sender, fallback);
+  !isMissingSenderName(item.senderName)
+    ? item.senderName
+    : !isMissingSenderName(item.senderDisplay?.name)
+      ? item.senderDisplay.name
+      : getPersonName(sender, fallback);
 
 const getSenderEmail = (item: any, sender: any) =>
   item.senderEmail || item.senderDisplay?.email || sender?.email;
@@ -133,6 +143,12 @@ const buildRelated = (item: any) => {
 
 const normalizeAnnouncement = (item: any, userId: string): TeacherNotification => {
   const sender = item.senderId || item.createdBy;
+  const schoolName =
+    item.schoolName ||
+    item.school?.name ||
+    item.schoolId?.name ||
+    item.metadata?.schoolName ||
+    "School Admin";
   const createdAt = item.publishedAt || item.createdAt || item.scheduledFor || new Date().toISOString();
   const isRead =
     typeof item.isRead === "boolean" ? item.isRead : hasReadByUser(item.readBy, userId);
@@ -147,7 +163,7 @@ const normalizeAnnouncement = (item: any, userId: string): TeacherNotification =
     message: item.message || item.content || "No message provided.",
     createdAt,
     unread: !isRead,
-    senderName: getSenderName(item, sender, "School"),
+    senderName: getSenderName(item, sender, schoolName),
     senderEmail: getSenderEmail(item, sender),
     attachments: toAttachments(item),
     related: buildRelated(item),
@@ -168,6 +184,12 @@ const normalizeSystemNotification = (item: any, userId: string): TeacherNotifica
   const source = item.source || item.metadata?.source;
   const normalizedSource: NotificationSource =
     source === "school" ? "school" : source === "talim" ? "talim" : "system";
+  const senderFallback =
+    normalizedSource === "talim"
+      ? "Talim Admin"
+      : normalizedSource === "school"
+        ? "School Admin"
+        : "System Notification";
 
   return {
     id: `notification:${item._id}`,
@@ -185,7 +207,7 @@ const normalizeSystemNotification = (item: any, userId: string): TeacherNotifica
     message: item.message || item.body || item.content || "No message provided.",
     createdAt: item.createdAt || new Date().toISOString(),
     unread: !isRead,
-    senderName: getSenderName(item, sender),
+    senderName: getSenderName(item, sender, senderFallback),
     senderEmail: getSenderEmail(item, sender),
     attachments: toAttachments(item),
     related: buildRelated(item),
@@ -214,13 +236,20 @@ const useNotifications = () => {
   const [notifications, setNotifications] = useState<TeacherNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { user, getAccessToken, getUser } = useAuth();
-  const userId = getUserId(user || getUser());
+  const { user, getUser } = useAuth();
+  const [storedUser, setStoredUser] = useState<any>(null);
+
+  useEffect(() => {
+    setStoredUser(getUser());
+  }, []);
+
+  const effectiveUser = user || storedUser;
+  const userId = getUserId(effectiveUser);
 
   const cacheKey = userId ? `teacher-notifications:${userId}` : "";
 
   const fetchNotifications = useCallback(async () => {
-    const token = getAccessToken();
+    const token = nookies.get(undefined).access_token;
 
     if (!token) {
       setNotifications([]);
@@ -287,7 +316,7 @@ const useNotifications = () => {
     } finally {
       setLoading(false);
     }
-  }, [cacheKey, getAccessToken, userId]);
+  }, [cacheKey, userId]);
 
   useEffect(() => {
     fetchNotifications();
@@ -322,11 +351,14 @@ const useNotifications = () => {
         } else {
           await apiClient.put(`/notifications/${target.rawId}/read`, { userId });
         }
+        await fetchNotifications();
       } catch (error) {
         console.error("Failed to mark notification as read:", error);
+        persistNotifications(notifications);
+        setError("Failed to mark notification as read. Please try again.");
       }
     },
-    [notifications, persistNotifications, userId],
+    [fetchNotifications, notifications, persistNotifications, userId],
   );
 
   const markAllAsRead = useCallback(async () => {
@@ -335,14 +367,22 @@ const useNotifications = () => {
 
     persistNotifications(notifications.map((notification) => ({ ...notification, unread: false })));
 
-    await Promise.allSettled(
+    const results = await Promise.allSettled(
       unreadNotifications.map((notification) =>
         notification.endpoint === "announcement"
           ? apiClient.put(`/notifications/announcements/${notification.rawId}/read`, { userId })
           : apiClient.put(`/notifications/${notification.rawId}/read`, { userId }),
       ),
     );
-  }, [notifications, persistNotifications, userId]);
+
+    if (results.some((result) => result.status === "rejected")) {
+      persistNotifications(notifications);
+      setError("Some notifications could not be marked as read. Please try again.");
+      return;
+    }
+
+    await fetchNotifications();
+  }, [fetchNotifications, notifications, persistNotifications, userId]);
 
   const counts = useMemo(() => {
     return notifications.reduce(
