@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import Image from "next/image";
 import { Eye, EyeOff, ShieldAlert, AlertCircle, Loader2 } from "lucide-react";
 import { useAuth } from "./hooks/useAuth";
+import ModernLoader from "@/components/ModernLoader";
 
 type LoginError =
   | { kind: "access_denied"; message: string }
@@ -55,6 +56,7 @@ const LoginPage: React.FC = () => {
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
+      <ModernLoader visible={isLoading} />
 
       {/* ── Left panel — Form ── */}
       <div className="flex flex-col justify-center items-center px-8 py-12 sm:px-16 bg-white">
