@@ -6,9 +6,12 @@ import { Button } from "./ui/button";
 import { format } from "date-fns";
 import { WebSocketStatus } from "./WebSocketStatus";
 import { useAuth } from "@/app/hooks/useAuth";
+import useNotifications from "@/app/hooks/useNotifications";
 
 export function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const { user } = useAuth();
+  const { counts } = useNotifications();
+  const unreadNotifications = counts.unread || 0;
 
   // Generate initials from first and last names
   const getInitials = () => {
@@ -45,8 +48,13 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
               <WebSocketStatus />
             </div>
             <Link href="/notifications">
-              <Button className="bg-white shadow-none border border-[#F0F0F0] hover:bg-gray-200 h-full rounded-lg p-3">
+              <Button className="relative bg-white shadow-none border border-[#F0F0F0] hover:bg-gray-200 h-full rounded-lg p-3">
                 <Bell className="h-5 w-5 text-gray-600" />
+                {unreadNotifications > 0 ? (
+                  <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#003366] px-1 text-[11px] font-semibold leading-none text-white">
+                    {unreadNotifications > 99 ? "99+" : unreadNotifications}
+                  </span>
+                ) : null}
               </Button>
             </Link>
             <Link href="/profile">
