@@ -44,18 +44,76 @@ interface ErrorState {
 // Days of the week
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
-// Time slots (configurable) - using 12-hour format to match backend
+// Time slots use the same 24-hour format as the school admin timetable.
 const TIME_SLOTS = [
-  "08:00 AM - 09:00 AM",
-  "09:00 AM - 10:00 AM",
-  "10:00 AM - 11:00 AM",
-  "11:00 AM - 12:00 PM",
-  "12:00 PM - 01:00 PM",
-  "01:00 PM - 02:00 PM",
-  "02:00 PM - 03:00 PM",
-  "03:00 PM - 04:00 PM",
-  "04:00 PM - 05:00 PM",
+  "08:00 - 09:00",
+  "09:00 - 10:00",
+  "10:00 - 11:00",
+  "11:00 - 12:00",
+  "12:00 - 13:00",
+  "13:00 - 14:00",
+  "14:00 - 15:00",
+  "15:00 - 16:00",
+  "16:00 - 17:00",
 ];
+
+const getEntryStartTime = (entry: TimetableEntry) =>
+  entry.startTime || entry.startTIme || "";
+
+const parseTimeToMinutes = (time?: string) => {
+  if (!time) return null;
+
+  const match = time
+    .trim()
+    .match(/^(\d{1,2})(?::(\d{1,2}))?\s*(AM|PM)?$/i);
+
+  if (!match) return null;
+
+  let hour = Number(match[1]);
+  const minute = Number(match[2] ?? "0");
+  const modifier = match[3]?.toUpperCase();
+
+  if (Number.isNaN(hour) || Number.isNaN(minute) || minute > 59) return null;
+
+  if (modifier === "PM" && hour < 12) hour += 12;
+  if (modifier === "AM" && hour === 12) hour = 0;
+
+  if (hour > 24 || (hour === 24 && minute !== 0)) return null;
+
+  return hour * 60 + minute;
+};
+
+const formatMinutesAsTime = (minutes: number) => {
+  const hour = Math.floor(minutes / 60);
+  const minute = minutes % 60;
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+};
+
+const normalizeTime = (time?: string) => {
+  const minutes = parseTimeToMinutes(time);
+  return minutes === null ? "" : formatMinutesAsTime(minutes);
+};
+
+const parseTimeRange = (range?: string) => {
+  if (!range) return null;
+  const [start, end] = range.split(" - ");
+  if (!start || !end) return null;
+
+  const startMinutes = parseTimeToMinutes(start);
+  const endMinutes = parseTimeToMinutes(end);
+
+  if (startMinutes === null || endMinutes === null) return null;
+
+  return { startMinutes, endMinutes };
+};
+
+const formatEntryTimeRange = (entry: TimetableEntry) => {
+  const start = normalizeTime(getEntryStartTime(entry));
+  const end = normalizeTime(entry.endTime);
+
+  if (start && end) return `${start} - ${end}`;
+  return entry.time || `${getEntryStartTime(entry)} - ${entry.endTime}`;
+};
 
 const Timetable: React.FC = () => {
   const { user, getAccessToken } = useAuth();
@@ -178,43 +236,29 @@ const Timetable: React.FC = () => {
   // Get timetable entry for specific day and time - improved matching
   const getTimetableEntry = (day: string, timeSlot: string) => {
     const dayEntries = timetableData[day] || [];
+    const slotRange = parseTimeRange(timeSlot);
+    if (!slotRange) return undefined;
 
- 
-    // First, try exact matches
-    let entry = dayEntries.find((entry) => {
-      const startTime = entry.startTime || entry.startTIme || "";
-      const exactMatch =
-        entry.time === timeSlot ||
-        `${startTime} - ${entry.endTime}` === timeSlot;
-      
-      return exactMatch;
+    return dayEntries.find((entry) => {
+      const entryStart = parseTimeToMinutes(getEntryStartTime(entry));
+      const entryEnd = parseTimeToMinutes(entry.endTime);
+      const entryRange = parseTimeRange(entry.time);
+
+      if (entryStart === null) return false;
+
+      const startsAtSlot = entryStart === slotRange.startMinutes;
+      const exactRange =
+        startsAtSlot &&
+        entryEnd !== null &&
+        entryEnd === slotRange.endMinutes;
+      const exactEntryTimeRange =
+        entryRange?.startMinutes === slotRange.startMinutes &&
+        entryRange?.endMinutes === slotRange.endMinutes;
+      const startsWithinSlot =
+        entryStart >= slotRange.startMinutes && entryStart < slotRange.endMinutes;
+
+      return exactRange || exactEntryTimeRange || startsAtSlot || startsWithinSlot;
     });
-
-    if (entry) return entry;
-
-    // If no exact match, try time-based matching
-    const slotStart = timeSlot.split(" - ")[0]; // e.g., "08:00 AM"
-    const slotStartHour = parseInt(slotStart.split(":")[0]); // e.g., 8
-    const slotStartMinute = parseInt(slotStart.split(":")[1].split(" ")[0]); // e.g., 0
-
-    entry = dayEntries.find((entry) => {
-      const startTime = entry.startTime || entry.startTIme || "";
-      if (!startTime) return false;
-
-      const entryStartHour = parseInt(startTime.split(":")[0]);
-      const entryStartMinute = parseInt(startTime.split(":")[1].split(" ")[0]);
-
-      // Check if the entry starts within this time slot (within same hour)
-      const match =
-        entryStartHour === slotStartHour &&
-        Math.abs(entryStartMinute - slotStartMinute) <= 30; // Allow 30-minute tolerance
-
-   
-
-      return match;
-    });
-
-    return entry;
   };
 
   // Get all entries for a day that don't match standard time slots
@@ -223,15 +267,14 @@ const Timetable: React.FC = () => {
     return dayEntries.filter((entry) => {
       // Check if this entry matches any of our time slots
       return !filteredTimeSlots.some((timeSlot) => {
-        const startTime = entry.startTime || entry.startTIme || "";
-        const slotStart = timeSlot.split(" - ")[0];
-        const slotStartHour = parseInt(slotStart.split(":")[0]);
-        const entryStartHour = parseInt(startTime.split(":")[0]);
+        const slotRange = parseTimeRange(timeSlot);
+        const entryStart = parseTimeToMinutes(getEntryStartTime(entry));
 
         return (
-          entry.time === timeSlot ||
-          `${startTime} - ${entry.endTime}` === timeSlot ||
-          entryStartHour === slotStartHour
+          slotRange !== null &&
+          entryStart !== null &&
+          entryStart >= slotRange.startMinutes &&
+          entryStart < slotRange.endMinutes
         );
       });
     });
@@ -538,11 +581,7 @@ const Timetable: React.FC = () => {
                               </div>
                               <div className="text-right">
                                 <div className="text-sm font-medium text-[#003366]">
-                                  {entry.time}
-                                </div>
-                                <div className="text-xs text-[#878787]">
-                                  {entry.startTime || entry.startTIme} -{" "}
-                                  {entry.endTime}
+                                  {formatEntryTimeRange(entry)}
                                 </div>
                               </div>
                             </div>
@@ -643,7 +682,7 @@ const Timetable: React.FC = () => {
                                   <div className="text-xs text-blue-200 flex items-center gap-1">
                                     <MapPin className="w-3 h-3" />
                                     <span className="hidden md:inline">
-                                      {entry.time}
+                                      {formatEntryTimeRange(entry)}
                                     </span>
                                   </div>
                                 </div>

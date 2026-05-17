@@ -10,6 +10,7 @@ import {
 } from "@/app/services/api.service";
 import { getCurricula } from "@/app/services/curriculum.services";
 import { getChatRooms } from "@/app/services/chat.service";
+import { apiClient } from "@/app/lib/api/apiClient";
 
 const isGroupRoom = (room: any) => {
   const type = String(room?.type || room?.roomType || "").toLowerCase();
@@ -52,12 +53,32 @@ export function useOnboardingSync() {
           }
         })
         .catch(() => {}),
+      // Detect "view-notifications" by checking if the teacher has any
+      // notifications or announcements in the system. If they exist the
+      // teacher has been exposed to the notifications feature.
+      Promise.allSettled([
+        apiClient.get(`/notifications/announcements/receiver/${userId}`, {
+          params: { page: 1, limit: 1 },
+        }),
+        apiClient.get("/notifications", {
+          params: { recipientId: userId, page: 1, limit: 1 },
+        }),
+      ]).then((results) => {
+        const hasAny = results.some((r) => {
+          if (r.status !== "fulfilled") return false;
+          const d = (r.value as any)?.data ?? r.value;
+          const items: any[] =
+            d?.data ?? d?.items ?? d?.results ?? d?.announcements ?? d?.notifications ?? [];
+          const total = d?.meta?.total ?? d?.total ?? d?.count ?? items.length;
+          return Number(total) > 0;
+        });
+        if (hasAny) markStepComplete("view-notifications");
+      }).catch(() => {}),
     ];
 
     const classIds = (classes || [])
       .map((classItem: any) => classItem?._id || classItem?.id)
-      .filter(Boolean)
-      .slice(0, 3);
+      .filter(Boolean);
 
     if (classIds.length > 0) {
       checks.push(

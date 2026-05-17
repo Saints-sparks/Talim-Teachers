@@ -10,17 +10,31 @@ const SYNC_THROTTLE_MS = 60_000;
 
 function OnboardingSyncEffect() {
   const pathname = usePathname();
-  const { user } = useAppContext();
+  const { user, classes } = useAppContext();
   const { syncProgress } = useOnboardingSync();
   const lastSyncAt = useRef(0);
+  const lastSyncPath = useRef<string | null>(null);
+  const classesLoadedRef = useRef(false);
 
   useEffect(() => {
     if (!user) return;
     const now = Date.now();
-    if (now - lastSyncAt.current < SYNC_THROTTLE_MS) return;
+    const pathChanged = lastSyncPath.current !== pathname;
+    if (!pathChanged && now - lastSyncAt.current < SYNC_THROTTLE_MS) return;
+
+    lastSyncPath.current = pathname;
     lastSyncAt.current = now;
     syncProgress().catch(() => {});
   }, [pathname, user?.userId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Re-run sync once when classes first populate so the attendance check
+  // is not skipped due to a race between the initial sync and data loading.
+  useEffect(() => {
+    if (!user || !classes?.length || classesLoadedRef.current) return;
+    classesLoadedRef.current = true;
+    lastSyncAt.current = 0; // reset throttle so sync runs immediately
+    syncProgress().catch(() => {});
+  }, [classes, user, syncProgress]);
 
   return null;
 }
