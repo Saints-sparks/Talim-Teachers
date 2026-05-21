@@ -1,12 +1,13 @@
+"use client";
 import Link from "next/link";
-import { Search, Bell, Menu, CalendarRange } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Bell, Menu, CalendarRange } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "./ui/button";
 import { format } from "date-fns";
 import { WebSocketStatus } from "./WebSocketStatus";
 import { useAuth } from "@/app/hooks/useAuth";
 import useNotifications from "@/app/hooks/useNotifications";
+import { ThemeToggle } from "./theme-toggle";
 
 export function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const { user } = useAuth();
@@ -24,7 +25,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
     return `${firstNameInitial}${lastNameInitial}` || "US";
   };
   return (
-    <header className="font-manrope px-5 border-b sm:border-b-2 border-b-[#F0F0F0] bg-white py-2 ">
+    <header className="font-manrope px-5 border-b sm:border-b-2 border-b-[#F0F0F0] dark:border-b-slate-800 bg-white dark:bg-slate-900 py-2">
       {/* Top row: Menu, Date, Notifications, Avatar */}
       <div className="flex flex-col  sm:flex-row items-center w-full justify-end gap-4 py-3">
         {/* Menu Button (Only on Mobile) */}
@@ -37,7 +38,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
           </div>
           {/* Right Side: Date, Notifications, Avatar */}
           <div className="flex items-center gap-4">
-            <div className="flex gap-2 items-center text-sm text-[#6F6F6F] p-2 rounded-lg border border-[#F0F0F0] bg-white cursor-pointer hover:bg-gray-100">
+            <div className="flex gap-2 items-center text-sm text-[#6F6F6F] dark:text-slate-400 p-2 rounded-lg border border-[#F0F0F0] dark:border-slate-700 bg-white dark:bg-slate-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700">
               <p className="text-[14px] sm:text-[16px]">
                 {format(new Date(), "dd MMM, yyyy")}
               </p>
@@ -47,9 +48,10 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
             <div className="flex items-center">
               <WebSocketStatus />
             </div>
+            <ThemeToggle />
             <Link href="/notifications">
-              <Button className="relative bg-white shadow-none border border-[#F0F0F0] hover:bg-gray-200 h-full rounded-lg p-3">
-                <Bell className="h-5 w-5 text-gray-600" />
+              <Button className="relative bg-white dark:bg-slate-800 shadow-none border border-[#F0F0F0] dark:border-slate-700 hover:bg-gray-200 dark:hover:bg-slate-700 h-full rounded-lg p-3">
+                <Bell className="h-5 w-5 text-gray-600 dark:text-slate-400" />
                 {unreadNotifications > 0 ? (
                   <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#003366] px-1 text-[11px] font-semibold leading-none text-white">
                     {unreadNotifications > 99 ? "99+" : unreadNotifications}

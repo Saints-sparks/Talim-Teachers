@@ -10,11 +10,46 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --card: #ffffff;
+  --card-foreground: #171717;
+  --popover: #ffffff;
+  --popover-foreground: #171717;
+  --primary: #003366;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f4f6;
+  --secondary-foreground: #111827;
+  --muted: #f9fafb;
+  --muted-foreground: #6b7280;
+  --accent: #f3f4f6;
+  --accent-foreground: #111827;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #e5e7eb;
+  --input: #e5e7eb;
+  --ring: #003366;
+  --radius: 0.5rem;
 }
 
 html.dark {
   --background: #0b1120;
   --foreground: #e2e8f0;
+  --card: #0f172a;
+  --card-foreground: #e2e8f0;
+  --popover: #0f172a;
+  --popover-foreground: #e2e8f0;
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #1e293b;
+  --secondary-foreground: #e2e8f0;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --accent: #1e293b;
+  --accent-foreground: #e2e8f0;
+  --destructive: #7f1d1d;
+  --destructive-foreground: #fca5a5;
+  --border: #1e293b;
+  --input: #1e293b;
+  --ring: #3b82f6;
 }
 
 /* Global Styles */
@@ -214,3 +249,35 @@ html.dark td { border-color: #1e293b; color: #cbd5e1; }
 
 /* Dividers */
 html.dark hr { border-color: #1e293b; }
+
+/* ── Tailwind semantic gray classes ────────────────────── */
+/* Backgrounds */
+html.dark .bg-gray-50  { background-color: #1e293b; }
+html.dark .bg-gray-100 { background-color: #1e293b; }
+html.dark .bg-gray-200 { background-color: #334155; }
+html.dark .bg-gray-300 { background-color: #475569; }
+
+/* Text */
+html.dark .text-gray-900 { color: #f1f5f9; }
+html.dark .text-gray-800 { color: #e2e8f0; }
+html.dark .text-gray-700 { color: #cbd5e1; }
+html.dark .text-gray-600 { color: #94a3b8; }
+html.dark .text-gray-500 { color: #64748b; }
+html.dark .text-gray-400 { color: #475569; }
+
+/* Borders */
+html.dark .border-gray-100 { border-color: #1e293b; }
+html.dark .border-gray-200 { border-color: #1e293b; }
+html.dark .border-gray-300 { border-color: #334155; }
+
+/* ── ShadCN CSS-variable components ────────────────────── */
+html.dark .bg-card           { background-color: #0f172a; }
+html.dark .text-card-foreground { color: #e2e8f0; }
+html.dark .bg-background     { background-color: #0b1120; }
+html.dark .bg-muted          { background-color: #1e293b; }
+html.dark .text-muted-foreground { color: #94a3b8; }
+html.dark .bg-secondary      { background-color: #1e293b; }
+html.dark .bg-accent         { background-color: #1e293b; }
+html.dark .text-foreground   { color: #e2e8f0; }
+html.dark .border-border     { border-color: #1e293b; }
+html.dark .border-input      { border-color: #334155; }

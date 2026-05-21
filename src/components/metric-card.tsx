@@ -5,21 +5,21 @@ import Link from "next/link";
 
 export function MetricCard({ icon, value, label, link }: MetricCardProps) {
   return (
-    <Card className="overflow-hidden bg-white shadow-none border-[#F0F0F0]">
+    <Card className="overflow-hidden bg-white dark:bg-slate-800 shadow-none border-[#F0F0F0] dark:border-slate-700">
       <CardContent className="p-6">
         <div className="space-y-2 flex mb-6 justify-start items-center gap-2 flex-row">
-          <div className=" flex justify-center items-center text-blue-600">
+          <div className="flex justify-center items-center text-blue-600 dark:text-blue-400">
             {icon}
           </div>
           <div className="space-y-1">
-            <div className="text-2xl font-semibold text-gray-900">{value}</div>
-            <p className="text-sm text-[#878787]">{label}</p>
+            <div className="text-2xl font-semibold text-gray-900 dark:text-slate-100">{value}</div>
+            <p className="text-sm text-[#878787] dark:text-slate-400">{label}</p>
           </div>
         </div>
         {/* Horizontal lines */}
-        <div className=" h-px -mx-6 bg-[#F0F0F0]" />
+        <div className="h-px -mx-6 bg-[#F0F0F0] dark:bg-slate-700" />
         <Link href={link}>
-          <button className="mt-4 inline-flex items-center text-sm text-[#878787] hover:text-gray-900">
+          <button className="mt-4 inline-flex items-center text-sm text-[#878787] dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-200">
             See more
             <svg
               className="ml-1 h-4 w-4"
