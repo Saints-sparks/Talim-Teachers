@@ -6,6 +6,7 @@ import { WebSocketProvider } from "@/app/contexts/WebSocketContext";
 import { ChatProvider } from "@/app/context/ChatContext";
 import OnboardingShell from "./onboarding-provider";
 import { ToastViewport } from "@/components/CustomToast";
+import { ThemeProvider } from "@/providers/theme-provider";
 
 const manrope = Manrope({ subsets: ["latin"] });
 
@@ -22,21 +23,28 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="icon" type="image/svg+xml" href="/icons/talim.svg" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('talim_teacher_theme')||'system';var d=window.matchMedia('(prefers-color-scheme: dark)').matches;if(t==='dark'||(t==='system'&&d)){document.documentElement.classList.add('dark')}}catch(e){}})()`,
+          }}
+        />
       </head>
       <body className={manrope.className}>
-        <AppProvider>
-          <OnboardingShell>
-            <WebSocketProvider>
-              <ChatProvider>
-                {children}
-                <ToastViewport />
-              </ChatProvider>
-            </WebSocketProvider>
-          </OnboardingShell>
-        </AppProvider>
+        <ThemeProvider>
+          <AppProvider>
+            <OnboardingShell>
+              <WebSocketProvider>
+                <ChatProvider>
+                  {children}
+                  <ToastViewport />
+                </ChatProvider>
+              </WebSocketProvider>
+            </OnboardingShell>
+          </AppProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -12,11 +12,9 @@
   --foreground: #171717;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #ededed;
-    /* --foreground: #ededed; */
-  }
+html.dark {
+  --background: #0b1120;
+  --foreground: #e2e8f0;
 }
 
 /* Global Styles */
@@ -59,3 +57,160 @@ body {
     max-width: calc(100vw - 2rem);
   }
 }
+
+/* ============================================================
+   DARK MODE — Global hex-color overrides
+   Covers components that use arbitrary Tailwind hex values
+   without dark: variants. Specificity (0,2,1) > utility (0,1,0).
+   ============================================================ */
+
+/* bg-white */
+html.dark .bg-white { background-color: #0f172a; }
+
+/* Near-white / light gray page backgrounds → slate-900 */
+html.dark [class*="bg-[#FDFDFD]"],
+html.dark [class*="bg-[#FBFCFE]"],
+html.dark [class*="bg-[#FBFBFB]"],
+html.dark [class*="bg-[#F9FAFB]"],
+html.dark [class*="bg-[#F9F9F9]"],
+html.dark [class*="bg-[#F8F8F8]"],
+html.dark [class*="bg-[#F7F7F7]"],
+html.dark [class*="bg-[#F3F3F3]"],
+html.dark [class*="bg-[#f3f3f3]"],
+html.dark [class*="bg-[#F0F0F0]"],
+html.dark [class*="bg-[#ECECEC]"] { background-color: #0f172a; }
+
+/* Blue-tinted light backgrounds → navy-dark card */
+html.dark [class*="bg-[#F8FBFF]"],
+html.dark [class*="bg-[#F8FAFF]"],
+html.dark [class*="bg-[#F8FAFD]"],
+html.dark [class*="bg-[#F7F9FC]"],
+html.dark [class*="bg-[#F4F8FF]"],
+html.dark [class*="bg-[#F2F6FB]"],
+html.dark [class*="bg-[#EFF5FF]"],
+html.dark [class*="bg-[#EEF3F9]"],
+html.dark [class*="bg-[#EDF2F8]"],
+html.dark [class*="bg-[#EAF2FB]"],
+html.dark [class*="bg-[#E7F0FF]"],
+html.dark [class*="bg-[#DDEAF7]"] { background-color: #1a2740; }
+
+/* Amber/warm tints */
+html.dark [class*="bg-[#FFF8E8]"] { background-color: #2a1f00; }
+
+/* Mid-gray UI chips → slate-700 */
+html.dark [class*="bg-[#CBD5E1]"],
+html.dark [class*="bg-[#ADBECE]"],
+html.dark [class*="bg-[#BABABA]"] { background-color: #334155; }
+
+/* Borders: light gray → slate-800 */
+html.dark .border-white { border-color: #1e293b; }
+
+html.dark [class*="border-[#F6F6F6]"],
+html.dark [class*="border-[#F4F4F4]"],
+html.dark [class*="border-[#F2F2F2]"],
+html.dark [class*="border-[#F1F1F1]"],
+html.dark [class*="border-[#F0F0F0]"],
+html.dark [class*="border-[#EEEEEE]"],
+html.dark [class*="border-[#EEF2F7]"],
+html.dark [class*="border-[#E8EDF5]"],
+html.dark [class*="border-[#E8E8E8]"],
+html.dark [class*="border-[#E6EDF5]"],
+html.dark [class*="border-[#E5EAF2]"],
+html.dark [class*="border-[#E5E7EB]"],
+html.dark [class*="border-[#E3E3E3]"],
+html.dark [class*="border-[#DDE8F6]"],
+html.dark [class*="border-[#DCE5F2]"],
+html.dark [class*="border-[#D9D9D9]"],
+html.dark [class*="border-[#ADBECE]"] { border-color: #1e293b; }
+
+/* Blue-tinted borders → visible in dark */
+html.dark [class*="border-[#BFD7FF]"],
+html.dark [class*="border-[#D7E6F6]"] { border-color: #1e3a6e; }
+
+/* Brand blue borders */
+html.dark [class*="border-[#002244]"],
+html.dark [class*="border-[#002B5B]"],
+html.dark [class*="border-[#003366]"],
+html.dark [class*="border-[#154473]"] { border-color: #3b82f6; }
+
+/* Text: near-black → slate-100 */
+html.dark [class*="text-[#030303]"],
+html.dark [class*="text-[#030E18]"],
+html.dark [class*="text-[#0B1220]"],
+html.dark [class*="text-[#101828]"],
+html.dark [class*="text-[#131616]"] { color: #f1f5f9; }
+
+/* Dark gray → slate-200 */
+html.dark [class*="text-[#2F2F2F]"],
+html.dark [class*="text-[#344054]"],
+html.dark [class*="text-[#434343]"],
+html.dark [class*="text-[#444444]"],
+html.dark [class*="text-[#454545]"] { color: #e2e8f0; }
+
+/* Mid-dark gray → slate-300 */
+html.dark [class*="text-[#4A4A4A]"],
+html.dark [class*="text-[#4B5563]"],
+html.dark [class*="text-[#4D4D4D]"],
+html.dark [class*="text-[#525252]"],
+html.dark [class*="text-[#545454]"],
+html.dark [class*="text-[#5D5D5D]"],
+html.dark [class*="text-[#616161]"] { color: #cbd5e1; }
+
+/* Medium gray → slate-400 */
+html.dark [class*="text-[#667085]"],
+html.dark [class*="text-[#676767]"],
+html.dark [class*="text-[#686868]"],
+html.dark [class*="text-[#6F6F6F]"],
+html.dark [class*="text-[#738195]"],
+html.dark [class*="text-[#7B7B7B]"],
+html.dark [class*="text-[#878787]"],
+html.dark [class*="text-[#898989]"],
+html.dark [class*="text-[#8A95A5]"] { color: #94a3b8; }
+
+/* Light gray → slate-500 */
+html.dark [class*="text-[#909090]"],
+html.dark [class*="text-[#98A2B3]"],
+html.dark [class*="text-[#999999]"],
+html.dark [class*="text-[#A0A0A0]"],
+html.dark [class*="text-[#A5A5A5]"],
+html.dark [class*="text-[#ABABAB]"],
+html.dark [class*="text-[#C0C0C0]"],
+html.dark [class*="text-[#D0D0D0]"],
+html.dark [class*="text-[#F0F0F0]"] { color: #64748b; }
+
+/* Navy brand text → blue-300 */
+html.dark [class*="text-[#002244]"],
+html.dark [class*="text-[#002B5B]"],
+html.dark [class*="text-[#003366]"],
+html.dark [class*="text-[#0A2343]"],
+html.dark [class*="text-[#102A43]"],
+html.dark [class*="text-[#154473]"] { color: #93c5fd; }
+
+/* Blue interactive → blue-400 */
+html.dark [class*="text-[#0B74DE]"] { color: #60a5fa; }
+
+/* Amber */
+html.dark [class*="text-[#7A5600]"],
+html.dark [class*="text-[#B88916]"] { color: #fbbf24; }
+
+/* Inputs */
+html.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+html.dark select,
+html.dark textarea {
+  background-color: #1e293b;
+  color: #e2e8f0;
+  border-color: #334155;
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder { color: #64748b; }
+
+/* Tables */
+html.dark table { border-color: #1e293b; }
+html.dark thead { background-color: #1e293b; }
+html.dark thead th { color: #94a3b8; border-color: #334155; }
+html.dark tbody tr { border-color: #1e293b; }
+html.dark tbody tr:hover { background-color: #1a2740; }
+html.dark td { border-color: #1e293b; color: #cbd5e1; }
+
+/* Dividers */
+html.dark hr { border-color: #1e293b; }

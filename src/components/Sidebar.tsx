@@ -1,42 +1,47 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation"; // Correct hook for Next.js 13 App Router
-import { ChevronLeft } from "lucide-react";
+import { usePathname } from "next/navigation";
+import {
+  ChevronLeft,
+  LayoutDashboard,
+  BookMarked,
+  Users,
+  FolderOpen,
+  Calendar,
+  ClipboardList,
+  BarChart2,
+  MessageSquare,
+  Bell,
+  BookOpen,
+  Settings,
+  LogOut,
+} from "lucide-react";
 import { useAuth } from "@/app/hooks/useAuth";
 import { useAppContext } from "@/app/context/AppContext";
 import { useChat } from "@/app/context/ChatContext";
+import useNotifications from "@/app/hooks/useNotifications";
 
-// Type for Menu Item
 type MenuItem = {
   label: string;
-  iconPath: string;
-  notification?: number;
-  link?: string;
+  icon: React.ElementType;
+  link: string;
+  badge?: "messages" | "notifications";
 };
 
 const menuItems: MenuItem[] = [
-  { label: "Dashboard", iconPath: "/icons/dashboard.svg", link: "/dashboard" },
-  { label: "Subjects", iconPath: "/icons/subjects.svg", link: "/subjects" },
-  { label: "Students", iconPath: "/icons/student.svg", link: "/students" },
-  { label: "Resources", iconPath: "/icons/resources.svg", link: "/resources" },
-  { label: "Timetable", iconPath: "/icons/timetable.svg", link: "/timetable" },
-  {
-    label: "Attendance",
-    iconPath: "/icons/attendance.svg",
-    link: "/attendance",
-  },
-  {
-    label: "Grading",
-    iconPath: "/icons/results.svg",
-    link: "/grading",
-  },
-  {
-    label: "Messages",
-    iconPath: "/icons/messages.svg",
-    link: "/messages",
-  },
+  { label: "Dashboard",     icon: LayoutDashboard, link: "/dashboard" },
+  { label: "Students",      icon: Users,           link: "/students" },
+  { label: "Subjects",      icon: BookMarked,      link: "/subjects" },
+  { label: "Resources",     icon: FolderOpen,      link: "/resources" },
+  { label: "Timetable",     icon: Calendar,        link: "/timetable" },
+  { label: "Attendance",    icon: ClipboardList,   link: "/attendance" },
+  { label: "Grading",       icon: BarChart2,       link: "/grading" },
+  { label: "Curriculum",    icon: BookOpen,        link: "/curriculum" },
+  { label: "Messages",      icon: MessageSquare,   link: "/messages",       badge: "messages" },
+  { label: "Notifications", icon: Bell,            link: "/notifications",  badge: "notifications" },
+  { label: "Settings",      icon: Settings,        link: "/settings" },
 ];
 
 interface SidebarProps {
@@ -46,101 +51,96 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const { logout } = useAuth();
-  const pathname = usePathname(); // usePathname is the correct hook for App Router
+  const pathname = usePathname();
   const { user } = useAppContext();
   const { chatRooms } = useChat();
+  const { counts: notifCounts } = useNotifications();
 
   const totalUnread = chatRooms.reduce(
     (acc, room) => acc + (room.unreadCount || 0),
     0,
   );
 
-  if (!user) {
-    return null; // or return <Spinner/> or some placeholder
-  }
+  if (!user) return null;
 
-  // Use schoolName directly from the user object, fallback to parsing schoolId if needed
   const schoolName =
     user.schoolName ||
     (typeof user.schoolId === "object" && user.schoolId?.name) ||
     "Your School";
 
-  
+  const getBadge = (item: MenuItem): number => {
+    if (item.badge === "messages") return totalUnread;
+    if (item.badge === "notifications") return notifCounts?.unread ?? 0;
+    return 0;
+  };
 
   return (
-    <div className=" w-[280px] font-manrope px-4 h-full bg-white pb-4 bg-[#FBFBFB] flex flex-col justify-between border-r overflow-y-auto scrollbar-hide">
+    <div className="w-[280px] font-manrope px-4 h-full bg-white dark:bg-slate-900 pb-4 flex flex-col justify-between border-r border-[#F1F1F1] dark:border-slate-800 overflow-y-auto scrollbar-hide">
       {/* Header */}
       <div>
         <div className="flex items-center py-2 justify-between">
-          <div className="flex items-center ">
-            <div className="text-white p-3 rounded-lg">
-              <Image
-                src="/icons/talim.svg"
-                alt="School"
-                width={44.29}
-                height={43.23}
-              />
+          <div className="flex items-center">
+            <div className="p-3 rounded-lg">
+              <Image src="/icons/talim.svg" alt="Talim" width={44} height={43} />
             </div>
-            <span className="ml-2 text-lg font-semibold text-[#030E18]">
-              Talim
-            </span>
+            <span className="ml-2 text-lg font-semibold text-[#030E18] dark:text-slate-100">Talim</span>
           </div>
           <div
-            className="border border-[#003366] border-2 rounded-md md:hidden"
+            className="border-2 border-[#003366] dark:border-blue-500 rounded-md md:hidden cursor-pointer"
             onClick={onClose}
           >
-            <ChevronLeft className="text-[#003366]" />
+            <ChevronLeft className="text-[#003366] dark:text-blue-400" />
           </div>
         </div>
-        <div className="mb-4 border-b border-2 border-solid border-[#F1F1F1] -mx-4"></div>
+
+        <div className="mb-4 border-b-2 border-[#F1F1F1] dark:border-slate-800 -mx-4" />
 
         {/* School Selector */}
-        <div className="flex gap-2 items-center px-2 py-3 border border-[#F1F1F1] bg-[#FBFBFB] rounded-md mb-4">
-          <Image
-            src={user.schoolLogo}
-            alt={schoolName}
-            width={40}
-            height={40}
-          />
-          <span className="ml-2 font-medium text-base text-[#030E18]">
-            {schoolName}
-          </span>
+        <div className="flex gap-2 items-center px-2 py-3 border border-[#F1F1F1] dark:border-slate-700 bg-[#FBFBFB] dark:bg-slate-800 rounded-md mb-4">
+          {user.schoolLogo ? (
+            <Image src={user.schoolLogo} alt={schoolName} width={32} height={32} className="rounded" />
+          ) : (
+            <div className="w-8 h-8 rounded bg-[#003366] flex items-center justify-center shrink-0">
+              <span className="text-white text-xs font-bold">{schoolName.charAt(0)}</span>
+            </div>
+          )}
+          <span className="ml-1 font-medium text-sm text-[#030E18] dark:text-slate-200 truncate">{schoolName}</span>
         </div>
 
         {/* Menu Items */}
         <nav>
           <ul>
             {menuItems.map((item) => {
-              const isActive = pathname === item.link; // Check if the current pathname matches the link
-              const notificationCount =
-                item.label === "Messages" && totalUnread > 0
-                  ? totalUnread
-                  : item.notification;
+              const isActive =
+                pathname === item.link ||
+                (item.link !== "/dashboard" && pathname.startsWith(item.link + "/"));
+              const Icon = item.icon;
+              const badge = getBadge(item);
 
               return (
-                <li key={item.label} className="mb-4">
-                  <Link href={item.link || "#"}>
+                <li key={item.label} className="mb-1">
+                  <Link href={item.link}>
                     <div
-                      className={`flex items-center px-3 py-2 rounded-md cursor-pointer ${
+                      className={`flex items-center px-3 py-2 rounded-md cursor-pointer transition-colors ${
                         isActive
-                          ? "bg-[#003366] bg-opacity-25 text-[#003366]"
-                          : "text-gray-600 hover:bg-gray-100"
+                          ? "bg-[#003366]/20 dark:bg-blue-900/30 text-[#003366] dark:text-blue-400"
+                          : "text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800"
                       }`}
                     >
-                      <Image
-                        src={item.iconPath}
-                        alt={item.label}
-                        width={20}
-                        height={20}
+                      <Icon
+                        size={18}
+                        className={`shrink-0 ${
+                          isActive
+                            ? "text-[#003366] dark:text-blue-400"
+                            : "text-gray-500 dark:text-slate-500"
+                        }`}
                       />
-                      <span className="font-manrope text-base ml-3 font-medium">
-                        {item.label}
-                      </span>
-                      {notificationCount ? (
-                        <span className="ml-auto bg-blue-900 text-white text-sm w-5 h-5 flex items-center justify-center rounded-full">
-                          {notificationCount}
+                      <span className="font-manrope text-base ml-3 font-medium">{item.label}</span>
+                      {badge > 0 && (
+                        <span className="ml-auto bg-blue-900 dark:bg-blue-600 text-white text-xs min-w-[20px] h-5 flex items-center justify-center rounded-full font-semibold px-1">
+                          {badge > 99 ? "99+" : badge}
                         </span>
-                      ) : null}
+                      )}
                     </div>
                   </Link>
                 </li>
@@ -152,13 +152,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
       {/* Logout */}
       <div>
-        <div className="mb-4 border-b border-2 border-solid border-[#F1F1F1] -mx-4"></div>
-
+        <div className="mb-4 border-b-2 border-[#F1F1F1] dark:border-slate-800 -mx-4" />
         <div
-          className="flex items-center px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-md cursor-pointer"
+          className="flex items-center px-3 py-2 text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-md cursor-pointer transition-colors"
           onClick={logout}
         >
-          <Image src="/icons/logout.svg" alt="Logout" width={18} height={20} />
+          <LogOut size={18} className="text-gray-500 dark:text-slate-500" />
           <span className="ml-3 font-medium">Logout Account</span>
         </div>
       </div>
