@@ -250,12 +250,93 @@ html.dark td { border-color: #1e293b; color: #cbd5e1; }
 /* Dividers */
 html.dark hr { border-color: #1e293b; }
 
-/* ── Tailwind semantic gray classes ────────────────────── */
+/* ── Tailwind semantic classes, aligned with the parent app ────────────────────── */
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
+  background-color: #0f1629;
+  color: #f1f5f9;
+}
+
 /* Backgrounds */
-html.dark .bg-gray-50  { background-color: #1e293b; }
-html.dark .bg-gray-100 { background-color: #1e293b; }
-html.dark .bg-gray-200 { background-color: #334155; }
-html.dark .bg-gray-300 { background-color: #475569; }
+html.dark .min-h-screen,
+html.dark .bg-gray-50  { background-color: #0f1629; }
+html.dark .bg-gray-100 { background-color: #1a2540; }
+html.dark .bg-gray-200 { background-color: #1e2d47; }
+html.dark .bg-gray-300 { background-color: #2a3a5a; }
+html.dark .bg-blue-50,
+html.dark .bg-blue-100 { background-color: #0e2040; }
+html.dark .bg-green-50,
+html.dark .bg-green-100,
+html.dark .bg-emerald-50,
+html.dark .bg-emerald-100 { background-color: #042516; }
+html.dark .bg-red-50,
+html.dark .bg-red-100 { background-color: #2a0a0a; }
+html.dark .bg-yellow-50,
+html.dark .bg-yellow-100,
+html.dark .bg-amber-50,
+html.dark .bg-amber-100 { background-color: #1f1600; }
+html.dark .bg-orange-50,
+html.dark .bg-orange-100 { background-color: #2a1000; }
+html.dark .bg-indigo-50,
+html.dark .bg-indigo-100,
+html.dark .bg-purple-50,
+html.dark .bg-purple-100,
+html.dark .bg-violet-50,
+html.dark .bg-violet-100 { background-color: #1c1040; }
+
+/* Common light gradients used across dashboard, timetable, and loaders */
+html.dark .from-white,
+html.dark .from-gray-50,
+html.dark .from-blue-50 {
+  --tw-gradient-from: #0f1629 var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(15 22 41 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+html.dark .via-white {
+  --tw-gradient-to: rgb(15 22 41 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), #0f1629 var(--tw-gradient-via-position), var(--tw-gradient-to);
+}
+
+html.dark .to-blue-50,
+html.dark .to-indigo-50 {
+  --tw-gradient-to: #0f1629 var(--tw-gradient-to-position);
+}
+
+html.dark .from-red-50 {
+  --tw-gradient-from: #2a0a0a var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(42 10 10 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+html.dark .to-orange-50 {
+  --tw-gradient-to: #2a1000 var(--tw-gradient-to-position);
+}
+
+html.dark [class*="from-[#F0F0F0]"],
+html.dark [class*="from-[#f0f0f0]"] {
+  --tw-gradient-from: #1a2540 var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(26 37 64 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+html.dark [class*="to-[#F0F0F0]"],
+html.dark [class*="to-[#f0f0f0]"] {
+  --tw-gradient-to: #1e2d47 var(--tw-gradient-to-position);
+}
+
+html.dark [class*="from-[#003366]"] {
+  --tw-gradient-from: #0b4f95 var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(11 79 149 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+html.dark [class*="to-[#004080]"] {
+  --tw-gradient-to: #0a3a70 var(--tw-gradient-to-position);
+}
 
 /* Text */
 html.dark .text-gray-900 { color: #f1f5f9; }
@@ -263,12 +344,41 @@ html.dark .text-gray-800 { color: #e2e8f0; }
 html.dark .text-gray-700 { color: #cbd5e1; }
 html.dark .text-gray-600 { color: #94a3b8; }
 html.dark .text-gray-500 { color: #64748b; }
-html.dark .text-gray-400 { color: #475569; }
+html.dark .text-gray-400 { color: #94a3b8; }
+html.dark .text-gray-300,
+html.dark .text-gray-200 { color: #64748b; }
 
 /* Borders */
 html.dark .border-gray-100 { border-color: #1e293b; }
 html.dark .border-gray-200 { border-color: #1e293b; }
 html.dark .border-gray-300 { border-color: #334155; }
+
+/* Dividers and hover/focus states */
+html.dark .divide-gray-50 > * + *,
+html.dark .divide-gray-100 > * + *,
+html.dark .divide-gray-200 > * + * { border-color: #2a3a5a; }
+
+html.dark .hover\:bg-gray-50:hover,
+html.dark .hover\:bg-gray-50\/50:hover,
+html.dark .hover\:bg-gray-100:hover {
+  background-color: #1e3050;
+}
+
+html.dark .hover\:bg-blue-50:hover { background-color: #0e2040; }
+html.dark .hover\:bg-red-50:hover { background-color: #2a0a0a; }
+html.dark .focus\:bg-white:focus { background-color: #1e293b; }
+
+html.dark .shadow-sm {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+html.dark .shadow-md {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.45), 0 2px 4px rgba(0, 0, 0, 0.35);
+}
+html.dark .shadow-lg,
+html.dark .shadow-xl,
+html.dark .shadow-2xl {
+  box-shadow: 0 18px 30px rgba(0, 0, 0, 0.45), 0 8px 12px rgba(0, 0, 0, 0.35);
+}
 
 /* ── ShadCN CSS-variable components ────────────────────── */
 html.dark .bg-card           { background-color: #0f172a; }

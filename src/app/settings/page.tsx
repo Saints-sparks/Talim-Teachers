@@ -41,6 +41,7 @@ import useNotifications from "@/app/hooks/useNotifications";
 import { apiClient } from "@/app/lib/api/apiClient";
 import { toast } from "@/components/CustomToast";
 import { useTheme, Theme } from "@/providers/theme-provider";
+import Layout from "@/components/Layout";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -446,7 +447,7 @@ function AccountSection() {
             </div>
 
             {/* Info grid */}
-            <div className="grid grid-cols-2 gap-x-8 gap-y-4 flex-1 min-w-0">
+            <div className="grid grid-cols-1 gap-x-8 gap-y-4 flex-1 min-w-0 sm:grid-cols-2">
               <InfoRow label="Full Name" value={fullName} />
               <InfoRow
                 label="Role"
@@ -1153,34 +1154,36 @@ const SECTION_MAP: Record<Section, React.ComponentType> = {
 // ─── Settings Page ────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
-  const { user } = useAppContext();
   const [active, setActive] = useState<Section>("account");
 
   const ActiveSection = SECTION_MAP[active];
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Page header */}
-      <div className="px-6 pt-6 pb-4 border-b border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Settings</h1>
-          <p className="text-sm text-gray-500 dark:text-slate-400 mt-0.5">
-            Manage your account, preferences and teaching workspace
-          </p>
-        </div>
-        <Link
-          href="/profile"
-          className="flex items-center gap-1.5 text-sm font-semibold text-[#003366] dark:text-blue-400 hover:underline"
-        >
-          <UserCircle size={16} />
-          View Profile
-        </Link>
-      </div>
+    <Layout>
+      <div className="flex h-full min-h-0 flex-col bg-gray-50 dark:bg-slate-950 md:flex-row">
+        {/* Settings rail */}
+        <aside className="shrink-0 border-b border-gray-100 bg-white dark:border-slate-800 dark:bg-slate-900 md:flex md:w-[340px] md:flex-col md:border-b-0 md:border-r">
+          <div className="px-5 py-5 md:border-b md:border-gray-100 md:dark:border-slate-800">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">
+                  Settings
+                </h1>
+                <p className="mt-1 max-w-[260px] text-sm leading-5 text-gray-500 dark:text-slate-400">
+                  Manage your account, preferences and teaching workspace
+                </p>
+              </div>
+              <Link
+                href="/profile"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-semibold text-[#003366] hover:bg-gray-50 hover:underline dark:text-blue-400 dark:hover:bg-slate-800 md:hidden"
+              >
+                <UserCircle size={16} />
+                Profile
+              </Link>
+            </div>
+          </div>
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Desktop sidebar nav */}
-        <aside className="hidden md:flex w-60 shrink-0 flex-col border-r border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-y-auto">
-          <nav className="p-2 flex-1">
+          <nav className="hidden flex-1 overflow-y-auto p-3 md:block">
             {SECTIONS.map((s) => {
               const Icon = s.icon;
               const isActive = active === s.id;
@@ -1188,27 +1191,31 @@ export default function SettingsPage() {
                 <button
                   key={s.id}
                   onClick={() => setActive(s.id)}
-                  className={`w-full flex items-start gap-3 px-3 py-2.5 rounded-lg mb-0.5 text-left transition-colors ${
+                  className={`mb-1 flex w-full items-start gap-3 rounded-lg px-4 py-3 text-left transition-colors ${
                     isActive
-                      ? "bg-[#EEF3F9] dark:bg-slate-700 text-[#003366] dark:text-blue-400"
-                      : "text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-800"
+                      ? "bg-[#EEF3F9] text-[#003366] dark:bg-slate-800 dark:text-blue-400"
+                      : "text-gray-600 hover:bg-gray-50 dark:text-slate-400 dark:hover:bg-slate-800"
                   }`}
                 >
                   <Icon
-                    size={16}
+                    size={18}
                     className={`mt-0.5 shrink-0 ${
-                      isActive ? "text-[#003366] dark:text-blue-400" : "text-gray-400 dark:text-slate-500"
+                      isActive
+                        ? "text-[#003366] dark:text-blue-400"
+                        : "text-gray-400 dark:text-slate-500"
                     }`}
                   />
                   <div className="min-w-0">
                     <p
-                      className={`text-xs font-semibold truncate ${
-                        isActive ? "text-[#003366] dark:text-blue-400" : "text-gray-700 dark:text-slate-300"
+                      className={`truncate text-sm font-semibold ${
+                        isActive
+                          ? "text-[#003366] dark:text-blue-400"
+                          : "text-gray-700 dark:text-slate-300"
                       }`}
                     >
                       {s.label}
                     </p>
-                    <p className="text-[11px] text-gray-400 dark:text-slate-500 truncate leading-tight mt-0.5">
+                    <p className="mt-0.5 truncate text-xs leading-tight text-gray-400 dark:text-slate-500">
                       {s.desc}
                     </p>
                   </div>
@@ -1216,14 +1223,14 @@ export default function SettingsPage() {
               );
             })}
           </nav>
-          <div className="px-4 py-3 border-t border-gray-100 dark:border-slate-800">
-            <p className="text-[10px] text-gray-400 dark:text-slate-600">Talim Teachers v2.0</p>
-          </div>
-        </aside>
 
-        {/* Mobile horizontal tabs */}
-        <div className="md:hidden w-full">
-          <div className="flex overflow-x-auto scrollbar-hide border-b border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 gap-1">
+          <div className="hidden border-t border-gray-100 px-5 py-4 dark:border-slate-800 md:block">
+            <p className="text-xs text-gray-400 dark:text-slate-600">
+              Talim Teachers v2.0
+            </p>
+          </div>
+
+          <div className="flex gap-1 overflow-x-auto border-t border-gray-100 px-4 dark:border-slate-800 md:hidden">
             {SECTIONS.map((s) => {
               const Icon = s.icon;
               const isActive = active === s.id;
@@ -1231,9 +1238,9 @@ export default function SettingsPage() {
                 <button
                   key={s.id}
                   onClick={() => setActive(s.id)}
-                  className={`flex items-center gap-1.5 px-3 py-3 text-xs font-semibold whitespace-nowrap border-b-2 transition-colors ${
+                  className={`flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-3 text-xs font-semibold transition-colors ${
                     isActive
-                      ? "border-[#003366] dark:border-blue-500 text-[#003366] dark:text-blue-400"
+                      ? "border-[#003366] text-[#003366] dark:border-blue-500 dark:text-blue-400"
                       : "border-transparent text-gray-500 dark:text-slate-400"
                   }`}
                 >
@@ -1243,20 +1250,24 @@ export default function SettingsPage() {
               );
             })}
           </div>
+        </aside>
 
-          {/* Mobile content */}
-          <div className="overflow-y-auto p-4">
-            <ActiveSection />
-          </div>
-        </div>
-
-        {/* Desktop content */}
-        <main className="hidden md:block flex-1 overflow-y-auto bg-gray-50 dark:bg-slate-950">
-          <div className="max-w-3xl mx-auto px-8 py-8">
+        {/* Content */}
+        <main className="min-h-0 flex-1 overflow-y-auto bg-gray-50 dark:bg-slate-950">
+          <div className="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6 lg:px-10 lg:py-8">
+            <div className="mb-6 hidden items-center justify-end md:flex">
+              <Link
+                href="/profile"
+                className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-[#003366] hover:bg-white hover:underline dark:text-blue-400 dark:hover:bg-slate-900"
+              >
+                <UserCircle size={16} />
+                View Profile
+              </Link>
+            </div>
             <ActiveSection />
           </div>
         </main>
       </div>
-    </div>
+    </Layout>
   );
 }
