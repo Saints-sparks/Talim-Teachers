@@ -201,6 +201,7 @@ export default function Profile() {
                 lastName={teacher!.userId.lastName}
                 email={teacher!.userId.email}
                 phoneNumber={teacher!.userId.phoneNumber}
+                staffNumber={teacher!.staffNumber}
               />
             )}
             {selectedTab === "Qualifications and Experience" && (

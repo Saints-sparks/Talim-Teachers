@@ -16,7 +16,8 @@ const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState<LoginError | null>(null);
   const [formData, setFormData] = useState({
-    email: "",
+    identifier: "",
+    schoolSlug: "",
     password: "",
     rememberMe: false,
   });
@@ -27,7 +28,9 @@ const LoginPage: React.FC = () => {
 
     try {
       await login({
-        email: formData.email,
+        identifier: formData.identifier.trim(),
+        email: formData.identifier.trim(),
+        schoolSlug: formData.schoolSlug.trim(),
         password: formData.password,
         deviceToken: "web-token",
         platform: "web",
@@ -105,8 +108,8 @@ const LoginPage: React.FC = () => {
               <div className="flex items-start gap-3">
                 <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
                 <p className="text-sm text-amber-700">
-                  Incorrect email or password. Please double-check your
-                  credentials and try again.
+                  Incorrect email, staff number, or password. Please
+                  double-check your credentials and try again.
                 </p>
               </div>
             </div>
@@ -123,23 +126,49 @@ const LoginPage: React.FC = () => {
           )}
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-5" noValidate>
-            {/* Email */}
+            {/* Identifier */}
             <div className="space-y-1.5">
               <label
-                htmlFor="email"
+                htmlFor="identifier"
                 className="block text-sm font-medium text-[#030E18]"
               >
-                Email address
+                Email or Staff Number
               </label>
               <input
-                id="email"
-                type="email"
-                placeholder="you@school.com"
-                value={formData.email}
+                id="identifier"
+                type="text"
+                placeholder="you@school.com or 260200001"
+                value={formData.identifier}
                 onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, email: e.target.value }))
+                  setFormData((prev) => ({
+                    ...prev,
+                    identifier: e.target.value,
+                  }))
                 }
                 required
+                disabled={isLoading}
+                className="w-full h-10 px-3 border border-[#E5E7EB] bg-[#F9FAFB] rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003366]/30 focus:border-[#003366] transition-all disabled:opacity-60"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label
+                htmlFor="schoolSlug"
+                className="block text-sm font-medium text-[#030E18]"
+              >
+                School slug or prefix
+              </label>
+              <input
+                id="schoolSlug"
+                type="text"
+                placeholder="greenwood-academy"
+                value={formData.schoolSlug}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    schoolSlug: e.target.value,
+                  }))
+                }
                 disabled={isLoading}
                 className="w-full h-10 px-3 border border-[#E5E7EB] bg-[#F9FAFB] rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003366]/30 focus:border-[#003366] transition-all disabled:opacity-60"
               />

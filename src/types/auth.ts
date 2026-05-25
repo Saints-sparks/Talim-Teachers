@@ -1,5 +1,7 @@
 export interface LoginCredentials {
-  email: string;
+  identifier?: string;
+  email?: string;
+  schoolSlug?: string;
   password: string;
   deviceToken: string;
   platform: string;
@@ -34,6 +36,7 @@ export interface User {
         updatedAt: string;
       };
   schoolName: string;
+  staffNumber?: string;
   userAvatar?: string;
   isTwoFactorEnabled?: boolean;
   createdAt?: string;

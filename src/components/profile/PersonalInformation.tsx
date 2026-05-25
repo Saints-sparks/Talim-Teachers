@@ -5,6 +5,7 @@ interface PersonalInformationProps {
   lastName: string;
   email: string;
   phoneNumber: string;
+  staffNumber?: string;
 }
 
 const PersonalInformation = ({
@@ -12,8 +13,10 @@ const PersonalInformation = ({
   lastName,
   email,
   phoneNumber,
+  staffNumber,
 }: PersonalInformationProps) => {
   const studentDetails = [
+    { label: "Staff Number:", value: staffNumber || "N/A" },
     { label: "First Name:", value: firstName },
     { label: "Last Name:", value: lastName },
     { label: "Phone Number:", value: phoneNumber },

@@ -67,6 +67,7 @@ export interface TeacherClass {
 export interface Teacher {
   _id: string;
   userId: User;
+  staffNumber?: string;
   employmentType: string;
   employmentRole: string;
   availabilityDays: string[];
