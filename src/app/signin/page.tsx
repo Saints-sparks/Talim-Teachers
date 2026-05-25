@@ -13,7 +13,6 @@ type LoginError =
 
 interface FormData {
   identifier: string;
-  schoolSlug: string;
   password: string;
   rememberMe: boolean;
 }
@@ -24,7 +23,6 @@ const LoginPage: React.FC = () => {
   const [loginError, setLoginError] = useState<LoginError | null>(null);
   const [formData, setFormData] = useState<FormData>({
     identifier: "",
-    schoolSlug: "",
     password: "",
     rememberMe: false,
   });
@@ -37,7 +35,6 @@ const LoginPage: React.FC = () => {
       await login({
         identifier: formData.identifier.trim(),
         email: formData.identifier.trim(),
-        schoolSlug: formData.schoolSlug.trim(),
         password: formData.password,
         deviceToken: "web-token",
         platform: "web",
@@ -136,21 +133,6 @@ const LoginPage: React.FC = () => {
                 value={formData.identifier}
                 onChange={(e) => setFormData((prev) => ({ ...prev, identifier: e.target.value }))}
                 required
-                disabled={isLoading}
-                className="w-full h-10 px-3 border border-[#E5E7EB] bg-[#F9FAFB] rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003366]/30 focus:border-[#003366] transition-all"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label htmlFor="schoolSlug" className="block text-sm font-medium text-[#030E18]">
-                School slug or prefix
-              </label>
-              <input
-                id="schoolSlug"
-                type="text"
-                placeholder="greenwood-academy"
-                value={formData.schoolSlug}
-                onChange={(e) => setFormData((prev) => ({ ...prev, schoolSlug: e.target.value }))}
                 disabled={isLoading}
                 className="w-full h-10 px-3 border border-[#E5E7EB] bg-[#F9FAFB] rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#003366]/30 focus:border-[#003366] transition-all"
               />

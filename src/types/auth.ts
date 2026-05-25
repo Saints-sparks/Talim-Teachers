@@ -1,7 +1,6 @@
 export interface LoginCredentials {
   identifier?: string;
   email?: string;
-  schoolSlug?: string;
   password: string;
   deviceToken: string;
   platform: string;
