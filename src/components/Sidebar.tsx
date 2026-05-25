@@ -136,7 +136,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
               return (
                 <li key={item.label} className="mb-1">
-                  <Link href={item.link}>
+                  <Link href={item.link} onClick={onClose}>
                     <div
                       className={`relative flex items-center px-3 py-2 rounded-md cursor-pointer transition-colors ${
                         isActive

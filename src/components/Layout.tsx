@@ -1,5 +1,5 @@
 "use client";
-import { ReactNode, Suspense, useState } from "react";
+import { ReactNode, Suspense, useEffect, useState } from "react";
 import Sidebar from "./Sidebar";
 import { Header } from "./HeaderTwo";
 import AppGuide from "./onboarding/AppGuide";
@@ -10,13 +10,19 @@ interface LayoutProps {
 
 function Layout({ children }: LayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState(false);
+  const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("talim_teacher_sidebar_collapsed") === "true";
+  });
+
+  useEffect(() => {
+    localStorage.setItem(
+      "talim_teacher_sidebar_collapsed",
+      String(isDesktopSidebarCollapsed)
+    );
+  }, [isDesktopSidebarCollapsed]);
 
   const handleMenuClick = () => {
-    if (typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches) {
-      setIsDesktopSidebarCollapsed((value) => !value);
-      return;
-    }
     setIsSidebarOpen((value) => !value);
   };
 
@@ -42,7 +48,7 @@ function Layout({ children }: LayoutProps) {
         />
       </div>
       <div className="bg-[#F8F8F8] dark:bg-slate-950 flex min-w-0 flex-col flex-1 border dark:border-slate-800 h-full overflow-hidden">
-        <Header onMenuClick={handleMenuClick} isSidebarCollapsed={isDesktopSidebarCollapsed} />
+        <Header onMenuClick={handleMenuClick} />
         <div className="flex-1 h-full min-w-0 overflow-y-auto">{children}</div>
       </div>
       <Suspense fallback={null}>

@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { Bell, Menu, CalendarRange, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Bell, Menu, CalendarRange } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "./ui/button";
 import { format } from "date-fns";
@@ -11,10 +11,8 @@ import { ThemeToggle } from "./theme-toggle";
 
 export function Header({
   onMenuClick,
-  isSidebarCollapsed = false,
 }: {
   onMenuClick: () => void;
-  isSidebarCollapsed?: boolean;
 }) {
   const { user } = useAuth();
   const { counts } = useNotifications();
@@ -38,16 +36,11 @@ export function Header({
         <div className="flex min-w-0 items-center w-full justify-between gap-2">
           <button
             type="button"
-            className="rounded-md p-2 text-[#003366] hover:bg-[#EAF2FB] dark:text-blue-300 dark:hover:bg-slate-800"
+            className="rounded-md p-2 text-[#003366] hover:bg-[#EAF2FB] dark:text-blue-300 dark:hover:bg-slate-800 md:hidden"
             onClick={onMenuClick}
-            aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label="Open sidebar"
           >
-            <Menu className="md:hidden" size={24} />
-            {isSidebarCollapsed ? (
-              <PanelLeftOpen className="hidden md:block" size={22} />
-            ) : (
-              <PanelLeftClose className="hidden md:block" size={22} />
-            )}
+            <Menu size={24} />
           </button>
           {/* Right Side: Date, Notifications, Avatar */}
           <div className="flex min-w-0 items-center justify-end gap-1.5 sm:gap-3">
