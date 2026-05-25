@@ -40,14 +40,14 @@ export const WebSocketStatus: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center space-x-1 sm:space-x-2 text-xs">
+    <div className="flex items-center space-x-1 text-xs sm:space-x-2">
       <span className="text-sm sm:text-lg">{getStatusIcon()}</span>
       <span className={`font-medium text-xs sm:text-sm ${
         isConnected ? 'text-green-600' : 'text-gray-500'
       }`}>
         {/* Show full text on desktop, shortened on mobile */}
-        <span className="hidden sm:inline">{getStatusText()}</span>
-        <span className="sm:hidden">
+        <span className="hidden md:inline">{getStatusText()}</span>
+        <span className="md:hidden">
           {connectionStatus === 'connected' ? 'Online' : 
            connectionStatus === 'connecting' ? 'Connecting' : 
            connectionStatus === 'error' ? 'Error' : 'Offline'}

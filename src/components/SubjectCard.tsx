@@ -213,7 +213,7 @@ const SubjectCard: React.FC<SubjectCardProps> = ({
   return (
     <>
       <div
-        className={`group relative bg-white rounded-xl transition-all duration-300 cursor-pointer border border-[#F0F0F0] overflow-hidden ${
+        className={`group relative bg-white rounded-xl transition-all duration-300 cursor-pointer border border-[#F0F0F0] overflow-hidden dark:bg-slate-900 dark:border-slate-800 ${
           isCheckingCurriculum || isLoading
             ? "opacity-75 pointer-events-none"
             : ""
@@ -227,27 +227,27 @@ const SubjectCard: React.FC<SubjectCardProps> = ({
           </div>
         )}
         {/* Content */}
-        <div className="p-5 space-y-3">
-          <div className="flex items-start justify-between">
-            <div className="flex flex-col gap-2">
-              <span className="inline-block border border-[#F2F2F2] text-[#4D4D4D] text-[15px] rounded-full font-semibold rounded px-2 mb-1">
+        <div className="space-y-3 p-4 sm:p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex min-w-0 flex-col gap-2">
+              <span className="mb-1 inline-block max-w-full truncate rounded-full border border-[#F2F2F2] px-2 text-[15px] font-semibold text-[#4D4D4D] dark:border-slate-700 dark:text-slate-200">
                 {courseCode || "ENG 213"}
               </span>
             </div>
-            <div className="flex -space-x-2">
+            <div className="flex shrink-0 -space-x-2">
               {studentAvatars.length > 0 ? studentAvatars.map((avatar, idx) => (
                 avatar.src ? (
                   <img
                   key={idx}
                   src={avatar.src}
                   alt={avatar.name}
-                  className="w-8 h-8 rounded-full border-2 border-white shadow -ml-1"
+                  className="w-8 h-8 rounded-full border-2 border-white object-cover shadow -ml-1 dark:border-slate-900"
                   style={{ zIndex: 10 - idx }}
                 />
                 ) : (
                   <div
                     key={idx}
-                    className="w-8 h-8 rounded-full border-2 border-white bg-[#003366] text-white shadow -ml-1 flex items-center justify-center text-[10px] font-semibold"
+                    className="w-8 h-8 rounded-full border-2 border-white bg-[#003366] text-white shadow -ml-1 flex items-center justify-center text-[10px] font-semibold dark:border-slate-900"
                     style={{ zIndex: 10 - idx }}
                     title={avatar.name}
                   >
@@ -262,13 +262,13 @@ const SubjectCard: React.FC<SubjectCardProps> = ({
             </div>
           </div>
           <div>
-            <p className="text-[14px] text-[#4D4D4D]">
+            <p className="text-[14px] leading-6 text-[#4D4D4D] dark:text-slate-300">
               {description ||
                 "English Language, you will be learning on grammar, essay writing and comprehension"}
             </p>
           </div>
           <div className="flex items-center gap-2 mt-2">
-            <span className="flex items-center bg-gray-100 text-gray-700 text-xs rounded px-3 py-1">
+            <span className="flex min-w-0 items-center rounded bg-gray-100 px-3 py-1 text-xs text-gray-700 dark:bg-slate-800 dark:text-slate-300">
               <svg
                 className="w-4 h-4 mr-1"
                 fill="none"
@@ -282,12 +282,12 @@ const SubjectCard: React.FC<SubjectCardProps> = ({
                   d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                 />
               </svg>
-              {getTimetableLabel()}
+              <span className="truncate">{getTimetableLabel()}</span>
             </span>
           </div>
-          <div className="flex gap-3 mt-4">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 mt-4">
             <button
-              className="flex-1 flex items-center justify-center gap-2 border border-gray-200 rounded-lg py-2 text-[#0A2343] font-medium text-base hover:bg-gray-50"
+              className="flex min-w-0 items-center justify-center gap-2 rounded-lg border border-gray-200 py-2 text-sm font-medium text-[#0A2343] hover:bg-gray-50 dark:border-slate-700 dark:text-blue-300 dark:hover:bg-slate-800 sm:text-base"
               onClick={(e) => {
                 e.stopPropagation();
                 handleView();
@@ -314,7 +314,7 @@ const SubjectCard: React.FC<SubjectCardProps> = ({
               View
             </button>
             <button
-              className="flex-1 flex items-center justify-center gap-2 border border-gray-200 rounded-lg py-2 text-[#0A2343] font-medium text-base hover:bg-gray-50"
+              className="flex min-w-0 items-center justify-center gap-2 rounded-lg border border-gray-200 py-2 text-sm font-medium text-[#0A2343] hover:bg-gray-50 dark:border-slate-700 dark:text-blue-300 dark:hover:bg-slate-800 sm:text-base"
               onClick={(e) => {
                 e.stopPropagation();
                 handleEdit();

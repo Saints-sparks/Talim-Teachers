@@ -237,27 +237,27 @@ export function ResourcesTable({
       </div>
       <div className="block md:hidden space-y-4 mt-4">
         {resourceList.map((resource) => (
-          <div key={resource._id} className="rounded-lg bg-white p-4 ">
-            <p className="text-[12px] text-black font-medium mb-1">Name</p>
-            <p className="text-[14px] text-[#676767]">{resource.name}</p>
-            <div className="mt-3 grid grid-cols-2 gap-4 text-sm">
+          <div key={resource._id} className="rounded-lg border border-[#F0F0F0] bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+            <p className="text-[12px] text-black font-medium mb-1 dark:text-slate-200">Name</p>
+            <p className="break-words text-[14px] text-[#676767] dark:text-slate-300">{resource.name}</p>
+            <div className="mt-3 grid grid-cols-1 gap-3 text-sm min-[420px]:grid-cols-2">
               <div>
-                <p className="text-[12px] text-black font-medium">Class</p>
-                <p className="text-[14px] text-[#676767]">
+                <p className="text-[12px] text-black font-medium dark:text-slate-200">Class</p>
+                <p className="break-words text-[14px] text-[#676767] dark:text-slate-300">
                   {getClassName(resource.classId)}
                 </p>
               </div>
               <div>
-                <p className="text-[12px] text-black font-medium">Course</p>
-                <p className="text-[14px] text-[#676767]">
+                <p className="text-[12px] text-black font-medium dark:text-slate-200">Course</p>
+                <p className="break-words text-[14px] text-[#676767] dark:text-slate-300">
                   {getCourseName(resource.courseId)}
                 </p>
               </div>
               <div>
-                <p className="text-[12px] text-black font-medium">
+                <p className="text-[12px] text-black font-medium dark:text-slate-200">
                   Upload Date
                 </p>
-                <p className="text-[14px] text-[#676767]">
+                <p className="text-[14px] text-[#676767] dark:text-slate-300">
                   {formatDate(resource.uploadDate)}
                 </p>
               </div>
@@ -265,8 +265,9 @@ export function ResourcesTable({
             <div className="mt-4 flex items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="p-1">
+                  <Button variant="ghost" size="sm" className="h-9 px-3 text-[#003366] dark:text-blue-300">
                     <Info size={16} />
+                    <span className="ml-1">Actions</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-white text-[#030E18] border border-[#D7E6F6] shadow-lg">

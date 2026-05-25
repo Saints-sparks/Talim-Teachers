@@ -202,7 +202,7 @@ function CardHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700">
+    <div className="flex items-center justify-between gap-3 px-4 py-4 border-b border-gray-100 dark:border-slate-700 sm:px-5">
       <h3 className="text-sm font-semibold text-gray-800 dark:text-slate-200">{title}</h3>
       {action}
     </div>
@@ -223,8 +223,8 @@ function ToggleRow({
   disabled?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between py-3 border-b border-gray-50 dark:border-slate-700 last:border-0">
-      <div>
+    <div className="flex items-start justify-between gap-4 py-3 border-b border-gray-50 dark:border-slate-700 last:border-0">
+      <div className="min-w-0">
         <p className="text-sm font-medium text-gray-800 dark:text-slate-200">{label}</p>
         {desc && <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{desc}</p>}
       </div>
@@ -248,9 +248,9 @@ function ToggleRow({
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div>
+    <div className="min-w-0">
       <p className="text-xs text-gray-500 dark:text-slate-400 mb-0.5">{label}</p>
-      <div className="text-sm font-medium text-gray-900 dark:text-slate-100">{value}</div>
+      <div className="break-words text-sm font-medium text-gray-900 dark:text-slate-100">{value}</div>
     </div>
   );
 }
@@ -321,15 +321,15 @@ function SelectRow<T extends string>({
   onChange: (v: T) => void;
 }) {
   return (
-    <div className="flex items-center justify-between py-3 border-b border-gray-50 dark:border-slate-700 last:border-0">
-      <div>
+    <div className="flex flex-col gap-3 py-3 border-b border-gray-50 dark:border-slate-700 last:border-0 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0">
         <p className="text-sm font-medium text-gray-800 dark:text-slate-200">{label}</p>
         {desc && <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{desc}</p>}
       </div>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value as T)}
-        className="text-xs border border-gray-200 dark:border-slate-600 rounded-lg px-2 py-1.5 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#003366] dark:focus:ring-blue-500"
+        className="w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#003366] dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:focus:ring-blue-500 sm:w-auto sm:min-w-[180px]"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>{o.label}</option>
@@ -372,7 +372,7 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md mx-4">
+      <div className="mx-4 max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl bg-white shadow-2xl dark:bg-slate-800">
         <div className="px-6 py-5 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
           <h3 className="font-bold text-gray-900 dark:text-slate-100">Change Password</h3>
           <button
@@ -504,7 +504,7 @@ function AccountSection() {
 
       <Card>
         <CardHeader title="Profile" />
-        <div className="p-5">
+        <div className="p-4 sm:p-5">
           <div className="flex flex-col sm:flex-row gap-5 mb-5">
             {/* Avatar */}
             <div className="shrink-0 self-start">
@@ -554,7 +554,7 @@ function AccountSection() {
       {/* Actions */}
       <Card>
         <CardHeader title="Account Actions" />
-        <div className="p-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="p-4 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-3">
           <ActionCard
             icon={<UserCircle size={22} />}
             iconBg="bg-[#E7F0FF] dark:bg-blue-900/30"
@@ -616,7 +616,7 @@ function AccountSection() {
       {/* Account Summary */}
       <Card>
         <CardHeader title="Account Summary" />
-        <div className="p-5 grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="p-4 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 sm:p-5 lg:grid-cols-4">
           <SummaryCard
             label="Classes Assigned"
             value={isLoading ? "…" : classCount}
@@ -707,7 +707,7 @@ function NotificationsSection() {
             onChange={(v) => setN({ quietHoursEnabled: v })}
           />
           {n.quietHoursEnabled && (
-            <div className="flex gap-6 py-3">
+            <div className="grid grid-cols-1 gap-3 py-3 sm:grid-cols-2">
               {(["quietStart", "quietEnd"] as const).map((field) => (
                 <div key={field}>
                   <p className="text-xs text-gray-500 dark:text-slate-400 mb-1">
@@ -1026,8 +1026,8 @@ function SecuritySection() {
 
       <Card>
         <CardHeader title="Password" />
-        <div className="p-5 flex items-start justify-between gap-4">
-          <div>
+        <div className="p-5 flex flex-col items-stretch gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
             <p className="text-sm font-medium text-gray-800 dark:text-slate-200">Change Password</p>
             <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
               Use a strong password of at least 8 characters.
@@ -1035,7 +1035,7 @@ function SecuritySection() {
           </div>
           <button
             onClick={() => setShowPasswordModal(true)}
-            className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg bg-[#003366] dark:bg-blue-600 text-white hover:bg-[#002244] dark:hover:bg-blue-700 transition-colors shrink-0"
+            className="flex items-center justify-center gap-1.5 rounded-lg bg-[#003366] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#002244] dark:bg-blue-600 dark:hover:bg-blue-700 sm:shrink-0"
           >
             <Key size={14} /> Change
           </button>
@@ -1074,7 +1074,7 @@ function SecuritySection() {
         <div className="p-5">
           <button
             onClick={logout}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20 sm:w-auto"
           >
             <LogOut size={14} />
             Logout Account
@@ -1275,9 +1275,9 @@ function AboutSection() {
             { label: "Platform",   value: "Web (Next.js)" },
             { label: "Support",    value: "support@talim.io" },
           ].map(({ label, value }) => (
-            <div key={label} className="flex justify-between py-3">
+            <div key={label} className="flex flex-col gap-1 py-3 sm:flex-row sm:justify-between">
               <span className="text-sm text-gray-500 dark:text-slate-400">{label}</span>
-              <span className="text-sm font-medium text-gray-800 dark:text-slate-200">{value}</span>
+              <span className="break-words text-sm font-medium text-gray-800 dark:text-slate-200 sm:text-right">{value}</span>
             </div>
           ))}
         </div>

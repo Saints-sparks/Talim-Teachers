@@ -21,7 +21,7 @@ function Layout({ children }: LayoutProps) {
   };
 
   return (
-    <div className="flex flex-row h-screen font-manrope">
+    <div className="flex min-h-dvh h-dvh flex-row overflow-hidden font-manrope">
       {/* Sidebar: Hidden on mobile, toggled via state */}
       <div
         className={`fixed inset-0 bg-black bg-opacity-50 z-40 ${
@@ -41,9 +41,9 @@ function Layout({ children }: LayoutProps) {
           onToggleCollapse={() => setIsDesktopSidebarCollapsed((value) => !value)}
         />
       </div>
-      <div className="bg-[#F8F8F8] dark:bg-slate-950 flex flex-col flex-1 border dark:border-slate-800 h-full overflow-hidden">
+      <div className="bg-[#F8F8F8] dark:bg-slate-950 flex min-w-0 flex-col flex-1 border dark:border-slate-800 h-full overflow-hidden">
         <Header onMenuClick={handleMenuClick} isSidebarCollapsed={isDesktopSidebarCollapsed} />
-        <div className="flex-1 h-full overflow-y-auto">{children}</div>
+        <div className="flex-1 h-full min-w-0 overflow-y-auto">{children}</div>
       </div>
       <Suspense fallback={null}>
         <AppGuide />

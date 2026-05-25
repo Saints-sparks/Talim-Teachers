@@ -117,8 +117,8 @@ const SubjectGrid: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="px-6 py-4 h-full">
-        <h2 className="text-xl font-medium mb-4 text-[#030E18]">My Subjects</h2>
+      <div className="h-full px-3 py-4 sm:px-6">
+        <h2 className="mb-4 text-xl font-medium text-[#030E18] dark:text-slate-100">My Subjects</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
             <LoadingCard key={i} height="h-48" />
@@ -130,8 +130,8 @@ const SubjectGrid: React.FC = () => {
 
   if (error) {
     return (
-      <div className="px-6 py-4 h-full">
-        <h2 className="text-xl font-medium mb-4 text-[#030E18]">My Subjects</h2>
+      <div className="h-full px-3 py-4 sm:px-6">
+        <h2 className="mb-4 text-xl font-medium text-[#030E18] dark:text-slate-100">My Subjects</h2>
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <div className="w-16 h-16 bg-[#F0F0F0] rounded-full flex items-center justify-center mx-auto mb-4">
             <BookOpen className="w-8 h-8 text-[#878787]" />
@@ -155,8 +155,8 @@ const SubjectGrid: React.FC = () => {
 
   if (subjects.length === 0) {
     return (
-      <div className="px-6 py-4 h-full">
-        <h2 className="text-xl font-medium mb-4 text-[#030E18]">My Subjects</h2>
+      <div className="h-full px-3 py-4 sm:px-6">
+        <h2 className="mb-4 text-xl font-medium text-[#030E18] dark:text-slate-100">My Subjects</h2>
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <div className="w-16 h-16 bg-[#F0F0F0] rounded-full flex items-center justify-center mx-auto mb-4">
             <BookOpen className="w-8 h-8 text-[#878787]" />
@@ -181,9 +181,9 @@ const SubjectGrid: React.FC = () => {
   }
 
   return (
-    <div className="px-6 py-4 h-full">
+    <div className="h-full px-3 py-4 sm:px-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-medium text-[#030E18]">My Subjects</h2>
+        <h2 className="text-xl font-medium text-[#030E18] dark:text-slate-100">My Subjects</h2>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {subjects.map((subject, index) => (

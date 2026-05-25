@@ -31,11 +31,11 @@ export function Header({
     return `${firstNameInitial}${lastNameInitial}` || "US";
   };
   return (
-    <header className="font-manrope px-5 border-b sm:border-b-2 border-b-[#F0F0F0] dark:border-b-slate-800 bg-white dark:bg-slate-900 py-2">
+    <header className="font-manrope border-b border-b-[#F0F0F0] bg-white px-3 py-2 dark:border-b-slate-800 dark:bg-slate-900 sm:border-b-2 sm:px-5">
       {/* Top row: Menu, Date, Notifications, Avatar */}
-      <div className="flex flex-col  sm:flex-row items-center w-full justify-end gap-4 py-3">
+      <div className="flex w-full items-center justify-end py-2 sm:py-3">
         {/* Menu Button (Only on Mobile) */}
-        <div className="flex items-center w-full sm:w-auto justify-between">
+        <div className="flex min-w-0 items-center w-full justify-between gap-2">
           <button
             type="button"
             className="rounded-md p-2 text-[#003366] hover:bg-[#EAF2FB] dark:text-blue-300 dark:hover:bg-slate-800"
@@ -50,20 +50,20 @@ export function Header({
             )}
           </button>
           {/* Right Side: Date, Notifications, Avatar */}
-          <div className="flex items-center gap-4">
-            <div className="flex gap-2 items-center text-sm text-[#6F6F6F] dark:text-slate-400 p-2 rounded-lg border border-[#F0F0F0] dark:border-slate-700 bg-white dark:bg-slate-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700">
-              <p className="text-[14px] sm:text-[16px]">
+          <div className="flex min-w-0 items-center justify-end gap-1.5 sm:gap-3">
+            <div className="flex shrink-0 items-center gap-1.5 rounded-lg border border-[#F0F0F0] bg-white p-2 text-sm text-[#6F6F6F] cursor-pointer hover:bg-gray-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700">
+              <p className="hidden text-[14px] min-[390px]:inline sm:text-[16px]">
                 {format(new Date(), "dd MMM, yyyy")}
               </p>
-              <CalendarRange size={24} />
+              <CalendarRange className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
             {/* WebSocket Status - Always visible but compact on mobile */}
-            <div className="flex items-center">
+            <div className="hidden items-center min-[390px]:flex">
               <WebSocketStatus />
             </div>
             <ThemeToggle />
             <Link href="/notifications">
-              <Button className="relative bg-white dark:bg-slate-800 shadow-none border border-[#F0F0F0] dark:border-slate-700 hover:bg-gray-200 dark:hover:bg-slate-700 h-full rounded-lg p-3">
+              <Button className="relative h-10 w-10 rounded-lg border border-[#F0F0F0] bg-white p-0 shadow-none hover:bg-gray-200 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 sm:h-11 sm:w-11">
                 <Bell className="h-5 w-5 text-gray-600 dark:text-slate-400" />
                 {unreadNotifications > 0 ? (
                   <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#003366] px-1 text-[11px] font-semibold leading-none text-white">
@@ -73,7 +73,7 @@ export function Header({
               </Button>
             </Link>
             <Link href="/profile">
-                <Avatar>
+                <Avatar className="h-9 w-9 sm:h-10 sm:w-10">
                 <AvatarImage
                   src={user?.userAvatar || "/placeholder.svg"}
                   alt="User avatar"

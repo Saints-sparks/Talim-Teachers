@@ -287,7 +287,7 @@ export default function ResourcePage() {
           </div>
         </div>
         {/* Resources Content */}
-        <div className="bg-white rounded-lg shadow-none border border-[#F0F0F0] p-6" data-guide="resources-list">
+        <div className="bg-white rounded-lg shadow-none border border-[#F0F0F0] p-3 sm:p-6" data-guide="resources-list">
           {loading ? (
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -338,8 +338,8 @@ export default function ResourcePage() {
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-[#030E18]">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="min-w-0 break-words text-base font-semibold text-[#030E18] sm:text-lg">
                   {searchTerm
                     ? `Search Results (${filteredResources.length})`
                     : `All Resources (${resources.length})`}

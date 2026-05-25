@@ -138,7 +138,7 @@ export default function Profile() {
         )
       ) : (
         // main content when loaded and no error
-        <div className="flex h-full flex-col p-4 gap-6">
+        <div className="flex min-h-full flex-col gap-4 p-3 sm:gap-6 sm:p-4">
           <Button
             className="bg-transparent shadow-none hover:bg-gray-200 self-start"
             onClick={() => router.back()}
@@ -146,17 +146,17 @@ export default function Profile() {
             <ChevronLeft className="text-[#6F6F6F]" strokeWidth={1.5} />
           </Button>
 
-          <div className="flex gap-4 bg-white py-10 sm:p-10 rounded-3xl justify-center sm:justify-start items-center">
+          <div className="flex flex-col items-center justify-center gap-4 rounded-2xl bg-white px-4 py-8 dark:bg-slate-900 sm:flex-row sm:justify-start sm:rounded-3xl sm:p-10">
              <Avatar className="w-[100px] sm:w-[150px] h-[100px] sm:h-[150px]">
                 <AvatarImage src={user?.userAvatar || "/placeholder.svg"} alt="User avatar" />
                 <AvatarFallback className="bg-green-300">
                   {getInitials()}
                 </AvatarFallback>
               </Avatar>
-            <div className="flex flex-col gap-3">
-              <p>My Profile</p>
+            <div className="flex w-full max-w-xs flex-col items-center gap-3 text-center sm:w-auto sm:items-start sm:text-left">
+              <p className="text-[#030E18] dark:text-slate-100">My Profile</p>
               <Button
-                className="border border-[#003366] text-[#003366] bg-[#F3F3F3] shadow-none hover:bg-gray-200"
+                className="w-full border border-[#003366] bg-[#F3F3F3] text-[#003366] shadow-none hover:bg-gray-200 sm:w-auto"
                 onClick={handleUploadClick}
                 disabled={uploading}
               >
@@ -175,21 +175,21 @@ export default function Profile() {
             </div>
           </div>
 
-          <div className="bg-white h-full p-4 flex flex-col gap-4 rounded-3xl">
+          <div className="flex min-h-0 flex-1 flex-col gap-4 rounded-2xl bg-white p-3 dark:bg-slate-900 sm:rounded-3xl sm:p-4">
             {/* Tab Buttons */}
-            <div className="flex gap-2 overflow-x-auto">
+            <div className="flex gap-2 overflow-x-auto pb-1">
               {tabs.map((tab) => (
                 <Button
                   key={tab.label}
                   onClick={() => setSelectedTab(tab.label)}
-                  className={`rounded-lg border border-[#F0F0F0] text-[#686868] hover:bg-gray-200 shadow-none items-center ${
+                  className={`shrink-0 rounded-lg border border-[#F0F0F0] text-[#686868] hover:bg-gray-200 shadow-none items-center dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 ${
                     selectedTab === tab.label
-                      ? "bg-[#F0F0F0] border-[#ADBECE]"
-                      : "bg-white"
+                      ? "bg-[#F0F0F0] border-[#ADBECE] dark:bg-slate-800"
+                      : "bg-white dark:bg-slate-900"
                   }`}
                 >
-                  {tab.icon}
-                  {tab.label}
+                  <span className="h-4 w-4 shrink-0">{tab.icon}</span>
+                  <span className="whitespace-nowrap">{tab.label}</span>
                 </Button>
               ))}
             </div>

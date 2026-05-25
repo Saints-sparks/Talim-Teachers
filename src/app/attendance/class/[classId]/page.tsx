@@ -396,14 +396,14 @@ const AttendanceClassPage: React.FC = () => {
                 </button>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h1 className="text-xl sm:text-2xl font-semibold text-[#030E18] truncate">
+                    <h1 className="text-xl sm:text-2xl font-semibold text-[#030E18] dark:text-slate-100 truncate">
                       {selectedClass?.name || "Attendance"}
                     </h1>
-                    <span className="text-xs text-[#003366] bg-[#EAF2FB] border border-[#D7E6F6] rounded-full px-2 py-1">
+                    <span className="text-xs text-[#003366] bg-[#EAF2FB] border border-[#D7E6F6] rounded-full px-2 py-1 dark:border-[#315F95] dark:bg-[#10233E] dark:text-blue-200">
                       {viewMode === "mark-attendance" ? "Marking" : "Viewing"}
                     </span>
                   </div>
-                  <p className="text-sm text-[#6F6F6F] leading-tight mt-1">
+                  <p className="text-sm text-[#6F6F6F] leading-tight mt-1 dark:text-slate-400">
                     {viewMode === "mark-attendance"
                       ? "Mark attendance for today"
                       : "View attendance analytics"}
@@ -421,7 +421,7 @@ const AttendanceClassPage: React.FC = () => {
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div>
-                <div className="flex items-center gap-2" data-guide="attendance-mode-controls">
+                <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center" data-guide="attendance-mode-controls">
                   <Button
                     variant={viewMode === "mark-attendance" ? "default" : "outline"}
                     className={
@@ -447,7 +447,7 @@ const AttendanceClassPage: React.FC = () => {
                   {viewMode === "mark-attendance" && (
                     <Button
                       variant="outline"
-                      className="border-[#D7E6F6] text-[#030E18] dark:border-[#315F95] dark:text-slate-100 dark:hover:bg-[#132742]"
+                      className="col-span-2 border-[#D7E6F6] text-[#030E18] dark:border-[#315F95] dark:text-slate-100 dark:hover:bg-[#132742] sm:col-span-1"
                       onClick={handleRefreshAttendance}
                       disabled={loadingStudents}
                     >
@@ -484,7 +484,7 @@ const AttendanceClassPage: React.FC = () => {
                         <div className="text-[11px] uppercase tracking-wide text-[#6F6F6F]">
                           Total
                         </div>
-                        <div className="mt-1 text-lg sm:text-xl font-semibold text-[#030E18]">
+                        <div className="mt-1 text-lg sm:text-xl font-semibold text-[#030E18] dark:text-slate-100">
                           {attendanceStatus?.totalStudents || data.length}
                         </div>
                         <div className="mt-2 h-1.5 w-full rounded-full bg-[#EEF3F9]">
@@ -550,7 +550,7 @@ const AttendanceClassPage: React.FC = () => {
                                   .map((n) => n[0])
                                   .join("")}
                               </div>
-                              <h3 className="font-semibold text-[#030E18] text-sm sm:text-base truncate">
+                              <h3 className="font-semibold text-[#030E18] text-sm sm:text-base truncate dark:text-slate-100">
                                 {student.name}
                               </h3>
                               {(isSubmitted &&
@@ -774,10 +774,10 @@ const AttendanceClassPage: React.FC = () => {
                 <div className="space-y-4 sm:space-y-6">
                   <div className="bg-white rounded-xl border border-[#F0F0F0] p-4 sm:p-5 dark:bg-[#0F172A] dark:border-[#263A5C]">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
-                      <h3 className="text-lg font-semibold text-[#030E18]">
+                    <h3 className="text-lg font-semibold text-[#030E18] dark:text-slate-100">
                         Today’s Overview
                       </h3>
-                      <span className="text-xs text-[#6F6F6F] bg-[#F8F8F8] px-2 py-1 rounded-full w-fit">
+                      <span className="text-xs text-[#6F6F6F] bg-[#F8F8F8] px-2 py-1 rounded-full w-fit dark:bg-[#111C31] dark:text-slate-300">
                         {new Date().toLocaleDateString("en-US", {
                           weekday: "long",
                           year: "numeric",
@@ -791,7 +791,7 @@ const AttendanceClassPage: React.FC = () => {
                         <div className="text-[11px] uppercase tracking-wide text-[#6F6F6F]">
                           Total
                         </div>
-                        <div className="mt-1 text-lg sm:text-xl font-semibold text-[#030E18]">
+                        <div className="mt-1 text-lg sm:text-xl font-semibold text-[#030E18] dark:text-slate-100">
                           {attendanceStatus.totalStudents}
                         </div>
                         <div className="mt-2 h-1.5 w-full rounded-full bg-[#EEF3F9]">
@@ -862,10 +862,10 @@ const AttendanceClassPage: React.FC = () => {
                                 ></div>
                               )}
                             </div>
-                            <CardTitle className="mt-2 text-sm font-semibold text-[#030E18] truncate">
+                            <CardTitle className="mt-2 text-sm font-semibold text-[#030E18] truncate dark:text-slate-100">
                               {student.firstName} {student.lastName}
                             </CardTitle>
-                            <p className="text-xs text-[#6F6F6F] truncate">
+                            <p className="text-xs text-[#6F6F6F] truncate dark:text-slate-400">
                               {student.email}
                             </p>
                           </div>
