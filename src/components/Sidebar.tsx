@@ -17,6 +17,8 @@ import {
   BookOpen,
   Settings,
   LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { useAuth } from "@/app/hooks/useAuth";
 import { useAppContext } from "@/app/context/AppContext";
@@ -47,9 +49,16 @@ const menuItems: MenuItem[] = [
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
+const Sidebar: React.FC<SidebarProps> = ({
+  isOpen,
+  onClose,
+  collapsed = false,
+  onToggleCollapse,
+}) => {
   const { logout } = useAuth();
   const pathname = usePathname();
   const { user } = useAppContext();
@@ -75,7 +84,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="w-[280px] font-manrope px-4 h-full bg-white dark:bg-slate-900 pb-4 flex flex-col justify-between border-r border-[#F1F1F1] dark:border-slate-800 overflow-y-auto scrollbar-hide">
+    <div className={`${collapsed ? "md:w-[84px]" : "md:w-[280px]"} w-[280px] font-manrope px-4 h-full bg-white dark:bg-slate-900 pb-4 flex flex-col justify-between border-r border-[#F1F1F1] dark:border-slate-800 overflow-y-auto scrollbar-hide transition-all duration-300`}>
       {/* Header */}
       <div>
         <div className="flex items-center py-2 justify-between">
@@ -83,8 +92,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             <div className="p-3 rounded-lg">
               <Image src="/icons/talim.svg" alt="Talim" width={44} height={43} />
             </div>
-            <span className="ml-2 text-lg font-semibold text-[#030E18] dark:text-slate-100">Talim</span>
+            <span className={`${collapsed ? "md:hidden" : ""} ml-2 text-lg font-semibold text-[#030E18] dark:text-slate-100`}>Talim</span>
           </div>
+          <button
+            type="button"
+            className="hidden rounded-md border border-[#EAF2FB] p-1.5 text-[#003366] hover:bg-[#EAF2FB] dark:border-slate-700 dark:text-blue-400 dark:hover:bg-slate-800 md:flex"
+            onClick={onToggleCollapse}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          </button>
           <div
             className="border-2 border-[#003366] dark:border-blue-500 rounded-md md:hidden cursor-pointer"
             onClick={onClose}
@@ -96,7 +113,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         <div className="mb-4 border-b-2 border-[#F1F1F1] dark:border-slate-800 -mx-4" />
 
         {/* School Selector */}
-        <div className="flex gap-2 items-center px-2 py-3 border border-[#F1F1F1] dark:border-slate-700 bg-[#FBFBFB] dark:bg-slate-800 rounded-md mb-4">
+        <div className={`flex gap-2 items-center px-2 py-3 border border-[#F1F1F1] dark:border-slate-700 bg-[#FBFBFB] dark:bg-slate-800 rounded-md mb-4 ${collapsed ? "md:justify-center" : ""}`}>
           {user.schoolLogo ? (
             <Image src={user.schoolLogo} alt={schoolName} width={32} height={32} className="rounded" />
           ) : (
@@ -104,7 +121,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               <span className="text-white text-xs font-bold">{schoolName.charAt(0)}</span>
             </div>
           )}
-          <span className="ml-1 font-medium text-sm text-[#030E18] dark:text-slate-200 truncate">{schoolName}</span>
+          <span className={`${collapsed ? "md:hidden" : ""} ml-1 font-medium text-sm text-[#030E18] dark:text-slate-200 truncate`}>{schoolName}</span>
         </div>
 
         {/* Menu Items */}
@@ -121,7 +138,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 <li key={item.label} className="mb-1">
                   <Link href={item.link}>
                     <div
-                      className={`flex items-center px-3 py-2 rounded-md cursor-pointer transition-colors ${
+                      className={`relative flex items-center px-3 py-2 rounded-md cursor-pointer transition-colors ${
                         isActive
                           ? "bg-[#003366]/20 dark:bg-blue-900/30 text-[#003366] dark:text-blue-400"
                           : "text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800"
@@ -135,9 +152,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                             : "text-gray-500 dark:text-slate-500"
                         }`}
                       />
-                      <span className="font-manrope text-base ml-3 font-medium">{item.label}</span>
+                      <span className={`${collapsed ? "md:hidden" : ""} font-manrope text-base ml-3 font-medium`}>{item.label}</span>
                       {badge > 0 && (
-                        <span className="ml-auto bg-blue-900 dark:bg-blue-600 text-white text-xs min-w-[20px] h-5 flex items-center justify-center rounded-full font-semibold px-1">
+                        <span className={`${collapsed ? "absolute right-2" : "ml-auto"} bg-blue-900 dark:bg-blue-600 text-white text-xs min-w-[20px] h-5 flex items-center justify-center rounded-full font-semibold px-1`}>
                           {badge > 99 ? "99+" : badge}
                         </span>
                       )}
@@ -158,7 +175,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           onClick={logout}
         >
           <LogOut size={18} className="text-gray-500 dark:text-slate-500" />
-          <span className="ml-3 font-medium">Logout Account</span>
+          <span className={`${collapsed ? "md:hidden" : ""} ml-3 font-medium`}>Logout Account</span>
         </div>
       </div>
     </div>

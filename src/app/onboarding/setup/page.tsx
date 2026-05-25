@@ -14,6 +14,7 @@ import {
   Upload,
   Users,
 } from "lucide-react";
+import Image from "next/image";
 import {
   TEACHER_ONBOARDING_STEPS,
   TeacherOnboardingStepId,
@@ -71,13 +72,22 @@ export default function TeacherOnboardingSetup() {
     <div className="min-h-screen bg-[#F8F8F8]">
       <header className="sticky top-0 z-10 border-b border-[#F0F0F0] bg-white px-6 py-4">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#003366]">
-              Teacher Setup
-            </p>
-            <h1 className="text-xl font-bold text-[#030E18]">
-              Complete your onboarding
-            </h1>
+          <div className="flex items-center gap-3">
+            <Image
+              src="/icons/talim.png"
+              alt="Talim"
+              width={40}
+              height={40}
+              className="h-10 w-10 object-contain"
+            />
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#003366]">
+                Teacher Setup
+              </p>
+              <h1 className="text-xl font-bold text-[#030E18]">
+                Complete your onboarding
+              </h1>
+            </div>
           </div>
           <button
             onClick={() => router.push("/dashboard")}

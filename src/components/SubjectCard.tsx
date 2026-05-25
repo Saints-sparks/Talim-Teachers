@@ -13,6 +13,7 @@ interface SubjectCardProps {
   title: string;
   description?: string;
   courseCode?: string;
+  studentAvatars?: Array<{ src?: string; initials: string; name: string }>;
   timetable?: Array<{
     day?: string;
     startTime?: string;
@@ -70,6 +71,7 @@ const SubjectCard: React.FC<SubjectCardProps> = ({
   title,
   description,
   courseCode,
+  studentAvatars = [],
   timetable,
 }) => {
   const router = useRouter();
@@ -208,13 +210,6 @@ const SubjectCard: React.FC<SubjectCardProps> = ({
     return label || "Schedule not set";
   };
 
-  // Dummy avatars for demonstration
-  const avatars = [
-    "https://randomuser.me/api/portraits/men/32.jpg",
-    "https://randomuser.me/api/portraits/women/44.jpg",
-    "https://randomuser.me/api/portraits/men/45.jpg",
-  ];
-
   return (
     <>
       <div
@@ -240,15 +235,30 @@ const SubjectCard: React.FC<SubjectCardProps> = ({
               </span>
             </div>
             <div className="flex -space-x-2">
-              {avatars.map((src, idx) => (
-                <img
+              {studentAvatars.length > 0 ? studentAvatars.map((avatar, idx) => (
+                avatar.src ? (
+                  <img
                   key={idx}
-                  src={src}
-                  alt="avatar"
+                  src={avatar.src}
+                  alt={avatar.name}
                   className="w-8 h-8 rounded-full border-2 border-white shadow -ml-1"
                   style={{ zIndex: 10 - idx }}
                 />
-              ))}
+                ) : (
+                  <div
+                    key={idx}
+                    className="w-8 h-8 rounded-full border-2 border-white bg-[#003366] text-white shadow -ml-1 flex items-center justify-center text-[10px] font-semibold"
+                    style={{ zIndex: 10 - idx }}
+                    title={avatar.name}
+                  >
+                    {avatar.initials}
+                  </div>
+                )
+              )) : (
+                <div className="w-8 h-8 rounded-full border-2 border-white bg-[#EAF2FB] text-[#003366] shadow flex items-center justify-center text-[10px] font-semibold">
+                  ST
+                </div>
+              )}
             </div>
           </div>
           <div>

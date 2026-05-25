@@ -39,15 +39,15 @@ const FieldCard = ({
   label: string;
   value: string;
 }) => (
-  <div className="flex items-center gap-3 p-3.5 rounded-xl bg-gray-50/80 border border-gray-100">
-    <div className="w-9 h-9 rounded-lg bg-[#003366]/10 border border-[#003366]/15 flex items-center justify-center flex-shrink-0">
+  <div className="flex items-center gap-3 p-3.5 rounded-xl bg-gray-50/80 border border-gray-100 dark:bg-[#111C31] dark:border-[#263A5C]">
+    <div className="w-9 h-9 rounded-lg bg-[#003366]/10 border border-[#003366]/15 flex items-center justify-center flex-shrink-0 dark:bg-[#0E2A4A] dark:border-[#315F95]">
       <Icon className="w-4 h-4 text-[#003366]" />
     </div>
     <div className="min-w-0 flex-1">
-      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider dark:text-slate-300">
         {label}
       </p>
-      <p className="text-sm font-medium text-gray-900 mt-0.5 break-words">
+      <p className="text-sm font-medium text-gray-900 mt-0.5 break-words dark:text-slate-100">
         {value}
       </p>
     </div>
@@ -85,7 +85,7 @@ const TabPill = ({
     className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all flex-1 sm:flex-none justify-center sm:justify-start ${
       active
         ? "bg-[#003366] text-white shadow-sm"
-        : "bg-white text-gray-500 border border-gray-200 hover:text-[#003366] hover:border-[#003366]/30"
+        : "bg-white text-gray-500 border border-gray-200 hover:text-[#003366] hover:border-[#003366]/30 dark:bg-[#0F172A] dark:text-slate-300 dark:border-[#263A5C] dark:hover:text-blue-200"
     }`}
   >
     <span
@@ -115,14 +115,15 @@ const StudentProfile: React.FC<{ student: Student }> = ({ student }) => {
   const className = student.classId?.name ?? "";
 
   return (
-    <div className="min-h-screen bg-gray-50" data-guide="student-profile-shell">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0F1629]" data-guide="student-profile-shell">
       {/* ── Page header bar ── */}
-      <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
-        <div className="max-w-3xl mx-auto flex items-center gap-3">
+      <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4 dark:bg-[#0F172A] dark:border-[#263A5C]">
+        <div className="max-w-4xl mx-auto flex items-center gap-3">
           <button
             onClick={() => router.back()}
-            className="flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 text-gray-500 hover:text-[#003366] hover:border-[#003366]/30 transition-all flex-shrink-0"
+            className="flex items-center justify-center w-10 h-10 rounded-lg border border-gray-200 text-gray-600 hover:text-[#003366] hover:border-[#003366]/30 transition-all flex-shrink-0 dark:border-[#315F95] dark:text-blue-200 dark:hover:bg-[#132742] dark:hover:text-white"
             title="Go back"
+            aria-label="Go back"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -135,9 +136,9 @@ const StudentProfile: React.FC<{ student: Student }> = ({ student }) => {
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-5">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-5">
         {/* ── Hero / avatar card ── */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col items-center text-center">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col items-center text-center dark:bg-[#0F172A] dark:border-[#263A5C]">
           {/* Avatar */}
           {avatar ? (
             <img
@@ -223,9 +224,9 @@ const StudentProfile: React.FC<{ student: Student }> = ({ student }) => {
         </div>
 
         {/* ── Tab content card ── */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden dark:bg-[#0F172A] dark:border-[#263A5C]">
           {/* Card header */}
-          <div className="px-5 py-4 border-b border-gray-100 bg-gray-50">
+          <div className="px-5 py-4 border-b border-gray-100 bg-gray-50 dark:bg-[#111C31] dark:border-[#263A5C]">
             <h3 className="text-sm font-semibold text-gray-800">
               {activeTab === "personal" && "Personal Details"}
               {activeTab === "parent" && "Parent / Guardian Information"}

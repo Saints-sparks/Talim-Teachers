@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
   UserCircle,
   Bell,
@@ -30,6 +30,7 @@ import {
   BarChart2,
   CheckCircle2,
   Circle,
+  HelpCircle,
 } from "lucide-react";
 import { useAppContext } from "@/app/context/AppContext";
 import { useAuth } from "@/app/hooks/useAuth";
@@ -53,6 +54,7 @@ type Section =
   | "onboarding"
   | "security"
   | "appearance"
+  | "help"
   | "about";
 
 const SECTIONS: { id: Section; label: string; desc: string; icon: React.ElementType }[] = [
@@ -63,6 +65,7 @@ const SECTIONS: { id: Section; label: string; desc: string; icon: React.ElementT
   { id: "onboarding",   label: "Onboarding & Guides",  desc: "Setup progress and help guides",      icon: BookOpen },
   { id: "security",     label: "Security",             desc: "Password and account security",       icon: Shield },
   { id: "appearance",   label: "Appearance",           desc: "Theme and display preferences",       icon: Palette },
+  { id: "help",         label: "Help",                 desc: "Support and help resources",          icon: HelpCircle },
   { id: "about",        label: "About",                desc: "App information and support",         icon: Info },
 ];
 
@@ -100,6 +103,7 @@ const defaultPrefs = {
   guides: {
     showAppTips:         true,
   },
+  theme:                 "system"      as "light" | "dark" | "system",
 };
 
 type Prefs = typeof defaultPrefs;
@@ -119,10 +123,30 @@ function useTeacherPrefs(userId: string | undefined) {
           messages:      { ...prev.messages,      ...parsed.messages },
           teaching:      { ...prev.teaching,      ...parsed.teaching },
           guides:        { ...prev.guides,        ...parsed.guides },
+          theme:          parsed.theme || prev.theme,
         }));
       }
     } catch {}
-    setLoaded(true);
+
+    apiClient
+      .get("/teacher/settings")
+      .then((response) => {
+        const serverPrefs = response.data?.preferences;
+        if (!serverPrefs) return;
+        setPrefs((prev) => {
+          const next = {
+            notifications: { ...prev.notifications, ...serverPrefs.notifications },
+            messages:      { ...prev.messages,      ...serverPrefs.messages },
+            teaching:      { ...prev.teaching,      ...serverPrefs.teaching },
+            guides:        { ...prev.guides,        ...serverPrefs.guides },
+            theme:          serverPrefs.theme || prev.theme,
+          };
+          try { localStorage.setItem(settingsKey(userId), JSON.stringify(next)); } catch {}
+          return next;
+        });
+      })
+      .catch(() => undefined)
+      .finally(() => setLoaded(true));
   }, [userId]);
 
   const save = useCallback(
@@ -131,6 +155,9 @@ function useTeacherPrefs(userId: string | undefined) {
       setPrefs((prev) => {
         const next = { ...prev, ...updates };
         try { localStorage.setItem(settingsKey(userId), JSON.stringify(next)); } catch {}
+        apiClient.patch("/teacher/settings/preferences", updates).catch(() => {
+          toast.error("Preference saved locally. Backend sync failed.");
+        });
         return next;
       });
     },
@@ -409,19 +436,67 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
 // ─── Section 1: Account ───────────────────────────────────────────────────────
 
 function AccountSection() {
-  const { user, teacherData, isLoading } = useAppContext();
+  const { user, teacherData, isLoading, updateUser } = useAppContext();
   const { logout } = useAuth();
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [overview, setOverview] = useState<any>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const fullName   = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Teacher";
-  const employeeId = teacherData?.employeeId || teacherData?.staffId || "—";
-  const joinedDate = user?.createdAt
-    ? new Date(user.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+  const schoolInfo = typeof user?.schoolId === "object" ? user.schoolId : null;
+  const employeeId = overview?.employment?.employeeId || teacherData?.staffNumber || teacherData?.employeeId || teacherData?.staffId || user?.staffNumber || "—";
+  const schoolIdentifier = overview?.profile?.schoolIdentifier || schoolInfo?.schoolPrefix || schoolInfo?._id || user?.schoolId || "—";
+  const schoolName = overview?.profile?.schoolName || user?.schoolName || schoolInfo?.name || "—";
+  const joinedSource = overview?.profile?.joinedAt || user?.createdAt;
+  const joinedDate = joinedSource
+    ? new Date(joinedSource).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
     : "—";
   const isActive   = user?.isActive !== false;
 
-  const classCount   = (teacherData?.assignedClasses?.length ?? teacherData?.classTeacherClasses?.length) ?? 0;
-  const subjectCount = (teacherData?.assignedCourses?.length ?? teacherData?.classTeacherCourses?.length) ?? 0;
+  const classCount   = overview?.summary?.classesAssigned ?? ((teacherData?.assignedClasses?.length ?? teacherData?.classTeacherClasses?.length) ?? 0);
+  const subjectCount = overview?.summary?.subjectsTeaching ?? ((teacherData?.assignedCourses?.length ?? teacherData?.classTeacherCourses?.length) ?? 0);
+
+  useEffect(() => {
+    apiClient
+      .get("/teacher/settings")
+      .then((response) => setOverview(response.data))
+      .catch(() => undefined);
+  }, []);
+
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", "presetOne");
+
+      const uploadResponse = await fetch(
+        "https://api.cloudinary.com/v1_1/ddbs7m7nt/image/upload",
+        { method: "POST", body: formData }
+      );
+      const uploadData = await uploadResponse.json();
+      if (!uploadData.secure_url) throw new Error("Image upload failed");
+
+      await apiClient.patch("/teacher/settings/profile", {
+        avatarUrl: uploadData.secure_url,
+      });
+      updateUser({ userAvatar: uploadData.secure_url });
+      setOverview((prev: any) => ({
+        ...(prev || {}),
+        profile: { ...(prev?.profile || {}), avatar: uploadData.secure_url },
+      }));
+      toast.success("Profile photo updated.");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to upload profile photo.");
+    } finally {
+      setUploadingPhoto(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -459,6 +534,8 @@ function AccountSection() {
               />
               <InfoRow label="Email Address" value={user?.email ?? "—"} />
               <InfoRow label="Employee ID"   value={employeeId} />
+              <InfoRow label="School ID"     value={schoolIdentifier} />
+              <InfoRow label="School"        value={schoolName} />
               <InfoRow label="Phone Number"  value={user?.phoneNumber ?? "—"} />
               <InfoRow label="Joined"        value={joinedDate} />
             </div>
@@ -500,12 +577,22 @@ function AccountSection() {
             title="Change Photo"
             desc="Update your profile photo that appears across Talim"
             action={
-              <Link
-                href="/profile"
-                className="text-sm text-[#003366] dark:text-blue-400 font-semibold hover:underline"
-              >
-                Upload Photo
-              </Link>
+              <>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingPhoto}
+                  className="text-sm text-[#003366] dark:text-blue-400 font-semibold hover:underline disabled:opacity-60"
+                >
+                  {uploadingPhoto ? "Uploading..." : "Upload Photo"}
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoUpload}
+                  className="hidden"
+                />
+              </>
             }
           />
           <ActionCard
@@ -546,7 +633,7 @@ function AccountSection() {
           />
           <SummaryCard
             label="Students Teaching"
-            value={isLoading ? "…" : (teacherData?.totalStudents ?? "—")}
+            value={isLoading ? "…" : (overview?.summary?.studentsTeaching ?? teacherData?.totalStudents ?? "—")}
             sub="Total students"
             icon={<GraduationCap size={20} />}
             color="text-emerald-600 dark:text-emerald-400"
@@ -1011,7 +1098,14 @@ const THEME_OPTIONS: { value: Theme; label: string; desc: string; icon: React.El
 ];
 
 function AppearanceSection() {
+  const { user } = useAppContext();
   const { theme, setTheme } = useTheme();
+  const { save } = useTeacherPrefs(user?.userId);
+
+  const handleThemeChange = (value: Theme) => {
+    setTheme(value);
+    save({ theme: value });
+  };
 
   return (
     <div className="space-y-6">
@@ -1026,7 +1120,7 @@ function AppearanceSection() {
               <button
                 key={value}
                 type="button"
-                onClick={() => setTheme(value)}
+                onClick={() => handleThemeChange(value)}
                 className={`flex flex-col items-center gap-3 p-5 rounded-xl border-2 transition-all ${
                   selected
                     ? "border-[#003366] dark:border-blue-500 bg-[#EEF3F9] dark:bg-slate-700"
@@ -1076,7 +1170,72 @@ function AppearanceSection() {
   );
 }
 
-// ─── Section 8: About ────────────────────────────────────────────────────────
+// ─── Section 8: Help ─────────────────────────────────────────────────────────
+
+function HelpSection() {
+  return (
+    <div className="space-y-6">
+      <SectionHeader title="Help" desc="Get support and learn more about Talim Teachers." />
+
+      <Card>
+        <CardHeader title="Support" />
+        <div className="p-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <ActionCard
+            icon={<MessageSquare size={22} />}
+            iconBg="bg-[#E7F0FF] dark:bg-blue-900/30"
+            iconColor="text-[#003366] dark:text-blue-400"
+            title="Contact Support"
+            desc="Send a message to the Talim support team"
+            action={
+              <a
+                href="mailto:support@talim.io"
+                className="text-sm text-[#003366] dark:text-blue-400 font-semibold hover:underline"
+              >
+                Email Support
+              </a>
+            }
+          />
+          <ActionCard
+            icon={<Info size={22} />}
+            iconBg="bg-emerald-50 dark:bg-emerald-900/30"
+            iconColor="text-emerald-600 dark:text-emerald-400"
+            title="About Talim Teachers"
+            desc="View app, school and platform information"
+            action={
+              <Link
+                href="/settings?tab=about"
+                className="text-sm text-[#003366] dark:text-blue-400 font-semibold hover:underline"
+              >
+                Open About
+              </Link>
+            }
+          />
+        </div>
+      </Card>
+
+      <Card>
+        <CardHeader title="Common Actions" />
+        <div className="p-5 flex flex-wrap gap-3">
+          <Link
+            href="/onboarding/setup"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-[#003366] dark:bg-blue-600 text-white hover:bg-[#002244] dark:hover:bg-blue-700 transition-colors"
+          >
+            <Play size={14} />
+            Open Setup Checklist
+          </Link>
+          <Link
+            href="/profile"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg border border-gray-200 dark:border-slate-600 text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+          >
+            View Profile
+          </Link>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+// ─── Section 9: About ────────────────────────────────────────────────────────
 
 function AboutSection() {
   const { user } = useAppContext();
@@ -1148,13 +1307,24 @@ const SECTION_MAP: Record<Section, React.ComponentType> = {
   onboarding:    OnboardingSection,
   security:      SecuritySection,
   appearance:    AppearanceSection,
+  help:          HelpSection,
   about:         AboutSection,
 };
 
 // ─── Settings Page ────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
-  const [active, setActive] = useState<Section>("account");
+  const searchParams = useSearchParams();
+  const requestedTab = searchParams.get("tab") as Section | null;
+  const [active, setActive] = useState<Section>(
+    requestedTab && SECTION_MAP[requestedTab] ? requestedTab : "account"
+  );
+
+  useEffect(() => {
+    if (requestedTab && SECTION_MAP[requestedTab]) {
+      setActive(requestedTab);
+    }
+  }, [requestedTab]);
 
   const ActiveSection = SECTION_MAP[active];
 

@@ -32,8 +32,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Checkbox } from "../ui/checkbox";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/app/hooks/useAuth";
 import { deleteResource } from "@/app/services/api.service";
 import { Resource } from "@/types/student";
@@ -72,6 +71,10 @@ export function ResourcesTable({
   const [pendingDelete, setPendingDelete] = useState<Resource | null>(null);
 
   const [loading, setLoading] = useState<string | null>(null);
+
+  useEffect(() => {
+    setResourceList(resources);
+  }, [resources]);
   const getClassName = (classId: Resource["classId"]) => {
     if (!classId) return "Unassigned Class";
 
@@ -114,14 +117,14 @@ export function ResourcesTable({
   const handleView = (resource: Resource) => {
     const url = getResourceUrl(resource);
     if (!url) {
-      alert("No file available for this resource.");
+      window.alert("No file available for this resource.");
       return;
     }
     window.open(url, "_blank", "noopener,noreferrer");
   };
   const handleDelete = async (id: string) => {
     if (!getAccessToken()) {
-      alert("Authentication required.");
+      window.alert("Authentication required.");
       return;
     }
 
@@ -152,7 +155,7 @@ export function ResourcesTable({
   return (
     <div>
       <div className="bg-white rounded-lg hidden md:block">
-        <Table className="text-[#030303] bg-white ">
+        <Table className="text-[#030303] bg-white">
           <TableHeader className="text-[#030E18]">
             <TableRow>
               <TableHead className="flex gap-2 items-center">Name</TableHead>
@@ -163,7 +166,7 @@ export function ResourcesTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {resources.map((resource) => (
+            {resourceList.map((resource) => (
               <TableRow key={resource._id}>
                 <TableCell>
                   <div className="flex items-center gap-2 p-5">
@@ -184,11 +187,12 @@ export function ResourcesTable({
                           <Info />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleView(resource)}>
+                      <DropdownMenuContent align="end" className="bg-white text-[#030E18] border border-[#D7E6F6] shadow-lg">
+                        <DropdownMenuItem className="cursor-pointer text-[#030E18] focus:bg-[#EAF2FB] focus:text-[#030E18]" onClick={() => handleView(resource)}>
                           View
                         </DropdownMenuItem>
                         <DropdownMenuItem
+                          className="cursor-pointer text-[#030E18] focus:bg-[#EAF2FB] focus:text-[#030E18]"
                           onClick={() => {
                             setSelectedResource(resource);
                             setEditModalOpen(true);
@@ -232,7 +236,7 @@ export function ResourcesTable({
         )}
       </div>
       <div className="block md:hidden space-y-4 mt-4">
-        {resources.map((resource) => (
+        {resourceList.map((resource) => (
           <div key={resource._id} className="rounded-lg bg-white p-4 ">
             <p className="text-[12px] text-black font-medium mb-1">Name</p>
             <p className="text-[14px] text-[#676767]">{resource.name}</p>
@@ -265,11 +269,12 @@ export function ResourcesTable({
                     <Info size={16} />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => handleView(resource)}>
+                <DropdownMenuContent align="end" className="bg-white text-[#030E18] border border-[#D7E6F6] shadow-lg">
+                  <DropdownMenuItem className="cursor-pointer text-[#030E18] focus:bg-[#EAF2FB] focus:text-[#030E18]" onClick={() => handleView(resource)}>
                     View
                   </DropdownMenuItem>
                   <DropdownMenuItem
+                    className="cursor-pointer text-[#030E18] focus:bg-[#EAF2FB] focus:text-[#030E18]"
                     onClick={() => {
                       setSelectedResource(resource);
                       setEditModalOpen(true);

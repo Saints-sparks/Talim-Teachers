@@ -4,8 +4,8 @@ import SubjectCard from "./SubjectCard";
 import { useAuth } from "@/app/hooks/useAuth";
 import { useEffect, useState } from "react";
 import {
-  fetchCourseById,
   fetchTeacherDetails,
+  getStudentsByClass,
 } from "@/app/services/api.service";
 import LoadingCard from "./LoadingCard";
 import { Button } from "./ui/button";
@@ -16,6 +16,8 @@ interface Course {
   title: string;
   courseCode: string;
   description: string;
+  classId?: string | { _id?: string; id?: string };
+  studentAvatars?: Array<{ src?: string; initials: string; name: string }>;
   timetable?: Array<{
     day?: string;
     startTime?: string;
@@ -25,29 +27,21 @@ interface Course {
   // …any other fields your API returns
 }
 
-const subjects = [
-  {
-    subject: "English Language",
-    title: "Mrs",
-    name: "Yetunde Adebayo",
-    subjectImageUrl: "/image/subject/english.png",
-    profileImageUrl: "/image/teachers/english.png",
-  },
-  {
-    subject: "Mathematics",
-    title: "Mrs",
-    name: "Yetunde Adebayo",
-    subjectImageUrl: "/image/subject/mathematics.png",
-    profileImageUrl: "/image/teachers/mathematics.png",
-  },
-  {
-    subject: "Civic Education",
-    title: "Mrs",
-    name: "Yetunde Adebayo",
-    subjectImageUrl: "/image/subject/civic-education.png",
-    profileImageUrl: "/image/teachers/civic.png",
-  },
-];
+const getCourseClassId = (classId: Course["classId"]) => {
+  if (!classId) return "";
+  return typeof classId === "string" ? classId : classId._id || classId.id || "";
+};
+
+const getStudentPreview = (student: any) => {
+  const firstName = student?.userId?.firstName || student?.firstName || "";
+  const lastName = student?.userId?.lastName || student?.lastName || "";
+  const name = `${firstName} ${lastName}`.trim() || "Student";
+  return {
+    src: student?.userId?.userAvatar || student?.userAvatar || student?.avatar,
+    initials: `${firstName[0] || ""}${lastName[0] || ""}`.toUpperCase() || "ST",
+    name,
+  };
+};
 
 const SubjectGrid: React.FC = () => {
   const { user } = useAppContext();
@@ -76,13 +70,27 @@ const SubjectGrid: React.FC = () => {
         return;
       }
 
-      const teachersCourses = teacher.assignedCourses.map((course: any) => ({
-        _id: course._id,
-        title: course.title,
-        courseCode: course.courseCode,
-        description: course.description,
-        timetable: course.timetable || [],
-      }));
+      const teachersCourses = await Promise.all(
+        teacher.assignedCourses.map(async (course: any) => {
+          const classId = getCourseClassId(course.classId);
+          let studentAvatars: Course["studentAvatars"] = [];
+
+          if (classId) {
+            const classStudents = await getStudentsByClass(classId, token);
+            studentAvatars = classStudents.slice(0, 3).map(getStudentPreview);
+          }
+
+          return {
+            _id: course._id,
+            title: course.title,
+            courseCode: course.courseCode,
+            description: course.description,
+            classId: course.classId,
+            studentAvatars,
+            timetable: course.timetable || [],
+          };
+        })
+      );
 
      
 

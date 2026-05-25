@@ -381,15 +381,15 @@ const AttendanceClassPage: React.FC = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-[#F8F8F8]">
+      <div className="min-h-screen bg-[#F8F8F8] dark:bg-[#0F1629]">
         <div className="p-3 sm:p-6">
           {/* Header */}
-          <div className="bg-white border border-[#E6EDF5] rounded-2xl p-4 sm:p-5 mb-6 sm:mb-8" data-guide="attendance-register-header">
+          <div className="bg-white border border-[#E6EDF5] rounded-2xl p-4 sm:p-5 mb-6 sm:mb-8 dark:bg-[#0F172A] dark:border-[#263A5C]" data-guide="attendance-register-header">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div className="flex items-start gap-3">
                 <button
                   onClick={() => router.push("/attendance")}
-                  className="mt-0.5 flex items-center justify-center w-9 h-9 rounded-full text-[#6F6F6F] hover:bg-[#F0F0F0] hover:text-[#030E18] transition-all duration-200"
+                  className="mt-0.5 flex items-center justify-center w-9 h-9 rounded-full text-[#6F6F6F] hover:bg-[#F0F0F0] hover:text-[#030E18] transition-all duration-200 dark:text-blue-200 dark:hover:bg-[#132742] dark:hover:text-white"
                   aria-label="Back to classes"
                 >
                   <ArrowLeft size={16} />
@@ -412,7 +412,7 @@ const AttendanceClassPage: React.FC = () => {
               </div>
 
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
-                <div className="flex items-center bg-white border border-[#F0F0F0] rounded-xl px-3 py-2 w-full sm:w-[260px]">
+                <div className="flex items-center bg-white border border-[#F0F0F0] rounded-xl px-3 py-2 w-full sm:w-[260px] dark:bg-[#111C31] dark:border-[#263A5C]">
                   <Search className="text-[#878787] mr-2" size={18} />
                   <Input
                     className="border-0 focus-visible:ring-0 focus:outline-none flex-1 placeholder:text-[#878787] shadow-none text-sm"
@@ -427,7 +427,7 @@ const AttendanceClassPage: React.FC = () => {
                     className={
                       viewMode === "mark-attendance"
                         ? "bg-[#003366] text-white hover:bg-[#002244]"
-                        : "border-[#F0F0F0]"
+                        : "border-[#D7E6F6] text-[#030E18] dark:border-[#315F95] dark:text-slate-100 dark:hover:bg-[#132742]"
                     }
                     onClick={() => setViewMode("mark-attendance")}
                   >
@@ -438,7 +438,7 @@ const AttendanceClassPage: React.FC = () => {
                     className={
                       viewMode === "view-attendance"
                         ? "bg-[#003366] text-white hover:bg-[#002244]"
-                        : "border-[#F0F0F0]"
+                        : "border-[#D7E6F6] text-[#030E18] dark:border-[#315F95] dark:text-slate-100 dark:hover:bg-[#132742]"
                     }
                     onClick={() => setViewMode("view-attendance")}
                   >
@@ -447,7 +447,7 @@ const AttendanceClassPage: React.FC = () => {
                   {viewMode === "mark-attendance" && (
                     <Button
                       variant="outline"
-                      className="border-[#F0F0F0]"
+                      className="border-[#D7E6F6] text-[#030E18] dark:border-[#315F95] dark:text-slate-100 dark:hover:bg-[#132742]"
                       onClick={handleRefreshAttendance}
                       disabled={loadingStudents}
                     >
@@ -478,9 +478,9 @@ const AttendanceClassPage: React.FC = () => {
                 </Card>
               ) : (
                 <div className="space-y-3 sm:space-y-4">
-                  <div className="rounded-2xl border border-[#E6EDF5] bg-gradient-to-br from-[#F6F9FC] via-white to-[#F8FBFF] p-4 sm:p-5" data-guide="attendance-overview">
+                  <div className="rounded-2xl border border-[#E6EDF5] bg-gradient-to-br from-[#F6F9FC] via-white to-[#F8FBFF] p-4 sm:p-5 dark:from-[#101B30] dark:via-[#0F172A] dark:to-[#101B30] dark:border-[#263A5C]" data-guide="attendance-overview">
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
-                      <div className="rounded-xl border border-[#E6EDF5] bg-white/80 p-3 text-left">
+                      <div className="rounded-xl border border-[#E6EDF5] bg-white/80 p-3 text-left dark:bg-[#111C31] dark:border-[#315F95]">
                         <div className="text-[11px] uppercase tracking-wide text-[#6F6F6F]">
                           Total
                         </div>
@@ -492,7 +492,7 @@ const AttendanceClassPage: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="rounded-xl border border-green-200 bg-green-50/60 p-3 text-left">
+                      <div className="rounded-xl border border-green-200 bg-green-50/60 p-3 text-left dark:bg-[#062B1A] dark:border-green-500/60">
                         <div className="text-[11px] uppercase tracking-wide text-green-700">
                           Present
                         </div>
@@ -505,7 +505,7 @@ const AttendanceClassPage: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="rounded-xl border border-red-200 bg-red-50/60 p-3 text-left">
+                      <div className="rounded-xl border border-red-200 bg-red-50/60 p-3 text-left dark:bg-[#351012] dark:border-red-400/60">
                         <div className="text-[11px] uppercase tracking-wide text-red-700">
                           Absent
                         </div>
@@ -518,7 +518,7 @@ const AttendanceClassPage: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="rounded-xl border border-[#D7E6F6] bg-[#EAF2FB]/60 p-3 text-left">
+                      <div className="rounded-xl border border-[#D7E6F6] bg-[#EAF2FB]/60 p-3 text-left dark:bg-[#10233E] dark:border-[#315F95]">
                         <div className="text-[11px] uppercase tracking-wide text-[#003366]">
                           Marked
                         </div>
@@ -540,7 +540,7 @@ const AttendanceClassPage: React.FC = () => {
                       return (
                         <Card
                           key={student.id}
-                          className="overflow-hidden border transition-all duration-200 border-[#F0F0F0] bg-white hover:border-[#003366]/20"
+                        className="overflow-hidden border transition-all duration-200 border-[#F0F0F0] bg-white hover:border-[#003366]/20 dark:bg-[#0F172A] dark:border-[#263A5C] dark:hover:border-blue-400/50"
                         >
                           <CardContent className="p-3 sm:p-4">
                             <div className="mb-3 text-center">
@@ -772,7 +772,7 @@ const AttendanceClassPage: React.FC = () => {
                 </Card>
               ) : (
                 <div className="space-y-4 sm:space-y-6">
-                  <div className="bg-white rounded-xl border border-[#F0F0F0] p-4 sm:p-5">
+                  <div className="bg-white rounded-xl border border-[#F0F0F0] p-4 sm:p-5 dark:bg-[#0F172A] dark:border-[#263A5C]">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
                       <h3 className="text-lg font-semibold text-[#030E18]">
                         Today’s Overview
@@ -787,7 +787,7 @@ const AttendanceClassPage: React.FC = () => {
                       </span>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
-                      <div className="rounded-xl border border-[#E6EDF5] bg-white/80 p-3 text-left">
+                      <div className="rounded-xl border border-[#E6EDF5] bg-white/80 p-3 text-left dark:bg-[#111C31] dark:border-[#315F95]">
                         <div className="text-[11px] uppercase tracking-wide text-[#6F6F6F]">
                           Total
                         </div>
@@ -799,7 +799,7 @@ const AttendanceClassPage: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="rounded-xl border border-green-200 bg-green-50/60 p-3 text-left">
+                      <div className="rounded-xl border border-green-200 bg-green-50/60 p-3 text-left dark:bg-[#062B1A] dark:border-green-500/60">
                         <div className="text-[11px] uppercase tracking-wide text-green-700">
                           Present
                         </div>
@@ -811,7 +811,7 @@ const AttendanceClassPage: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="rounded-xl border border-red-200 bg-red-50/60 p-3 text-left">
+                      <div className="rounded-xl border border-red-200 bg-red-50/60 p-3 text-left dark:bg-[#351012] dark:border-red-400/60">
                         <div className="text-[11px] uppercase tracking-wide text-red-700">
                           Absent
                         </div>
@@ -823,7 +823,7 @@ const AttendanceClassPage: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="rounded-xl border border-[#D7E6F6] bg-[#EAF2FB]/60 p-3 text-left">
+                      <div className="rounded-xl border border-[#D7E6F6] bg-[#EAF2FB]/60 p-3 text-left dark:bg-[#10233E] dark:border-[#315F95]">
                         <div className="text-[11px] uppercase tracking-wide text-[#003366]">
                           Marked
                         </div>
@@ -841,9 +841,9 @@ const AttendanceClassPage: React.FC = () => {
                     {filteredStudents.map((student: any) => (
                       <Card
                         key={student.studentId}
-                        className="group hover:shadow-md transition-all duration-300 border-[#F0F0F0] hover:border-[#003366]/30 overflow-hidden bg-white"
+                        className="group hover:shadow-md transition-all duration-300 border-[#F0F0F0] hover:border-[#003366]/30 overflow-hidden bg-white dark:bg-[#0F172A] dark:border-[#263A5C] dark:hover:border-blue-400/50"
                       >
-                        <CardHeader className="pb-3 bg-white border-b border-[#F0F0F0]">
+                        <CardHeader className="pb-3 bg-white border-b border-[#F0F0F0] dark:bg-[#0F172A] dark:border-[#263A5C]">
                           <div className="text-center">
                             <div className="relative inline-flex">
                               <div className="w-11 h-11 bg-gradient-to-br from-[#003366] to-[#004080] rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-sm">
@@ -923,7 +923,7 @@ const AttendanceClassPage: React.FC = () => {
                                 </div>
                               </div>
                             ) : (
-                              <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                              <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg dark:bg-[#2A1000] dark:border-orange-400/70">
                                 <div className="text-center">
                                   <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-2">
                                     <div className="w-2 h-2 bg-orange-500 rounded-full"></div>

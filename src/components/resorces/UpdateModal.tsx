@@ -18,6 +18,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/app/hooks/useAuth";
 import { Folder } from "lucide-react";
 import { updateResource } from "../../app/services/api.service"; // Assuming this is the service
+import { toast } from "@/components/CustomToast";
 
 interface UpdateModalProps {
   isOpen: boolean;
@@ -46,7 +47,7 @@ export function UpdateModal({
 
   const handleUpdate = async () => {
     if (!name || !selectedClass) {
-      alert("Please fill all fields");
+      toast.error("Please fill all fields");
       return;
     }
 
@@ -63,17 +64,17 @@ export function UpdateModal({
       setLoading(true);
       const token = getAccessToken();
       if (!token) {
-        alert("Authentication token is missing.");
+        toast.error("Authentication token is missing.");
         return;
       }
 
       // Call the update API
-      await updateResource(resource._id, updatedData, token);
-      alert("Update successful!");
-      onResourceUpdate(updatedData); // Callback to update the resource list
+      const updatedResource = await updateResource(resource._id, updatedData, token);
+      toast.success("Resource updated successfully.");
+      onResourceUpdate(updatedResource || updatedData); // Callback to update the resource list
       onClose(); // Close modal
     } catch (error) {
-      alert("Update failed. Check console for details.");
+      toast.error("Update failed. Please try again.");
     } finally {
       setLoading(false);
     }

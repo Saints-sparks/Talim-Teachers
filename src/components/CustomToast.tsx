@@ -209,6 +209,7 @@ let toastId = 0;
 class ToastManager {
   private listeners: Set<(toasts: ToastProps[]) => void> = new Set();
   private toasts: ToastProps[] = [];
+  private recentToastKeys: Map<string, number> = new Map();
 
   subscribe(listener: (toasts: ToastProps[]) => void) {
     this.listeners.add(listener);
@@ -220,13 +221,26 @@ class ToastManager {
   }
 
   addToast(toast: Omit<ToastProps, "id" | "onClose">) {
+    const key = `${toast.type}:${toast.title || ""}:${toast.message}`;
+    const now = Date.now();
+    const previous = this.recentToastKeys.get(key);
+
+    if (previous && now - previous < 3000) {
+      return;
+    }
+
+    this.recentToastKeys.set(key, now);
+    this.recentToastKeys.forEach((timestamp, toastKey) => {
+      if (now - timestamp > 10000) this.recentToastKeys.delete(toastKey);
+    });
+
     const newToast: ToastProps = {
       ...toast,
       id: `toast-${++toastId}`,
       onClose: this.removeToast,
     };
 
-    this.toasts = [newToast, ...this.toasts].slice(0, 5);
+    this.toasts = [newToast, ...this.toasts].slice(0, 3);
     this.emit();
   }
 

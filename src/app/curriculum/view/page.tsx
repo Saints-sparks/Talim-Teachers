@@ -19,12 +19,32 @@ import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { getCurriculumByCourseAndTerm } from "../../services/curriculum.services";
 import LoadingCard from "@/components/LoadingCard";
+import { fetchCourseById, getStudentsByClass } from "@/app/services/api.service";
+
+const getCourseClassId = (classId: any) => {
+  if (!classId) return "";
+  return typeof classId === "string" ? classId : classId._id || classId.id || "";
+};
+
+const getStudentPreview = (student: any) => {
+  const firstName = student?.userId?.firstName || student?.firstName || "";
+  const lastName = student?.userId?.lastName || student?.lastName || "";
+  const name = `${firstName} ${lastName}`.trim() || "Student";
+  return {
+    src: student?.userId?.userAvatar || student?.userAvatar || student?.avatar,
+    initials: `${firstName[0] || ""}${lastName[0] || ""}`.toUpperCase() || "ST",
+    name,
+  };
+};
 
 const CurriculumViewContent = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { getAccessToken } = useAuth();
   const [curriculum, setCurriculum] = useState<any>(null);
+  const [studentAvatars, setStudentAvatars] = useState<
+    Array<{ src?: string; initials: string; name: string }>
+  >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const contentRef = React.useRef<HTMLDivElement>(null);
@@ -49,6 +69,13 @@ const CurriculumViewContent = () => {
           token,
         });
         setCurriculum(data);
+
+        const course = await fetchCourseById(courseId, token);
+        const classId = getCourseClassId(course?.classId);
+        if (classId) {
+          const classStudents = await getStudentsByClass(classId, token);
+          setStudentAvatars(classStudents.slice(0, 3).map(getStudentPreview));
+        }
       } catch (err: any) {
         setError(err.message || "Failed to fetch curriculum");
       } finally {
@@ -358,13 +385,6 @@ const CurriculumViewContent = () => {
     );
   }
 
-  // Dummy avatars for demonstration
-  const avatars = [
-    "https://randomuser.me/api/portraits/men/32.jpg",
-    "https://randomuser.me/api/portraits/women/44.jpg",
-    "https://randomuser.me/api/portraits/men/45.jpg",
-  ];
-
   return (
     <Layout>
       <div className="min-h-screen bg-[#F8F8F8]">
@@ -431,15 +451,30 @@ const CurriculumViewContent = () => {
                     </span>
                   </div>
                   <div className="flex -space-x-2 ml-2">
-                    {avatars.map((src, idx) => (
-                      <img
+                    {studentAvatars.length > 0 ? studentAvatars.map((avatar, idx) => (
+                      avatar.src ? (
+                        <img
                         key={idx}
-                        src={src}
-                        alt="avatar"
+                        src={avatar.src}
+                        alt={avatar.name}
                         className="w-8 h-8 rounded-full border-2 border-white shadow -ml-1"
                         style={{ zIndex: 10 - idx }}
                       />
-                    ))}
+                      ) : (
+                        <div
+                          key={idx}
+                          className="w-8 h-8 rounded-full border-2 border-white bg-[#003366] text-white shadow -ml-1 flex items-center justify-center text-[10px] font-semibold"
+                          style={{ zIndex: 10 - idx }}
+                          title={avatar.name}
+                        >
+                          {avatar.initials}
+                        </div>
+                      )
+                    )) : (
+                      <div className="w-8 h-8 rounded-full border-2 border-white bg-[#EAF2FB] text-[#003366] shadow flex items-center justify-center text-[10px] font-semibold">
+                        ST
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

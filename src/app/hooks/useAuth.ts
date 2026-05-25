@@ -35,12 +35,6 @@ export const useAuth = (): UseAuthReturn => {
 
     
 
-      if (!token) {
-      
-        toast.error(
-          "Authentication token not available. Please try logging in again."
-        );
-      }
       if (token && userData) {
         setIsAuthenticated(true);
         setUser(userData);

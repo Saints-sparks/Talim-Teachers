@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { Bell, Menu, CalendarRange } from "lucide-react";
+import { Bell, Menu, CalendarRange, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "./ui/button";
 import { format } from "date-fns";
@@ -9,7 +9,13 @@ import { useAuth } from "@/app/hooks/useAuth";
 import useNotifications from "@/app/hooks/useNotifications";
 import { ThemeToggle } from "./theme-toggle";
 
-export function Header({ onMenuClick }: { onMenuClick: () => void }) {
+export function Header({
+  onMenuClick,
+  isSidebarCollapsed = false,
+}: {
+  onMenuClick: () => void;
+  isSidebarCollapsed?: boolean;
+}) {
   const { user } = useAuth();
   const { counts } = useNotifications();
   const unreadNotifications = counts.unread || 0;
@@ -30,12 +36,19 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
       <div className="flex flex-col  sm:flex-row items-center w-full justify-end gap-4 py-3">
         {/* Menu Button (Only on Mobile) */}
         <div className="flex items-center w-full sm:w-auto justify-between">
-          <div
-            className="md:hidden rounded-md shadow-none"
+          <button
+            type="button"
+            className="rounded-md p-2 text-[#003366] hover:bg-[#EAF2FB] dark:text-blue-300 dark:hover:bg-slate-800"
             onClick={onMenuClick}
+            aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
-            <Menu className="text-[#003366]" size={24} />
-          </div>
+            <Menu className="md:hidden" size={24} />
+            {isSidebarCollapsed ? (
+              <PanelLeftOpen className="hidden md:block" size={22} />
+            ) : (
+              <PanelLeftClose className="hidden md:block" size={22} />
+            )}
+          </button>
           {/* Right Side: Date, Notifications, Avatar */}
           <div className="flex items-center gap-4">
             <div className="flex gap-2 items-center text-sm text-[#6F6F6F] dark:text-slate-400 p-2 rounded-lg border border-[#F0F0F0] dark:border-slate-700 bg-white dark:bg-slate-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700">
