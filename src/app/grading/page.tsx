@@ -1,229 +1,95 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 import Layout from "@/components/Layout";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import {
-  BookOpen,
-  Users,
-  GraduationCap,
-  TrendingUp,
-  FileText,
-  RefreshCw,
-} from "lucide-react";
-import SectionHeader from "@/components/ui/section-header";
-import CourseTeacherView from "@/components/grading/CourseTeacherView";
-import ClassTeacherView from "@/components/grading/ClassTeacherView";
-import { gradeRecordsApi } from "@/app/services/grade-records.service";
+import { ContextHeader } from "@/components/grading/workspace/ContextHeader";
+import { CourseTeacherGradingTab } from "@/components/grading/workspace/CourseTeacherGradingTab";
+import { ClassTeacherGradingTab } from "@/components/grading/workspace/ClassTeacherGradingTab";
+import { RoleMode } from "@/components/grading/workspace/types";
+import { gradingWorkspaceService } from "@/app/services/grading-workspace/grading-workspace.service";
 import { useAuth } from "@/app/hooks/useAuth";
-import { Tooltip } from "@/components/ui/Tooltip";
-
-type TeacherRole = "course" | "class";
-
-interface KpiData {
-  totalAssessments: number;
-  studentsGraded: number;
-  averageScore: number;
-  pendingReviews: number;
-}
 
 const GradingPage: React.FC = () => {
-  const [activeRole, setActiveRole] = useState<TeacherRole>("course");
-  const [kpiData, setKpiData] = useState<KpiData>({
-    totalAssessments: 0,
-    studentsGraded: 0,
-    averageScore: 0,
-    pendingReviews: 0,
-  });
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-
   const { getAccessToken } = useAuth();
+  const [role, setRole] = useState<RoleMode>("course");
+  const [termLabel, setTermLabel] = useState("");
+  const [scopeLabel, setScopeLabel] = useState("");
+  const [actions, setActions] = useState<{ refresh: () => void; primary: () => void; export: () => void; batch?: () => void }>({
+    refresh: () => undefined,
+    primary: () => undefined,
+    export: () => undefined,
+  });
 
-  const fetchKpis = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  const primaryLabel = useMemo(() => {
+    if (role === "course") return "Continue Grading";
+    return "Generate Class Summary";
+  }, [role]);
 
-      const token = getAccessToken();
-      if (!token) {
-        throw new Error("No authentication token available");
-      }
-
-      // For now, fetch school-wide KPIs
-      const data = await gradeRecordsApi.getSchoolKpis(token);
-
-      // Validate/shape the returned data before setting state
-      setKpiData({
-        totalAssessments: data?.totalAssessments ?? 0,
-        studentsGraded: data?.studentsGraded ?? 0,
-        averageScore: data?.averageScore ?? 0,
-        pendingReviews: data?.pendingReviews ?? 0,
-      });
-    } catch (err: any) {
-      console.error("Error fetching KPIs:", err);
-      setError(err?.message ?? "Failed to fetch KPI data");
-
-      // Provide reasonable fallback KPIs so UI still renders
-      setKpiData({
-        totalAssessments: 3,
-        studentsGraded: 120,
-        averageScore: 72,
-        pendingReviews: 6,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchKpis();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const scopeDefaults = role === "course"
+    ? "Course + Class"
+    : "Class";
 
   return (
     <Layout>
-      <div className="min-h-screen bg-[#F8F8F8] p-3 sm:p-6">
-        <div data-guide="grading-header">
-          <SectionHeader
-            title="Grading"
-            subtitle="Manage assessments and class performance with clarity"
-            actions={
-              <div className="flex items-center gap-2">
-                <Tooltip content="Reload assessment, grading, and pending-review totals." side="bottom">
-                  <Button
-                    onClick={fetchKpis}
-                    disabled={loading}
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-2 border-[#F0F0F0] text-[#6F6F6F] hover:bg-[#F8FAFF]"
-                  >
-                    <RefreshCw
-                      className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
-                    />
-                    Refresh
-                  </Button>
-                </Tooltip>
-                <Tooltip content="Bulk upload is for larger grading imports when available for your workflow." side="bottom">
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="bg-[#003366] text-white hover:bg-[#002244]"
-                  >
-                    Batch Upload
-                  </Button>
-                </Tooltip>
-              </div>
-            }
+      <div className="min-h-screen bg-[#EBF0F7] p-3 sm:p-6 dark:bg-slate-900">
+        <div className="mx-auto max-w-[1600px] space-y-4">
+          <ContextHeader
+            role={role}
+            termLabel={termLabel}
+            scopeLabel={scopeLabel || scopeDefaults}
+            onRefresh={actions.refresh}
+            onPrimary={actions.primary}
+            onExport={actions.export}
+            primaryLabel={primaryLabel}
+            canBatchUpload={role === "course"}
+            onBatchUpload={actions.batch}
           />
-        </div>
 
-        {/* Error banner */}
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-sm text-red-700">
-              <strong>Error loading KPIs:</strong> {error}
-            </p>
-          </div>
-        )}
-
-        <div className="rounded-2xl border border-[#E6EDF5] bg-gradient-to-br from-[#F6F9FC] via-white to-[#F8FBFF] p-4 sm:p-5 mb-6" data-guide="grading-kpis">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-            <div className="rounded-xl border border-[#E6EDF5] bg-white/80 p-3 text-left">
-              <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-[#6F6F6F]">
-                <GraduationCap className="h-4 w-4 text-[#003366]" />
-                Total Assessments
-              </div>
-              <div className="mt-1 text-lg sm:text-xl font-semibold text-[#030E18]">
-                {loading ? "..." : kpiData.totalAssessments}
-              </div>
-              <div className="mt-2 h-1.5 w-full rounded-full bg-[#EEF3F9]">
-                <div className="h-1.5 w-full rounded-full bg-[#003366]" />
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-green-200 bg-green-50/60 p-3 text-left">
-              <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-green-700">
-                <Users className="h-4 w-4 text-green-700" />
-                Students Graded
-              </div>
-              <div className="mt-1 text-lg sm:text-xl font-semibold text-green-700">
-                {loading ? "..." : kpiData.studentsGraded}
-              </div>
-              <div className="mt-2 h-1.5 w-full rounded-full bg-green-100">
-                <div className="h-1.5 w-3/4 rounded-full bg-green-600" />
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-[#D7E6F6] bg-[#EAF2FB]/60 p-3 text-left">
-              <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-[#003366]">
-                <TrendingUp className="h-4 w-4 text-[#003366]" />
-                Average Score
-              </div>
-              <div className="mt-1 text-lg sm:text-xl font-semibold text-[#003366]">
-                {loading ? "..." : `${kpiData.averageScore}%`}
-              </div>
-              <div className="mt-2 h-1.5 w-full rounded-full bg-[#DDEAF7]">
-                <div className="h-1.5 w-2/3 rounded-full bg-[#003366]" />
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-orange-200 bg-orange-50/60 p-3 text-left">
-              <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-orange-700">
-                <FileText className="h-4 w-4 text-orange-600" />
-                Pending Reviews
-              </div>
-              <div className="mt-1 text-lg sm:text-xl font-semibold text-orange-700">
-                {loading ? "..." : kpiData.pendingReviews}
-              </div>
-              <div className="mt-2 h-1.5 w-full rounded-full bg-orange-100">
-                <div className="h-1.5 w-1/3 rounded-full bg-orange-500" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 mb-6" data-guide="grading-role-switch">
-          <span className="text-sm font-medium text-[#2F2F2F]">View as:</span>
-          <div className="flex items-center gap-2 bg-white border border-[#F0F0F0] rounded-xl p-1">
-            <Tooltip content="Use this role to enter assessment scores and generate course grades." side="bottom">
-              <Button
-                variant="ghost"
-                onClick={() => setActiveRole("course")}
-                className={`flex items-center gap-2 text-sm shadow-none ${
-                  activeRole === "course"
-                    ? "bg-[#003366] text-white hover:bg-[#002244]"
-                    : "text-[#6F6F6F] hover:bg-[#F8FAFF]"
-                }`}
+          <div className="rounded-xl border border-[#D7E1ED] bg-white p-2 dark:border-slate-700 dark:bg-slate-800">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                className={`rounded-lg px-4 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#003366] ${role === "course" ? "bg-[#003366] text-white" : "text-slate-600 hover:bg-[#EBF0F7] dark:text-slate-300 dark:hover:bg-slate-700"}`}
+                onClick={() => setRole("course")}
               >
-                <BookOpen className="h-4 w-4" />
                 Course Teacher
-              </Button>
-            </Tooltip>
-            <Tooltip content="Use this role to combine generated course grades into class term results." side="bottom">
-              <Button
-                variant="ghost"
-                onClick={() => setActiveRole("class")}
-                className={`flex items-center gap-2 text-sm shadow-none ${
-                  activeRole === "class"
-                    ? "bg-[#003366] text-white hover:bg-[#002244]"
-                    : "text-[#6F6F6F] hover:bg-[#F8FAFF]"
-                }`}
+              </button>
+              <button
+                className={`rounded-lg px-4 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#003366] ${role === "class" ? "bg-[#003366] text-white" : "text-slate-600 hover:bg-[#EBF0F7] dark:text-slate-300 dark:hover:bg-slate-700"}`}
+                onClick={() => setRole("class")}
               >
-                <Users className="h-4 w-4" />
                 Class Teacher
-              </Button>
-            </Tooltip>
+              </button>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-[#D7E1ED] bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
+            {role === "course" ? (
+              <CourseTeacherGradingTab
+                onScopeChange={({ termLabel: t, scopeLabel: s }) => {
+                  setTermLabel(t);
+                  setScopeLabel(s);
+                }}
+                registerActions={setActions}
+              />
+            ) : (
+              <ClassTeacherGradingTab
+                onScopeChange={({ termLabel: t, scopeLabel: s }) => {
+                  setTermLabel(t);
+                  setScopeLabel(s);
+                }}
+                registerActions={setActions}
+              />
+            )}
+          </div>
+
+          <div className="rounded-xl border border-[#D7E1ED] bg-white p-4 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            <p className="font-semibold text-[#003366] dark:text-slate-100">Required backend additions/confirmations</p>
+            <p>1. Class generation history endpoint mapping for Generation History tab.</p>
+            <p>2. Student assessment history endpoint mapping for Details drawer audit trail.</p>
+            <p>3. Batch upload capability endpoint and payload for course grading scope.</p>
+            <p>4. Scoped class assessment overview endpoint for Class Teacher &quot;Assessment Overview&quot;.</p>
           </div>
         </div>
-
-        {/* Main Content Card */}
-        <Card className="bg-white shadow-none border-[#F0F0F0] h-fit">
-          <CardContent className="p-0">
-            {activeRole === "course" ? <CourseTeacherView /> : <ClassTeacherView />}
-          </CardContent>
-        </Card>
       </div>
     </Layout>
   );
