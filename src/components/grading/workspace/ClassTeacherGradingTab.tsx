@@ -191,6 +191,9 @@ export const ClassTeacherGradingTab: React.FC<Props> = ({ onScopeChange, registe
   return (
     <div className="space-y-4">
       <p className="text-sm text-slate-600 dark:text-slate-300">You are reviewing cumulative class performance and generating class summaries after course grades are completed.</p>
+      <div className="rounded-lg border border-[#D7E1ED] bg-[#EBF0F7] px-3 py-2 text-sm text-[#003366] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+        Showing enrolled students for <span className="font-medium">{classes.find((c) => normalizeId(c._id) === selectedClass)?.name || "selected class"}</span> in current term only.
+      </div>
       {successMsg && <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">{successMsg}</div>}
 
       {showStep(1) && (
