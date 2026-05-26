@@ -108,6 +108,18 @@ const defaultPrefs = {
 
 type Prefs = typeof defaultPrefs;
 
+function cleanPrefsSection<T>(section?: T): any {
+  if (!section || typeof section !== "object") return {};
+  const { _id, id, __v, createdAt, updatedAt, ...values } = section as Record<string, unknown> & {
+    _id?: unknown;
+    id?: unknown;
+    __v?: unknown;
+    createdAt?: unknown;
+    updatedAt?: unknown;
+  };
+  return values;
+}
+
 function useTeacherPrefs(userId: string | undefined) {
   const [prefs, setPrefs] = useState<Prefs>(defaultPrefs);
   const [loaded, setLoaded] = useState(false);
@@ -119,10 +131,10 @@ function useTeacherPrefs(userId: string | undefined) {
       if (stored) {
         const parsed = JSON.parse(stored);
         setPrefs((prev) => ({
-          notifications: { ...prev.notifications, ...parsed.notifications },
-          messages:      { ...prev.messages,      ...parsed.messages },
-          teaching:      { ...prev.teaching,      ...parsed.teaching },
-          guides:        { ...prev.guides,        ...parsed.guides },
+          notifications: { ...prev.notifications, ...cleanPrefsSection(parsed.notifications) },
+          messages:      { ...prev.messages,      ...cleanPrefsSection(parsed.messages) },
+          teaching:      { ...prev.teaching,      ...cleanPrefsSection(parsed.teaching) },
+          guides:        { ...prev.guides,        ...cleanPrefsSection(parsed.guides) },
           theme:          parsed.theme || prev.theme,
         }));
       }
@@ -135,10 +147,10 @@ function useTeacherPrefs(userId: string | undefined) {
         if (!serverPrefs) return;
         setPrefs((prev) => {
           const next = {
-            notifications: { ...prev.notifications, ...serverPrefs.notifications },
-            messages:      { ...prev.messages,      ...serverPrefs.messages },
-            teaching:      { ...prev.teaching,      ...serverPrefs.teaching },
-            guides:        { ...prev.guides,        ...serverPrefs.guides },
+            notifications: { ...prev.notifications, ...cleanPrefsSection(serverPrefs.notifications) },
+            messages:      { ...prev.messages,      ...cleanPrefsSection(serverPrefs.messages) },
+            teaching:      { ...prev.teaching,      ...cleanPrefsSection(serverPrefs.teaching) },
+            guides:        { ...prev.guides,        ...cleanPrefsSection(serverPrefs.guides) },
             theme:          serverPrefs.theme || prev.theme,
           };
           try { localStorage.setItem(settingsKey(userId), JSON.stringify(next)); } catch {}
@@ -153,9 +165,18 @@ function useTeacherPrefs(userId: string | undefined) {
     (updates: Partial<Prefs>) => {
       if (!userId) return;
       setPrefs((prev) => {
-        const next = { ...prev, ...updates };
+        const cleanedUpdates = {
+          ...updates,
+          ...(updates.notifications
+            ? { notifications: cleanPrefsSection(updates.notifications) }
+            : {}),
+          ...(updates.messages ? { messages: cleanPrefsSection(updates.messages) } : {}),
+          ...(updates.teaching ? { teaching: cleanPrefsSection(updates.teaching) } : {}),
+          ...(updates.guides ? { guides: cleanPrefsSection(updates.guides) } : {}),
+        };
+        const next = { ...prev, ...cleanedUpdates };
         try { localStorage.setItem(settingsKey(userId), JSON.stringify(next)); } catch {}
-        apiClient.patch("/teacher/settings/preferences", updates).catch(() => {
+        apiClient.patch("/teacher/settings/preferences", cleanedUpdates).catch(() => {
           toast.error("Preference saved locally. Backend sync failed.");
         });
         return next;
