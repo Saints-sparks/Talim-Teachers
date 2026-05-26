@@ -35,6 +35,7 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
 
   const [selectedAcademicYear, setSelectedAcademicYear] = useState("");
   const [selectedTerm, setSelectedTerm] = useState("");
+  const [currentTermId, setCurrentTermId] = useState("");
   const [selectedCourse, setSelectedCourse] = useState("");
   const [selectedClass, setSelectedClass] = useState("");
   const [selectedAssessment, setSelectedAssessment] = useState("");
@@ -50,6 +51,7 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
 
   const token = getAccessToken() || "";
   const selectedCourseObj = courses.find((c) => normalizeId(c._id) === normalizeId(selectedCourse));
+  const effectiveClassId = normalizeId(selectedCourseObj?.classId || selectedClass);
 
   const academicYears = useMemo(() => {
     const map = new Map<string, string>();
@@ -81,6 +83,7 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
       setCanBatchUpload(batchSupported);
       const activeTerm = (termData || []).find((t: any) => t.isActive)?._id || termData?.[0]?._id || "";
       const activeYear = (termData || []).find((t: any) => t._id === activeTerm)?.academicYearName || "";
+      setCurrentTermId(normalizeId(activeTerm));
       setSelectedAcademicYear((prev) => prev || activeYear || academicYears[0] || "");
       setSelectedTerm((prev) => prev || normalizeId(activeTerm));
       machine.dispatch({ type: "LOAD_SUCCESS" });
@@ -97,13 +100,13 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
   };
 
   const loadRows = async () => {
-    if (!token || !selectedAssessment || !selectedCourse || !selectedClass || !selectedCourseObj?.schoolId) return;
+    if (!token || !selectedAssessment || !selectedCourse || !effectiveClassId || !selectedCourseObj?.schoolId) return;
     machine.dispatch({ type: "LOAD" });
     setError(null);
     try {
       const data = await gradingWorkspaceService.getAssessmentGradeRows({
         assessmentId: selectedAssessment,
-        classId: selectedClass,
+        classId: effectiveClassId,
         courseId: selectedCourse,
         termId: selectedTerm,
         token,
@@ -120,10 +123,10 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
   useEffect(() => { loadBase(); }, [user?.userId]);
   useEffect(() => { loadAssessments(); }, [selectedTerm]);
   useEffect(() => {
-    if (selectedCourseObj?.classId && !selectedClass) {
+    if (selectedCourseObj?.classId) {
       setSelectedClass(normalizeId(selectedCourseObj.classId));
     }
-  }, [selectedCourseObj?.classId, selectedClass]);
+  }, [selectedCourseObj?.classId]);
   useEffect(() => {
     if (selectedTerm && selectedCourseObj) {
       onScopeChange({
@@ -132,7 +135,7 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
       });
     }
   }, [selectedTerm, selectedCourse, terms, selectedCourseObj]);
-  useEffect(() => { if (selectedAssessment) loadRows(); }, [selectedAssessment, selectedCourse, selectedClass]);
+  useEffect(() => { if (selectedAssessment) loadRows(); }, [selectedAssessment, selectedCourse, effectiveClassId]);
 
   const filteredAssessments = useMemo(() => {
     const q = assessmentSearch.toLowerCase().trim();
@@ -189,7 +192,7 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
   };
 
   const saveAll = async () => {
-    if (!selectedAssessment || !selectedCourse || !selectedClass || !selectedCourseObj?.schoolId || !token) return;
+    if (!selectedAssessment || !selectedCourse || !effectiveClassId || !selectedCourseObj?.schoolId || !token) return;
     const changed = rows.filter((r, idx) => r.score !== initialRows[idx]?.score && typeof r.score === "number") as Array<GradeRow & { score: number }>;
     if (!changed.length) return;
 
@@ -197,7 +200,7 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
     try {
       await gradingWorkspaceService.saveAssessmentScores({
         assessmentId: selectedAssessment,
-        classId: selectedClass,
+        classId: effectiveClassId,
         courseId: selectedCourse,
         schoolId: selectedCourseObj.schoolId,
         token,
@@ -214,11 +217,11 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
   };
 
   const generateCourseGrades = async () => {
-    if (!selectedCourse || !selectedClass || !selectedTerm || !token) return;
+    if (!selectedCourse || !effectiveClassId || !selectedTerm || !token) return;
     machine.dispatch({ type: "GENERATE" });
     try {
       await gradingWorkspaceService.generateCourseGrades({
-        classId: selectedClass,
+        classId: effectiveClassId,
         courseId: selectedCourse,
         termId: selectedTerm,
         token,
@@ -269,10 +272,10 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
       {showStep(1) && (
         <Card className="border-[#D7E1ED] bg-white dark:border-slate-700 dark:bg-slate-800">
           <CardContent className="grid grid-cols-1 gap-3 p-4 md:grid-cols-6">
-            <Select value={selectedAcademicYear} onValueChange={setSelectedAcademicYear}><SelectTrigger aria-label="Academic year"><SelectValue placeholder="Academic Year" /></SelectTrigger><SelectContent>{academicYears.map((year) => <SelectItem key={year} value={year}>{year}</SelectItem>)}</SelectContent></Select>
-            <Select value={selectedTerm} onValueChange={setSelectedTerm}><SelectTrigger aria-label="Term"><SelectValue placeholder="Term" /></SelectTrigger><SelectContent>{filteredTerms.map((t: any) => <SelectItem key={normalizeId(t._id)} value={normalizeId(t._id)}>{t.name}</SelectItem>)}</SelectContent></Select>
+            <Select value={selectedAcademicYear} onValueChange={setSelectedAcademicYear} disabled><SelectTrigger aria-label="Academic year"><SelectValue placeholder="Academic Year" /></SelectTrigger><SelectContent>{academicYears.map((year) => <SelectItem key={year} value={year}>{year}</SelectItem>)}</SelectContent></Select>
+            <Select value={selectedTerm} onValueChange={setSelectedTerm} disabled><SelectTrigger aria-label="Term"><SelectValue placeholder="Term" /></SelectTrigger><SelectContent>{filteredTerms.filter((t: any) => normalizeId(t._id) === currentTermId).map((t: any) => <SelectItem key={normalizeId(t._id)} value={normalizeId(t._id)}>{t.name}</SelectItem>)}</SelectContent></Select>
             <Select value={selectedCourse} onValueChange={setSelectedCourse}><SelectTrigger aria-label="Course"><SelectValue placeholder="Course" /></SelectTrigger><SelectContent>{courses.map((c: any) => <SelectItem key={normalizeId(c._id)} value={normalizeId(c._id)}>{c.title}</SelectItem>)}</SelectContent></Select>
-            <Select value={selectedClass} onValueChange={setSelectedClass}><SelectTrigger aria-label="Class"><SelectValue placeholder="Class" /></SelectTrigger><SelectContent>{classes.map((c: any) => <SelectItem key={normalizeId(c._id)} value={normalizeId(c._id)}>{c.name}</SelectItem>)}</SelectContent></Select>
+            <Select value={selectedClass} onValueChange={setSelectedClass} disabled={!!selectedCourse}><SelectTrigger aria-label="Class"><SelectValue placeholder="Class" /></SelectTrigger><SelectContent>{classes.map((c: any) => <SelectItem key={normalizeId(c._id)} value={normalizeId(c._id)}>{c.name}</SelectItem>)}</SelectContent></Select>
             <Select value={selectedAssessment} onValueChange={setSelectedAssessment}><SelectTrigger aria-label="Assessment"><SelectValue placeholder="Assessment" /></SelectTrigger><SelectContent>{filteredAssessments.map((a: any) => <SelectItem key={normalizeId(a._id)} value={normalizeId(a._id)}>{a.name || a.title}</SelectItem>)}</SelectContent></Select>
             <Input aria-label="Search assessments" value={assessmentSearch} onChange={(e) => setAssessmentSearch(e.target.value)} placeholder="Search assessment..." />
           </CardContent>

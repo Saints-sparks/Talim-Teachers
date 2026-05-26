@@ -5,7 +5,7 @@ import { GradeRow, GenerationResult, RowStatus } from "@/components/grading/work
 const resolveId = (val: any): string => {
   if (!val) return "";
   if (typeof val === "string") return val;
-  return val._id?.toString?.() || "";
+  return val._id?.toString?.() || val.id?.toString?.() || val.studentId?.toString?.() || "";
 };
 
 const resolveStudentName = (student: any): string => {
@@ -37,6 +37,26 @@ const normalizeStudents = (payload: any): any[] => {
   if (Array.isArray(payload?.data?.students)) return payload.data.students;
   if (Array.isArray(payload?.data?.data)) return payload.data.data;
   return [];
+};
+
+const toStudentEntity = (record: any): any => {
+  if (!record) return null;
+  if (record.studentId && typeof record.studentId === "object") {
+    return {
+      ...record.studentId,
+      _id: resolveId(record.studentId) || resolveId(record._id) || resolveId(record.studentId),
+    };
+  }
+  if (record.student && typeof record.student === "object") {
+    return {
+      ...record.student,
+      _id: resolveId(record.student) || resolveId(record._id),
+    };
+  }
+  return {
+    ...record,
+    _id: resolveId(record),
+  };
 };
 
 const toRowStatus = (status?: string, generated?: boolean): RowStatus => {
@@ -83,7 +103,7 @@ export const gradingWorkspaceService = {
     const resolvedClassId = resolveId(classId);
     if (!resolvedClassId) return [];
     const data = await gradeRecordsApi.getStudentsForCourse(resolvedClassId, token);
-    return normalizeStudents(data);
+    return normalizeStudents(data).map(toStudentEntity).filter((s: any) => !!resolveId(s));
   },
 
   async getAssessmentGradeRows(params: {
@@ -202,7 +222,7 @@ export const gradingWorkspaceService = {
     });
 
     return students.map((s: any) => {
-      const rec = map.get(s._id);
+      const rec = map.get(resolveId(s));
       const pct = rec?.percentage ?? null;
       return {
         studentId: resolveId(s._id),

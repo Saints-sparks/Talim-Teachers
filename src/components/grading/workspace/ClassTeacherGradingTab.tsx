@@ -39,6 +39,7 @@ export const ClassTeacherGradingTab: React.FC<Props> = ({ onScopeChange, registe
   const [selectedAcademicYear, setSelectedAcademicYear] = useState("");
   const [selectedClass, setSelectedClass] = useState("");
   const [selectedTerm, setSelectedTerm] = useState("");
+  const [currentTermId, setCurrentTermId] = useState("");
 
   const [summary, setSummary] = useState<any | null>(null);
   const [rows, setRows] = useState<GradeRow[]>([]);
@@ -83,8 +84,10 @@ export const ClassTeacherGradingTab: React.FC<Props> = ({ onScopeChange, registe
       setTerms(termData || []);
       const activeTerm = termData.find((t: any) => t.isActive)?._id || termData?.[0]?._id || "";
       const activeYear = termData.find((t: any) => t._id === activeTerm)?.academicYearName || "";
+      setCurrentTermId(normalizeId(activeTerm));
       setSelectedAcademicYear((prev) => prev || activeYear || academicYears[0] || "");
       setSelectedTerm((prev) => prev || normalizeId(activeTerm));
+      setSelectedClass((prev) => prev || normalizeId((assigned.classes || [])[0]?._id));
       machine.dispatch({ type: "LOAD_SUCCESS" });
     } catch (e: any) {
       setError(e?.message || "Failed to load class teacher workspace");
@@ -193,8 +196,8 @@ export const ClassTeacherGradingTab: React.FC<Props> = ({ onScopeChange, registe
       {showStep(1) && (
         <Card className="border-[#D7E1ED] bg-white dark:border-slate-700 dark:bg-slate-800">
           <CardContent className="grid grid-cols-1 gap-3 p-4 md:grid-cols-4">
-            <Select value={selectedAcademicYear} onValueChange={setSelectedAcademicYear}><SelectTrigger aria-label="Academic year"><SelectValue placeholder="Academic Year" /></SelectTrigger><SelectContent>{academicYears.map((year) => <SelectItem key={year} value={year}>{year}</SelectItem>)}</SelectContent></Select>
-            <Select value={selectedTerm} onValueChange={setSelectedTerm}><SelectTrigger aria-label="Term"><SelectValue placeholder="Term" /></SelectTrigger><SelectContent>{filteredTerms.map((t: any) => <SelectItem key={normalizeId(t._id)} value={normalizeId(t._id)}>{t.name}</SelectItem>)}</SelectContent></Select>
+            <Select value={selectedAcademicYear} onValueChange={setSelectedAcademicYear} disabled><SelectTrigger aria-label="Academic year"><SelectValue placeholder="Academic Year" /></SelectTrigger><SelectContent>{academicYears.map((year) => <SelectItem key={year} value={year}>{year}</SelectItem>)}</SelectContent></Select>
+            <Select value={selectedTerm} onValueChange={setSelectedTerm} disabled><SelectTrigger aria-label="Term"><SelectValue placeholder="Term" /></SelectTrigger><SelectContent>{filteredTerms.filter((t: any) => normalizeId(t._id) === currentTermId).map((t: any) => <SelectItem key={normalizeId(t._id)} value={normalizeId(t._id)}>{t.name}</SelectItem>)}</SelectContent></Select>
             <Select value={selectedClass} onValueChange={setSelectedClass}><SelectTrigger aria-label="Class"><SelectValue placeholder="Class" /></SelectTrigger><SelectContent>{classes.map((c: any) => <SelectItem key={normalizeId(c._id)} value={normalizeId(c._id)}>{c.name}</SelectItem>)}</SelectContent></Select>
             <div className="flex items-center justify-end"><Button className="bg-[#003366] hover:bg-[#002B57]" onClick={() => setConfirmOpen(true)} disabled={machine.isGenerating}>Generate Class Summary</Button></div>
           </CardContent>
