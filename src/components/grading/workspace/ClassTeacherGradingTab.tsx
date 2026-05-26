@@ -24,6 +24,12 @@ interface Props {
 }
 
 export const ClassTeacherGradingTab: React.FC<Props> = ({ onScopeChange, registerActions }) => {
+  const normalizeId = (value: any): string => {
+    if (!value) return "";
+    if (typeof value === "string") return value;
+    return value._id?.toString?.() || "";
+  };
+
   const { getAccessToken } = useAuth();
   const { user } = useAppContext();
   const machine = useGradingStateMachine();
@@ -78,7 +84,7 @@ export const ClassTeacherGradingTab: React.FC<Props> = ({ onScopeChange, registe
       const activeTerm = termData.find((t: any) => t.isActive)?._id || termData?.[0]?._id || "";
       const activeYear = termData.find((t: any) => t._id === activeTerm)?.academicYearName || "";
       setSelectedAcademicYear((prev) => prev || activeYear || academicYears[0] || "");
-      setSelectedTerm((prev) => prev || activeTerm);
+      setSelectedTerm((prev) => prev || normalizeId(activeTerm));
       machine.dispatch({ type: "LOAD_SUCCESS" });
     } catch (e: any) {
       setError(e?.message || "Failed to load class teacher workspace");
@@ -188,8 +194,8 @@ export const ClassTeacherGradingTab: React.FC<Props> = ({ onScopeChange, registe
         <Card className="border-[#D7E1ED] bg-white dark:border-slate-700 dark:bg-slate-800">
           <CardContent className="grid grid-cols-1 gap-3 p-4 md:grid-cols-4">
             <Select value={selectedAcademicYear} onValueChange={setSelectedAcademicYear}><SelectTrigger aria-label="Academic year"><SelectValue placeholder="Academic Year" /></SelectTrigger><SelectContent>{academicYears.map((year) => <SelectItem key={year} value={year}>{year}</SelectItem>)}</SelectContent></Select>
-            <Select value={selectedTerm} onValueChange={setSelectedTerm}><SelectTrigger aria-label="Term"><SelectValue placeholder="Term" /></SelectTrigger><SelectContent>{filteredTerms.map((t: any) => <SelectItem key={t._id} value={t._id}>{t.name}</SelectItem>)}</SelectContent></Select>
-            <Select value={selectedClass} onValueChange={setSelectedClass}><SelectTrigger aria-label="Class"><SelectValue placeholder="Class" /></SelectTrigger><SelectContent>{classes.map((c: any) => <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>)}</SelectContent></Select>
+            <Select value={selectedTerm} onValueChange={setSelectedTerm}><SelectTrigger aria-label="Term"><SelectValue placeholder="Term" /></SelectTrigger><SelectContent>{filteredTerms.map((t: any) => <SelectItem key={normalizeId(t._id)} value={normalizeId(t._id)}>{t.name}</SelectItem>)}</SelectContent></Select>
+            <Select value={selectedClass} onValueChange={setSelectedClass}><SelectTrigger aria-label="Class"><SelectValue placeholder="Class" /></SelectTrigger><SelectContent>{classes.map((c: any) => <SelectItem key={normalizeId(c._id)} value={normalizeId(c._id)}>{c.name}</SelectItem>)}</SelectContent></Select>
             <div className="flex items-center justify-end"><Button className="bg-[#003366] hover:bg-[#002B57]" onClick={() => setConfirmOpen(true)} disabled={machine.isGenerating}>Generate Class Summary</Button></div>
           </CardContent>
         </Card>

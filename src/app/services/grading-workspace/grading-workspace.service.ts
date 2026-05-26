@@ -2,6 +2,43 @@ import { fetchTeacherDetails } from "@/app/services/api.service";
 import { gradeRecordsApi } from "@/app/services/grade-records.service";
 import { GradeRow, GenerationResult, RowStatus } from "@/components/grading/workspace/types";
 
+const resolveId = (val: any): string => {
+  if (!val) return "";
+  if (typeof val === "string") return val;
+  return val._id?.toString?.() || "";
+};
+
+const resolveStudentName = (student: any): string => {
+  if (!student) return "Unknown Student";
+  if (student.name && String(student.name).trim()) return String(student.name).trim();
+  if (student.userId?.name && String(student.userId.name).trim()) {
+    return String(student.userId.name).trim();
+  }
+
+  const first =
+    student.firstName ||
+    student.userId?.firstName ||
+    student.userId?.profile?.firstName ||
+    "";
+  const last =
+    student.lastName ||
+    student.userId?.lastName ||
+    student.userId?.profile?.lastName ||
+    "";
+
+  const full = `${first} ${last}`.trim();
+  return full || "Unknown Student";
+};
+
+const normalizeStudents = (payload: any): any[] => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.students)) return payload.students;
+  if (Array.isArray(payload?.data?.students)) return payload.data.students;
+  if (Array.isArray(payload?.data?.data)) return payload.data.data;
+  return [];
+};
+
 const toRowStatus = (status?: string, generated?: boolean): RowStatus => {
   if (generated) return "generated";
   switch ((status || "").toLowerCase()) {
@@ -43,8 +80,10 @@ export const gradingWorkspaceService = {
   },
 
   async getCourseStudents(classId: string, token: string) {
-    const data = await gradeRecordsApi.getStudentsForCourse(classId, token);
-    return Array.isArray(data) ? data : data?.data || [];
+    const resolvedClassId = resolveId(classId);
+    if (!resolvedClassId) return [];
+    const data = await gradeRecordsApi.getStudentsForCourse(resolvedClassId, token);
+    return normalizeStudents(data);
   },
 
   async getAssessmentGradeRows(params: {
@@ -64,23 +103,25 @@ export const gradingWorkspaceService = {
     const grades = gradesPayload.grades || [];
     return students.map((student: any) => {
       const grade = grades.find((g: any) => {
-        const sid = typeof g.studentId === "object" ? g.studentId?._id : g.studentId;
-        return sid === student._id;
+        const sid = resolveId(g.studentId);
+        return sid === resolveId(student._id);
       });
       const generated = Array.isArray(courseGrades)
         ? courseGrades.some((cg: any) => {
-            const sid = typeof cg.studentId === "object" ? cg.studentId?._id : cg.studentId;
-            return sid === student._id;
+            const sid = resolveId(cg.studentId);
+            return sid === resolveId(student._id);
           })
         : false;
 
       return {
-        studentId: student._id,
-        studentName: student.name || `${student.firstName || ""} ${student.lastName || ""}`.trim() || "Unknown Student",
+        studentId: resolveId(student._id),
+        studentName: resolveStudentName(student),
         score: grade?.actualScore ?? null,
         maxScore: grade?.maxScore ?? params.defaultMaxScore ?? 20,
         status: toRowStatus(grade ? "graded" : "not_graded", generated),
-        lastUpdated: grade?.updatedAt,
+        lastUpdated: grade?.updatedAt
+          ? new Date(grade.updatedAt).toISOString()
+          : undefined,
         generated,
       };
     });
@@ -156,7 +197,7 @@ export const gradingWorkspaceService = {
 
     const map = new Map<string, any>();
     (cumulative?.studentCumulativeTermGradeRecords || []).forEach((rec: any) => {
-      const sid = typeof rec.studentId === "object" ? rec.studentId?._id : rec.studentId;
+      const sid = resolveId(rec.studentId);
       if (sid) map.set(sid, rec);
     });
 
@@ -164,14 +205,16 @@ export const gradingWorkspaceService = {
       const rec = map.get(s._id);
       const pct = rec?.percentage ?? null;
       return {
-        studentId: s._id,
-        studentName: s.name || `${s.firstName || ""} ${s.lastName || ""}`.trim() || "Unknown Student",
+        studentId: resolveId(s._id),
+        studentName: resolveStudentName(s),
         score: pct,
         maxScore: 100,
         gradePreview: rec?.grade,
         position: rec?.position,
         status: rec ? (pct < 60 ? "needs_review" : "ready_to_generate") : "not_graded",
-        lastUpdated: rec?.updatedAt,
+        lastUpdated: rec?.updatedAt
+          ? new Date(rec.updatedAt).toISOString()
+          : undefined,
       } as GradeRow;
     });
   },

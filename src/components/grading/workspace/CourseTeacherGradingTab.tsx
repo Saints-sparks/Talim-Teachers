@@ -18,6 +18,12 @@ interface Props {
 }
 
 export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, registerActions }) => {
+  const normalizeId = (value: any): string => {
+    if (!value) return "";
+    if (typeof value === "string") return value;
+    return value._id?.toString?.() || "";
+  };
+
   const { getAccessToken } = useAuth();
   const { user } = useAppContext();
   const machine = useGradingStateMachine();
@@ -43,7 +49,7 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
   const [canBatchUpload, setCanBatchUpload] = useState(false);
 
   const token = getAccessToken() || "";
-  const selectedCourseObj = courses.find((c) => c._id === selectedCourse);
+  const selectedCourseObj = courses.find((c) => normalizeId(c._id) === normalizeId(selectedCourse));
 
   const academicYears = useMemo(() => {
     const map = new Map<string, string>();
@@ -76,7 +82,7 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
       const activeTerm = (termData || []).find((t: any) => t.isActive)?._id || termData?.[0]?._id || "";
       const activeYear = (termData || []).find((t: any) => t._id === activeTerm)?.academicYearName || "";
       setSelectedAcademicYear((prev) => prev || activeYear || academicYears[0] || "");
-      setSelectedTerm((prev) => prev || activeTerm);
+      setSelectedTerm((prev) => prev || normalizeId(activeTerm));
       machine.dispatch({ type: "LOAD_SUCCESS" });
     } catch (e: any) {
       setError(e?.message || "Failed to load grading workspace");
@@ -114,7 +120,9 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
   useEffect(() => { loadBase(); }, [user?.userId]);
   useEffect(() => { loadAssessments(); }, [selectedTerm]);
   useEffect(() => {
-    if (selectedCourseObj?.classId && !selectedClass) setSelectedClass(selectedCourseObj.classId);
+    if (selectedCourseObj?.classId && !selectedClass) {
+      setSelectedClass(normalizeId(selectedCourseObj.classId));
+    }
   }, [selectedCourseObj?.classId, selectedClass]);
   useEffect(() => {
     if (selectedTerm && selectedCourseObj) {
@@ -230,7 +238,9 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
     registerActions({
       refresh: loadRows,
       primary: () => {
-        if (!selectedAssessment && filteredAssessments[0]) setSelectedAssessment(filteredAssessments[0]._id);
+        if (!selectedAssessment && filteredAssessments[0]) {
+          setSelectedAssessment(normalizeId(filteredAssessments[0]._id));
+        }
         if (selectedAssessment) setMobileStep(2);
       },
       export: () => { gradingWorkspaceService.exportPlaceholder(); },
@@ -260,10 +270,10 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
         <Card className="border-[#D7E1ED] bg-white dark:border-slate-700 dark:bg-slate-800">
           <CardContent className="grid grid-cols-1 gap-3 p-4 md:grid-cols-6">
             <Select value={selectedAcademicYear} onValueChange={setSelectedAcademicYear}><SelectTrigger aria-label="Academic year"><SelectValue placeholder="Academic Year" /></SelectTrigger><SelectContent>{academicYears.map((year) => <SelectItem key={year} value={year}>{year}</SelectItem>)}</SelectContent></Select>
-            <Select value={selectedTerm} onValueChange={setSelectedTerm}><SelectTrigger aria-label="Term"><SelectValue placeholder="Term" /></SelectTrigger><SelectContent>{filteredTerms.map((t: any) => <SelectItem key={t._id} value={t._id}>{t.name}</SelectItem>)}</SelectContent></Select>
-            <Select value={selectedCourse} onValueChange={setSelectedCourse}><SelectTrigger aria-label="Course"><SelectValue placeholder="Course" /></SelectTrigger><SelectContent>{courses.map((c: any) => <SelectItem key={c._id} value={c._id}>{c.title}</SelectItem>)}</SelectContent></Select>
-            <Select value={selectedClass} onValueChange={setSelectedClass}><SelectTrigger aria-label="Class"><SelectValue placeholder="Class" /></SelectTrigger><SelectContent>{classes.map((c: any) => <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>)}</SelectContent></Select>
-            <Select value={selectedAssessment} onValueChange={setSelectedAssessment}><SelectTrigger aria-label="Assessment"><SelectValue placeholder="Assessment" /></SelectTrigger><SelectContent>{filteredAssessments.map((a: any) => <SelectItem key={a._id} value={a._id}>{a.name || a.title}</SelectItem>)}</SelectContent></Select>
+            <Select value={selectedTerm} onValueChange={setSelectedTerm}><SelectTrigger aria-label="Term"><SelectValue placeholder="Term" /></SelectTrigger><SelectContent>{filteredTerms.map((t: any) => <SelectItem key={normalizeId(t._id)} value={normalizeId(t._id)}>{t.name}</SelectItem>)}</SelectContent></Select>
+            <Select value={selectedCourse} onValueChange={setSelectedCourse}><SelectTrigger aria-label="Course"><SelectValue placeholder="Course" /></SelectTrigger><SelectContent>{courses.map((c: any) => <SelectItem key={normalizeId(c._id)} value={normalizeId(c._id)}>{c.title}</SelectItem>)}</SelectContent></Select>
+            <Select value={selectedClass} onValueChange={setSelectedClass}><SelectTrigger aria-label="Class"><SelectValue placeholder="Class" /></SelectTrigger><SelectContent>{classes.map((c: any) => <SelectItem key={normalizeId(c._id)} value={normalizeId(c._id)}>{c.name}</SelectItem>)}</SelectContent></Select>
+            <Select value={selectedAssessment} onValueChange={setSelectedAssessment}><SelectTrigger aria-label="Assessment"><SelectValue placeholder="Assessment" /></SelectTrigger><SelectContent>{filteredAssessments.map((a: any) => <SelectItem key={normalizeId(a._id)} value={normalizeId(a._id)}>{a.name || a.title}</SelectItem>)}</SelectContent></Select>
             <Input aria-label="Search assessments" value={assessmentSearch} onChange={(e) => setAssessmentSearch(e.target.value)} placeholder="Search assessment..." />
           </CardContent>
         </Card>
@@ -280,7 +290,7 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
                 {filteredAssessments.map((a: any) => {
                   const status = (a.status || "not_started").toLowerCase();
                   return (
-                    <button key={a._id} className={`w-full rounded-lg border p-2 text-left text-sm ${selectedAssessment === a._id ? "border-[#003366] bg-[#EBF0F7]" : "border-[#D7E1ED]"}`} onClick={() => setSelectedAssessment(a._id)}>
+                    <button key={normalizeId(a._id)} className={`w-full rounded-lg border p-2 text-left text-sm ${selectedAssessment === normalizeId(a._id) ? "border-[#003366] bg-[#EBF0F7]" : "border-[#D7E1ED]"}`} onClick={() => setSelectedAssessment(normalizeId(a._id))}>
                       <p className="font-medium">{a.name || a.title}</p>
                       <p className="text-xs text-slate-500">{status.replace("_", " ")} • Max: {a.maxScore || "-"}</p>
                     </button>
