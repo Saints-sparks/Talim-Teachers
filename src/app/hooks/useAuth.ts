@@ -127,8 +127,10 @@ export const useAuth = (): UseAuthReturn => {
 
       const userData = introspection.data.user;
 
-      // RBAC: only teacher role is permitted in this portal
-      if (userData.role !== "teacher") {
+      // RBAC: teacher and school_sub_admin roles are permitted in this portal.
+      // A sub-admin who was promoted from a teacher still retains teacher access.
+      const TEACHER_PORTAL_ROLES = ["teacher", "school_sub_admin"] as const;
+      if (!TEACHER_PORTAL_ROLES.includes(userData.role as typeof TEACHER_PORTAL_ROLES[number])) {
         // Destroy the cookies we just set — this login is not allowed
         nookies.destroy(undefined, "access_token", { path: "/" });
         nookies.destroy(undefined, "refresh_token", { path: "/" });
