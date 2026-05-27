@@ -40,6 +40,8 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
   const [selectedClass, setSelectedClass] = useState("");
   const [selectedAssessment, setSelectedAssessment] = useState("");
   const [assessmentSearch, setAssessmentSearch] = useState("");
+  const [showMaxScoreEditor, setShowMaxScoreEditor] = useState(false);
+  const [maxScoreInput, setMaxScoreInput] = useState<string>("");
   const [mobileStep, setMobileStep] = useState<1 | 2 | 3 | 4>(1);
 
   const [rows, setRows] = useState<GradeRow[]>([]);
@@ -187,14 +189,28 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
   };
 
   const applyMaxScoreToAll = () => {
-    if (!rows.length) return;
-    const changedCount = rows.filter((row) => row.score !== row.maxScore).length;
-    setRows((prev) => prev.map((row) => ({ ...row, score: row.maxScore, status: "graded" })));
+    const parsed = Number(maxScoreInput);
+    if (!rows.length || Number.isNaN(parsed) || parsed <= 0) return;
+    const appliedMax = Math.floor(parsed);
+    const changedCount = rows.filter((row) => row.maxScore !== appliedMax).length;
+    setRows((prev) =>
+      prev.map((row) => {
+        const nextScore =
+          typeof row.score === "number" ? Math.min(row.score, appliedMax) : row.score;
+        return {
+          ...row,
+          maxScore: appliedMax,
+          score: nextScore,
+          status: typeof nextScore === "number" ? "graded" : row.status,
+        };
+      }),
+    );
     setSuccessMsg(
       changedCount > 0
-        ? `Applied max score to ${changedCount} student${changedCount > 1 ? "s" : ""}.`
-        : "All students already have max score.",
+        ? `Applied max score ${appliedMax} to ${changedCount} student${changedCount > 1 ? "s" : ""}.`
+        : `Max score is already ${appliedMax} for all students.`,
     );
+    setShowMaxScoreEditor(false);
     machine.dispatch({ type: "EDIT" });
   };
 
@@ -364,9 +380,43 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
 
           <div className="space-y-4 xl:col-span-3">
             <div className="flex items-center justify-end gap-2">
-              <Button variant="outline" onClick={applyMaxScoreToAll}>Apply Max Score</Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowMaxScoreEditor((prev) => !prev);
+                  if (!maxScoreInput && rows.length > 0) {
+                    setMaxScoreInput(String(rows[0].maxScore || 0));
+                  }
+                }}
+              >
+                Apply Max Score
+              </Button>
               <Button variant="outline" onClick={saveAll} disabled={!machine.isDirty || machine.isSaving}>Save All Changes</Button>
             </div>
+            {showMaxScoreEditor && (
+              <Card className="border-[#D7E1ED] bg-white dark:border-slate-700 dark:bg-slate-800">
+                <CardContent className="flex flex-col gap-3 p-3 md:flex-row md:items-end">
+                  <div className="w-full md:max-w-xs">
+                    <p className="mb-1 text-xs text-slate-500">Assessment max score</p>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={maxScoreInput}
+                      onChange={(e) => setMaxScoreInput(e.target.value)}
+                      placeholder="e.g. 20"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button onClick={applyMaxScoreToAll} disabled={!rows.length || !maxScoreInput || Number(maxScoreInput) <= 0}>
+                      Apply
+                    </Button>
+                    <Button variant="outline" onClick={() => setShowMaxScoreEditor(false)}>
+                      Cancel
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
             <GradeEntryTable
               rows={rows}
               onChangeScore={updateScore}
