@@ -123,6 +123,13 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
   useEffect(() => { loadBase(); }, [user?.userId]);
   useEffect(() => { loadAssessments(); }, [selectedTerm]);
   useEffect(() => {
+    setRows([]);
+    setInitialRows([]);
+    setError(null);
+    setSuccessMsg(null);
+    setSelectedAssessment("");
+  }, [selectedCourse]);
+  useEffect(() => {
     if (selectedCourseObj?.classId) {
       setSelectedClass(normalizeId(selectedCourseObj.classId));
     }
@@ -142,6 +149,12 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
     if (!q) return assessments;
     return assessments.filter((a: any) => (a.name || a.title || "").toLowerCase().includes(q));
   }, [assessments, assessmentSearch]);
+  useEffect(() => {
+    if (!selectedCourse || !filteredAssessments.length) return;
+    if (!selectedAssessment) {
+      setSelectedAssessment(normalizeId(filteredAssessments[0]._id));
+    }
+  }, [selectedCourse, filteredAssessments, selectedAssessment]);
 
   const dirtyCount = useMemo(() => rows.filter((r, idx) => r.score !== initialRows[idx]?.score || r.maxScore !== initialRows[idx]?.maxScore).length, [rows, initialRows]);
 
@@ -275,12 +288,12 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
       {showStep(1) && (
         <Card className="border-[#D7E1ED] bg-white dark:border-slate-700 dark:bg-slate-800">
           <CardContent className="grid grid-cols-1 gap-3 p-4 md:grid-cols-6">
-            <Select value={selectedAcademicYear} onValueChange={setSelectedAcademicYear} disabled><SelectTrigger aria-label="Academic year"><SelectValue placeholder="Academic Year" /></SelectTrigger><SelectContent>{academicYears.map((year) => <SelectItem key={year} value={year}>{year}</SelectItem>)}</SelectContent></Select>
-            <Select value={selectedTerm} onValueChange={setSelectedTerm} disabled><SelectTrigger aria-label="Term"><SelectValue placeholder="Term" /></SelectTrigger><SelectContent>{filteredTerms.filter((t: any) => normalizeId(t._id) === currentTermId).map((t: any) => <SelectItem key={normalizeId(t._id)} value={normalizeId(t._id)}>{t.name}</SelectItem>)}</SelectContent></Select>
-            <Select value={selectedCourse} onValueChange={setSelectedCourse}><SelectTrigger aria-label="Course"><SelectValue placeholder="Course" /></SelectTrigger><SelectContent>{courses.map((c: any) => <SelectItem key={normalizeId(c._id)} value={normalizeId(c._id)}>{c.title}</SelectItem>)}</SelectContent></Select>
-            <Select value={selectedClass} onValueChange={setSelectedClass} disabled={!!selectedCourse}><SelectTrigger aria-label="Class"><SelectValue placeholder="Class" /></SelectTrigger><SelectContent>{classes.map((c: any) => <SelectItem key={normalizeId(c._id)} value={normalizeId(c._id)}>{c.name}</SelectItem>)}</SelectContent></Select>
-            <Select value={selectedAssessment} onValueChange={setSelectedAssessment}><SelectTrigger aria-label="Assessment"><SelectValue placeholder="Assessment" /></SelectTrigger><SelectContent>{filteredAssessments.map((a: any) => <SelectItem key={normalizeId(a._id)} value={normalizeId(a._id)}>{a.name || a.title}</SelectItem>)}</SelectContent></Select>
-            <Input aria-label="Search assessments" value={assessmentSearch} onChange={(e) => setAssessmentSearch(e.target.value)} placeholder="Search assessment..." />
+            <Select value={selectedAcademicYear} onValueChange={setSelectedAcademicYear} disabled><SelectTrigger aria-label="Academic year" className="bg-[#0B1736] text-white border-[#29446E]"><SelectValue placeholder="Academic Year" /></SelectTrigger><SelectContent>{academicYears.map((year) => <SelectItem key={year} value={year}>{year}</SelectItem>)}</SelectContent></Select>
+            <Select value={selectedTerm} onValueChange={setSelectedTerm} disabled><SelectTrigger aria-label="Term" className="bg-[#0B1736] text-white border-[#29446E]"><SelectValue placeholder="Term" /></SelectTrigger><SelectContent>{filteredTerms.filter((t: any) => normalizeId(t._id) === currentTermId).map((t: any) => <SelectItem key={normalizeId(t._id)} value={normalizeId(t._id)}>{t.name}</SelectItem>)}</SelectContent></Select>
+            <Select value={selectedCourse} onValueChange={setSelectedCourse}><SelectTrigger aria-label="Course" className="bg-[#0B1736] text-white border-[#29446E]"><SelectValue placeholder="Course" /></SelectTrigger><SelectContent>{courses.map((c: any) => <SelectItem key={normalizeId(c._id)} value={normalizeId(c._id)}>{c.title}</SelectItem>)}</SelectContent></Select>
+            <Select value={selectedClass} onValueChange={setSelectedClass} disabled={!!selectedCourse}><SelectTrigger aria-label="Class" className="bg-[#0B1736] text-white border-[#29446E]"><SelectValue placeholder="Class" /></SelectTrigger><SelectContent>{classes.map((c: any) => <SelectItem key={normalizeId(c._id)} value={normalizeId(c._id)}>{c.name}</SelectItem>)}</SelectContent></Select>
+            <Select value={selectedAssessment} onValueChange={setSelectedAssessment}><SelectTrigger aria-label="Assessment" className="bg-[#0B1736] text-white border-[#29446E]"><SelectValue placeholder="Assessment" /></SelectTrigger><SelectContent>{filteredAssessments.map((a: any) => <SelectItem key={normalizeId(a._id)} value={normalizeId(a._id)}>{a.name || a.title}</SelectItem>)}</SelectContent></Select>
+            <Input aria-label="Search assessments" value={assessmentSearch} onChange={(e) => setAssessmentSearch(e.target.value)} placeholder="Search assessment..." className="bg-[#0B1736] text-white placeholder:text-slate-300 border-[#29446E]" />
           </CardContent>
         </Card>
       )}
@@ -295,10 +308,11 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
               <div className="space-y-2">
                 {filteredAssessments.map((a: any) => {
                   const status = (a.status || "not_started").toLowerCase();
+                  const selected = selectedAssessment === normalizeId(a._id);
                   return (
-                    <button key={normalizeId(a._id)} className={`w-full rounded-lg border p-2 text-left text-sm ${selectedAssessment === normalizeId(a._id) ? "border-[#003366] bg-[#EBF0F7]" : "border-[#D7E1ED]"}`} onClick={() => setSelectedAssessment(normalizeId(a._id))}>
-                      <p className="font-medium">{a.name || a.title}</p>
-                      <p className="text-xs text-slate-500">{status.replace("_", " ")} • Max: {a.maxScore || "-"}</p>
+                    <button key={normalizeId(a._id)} className={`w-full rounded-lg border p-2 text-left text-sm transition-colors ${selected ? "border-[#1D4ED8] bg-[#0F1F45] text-white" : "border-[#D7E1ED] bg-white text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"}`} onClick={() => setSelectedAssessment(normalizeId(a._id))}>
+                      <p className={`font-medium ${selected ? "text-white" : "text-inherit"}`}>{a.name || a.title}</p>
+                      <p className={`text-xs ${selected ? "text-slate-200" : "text-slate-500 dark:text-slate-400"}`}>{status.replace("_", " ")} • Max: {a.maxScore || "-"}</p>
                     </button>
                   );
                 })}
