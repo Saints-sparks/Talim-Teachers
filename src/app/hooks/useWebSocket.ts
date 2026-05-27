@@ -162,6 +162,8 @@ export const useWebSocket = (): WebSocketContextType => {
   const maxReconnectAttempts = 3;
   const connectionFailureCountRef = useRef<number>(0);
   const maxToastFailures = 2;
+  const lastDisconnectToastAtRef = useRef<number>(0);
+  const disconnectToastCooldownMs = 10000;
 
   // Debug state changes
   useEffect(() => {
@@ -197,7 +199,6 @@ export const useWebSocket = (): WebSocketContextType => {
       socket.on("connect", () => {
         setIsConnected(true);
         setConnectionStatus("connected");
-        toast.success("Connected to real-time services");
 
         // Reset retry counters on successful connection
         reconnectAttemptsRef.current = 0;
@@ -230,9 +231,17 @@ export const useWebSocket = (): WebSocketContextType => {
 
         // Don't show toast for intentional disconnections
         if (reason !== "io client disconnect") {
-          // Only show connection lost toast for first few failures
-          if (connectionFailureCountRef.current <= maxToastFailures) {
+          const now = Date.now();
+          const shouldShowDisconnectToast =
+            now - lastDisconnectToastAtRef.current > disconnectToastCooldownMs;
+
+          // Only show connection lost toast for first few failures and with cooldown
+          if (
+            connectionFailureCountRef.current <= maxToastFailures &&
+            shouldShowDisconnectToast
+          ) {
             toast.error("Connection lost");
+            lastDisconnectToastAtRef.current = now;
           }
 
           // Attempt to reconnect after a delay, but limit attempts
@@ -261,10 +270,7 @@ export const useWebSocket = (): WebSocketContextType => {
 
       // Reconnection events
       socket.on("reconnect", (attemptNumber) => {
-        // Only show success toast if we haven't exceeded failure limit
-        if (connectionFailureCountRef.current <= maxToastFailures) {
-          toast.success("Reconnected to real-time services");
-        }
+        // Silent success: avoid noisy "connected" toasts
       });
 
       socket.on("reconnect_error", (error) => {

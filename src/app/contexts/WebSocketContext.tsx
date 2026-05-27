@@ -13,16 +13,18 @@ interface WebSocketProviderProps {
 export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
   children,
 }) => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, getAccessToken } = useAuth();
   const webSocket = useWebSocket();
 
   // Auto-connect when user is authenticated
   useEffect(() => {
     const userId = user?.userId || user?._id;
+    const accessToken = getAccessToken();
 
     if (
       isAuthenticated &&
       userId &&
+      accessToken &&
       !webSocket.isConnected &&
       webSocket.connectionStatus !== "connecting" &&
       webSocket.connectionStatus !== "error"
@@ -35,6 +37,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
     isAuthenticated,
     user?.userId,
     user?._id,
+    getAccessToken,
     webSocket.isConnected,
     webSocket.connectionStatus,
     webSocket.connect,
