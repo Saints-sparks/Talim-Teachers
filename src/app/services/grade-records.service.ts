@@ -202,9 +202,13 @@ export class GradeRecordsApiService {
     token: string,
   ): Promise<BulkGradeResult> {
     try {
+      const sanitizedGrades = (grades || []).map((grade: any) => {
+        const { schoolId: _schoolId, ...rest } = grade || {};
+        return rest;
+      });
       const response = await apiClient.post(
         `${API_BASE_URL}/grade-records/bulk`,
-        { grades },
+        { grades: sanitizedGrades },
         this.getAuthHeaders(token),
       );
       return response.data.data;

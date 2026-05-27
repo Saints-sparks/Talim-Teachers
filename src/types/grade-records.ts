@@ -87,7 +87,7 @@ export interface CreateAssessmentGradeRecordDto {
   assessmentId: string;
   actualScore: number;
   maxScore: number;
-  schoolId: string;
+  schoolId?: string;
   classId: string;
 }
 
