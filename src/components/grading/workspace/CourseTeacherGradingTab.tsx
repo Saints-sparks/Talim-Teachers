@@ -52,11 +52,6 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
   const token = getAccessToken() || "";
   const selectedCourseObj = courses.find((c) => normalizeId(c._id) === normalizeId(selectedCourse));
   const effectiveClassId = normalizeId(selectedCourseObj?.classId || selectedClass);
-  const effectiveSchoolId =
-    normalizeId(selectedCourseObj?.schoolId) ||
-    normalizeId((selectedCourseObj as any)?.school?._id) ||
-    normalizeId((user as any)?.schoolId) ||
-    normalizeId((user as any)?.school?._id);
 
   const academicYears = useMemo(() => {
     const map = new Map<string, string>();
@@ -192,7 +187,14 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
   };
 
   const applyMaxScoreToAll = () => {
+    if (!rows.length) return;
+    const changedCount = rows.filter((row) => row.score !== row.maxScore).length;
     setRows((prev) => prev.map((row) => ({ ...row, score: row.maxScore, status: "graded" })));
+    setSuccessMsg(
+      changedCount > 0
+        ? `Applied max score to ${changedCount} student${changedCount > 1 ? "s" : ""}.`
+        : "All students already have max score.",
+    );
     machine.dispatch({ type: "EDIT" });
   };
 
@@ -210,7 +212,7 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
   };
 
   const saveAll = async () => {
-    if (!selectedAssessment || !selectedCourse || !effectiveClassId || !effectiveSchoolId || !token) return;
+    if (!selectedAssessment || !selectedCourse || !effectiveClassId || !token) return;
     const changed = rows.filter((r, idx) => r.score !== initialRows[idx]?.score && typeof r.score === "number") as Array<GradeRow & { score: number }>;
     if (!changed.length) return;
 
@@ -220,7 +222,6 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
         assessmentId: selectedAssessment,
         classId: effectiveClassId,
         courseId: selectedCourse,
-        schoolId: effectiveSchoolId,
         token,
         rows: changed.map((row) => ({ studentId: row.studentId, score: row.score, maxScore: row.maxScore })),
       });
@@ -229,7 +230,42 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
       machine.dispatch({ type: "SAVE_SUCCESS" });
       setMobileStep(3);
     } catch (e: any) {
-      setError(e?.message || "We couldn’t load this grading data. Check your connection and try again.");
+      setError(e?.message || "Failed to save assessment grades. Please try again.");
+      machine.dispatch({ type: "SAVE_ERROR" });
+    }
+  };
+
+  const isRowDirty = (studentId: string) => {
+    const index = rows.findIndex((row) => row.studentId === studentId);
+    if (index < 0) return false;
+    const row = rows[index];
+    const initial = initialRows[index];
+    return row.score !== initial?.score || row.maxScore !== initial?.maxScore;
+  };
+
+  const saveSingle = async (studentId: string) => {
+    if (!selectedAssessment || !selectedCourse || !effectiveClassId || !token) return;
+    const index = rows.findIndex((row) => row.studentId === studentId);
+    if (index < 0) return;
+    const row = rows[index];
+    const initial = initialRows[index];
+    if (row.score === initial?.score || row.maxScore === undefined || typeof row.score !== "number") return;
+
+    machine.dispatch({ type: "SAVE" });
+    setError(null);
+    try {
+      await gradingWorkspaceService.saveAssessmentScores({
+        assessmentId: selectedAssessment,
+        classId: effectiveClassId,
+        courseId: selectedCourse,
+        token,
+        rows: [{ studentId: row.studentId, score: row.score, maxScore: row.maxScore }],
+      });
+      await loadRows();
+      setSuccessMsg(`Saved ${row.studentName}'s score.`);
+      machine.dispatch({ type: "SAVE_SUCCESS" });
+    } catch (e: any) {
+      setError(e?.message || "Failed to save this student's assessment grade.");
       machine.dispatch({ type: "SAVE_ERROR" });
     }
   };
@@ -331,7 +367,15 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
               <Button variant="outline" onClick={applyMaxScoreToAll}>Apply Max Score</Button>
               <Button variant="outline" onClick={saveAll} disabled={!machine.isDirty || machine.isSaving}>Save All Changes</Button>
             </div>
-            <GradeEntryTable rows={rows} onChangeScore={updateScore} onViewDetails={setDetailsRow} onMoveNext={moveNext} />
+            <GradeEntryTable
+              rows={rows}
+              onChangeScore={updateScore}
+              onViewDetails={setDetailsRow}
+              onMoveNext={moveNext}
+              onSaveRow={saveSingle}
+              isRowDirty={isRowDirty}
+              isSaving={machine.isSaving}
+            />
 
             <div className="sticky bottom-0 z-20 rounded-xl border border-[#003366] bg-slate-900 p-3 text-white" tabIndex={0}>
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">

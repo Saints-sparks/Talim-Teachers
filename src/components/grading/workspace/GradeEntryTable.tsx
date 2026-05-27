@@ -10,10 +10,13 @@ interface Props {
   onChangeScore: (studentId: string, score: number) => void;
   onViewDetails: (row: GradeRow) => void;
   onMoveNext?: (studentId: string) => void;
+  onSaveRow?: (studentId: string) => void;
+  isRowDirty?: (studentId: string) => boolean;
+  isSaving?: boolean;
   ariaLabel?: string;
 }
 
-export const GradeEntryTable: React.FC<Props> = ({ rows, onChangeScore, onViewDetails, onMoveNext, ariaLabel }) => {
+export const GradeEntryTable: React.FC<Props> = ({ rows, onChangeScore, onViewDetails, onMoveNext, onSaveRow, isRowDirty, isSaving, ariaLabel }) => {
   return (
     <div className="overflow-auto rounded-xl border border-[#D7E1ED] bg-white dark:border-slate-700 dark:bg-slate-800">
       <table className="w-full text-sm" aria-label={ariaLabel || "Grade entry table"}>
@@ -52,9 +55,20 @@ export const GradeEntryTable: React.FC<Props> = ({ rows, onChangeScore, onViewDe
               <td className="p-3"><StatusBadge status={row.status} /></td>
               <td className="p-3">{row.lastUpdated ? new Date(row.lastUpdated).toLocaleString() : "-"}</td>
               <td className="p-3">
-                <Button variant="ghost" size="sm" onClick={() => onViewDetails(row)}>
-                  <Eye className="mr-1 h-4 w-4" /> View Details
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => onViewDetails(row)}>
+                    <Eye className="mr-1 h-4 w-4" /> View Details
+                  </Button>
+                  {onSaveRow && (
+                    <Button
+                      size="sm"
+                      onClick={() => onSaveRow(row.studentId)}
+                      disabled={isSaving || !isRowDirty?.(row.studentId)}
+                    >
+                      Save
+                    </Button>
+                  )}
+                </div>
               </td>
             </tr>
           ))}

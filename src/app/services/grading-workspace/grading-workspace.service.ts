@@ -151,14 +151,12 @@ export const gradingWorkspaceService = {
     assessmentId: string;
     courseId: string;
     classId: string;
-    schoolId: string;
     token: string;
     rows: Array<{ studentId: string; score: number; maxScore: number }>;
   }) {
     const payload = params.rows.map((row) => ({
       courseId: params.courseId,
       classId: params.classId,
-      schoolId: params.schoolId,
       studentId: row.studentId,
       assessmentId: params.assessmentId,
       actualScore: row.score,
