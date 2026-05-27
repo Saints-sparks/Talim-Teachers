@@ -52,6 +52,11 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
   const token = getAccessToken() || "";
   const selectedCourseObj = courses.find((c) => normalizeId(c._id) === normalizeId(selectedCourse));
   const effectiveClassId = normalizeId(selectedCourseObj?.classId || selectedClass);
+  const effectiveSchoolId =
+    normalizeId(selectedCourseObj?.schoolId) ||
+    normalizeId((selectedCourseObj as any)?.school?._id) ||
+    normalizeId((user as any)?.schoolId) ||
+    normalizeId((user as any)?.school?._id);
 
   const academicYears = useMemo(() => {
     const map = new Map<string, string>();
@@ -100,7 +105,7 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
   };
 
   const loadRows = async () => {
-    if (!token || !selectedAssessment || !selectedCourse || !effectiveClassId || !selectedCourseObj?.schoolId) return;
+    if (!token || !selectedAssessment || !selectedCourse || !effectiveClassId) return;
     machine.dispatch({ type: "LOAD" });
     setError(null);
     try {
@@ -205,7 +210,7 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
   };
 
   const saveAll = async () => {
-    if (!selectedAssessment || !selectedCourse || !effectiveClassId || !selectedCourseObj?.schoolId || !token) return;
+    if (!selectedAssessment || !selectedCourse || !effectiveClassId || !effectiveSchoolId || !token) return;
     const changed = rows.filter((r, idx) => r.score !== initialRows[idx]?.score && typeof r.score === "number") as Array<GradeRow & { score: number }>;
     if (!changed.length) return;
 
@@ -215,7 +220,7 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
         assessmentId: selectedAssessment,
         classId: effectiveClassId,
         courseId: selectedCourse,
-        schoolId: selectedCourseObj.schoolId,
+        schoolId: effectiveSchoolId,
         token,
         rows: changed.map((row) => ({ studentId: row.studentId, score: row.score, maxScore: row.maxScore })),
       });
