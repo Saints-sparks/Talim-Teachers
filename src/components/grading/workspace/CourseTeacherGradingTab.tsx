@@ -231,6 +231,10 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
     if (!selectedAssessment || !selectedCourse || !effectiveClassId || !token) return;
     const changed = rows.filter((r, idx) => r.score !== initialRows[idx]?.score && typeof r.score === "number") as Array<GradeRow & { score: number }>;
     if (!changed.length) return;
+    const confirmed = window.confirm(
+      `You are about to save ${changed.length} grade record${changed.length > 1 ? "s" : ""}. Continue?`,
+    );
+    if (!confirmed) return;
 
     machine.dispatch({ type: "SAVE" });
     try {
@@ -266,6 +270,8 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
     const row = rows[index];
     const initial = initialRows[index];
     if (row.score === initial?.score || row.maxScore === undefined || typeof row.score !== "number") return;
+    const confirmed = window.confirm(`Save grade record for ${row.studentName}?`);
+    if (!confirmed) return;
 
     machine.dispatch({ type: "SAVE" });
     setError(null);
