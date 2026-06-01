@@ -16,6 +16,7 @@ import {
   Plus,
   List,
   TrendingUp,
+  Send,
 } from "lucide-react";
 import {
   AssessmentGradeRecord,
@@ -80,6 +81,18 @@ const AssessmentGradeForm: React.FC<AssessmentGradeFormProps> = ({
   const [defaultMaxScore, setDefaultMaxScore] = useState<number>(100);
   const [errors, setErrors] = useState<{ [studentId: string]: string }>({});
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState(false);
+  const [publishSummary, setPublishSummary] = useState<{
+    message: string;
+    kpis?: {
+      gradedCount: number;
+      totalStudents: number;
+      classAverage: number;
+      highestScore: number;
+      lowestScore: number;
+      passRate: number;
+    };
+  } | null>(null);
 
   // Helper functions to handle new student data structure
   const getStudentName = (student: any): string => {
@@ -447,6 +460,36 @@ const AssessmentGradeForm: React.FC<AssessmentGradeFormProps> = ({
     }
   };
 
+  const publishAssessmentGrades = async () => {
+    if (!termId || !gradingStatus?.isFullyGraded) return;
+
+    setPublishing(true);
+    setSaveError(null);
+    setPublishSummary(null);
+    try {
+      const result = await gradeRecordsApi.publishAssessmentGrades(
+        assessmentId,
+        courseId,
+        termId,
+        token
+      );
+      setPublishSummary({
+        message: result.message || "Assessment grades published successfully",
+        kpis: result.kpis,
+      });
+      await loadCourseAssessmentData();
+    } catch (error) {
+      console.error("Error publishing assessment grades:", error);
+      setSaveError(
+        error instanceof Error
+          ? error.message
+          : "Failed to publish assessment grades. Please try again."
+      );
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   const setAllMaxScores = (maxScore: number) => {
     setDefaultMaxScore(maxScore);
     setStudentGradeData((prev) =>
@@ -608,6 +651,60 @@ const AssessmentGradeForm: React.FC<AssessmentGradeFormProps> = ({
                 ))}
               </div>
             )}
+
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
+              <p className="text-xs text-[#6F6F6F]">
+                Publish sends results to students and parents, then makes this assessment visible in the student results portal.
+              </p>
+              <Tooltip
+                content={
+                  gradingStatus.isFullyGraded
+                    ? "Publish grades and notify students and parents."
+                    : "Finish grading every student before publishing."
+                }
+                side="left"
+              >
+                <Button
+                  size="sm"
+                  onClick={publishAssessmentGrades}
+                  disabled={!gradingStatus.isFullyGraded || publishing || saving}
+                  className="bg-[#003366] hover:bg-[#00264d] text-white"
+                >
+                  {publishing ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
+                      Publishing...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-1" />
+                      Publish Assessment
+                    </>
+                  )}
+                </Button>
+              </Tooltip>
+            </div>
+          </div>
+        )}
+
+        {publishSummary && (
+          <div className="mt-3 rounded-xl border border-green-200 bg-green-50 p-3">
+            <div className="flex items-start gap-2">
+              <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-green-800">
+                  {publishSummary.message}
+                </p>
+                {publishSummary.kpis && (
+                  <p className="text-xs text-green-700 mt-1">
+                    Average {publishSummary.kpis.classAverage}% • Pass rate{" "}
+                    {publishSummary.kpis.passRate}% •{" "}
+                    {publishSummary.kpis.gradedCount}/
+                    {publishSummary.kpis.totalStudents} students notified
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
         )}
 

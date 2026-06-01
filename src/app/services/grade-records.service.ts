@@ -132,6 +132,39 @@ export class GradeRecordsApiService {
     }
   }
 
+  async publishAssessmentGrades(
+    assessmentId: string,
+    courseId: string,
+    termId: string,
+    token: string,
+  ): Promise<{
+    message: string;
+    publication?: any;
+    kpis?: {
+      gradedCount: number;
+      totalStudents: number;
+      classAverage: number;
+      highestScore: number;
+      lowestScore: number;
+      passRate: number;
+    };
+  }> {
+    try {
+      const response = await apiClient.post(
+        `${API_BASE_URL}/grade-records/assessment/${assessmentId}/course/${courseId}/publish`,
+        { termId },
+        this.getAuthHeaders(token),
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error("Error publishing assessment grades:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          "Failed to publish assessment grades",
+      );
+    }
+  }
+
   /**
    * Get all assessment grades for a course
    */
