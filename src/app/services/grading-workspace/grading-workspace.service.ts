@@ -1,5 +1,7 @@
 import { fetchTeacherDetails } from "@/app/services/api.service";
 import { gradeRecordsApi } from "@/app/services/grade-records.service";
+import { apiClient } from "@/app/lib/api/apiClient";
+import { API_BASE_URL } from "@/app/lib/api/config";
 import { GradeRow, GenerationResult, RowStatus } from "@/components/grading/workspace/types";
 
 const resolveId = (val: any): string => {
@@ -147,6 +149,20 @@ export const gradingWorkspaceService = {
     });
   },
 
+  async publishAssessmentGrades(params: {
+    assessmentId: string;
+    courseId: string;
+    termId: string;
+    token: string;
+  }) {
+    return gradeRecordsApi.publishAssessmentGrades(
+      params.assessmentId,
+      params.courseId,
+      params.termId,
+      params.token,
+    );
+  },
+
   async saveAssessmentScores(params: {
     assessmentId: string;
     courseId: string;
@@ -268,29 +284,72 @@ export const gradingWorkspaceService = {
     }
   },
 
-  async retryFailedStudents(_classId: string, _runId: string, _studentIds: string[], _token: string): Promise<GenerationResult> {
-    // BACKEND CONFIRMATION NEEDED: /grading/classes/:classId/generate-summary/retry
-    return {
-      status: "partial_failed",
-      successful: 0,
-      failed: _studentIds.length,
-      skipped: 0,
-      errors: _studentIds.map((id) => ({ studentId: id, reason: "Retry endpoint not yet mapped" })),
-    };
+  async getPublicationStatus(params: {
+    assessmentId: string;
+    courseId: string;
+    termId: string;
+    token: string;
+  }) {
+    return gradeRecordsApi.getPublicationStatus(
+      params.assessmentId,
+      params.courseId,
+      params.termId,
+      params.token,
+    );
   },
 
-  async getGenerationHistory(_classId: string, _token: string) {
-    // BACKEND CONFIRMATION NEEDED: /grading/classes/:classId/generation-history?termId=
-    return [] as Array<{ runId: string; date: string; generatedBy: string; successful: number; failed: number; skipped: number; status: string }>;
+  async retryFailedStudents(classId: string, runId: string, studentIds: string[], token: string): Promise<GenerationResult> {
+    try {
+      const response = await apiClient.post(
+        `${API_BASE_URL}/grade-records/grading/classes/${classId}/generate-summary/retry`,
+        { runId, studentIds },
+        { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } },
+      );
+      return response?.data || { status: "failed", successful: 0, failed: studentIds.length, skipped: 0, errors: [] };
+    } catch (error: any) {
+      return {
+        status: "failed",
+        successful: 0,
+        failed: studentIds.length,
+        skipped: 0,
+        errors: studentIds.map((id) => ({ studentId: id, reason: error?.message || "Retry failed" })),
+      };
+    }
+  },
+
+  async getGenerationHistory(classId: string, token: string, termId?: string) {
+    try {
+      // Using the gradeRecordsApi pattern but direct fetch for this workspace endpoint
+      const { apiClient } = await import("@/app/lib/api/apiClient");
+      const { API_BASE_URL } = await import("@/app/lib/api/config");
+      const response = await apiClient.get(
+        `${API_BASE_URL}/grade-records/grading/classes/${classId}/generation-history`,
+        {
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          params: termId ? { termId } : {},
+        },
+      );
+      return response.data?.data || response.data || [];
+    } catch {
+      return [];
+    }
   },
 
   async getStudentAssessmentHistory(studentId: string, courseId: string, termId: string, token: string) {
-    // BACKEND CONFIRMATION NEEDED: /grading/students/:studentId/assessment-history?courseId=&termId=
-    const grades = await gradeRecordsApi.getStudentTermGrades(studentId, termId, token);
-    return grades.filter((g) => {
-      const cId = typeof g.courseId === "object" ? (g.courseId as any)._id : g.courseId;
-      return cId === courseId;
-    });
+    try {
+      const { apiClient } = await import("@/app/lib/api/apiClient");
+      const { API_BASE_URL } = await import("@/app/lib/api/config");
+      const response = await apiClient.get(
+        `${API_BASE_URL}/grade-records/grading/students/${studentId}/assessment-history`,
+        {
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          params: { courseId, termId },
+        },
+      );
+      return response.data?.data || response.data || [];
+    } catch {
+      return [];
+    }
   },
 
   async exportPlaceholder() {

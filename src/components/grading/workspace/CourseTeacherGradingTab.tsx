@@ -48,6 +48,20 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
   const [initialRows, setInitialRows] = useState<GradeRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [publishSummary, setPublishSummary] = useState<{
+    message: string;
+    kpis?: {
+      gradedCount: number;
+      totalStudents: number;
+      classAverage: number;
+      highestScore: number;
+      lowestScore: number;
+      passRate: number;
+    };
+  } | null>(null);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [alreadyPublished, setAlreadyPublished] = useState(false);
+  const [publishedAssessmentIds, setPublishedAssessmentIds] = useState<Set<string>>(new Set());
   const [detailsRow, setDetailsRow] = useState<GradeRow | null>(null);
   const [canBatchUpload, setCanBatchUpload] = useState(false);
 
@@ -122,6 +136,29 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
     }
   };
 
+  const loadPublicationStatus = async () => {
+    if (!selectedAssessment || !selectedCourse || !selectedTerm || !token) return;
+    try {
+      const status = await gradingWorkspaceService.getPublicationStatus({
+        assessmentId: selectedAssessment,
+        courseId: selectedCourse,
+        termId: selectedTerm,
+        token,
+      });
+      setAlreadyPublished(status.published);
+      if (status.published) {
+        setPublishedAssessmentIds((prev) => new Set([...prev, selectedAssessment]));
+        if (status.kpis) {
+          setPublishSummary({ message: "Grades already published for this assessment.", kpis: status.kpis as any });
+        }
+      } else {
+        setPublishSummary(null);
+      }
+    } catch {
+      setAlreadyPublished(false);
+    }
+  };
+
   useEffect(() => { loadBase(); }, [user?.userId]);
   useEffect(() => { loadAssessments(); }, [selectedTerm]);
   useEffect(() => {
@@ -130,6 +167,8 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
     setError(null);
     setSuccessMsg(null);
     setSelectedAssessment("");
+    setAlreadyPublished(false);
+    setPublishSummary(null);
   }, [selectedCourse]);
   useEffect(() => {
     if (selectedCourseObj?.classId) {
@@ -144,7 +183,13 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
       });
     }
   }, [selectedTerm, selectedCourse, terms, selectedCourseObj]);
-  useEffect(() => { if (selectedAssessment) loadRows(); }, [selectedAssessment, selectedCourse, effectiveClassId]);
+  useEffect(() => {
+    if (selectedAssessment) {
+      loadRows();
+      loadPublicationStatus();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAssessment, selectedCourse, effectiveClassId, selectedTerm]);
 
   const filteredAssessments = useMemo(() => {
     const q = assessmentSearch.toLowerCase().trim();
@@ -159,6 +204,23 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
   }, [selectedCourse, filteredAssessments, selectedAssessment]);
 
   const dirtyCount = useMemo(() => rows.filter((r, idx) => r.score !== initialRows[idx]?.score || r.maxScore !== initialRows[idx]?.maxScore).length, [rows, initialRows]);
+  const allStudentsGraded = rows.length > 0 && rows.every((row) => typeof row.score === "number");
+  const canPublish =
+    Boolean(selectedAssessment && selectedCourse && selectedTerm && allStudentsGraded) &&
+    !machine.isDirty &&
+    !machine.isSaving &&
+    !machine.isGenerating &&
+    !isPublishing &&
+    !alreadyPublished;
+  const publishButtonTitle = alreadyPublished
+    ? "Grades already published for this assessment."
+    : !selectedAssessment
+      ? "Select an assessment before publishing."
+      : !allStudentsGraded
+        ? "Grade every student before publishing."
+        : machine.isDirty
+          ? "Save changes before publishing."
+          : "Publish grades and notify students and parents.";
 
   useEffect(() => {
     if (dirtyCount > 0) machine.dispatch({ type: "EDIT" });
@@ -313,6 +375,35 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
     }
   };
 
+  const publishAssessmentGrades = async () => {
+    if (!selectedAssessment || !selectedCourse || !selectedTerm || !token || !allStudentsGraded || machine.isDirty) return;
+    const confirmed = window.confirm("Publish this assessment's grades to students and parents?");
+    if (!confirmed) return;
+
+    setIsPublishing(true);
+    setError(null);
+    setPublishSummary(null);
+    try {
+      const result = await gradingWorkspaceService.publishAssessmentGrades({
+        assessmentId: selectedAssessment,
+        courseId: selectedCourse,
+        termId: selectedTerm,
+        token,
+      });
+      const payload = (result as any)?.data || result;
+      const kpis = payload?.kpis;
+      const message = payload?.message || (result as any)?.message || "Assessment grades published successfully.";
+      setPublishSummary({ message, kpis });
+      setSuccessMsg(message);
+      setAlreadyPublished(true);
+      setPublishedAssessmentIds((prev) => new Set([...prev, selectedAssessment]));
+    } catch (e: any) {
+      setError(e?.message || "Failed to publish assessment grades.");
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
   useEffect(() => {
     registerActions({
       refresh: loadRows,
@@ -346,7 +437,33 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
       <div className="rounded-lg border border-[#D7E1ED] bg-[#EBF0F7] px-3 py-2 text-sm text-[#003366] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
         Showing enrolled students for <span className="font-medium">{selectedCourseObj?.classId?.name || classes.find((c) => normalizeId(c._id) === selectedClass)?.name || "selected class"}</span> in current term only.
       </div>
-      {successMsg && <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">{successMsg}</div>}
+      {successMsg && !publishSummary?.kpis && (
+        <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">{successMsg}</div>
+      )}
+      {publishSummary?.kpis && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950">
+          <div className="mb-3 flex items-center gap-2">
+            <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">
+              ✓ Published
+            </span>
+            <span className="text-sm text-emerald-800 dark:text-emerald-200">{publishSummary.message}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            {[
+              { label: "Class avg", value: `${publishSummary.kpis.classAverage.toFixed(1)}%` },
+              { label: "Pass rate", value: `${publishSummary.kpis.passRate.toFixed(1)}%` },
+              { label: "Graded", value: `${publishSummary.kpis.gradedCount}/${publishSummary.kpis.totalStudents}` },
+              { label: "Highest score", value: publishSummary.kpis.highestScore },
+              { label: "Lowest score", value: publishSummary.kpis.lowestScore },
+            ].map(({ label, value }) => (
+              <div key={label} className="rounded-lg bg-white px-3 py-2 dark:bg-slate-800">
+                <p className="text-xs text-slate-500">{label}</p>
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {showStep(1) && (
         <Card className="border-[#D7E1ED] bg-white dark:border-slate-700 dark:bg-slate-800">
@@ -372,9 +489,17 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
                 {filteredAssessments.map((a: any) => {
                   const status = (a.status || "not_started").toLowerCase();
                   const selected = selectedAssessment === normalizeId(a._id);
+                  const isPublishedItem = publishedAssessmentIds.has(normalizeId(a._id));
                   return (
                     <button key={normalizeId(a._id)} className={`w-full rounded-lg border p-2 text-left text-sm transition-colors ${selected ? "border-[#1D4ED8] bg-[#0F1F45] text-white" : "border-[#D7E1ED] bg-white text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"}`} onClick={() => setSelectedAssessment(normalizeId(a._id))}>
-                      <p className={`font-medium ${selected ? "text-white" : "text-inherit"}`}>{a.name || a.title}</p>
+                      <div className="flex items-start justify-between gap-1">
+                        <p className={`font-medium ${selected ? "text-white" : "text-inherit"}`}>{a.name || a.title}</p>
+                        {isPublishedItem && (
+                          <span className="shrink-0 rounded-full bg-emerald-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                            Published
+                          </span>
+                        )}
+                      </div>
                       <p className={`text-xs ${selected ? "text-slate-200" : "text-slate-500 dark:text-slate-400"}`}>{status.replace("_", " ")} • Max: {a.maxScore || "-"}</p>
                     </button>
                   );
@@ -440,6 +565,14 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
                   <Button variant="outline" onClick={() => setRows(initialRows)} disabled={!machine.isDirty}>Discard</Button>
                   <Button className="bg-[#003366] hover:bg-[#002B57]" onClick={saveAll} disabled={!machine.isDirty || machine.isSaving || machine.isGenerating}>Save Changes</Button>
                   <Button className="bg-[#003366] hover:bg-[#002B57]" onClick={generateCourseGrades} disabled={machine.isDirty || machine.isSaving || machine.isGenerating}>Generate Course Grades</Button>
+                  <Button
+                    className={alreadyPublished ? "bg-emerald-600 hover:bg-emerald-700 cursor-default" : "bg-[#1D4ED8] hover:bg-[#1E40AF]"}
+                    onClick={publishAssessmentGrades}
+                    disabled={!canPublish}
+                    title={publishButtonTitle}
+                  >
+                    {isPublishing ? "Publishing…" : alreadyPublished ? "✓ Published" : "Publish Grades"}
+                  </Button>
                 </div>
               </div>
             </div>

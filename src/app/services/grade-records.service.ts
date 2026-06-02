@@ -1138,6 +1138,44 @@ export class GradeRecordsApiService {
   }
 
   /**
+   * Get publication status for an assessment + course
+   */
+  async getPublicationStatus(
+    assessmentId: string,
+    courseId: string,
+    termId: string,
+    token: string,
+  ): Promise<{
+    published: boolean;
+    publishedAt?: string;
+    publishedBy?: any;
+    kpis?: {
+      classAverage: number;
+      highestScore: number;
+      lowestScore: number;
+      passRate: number;
+      gradedCount: number;
+      totalStudents: number;
+    };
+    notificationSummary?: any;
+  }> {
+    try {
+      const response = await apiClient.get(
+        `${API_BASE_URL}/grade-records/grading/assessments/${assessmentId}/course/${courseId}/publication-status`,
+        {
+          ...this.getAuthHeaders(token),
+          params: { termId },
+        },
+      );
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.status === 404) return { published: false };
+      console.error('Error fetching publication status:', error);
+      return { published: false };
+    }
+  }
+
+  /**
    * Get grade statistics for a course
    */
   async getCourseGradeStatistics(
