@@ -896,12 +896,16 @@ export class GradeRecordsApiService {
   async getAssessmentsForTerm(termId: string, token: string) {
     try {
       const response = await apiClient.get(
-        `${API_BASE_URL}/assessments/term/${termId}/active`,
+        `${API_BASE_URL}/assessments/term/${termId}`,
         this.getAuthHeaders(token),
       );
 
-      // Ensure we always return an array
-      const data = response.data.data || response.data || [];
+      // Ensure we always return an array across backend response shapes.
+      const data =
+        response.data?.data ||
+        response.data?.assessments ||
+        response.data ||
+        [];
       return Array.isArray(data) ? data : [];
     } catch (error: any) {
       console.error("Error fetching assessments for term:", error);
