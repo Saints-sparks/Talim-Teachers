@@ -82,13 +82,6 @@ const GradingPage: React.FC = () => {
             )}
           </div>
 
-          <div className="rounded-xl border border-[#D7E1ED] bg-white p-4 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-            <p className="font-semibold text-[#003366] dark:text-slate-100">Required backend additions/confirmations</p>
-            <p>1. Class generation history endpoint mapping for Generation History tab.</p>
-            <p>2. Student assessment history endpoint mapping for Details drawer audit trail.</p>
-            <p>3. Batch upload capability endpoint and payload for course grading scope.</p>
-            <p>4. Scoped class assessment overview endpoint for Class Teacher &quot;Assessment Overview&quot;.</p>
-          </div>
         </div>
       </div>
     </Layout>
