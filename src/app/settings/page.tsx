@@ -679,19 +679,91 @@ function AccountSection() {
 
 // ─── Section 2: Notifications ────────────────────────────────────────────────
 
+interface NotifPrefs {
+  announcementsEnabled: boolean;
+  attendanceEnabled: boolean;
+  resultsEnabled: boolean;
+  resourcesEnabled: boolean;
+  messagesEnabled: boolean;
+  emailEnabled: boolean;
+  pushEnabled: boolean;
+  quietHoursEnabled: boolean;
+  quietHoursStart: string;
+  quietHoursEnd: string;
+}
+
+const NOTIF_DEFAULTS: NotifPrefs = {
+  announcementsEnabled: true,
+  attendanceEnabled: true,
+  resultsEnabled: true,
+  resourcesEnabled: true,
+  messagesEnabled: true,
+  emailEnabled: false,
+  pushEnabled: true,
+  quietHoursEnabled: false,
+  quietHoursStart: "22:00",
+  quietHoursEnd: "07:00",
+};
+
 function NotificationsSection() {
-  const { user } = useAppContext();
-  const { counts, markAllAsRead, loading } = useNotifications();
-  const { prefs, save } = useTeacherPrefs(user?.userId);
+  const { counts, markAllAsRead, loading: notifLoading } = useNotifications();
+  const [prefs, setPrefs] = useState<NotifPrefs>(NOTIF_DEFAULTS);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState<Partial<Record<keyof NotifPrefs, boolean>>>({});
+  const [error, setError] = useState<string | null>(null);
 
-  const n = prefs.notifications;
+  useEffect(() => {
+    apiClient
+      .get("/notifications/preferences")
+      .then((res: any) => {
+        const data = res?.data ?? res;
+        if (data && typeof data === "object") {
+          setPrefs((prev) => ({ ...prev, ...data }));
+        }
+      })
+      .catch(() => {
+        setError("Could not load notification preferences. Your changes will still be saved.");
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
-  const setN = (patch: Partial<typeof n>) =>
-    save({ notifications: { ...n, ...patch } });
+  const toggle = async (field: keyof NotifPrefs, value: boolean | string) => {
+    const prev = prefs[field];
+    setPrefs((p) => ({ ...p, [field]: value }));
+    setSaving((s) => ({ ...s, [field]: true }));
+    try {
+      await apiClient.patch("/notifications/preferences", { [field]: value });
+    } catch {
+      setPrefs((p) => ({ ...p, [field]: prev }));
+      toast.error("Failed to save preference. Please try again.");
+    } finally {
+      setSaving((s) => ({ ...s, [field]: false }));
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <SectionHeader title="Notifications" desc="Control your alerts and notification preferences." />
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-14 bg-gray-100 dark:bg-slate-800 rounded-xl animate-pulse" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <SectionHeader title="Notifications" desc="Control your alerts and notification preferences." />
+
+      {error && (
+        <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50">
+          <AlertCircle size={15} className="text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+          <p className="text-xs text-amber-700 dark:text-amber-300">{error}</p>
+        </div>
+      )}
 
       <Card>
         <CardHeader
@@ -703,19 +775,19 @@ function NotificationsSection() {
           }
         />
         <div className="px-5">
-          <ToggleRow label="School announcements"       desc="Alerts from your school admin"          checked={n.announcements}  onChange={(v) => setN({ announcements: v })} />
-          <ToggleRow label="Attendance alerts"          desc="Attendance reminders and updates"        checked={n.attendance}     onChange={(v) => setN({ attendance: v })} />
-          <ToggleRow label="Grading & result alerts"    desc="New assessments and grade updates"       checked={n.grading}        onChange={(v) => setN({ grading: v })} />
-          <ToggleRow label="Resource & curriculum"      desc="New materials and curriculum updates"    checked={n.resources}      onChange={(v) => setN({ resources: v })} />
-          <ToggleRow label="Message notifications"      desc="New messages from students or groups"   checked={n.messages}       onChange={(v) => setN({ messages: v })} />
+          <ToggleRow label="School announcements"    desc="Alerts from your school admin"         checked={prefs.announcementsEnabled} onChange={(v) => toggle("announcementsEnabled", v)} disabled={saving.announcementsEnabled} />
+          <ToggleRow label="Attendance alerts"       desc="Attendance reminders and updates"       checked={prefs.attendanceEnabled}    onChange={(v) => toggle("attendanceEnabled", v)}    disabled={saving.attendanceEnabled} />
+          <ToggleRow label="Grading & result alerts" desc="New assessments and grade updates"      checked={prefs.resultsEnabled}       onChange={(v) => toggle("resultsEnabled", v)}        disabled={saving.resultsEnabled} />
+          <ToggleRow label="Resource & curriculum"   desc="New materials and curriculum updates"   checked={prefs.resourcesEnabled}     onChange={(v) => toggle("resourcesEnabled", v)}      disabled={saving.resourcesEnabled} />
+          <ToggleRow label="Message notifications"   desc="New messages from students or groups"  checked={prefs.messagesEnabled}      onChange={(v) => toggle("messagesEnabled", v)}       disabled={saving.messagesEnabled} />
         </div>
       </Card>
 
       <Card>
         <CardHeader title="Delivery" />
         <div className="px-5">
-          <ToggleRow label="In-app notifications" desc="Show alerts inside the app"    checked={n.inApp}  onChange={(v) => setN({ inApp: v })} />
-          <ToggleRow label="Email notifications"  desc="Receive updates via email"    checked={n.email}  onChange={(v) => setN({ email: v })} />
+          <ToggleRow label="Push notifications"  desc="Send alerts to this device"   checked={prefs.pushEnabled}  onChange={(v) => toggle("pushEnabled", v)}  disabled={saving.pushEnabled} />
+          <ToggleRow label="Email notifications" desc="Receive updates via email"    checked={prefs.emailEnabled} onChange={(v) => toggle("emailEnabled", v)} disabled={saving.emailEnabled} />
           <PushNotificationToggle />
         </div>
       </Card>
@@ -725,21 +797,22 @@ function NotificationsSection() {
         <div className="px-5">
           <ToggleRow
             label="Enable quiet hours"
-            desc="Suppress notifications during set times"
-            checked={n.quietHoursEnabled}
-            onChange={(v) => setN({ quietHoursEnabled: v })}
+            desc="Suppress non-urgent notifications during set times"
+            checked={prefs.quietHoursEnabled}
+            onChange={(v) => toggle("quietHoursEnabled", v)}
+            disabled={saving.quietHoursEnabled}
           />
-          {n.quietHoursEnabled && (
+          {prefs.quietHoursEnabled && (
             <div className="grid grid-cols-1 gap-3 py-3 sm:grid-cols-2">
-              {(["quietStart", "quietEnd"] as const).map((field) => (
+              {(["quietHoursStart", "quietHoursEnd"] as const).map((field) => (
                 <div key={field}>
                   <p className="text-xs text-gray-500 dark:text-slate-400 mb-1">
-                    {field === "quietStart" ? "Start time" : "End time"}
+                    {field === "quietHoursStart" ? "Start time" : "End time"}
                   </p>
                   <input
                     type="time"
-                    value={n[field]}
-                    onChange={(e) => setN({ [field]: e.target.value })}
+                    value={prefs[field]}
+                    onChange={(e) => toggle(field, e.target.value)}
                     className="text-sm border border-gray-200 dark:border-slate-600 rounded-lg px-2 py-1.5 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#003366] dark:focus:ring-blue-500"
                   />
                 </div>
@@ -752,8 +825,10 @@ function NotificationsSection() {
       <Card>
         <div className="p-5 flex flex-wrap gap-3">
           <button
-            onClick={() => markAllAsRead().then(() => toast.success("All notifications marked as read."))}
-            disabled={loading || counts.unread === 0}
+            onClick={() =>
+              markAllAsRead().then(() => toast.success("All notifications marked as read."))
+            }
+            disabled={notifLoading || counts.unread === 0}
             className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-[#003366] dark:bg-blue-600 text-white hover:bg-[#002244] dark:hover:bg-blue-700 disabled:opacity-50 transition-colors"
           >
             <Check size={14} />
