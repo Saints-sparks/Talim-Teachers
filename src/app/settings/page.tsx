@@ -43,6 +43,7 @@ import { apiClient } from "@/app/lib/api/apiClient";
 import { toast } from "@/components/CustomToast";
 import { useTheme, Theme } from "@/providers/theme-provider";
 import Layout from "@/components/Layout";
+import { PushNotificationToggle } from "@/components/notifications/PushNotificationToggle";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -715,6 +716,7 @@ function NotificationsSection() {
         <div className="px-5">
           <ToggleRow label="In-app notifications" desc="Show alerts inside the app"    checked={n.inApp}  onChange={(v) => setN({ inApp: v })} />
           <ToggleRow label="Email notifications"  desc="Receive updates via email"    checked={n.email}  onChange={(v) => setN({ email: v })} />
+          <PushNotificationToggle />
         </div>
       </Card>
 
