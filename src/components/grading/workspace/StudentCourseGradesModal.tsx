@@ -100,14 +100,32 @@ export const StudentCourseGradesModal: React.FC<Props> = ({
     }
   };
 
-  const gradeMap = new Map<string, any>(
-    courseGrades.map((g: any) => [resolveId(g.courseId), g]),
-  );
+  // Build the display list from grade records (primary source) so the course name and
+  // courseId always come from the populated data — no cross-source ID matching required.
+  const getCourseTitle = (courseId: any): string => {
+    if (!courseId) return "Unknown Course";
+    if (typeof courseId === "object") return courseId.title || courseId.name || "Unknown Course";
+    return "Unknown Course";
+  };
 
-  const allCoursesGraded =
-    courseList.length > 0 && courseList.every((c) => gradeMap.has(c.courseId));
+  const gradedEntries = courseGrades.map((g: any) => ({
+    courseId: resolveId(g.courseId),         // actual ID from the grade record
+    courseName: getCourseTitle(g.courseId),  // title from populated course object
+    teacherName: courseList.find(c => c.courseId === resolveId(g.courseId))?.teacherName || "",
+    grade: g,
+  }));
 
-  const ungradedCount = courseList.filter((c) => !gradeMap.has(c.courseId)).length;
+  const gradedIds = new Set(gradedEntries.map((e) => e.courseId));
+  const gradedNames = new Set(gradedEntries.map((e) => e.courseName.toLowerCase()));
+
+  // Add class-list courses that have no matching grade (neither by ID nor by name)
+  const ungradedEntries = courseList
+    .filter((c) => !gradedIds.has(c.courseId) && !gradedNames.has(c.courseName.toLowerCase()))
+    .map((c) => ({ courseId: c.courseId, courseName: c.courseName, teacherName: c.teacherName, grade: null as any }));
+
+  const displayCourses = [...gradedEntries, ...ungradedEntries];
+  const allCoursesGraded = ungradedEntries.length === 0 && gradedEntries.length > 0;
+  const ungradedCount = ungradedEntries.length;
 
   const handleGenerateTermGrade = async () => {
     setIsGenerating(true);
@@ -171,9 +189,9 @@ export const StudentCourseGradesModal: React.FC<Props> = ({
             {/* Summary row */}
             <div className="flex items-center gap-4 rounded-lg border border-[#D7E1ED] bg-[#EBF0F7] px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800">
               <span className="text-slate-600 dark:text-slate-300">
-                <span className="font-medium text-slate-800 dark:text-slate-100">{courseGrades.length}</span>/{courseList.length} courses graded
+                <span className="font-medium text-slate-800 dark:text-slate-100">{gradedEntries.length}</span>/{displayCourses.length} courses graded
               </span>
-              {!allCoursesGraded && (
+              {!allCoursesGraded && ungradedCount > 0 && (
                 <span className="text-amber-700 dark:text-amber-400">
                   {ungradedCount} still need course grades
                 </span>
@@ -181,11 +199,11 @@ export const StudentCourseGradesModal: React.FC<Props> = ({
             </div>
 
             {/* Course list */}
-            {courseList.length === 0 ? (
+            {displayCourses.length === 0 ? (
               <p className="py-8 text-center text-sm text-slate-500">No courses found for this class and term.</p>
             ) : (
-              courseList.map((course) => {
-                const courseGrade = gradeMap.get(course.courseId);
+              displayCourses.map((course) => {
+                const courseGrade = course.grade;
                 const isExpanded = expandedCourse === course.courseId;
                 const details = assessmentDetails[course.courseId];
                 const isLoadingDetails = loadingAssessments[course.courseId];
@@ -273,13 +291,13 @@ export const StudentCourseGradesModal: React.FC<Props> = ({
             )}
 
             {/* Generate term grade footer */}
-            {!termGrade && courseList.length > 0 && (
+            {!termGrade && displayCourses.length > 0 && (
               <div className={`rounded-xl border p-4 ${allCoursesGraded ? "border-[#003366] bg-[#EBF0F7] dark:border-slate-600 dark:bg-slate-800" : "border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950"}`}>
                 {allCoursesGraded ? (
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
-                        All {courseList.length} courses graded — ready to generate term grade
+                        All {displayCourses.length} courses graded — ready to generate term grade
                       </p>
                       <p className="text-xs text-slate-500">
                         Calculates {studentName}'s cumulative score and class position
