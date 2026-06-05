@@ -352,6 +352,97 @@ export const gradingWorkspaceService = {
     }
   },
 
+  async loadAllPublicationStatuses(
+    assessments: any[],
+    courseId: string,
+    termId: string,
+    token: string,
+  ): Promise<Record<string, boolean>> {
+    if (!assessments.length || !courseId || !termId) return {};
+    const results = await Promise.allSettled(
+      assessments.map((a) =>
+        gradeRecordsApi.getPublicationStatus(
+          resolveId(a._id),
+          courseId,
+          termId,
+          token,
+        ),
+      ),
+    );
+    const map: Record<string, boolean> = {};
+    assessments.forEach((a, i) => {
+      const r = results[i];
+      map[resolveId(a._id)] = r.status === "fulfilled" ? !!(r.value as any)?.published : false;
+    });
+    return map;
+  },
+
+  async generateStudentTermGrade(
+    studentId: string,
+    termId: string,
+    token: string,
+  ): Promise<{ message: string }> {
+    const response = await apiClient.post(
+      `${API_BASE_URL}/grade-records/student-cumulative-term-grade-records/calculate/${studentId}/${termId}`,
+      {},
+      { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } },
+    );
+    return response.data;
+  },
+
+  async getStudentCourseGrades(
+    studentId: string,
+    termId: string,
+    token: string,
+  ): Promise<any[]> {
+    try {
+      const response = await apiClient.get(
+        `${API_BASE_URL}/grade-records/course-grade-records/student/${studentId}/term/${termId}`,
+        { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } },
+      );
+      const raw = response.data?.data || response.data || [];
+      return Array.isArray(raw) ? raw : [];
+    } catch {
+      return [];
+    }
+  },
+
+  async getStudentTermGrade(
+    studentId: string,
+    termId: string,
+    token: string,
+  ): Promise<any | null> {
+    try {
+      const response = await apiClient.get(
+        `${API_BASE_URL}/grade-records/student-cumulative-term-grade-records/${studentId}/${termId}`,
+        { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } },
+      );
+      return response.data?.data || response.data || null;
+    } catch {
+      return null;
+    }
+  },
+
+  async getClassCourseList(
+    classId: string,
+    termId: string,
+    token: string,
+  ): Promise<any[]> {
+    try {
+      const response = await apiClient.get(
+        `${API_BASE_URL}/grade-records/grading/classes/${classId}/assessment-overview`,
+        {
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          params: { termId },
+        },
+      );
+      const raw = response.data?.data || response.data || [];
+      return Array.isArray(raw) ? raw : [];
+    } catch {
+      return [];
+    }
+  },
+
   async exportPlaceholder() {
     return true;
   },

@@ -8,9 +8,9 @@ import { ScopedKpiCards } from "./ScopedKpiCards";
 import { ClassPerformanceTable } from "./ClassPerformanceTable";
 import { AssessmentOverviewTab } from "./AssessmentOverviewTab";
 import { GenerationHistoryTab } from "./GenerationHistoryTab";
-import { DetailsDrawer } from "./DetailsDrawer";
 import { GenerateSummaryModal } from "./GenerateSummaryModal";
 import { ValidationResultModal } from "./ValidationResultModal";
+import { StudentCourseGradesModal } from "./StudentCourseGradesModal";
 import { GenerationResult, GradeRow, ScopedKpi } from "./types";
 import { useGradingStateMachine } from "./useGradingStateMachine";
 import { useAuth } from "@/app/hooks/useAuth";
@@ -48,13 +48,13 @@ export const ClassTeacherGradingTab: React.FC<Props> = ({ onScopeChange, registe
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [subTab, setSubTab] = useState<ClassSubTab>("students");
-  const [detailsRow, setDetailsRow] = useState<GradeRow | null>(null);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [resultOpen, setResultOpen] = useState(false);
   const [result, setResult] = useState<GenerationResult | null>(null);
   const [mobileStep, setMobileStep] = useState<1 | 2 | 3 | 4>(1);
+  const [studentModalTarget, setStudentModalTarget] = useState<{ studentId: string; studentName: string } | null>(null);
 
   const token = getAccessToken() || "";
 
@@ -125,13 +125,18 @@ export const ClassTeacherGradingTab: React.FC<Props> = ({ onScopeChange, registe
     onScopeChange({ termLabel, scopeLabel: classLabel });
   }, [selectedClass, selectedTerm, classes, terms]);
 
+  const allStudentsHaveTermGrades = useMemo(
+    () => rows.length > 0 && rows.every((r) => r.status !== "not_graded"),
+    [rows],
+  );
+
   const prerequisites = useMemo(() => [
     { label: "Class selected", ok: !!selectedClass, level: "failed" },
     { label: "Term selected", ok: !!selectedTerm, level: "failed" },
     { label: "Students enrolled", ok: (summary?.studentsCount || 0) > 0, level: "failed" },
+    { label: "All students have individual term grades", ok: allStudentsHaveTermGrades, level: "failed" },
     { label: "Required assessments completed", ok: (summary?.assessmentsCompleted || 0) >= (summary?.assessmentsTotal || 0) && (summary?.assessmentsTotal || 0) > 0, level: "warning" },
-    { label: "Course grades available", ok: (summary?.studentsFullyGraded || 0) > 0, level: "warning" },
-  ], [selectedClass, selectedTerm, summary]);
+  ], [selectedClass, selectedTerm, summary, allStudentsHaveTermGrades]);
 
   const blockers = prerequisites.filter((p) => !p.ok && p.level === "failed").map((p) => p.label);
   const warnings = prerequisites.filter((p) => !p.ok && p.level === "warning").map((p) => p.label);
@@ -198,11 +203,10 @@ export const ClassTeacherGradingTab: React.FC<Props> = ({ onScopeChange, registe
 
       {showStep(1) && (
         <Card className="border-[#D7E1ED] bg-white dark:border-slate-700 dark:bg-slate-800">
-          <CardContent className="grid grid-cols-1 gap-3 p-4 md:grid-cols-4">
+          <CardContent className="grid grid-cols-1 gap-3 p-4 md:grid-cols-3">
             <Select value={selectedAcademicYear} onValueChange={setSelectedAcademicYear} disabled><SelectTrigger aria-label="Academic year"><SelectValue placeholder="Academic Year" /></SelectTrigger><SelectContent>{academicYears.map((year) => <SelectItem key={year} value={year}>{year}</SelectItem>)}</SelectContent></Select>
             <Select value={selectedTerm} onValueChange={setSelectedTerm} disabled><SelectTrigger aria-label="Term"><SelectValue placeholder="Term" /></SelectTrigger><SelectContent>{filteredTerms.filter((t: any) => normalizeId(t._id) === currentTermId).map((t: any) => <SelectItem key={normalizeId(t._id)} value={normalizeId(t._id)}>{t.name}</SelectItem>)}</SelectContent></Select>
             <Select value={selectedClass} onValueChange={setSelectedClass}><SelectTrigger aria-label="Class"><SelectValue placeholder="Class" /></SelectTrigger><SelectContent>{classes.map((c: any) => <SelectItem key={normalizeId(c._id)} value={normalizeId(c._id)}>{c.name}</SelectItem>)}</SelectContent></Select>
-            <div className="flex items-center justify-end"><Button className="bg-[#003366] hover:bg-[#002B57]" onClick={() => setConfirmOpen(true)} disabled={machine.isGenerating}>Generate Class Summary</Button></div>
           </CardContent>
         </Card>
       )}
@@ -245,7 +249,40 @@ export const ClassTeacherGradingTab: React.FC<Props> = ({ onScopeChange, registe
                   </SelectContent>
                 </Select>
               </div>
-              <ClassPerformanceTable rows={filteredRows} onViewDetails={setDetailsRow} />
+              <ClassPerformanceTable
+                rows={filteredRows}
+                onReviewCourses={(row) => setStudentModalTarget({ studentId: row.studentId, studentName: row.studentName })}
+              />
+
+              {/* Generate Cumulative Class Grade — shown only when all students have term grades */}
+              <div className={`rounded-xl border p-4 ${allStudentsHaveTermGrades ? "border-[#003366] bg-[#EBF0F7] dark:border-slate-600 dark:bg-slate-800" : "border-[#D7E1ED] bg-white dark:border-slate-700 dark:bg-slate-800"}`}>
+                {allStudentsHaveTermGrades ? (
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                        All {rows.length} students have term grades — ready to generate cumulative class grade
+                      </p>
+                      <p className="text-xs text-slate-500">Calculates class average, rankings, and overall performance</p>
+                    </div>
+                    <Button
+                      className="shrink-0 bg-[#003366] hover:bg-[#002B57]"
+                      onClick={() => setConfirmOpen(true)}
+                      disabled={machine.isGenerating}
+                    >
+                      Generate Cumulative Class Grade
+                    </Button>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                      Cumulative class grade unavailable
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {rows.filter((r) => r.status === "not_graded").length} student{rows.filter((r) => r.status === "not_graded").length !== 1 ? "s" : ""} still need{rows.filter((r) => r.status === "not_graded").length === 1 ? "s" : ""} a term grade. Use "Review Courses" on each student to generate their individual term grade first.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -254,11 +291,15 @@ export const ClassTeacherGradingTab: React.FC<Props> = ({ onScopeChange, registe
         </>
       )}
 
-      <DetailsDrawer
-        open={!!detailsRow}
-        onOpenChange={(open) => !open && setDetailsRow(null)}
-        row={detailsRow}
-        history={detailsRow ? [{ label: "Performance", score: detailsRow.score ? `${detailsRow.score.toFixed(1)}%` : "-", date: detailsRow.lastUpdated ? new Date(detailsRow.lastUpdated).toLocaleString() : "-", by: "System" }] : []}
+      <StudentCourseGradesModal
+        open={!!studentModalTarget}
+        onOpenChange={(open) => !open && setStudentModalTarget(null)}
+        studentId={studentModalTarget?.studentId || ""}
+        studentName={studentModalTarget?.studentName || ""}
+        classId={selectedClass}
+        termId={selectedTerm}
+        token={token}
+        onTermGradeGenerated={loadScopedData}
       />
 
       <GenerateSummaryModal
