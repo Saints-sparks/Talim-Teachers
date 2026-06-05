@@ -498,8 +498,8 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
       {(showStep(2) || showStep(3) || showStep(4)) && (
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
           <Card className="border-[#D7E1ED] bg-white dark:border-slate-700 dark:bg-slate-800 xl:col-span-1">
-            <CardContent className="p-3">
-              <p className="mb-2 text-sm font-medium">Assessments</p>
+            <CardContent className="flex flex-col gap-3 p-3">
+              <p className="text-sm font-medium">Assessments</p>
               <div className="space-y-2">
                 {filteredAssessments.map((a: any) => {
                   const status = (a.status || "not_started").toLowerCase();
@@ -521,6 +521,32 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
                 })}
                 {filteredAssessments.length === 0 && <p className="text-sm text-slate-500">No assessments have been created for this course and term.</p>}
               </div>
+
+              {/* Generate Course Grades — at the bottom of the assessments panel */}
+              {filteredAssessments.length > 0 && (
+                <div className={`mt-1 rounded-lg border p-3 ${allAssessmentsPublished ? "border-emerald-300 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-950" : "border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950"}`}>
+                  {!allAssessmentsPublished && (
+                    <p className="mb-2 text-xs text-amber-700 dark:text-amber-400">
+                      {assessments.filter((a: any) => !assessmentPublishStatus[normalizeId(a._id)]).length} unpublished — publish all before generating
+                    </p>
+                  )}
+                  <Button
+                    className="w-full bg-[#003366] hover:bg-[#002B57] disabled:opacity-50"
+                    size="sm"
+                    onClick={generateCourseGrades}
+                    disabled={!allAssessmentsPublished || machine.isDirty || machine.isSaving || machine.isGenerating}
+                    title={
+                      !allAssessmentsPublished
+                        ? "Publish all assessment grades before generating course grades"
+                        : machine.isDirty
+                          ? "Save changes before generating"
+                          : "Generate course grades for all students"
+                    }
+                  >
+                    {machine.isGenerating ? "Generating…" : "Generate Course Grades"}
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -572,38 +598,6 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
               isRowDirty={isRowDirty}
               isSaving={machine.isSaving}
             />
-
-            {/* Generate Course Grades — below the assessments table */}
-            <div className={`rounded-xl border p-4 ${allAssessmentsPublished ? "border-[#003366] bg-[#EBF0F7] dark:border-slate-600 dark:bg-slate-800" : "border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950"}`}>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className={`text-sm font-medium ${allAssessmentsPublished ? "text-slate-800 dark:text-slate-100" : "text-amber-800 dark:text-amber-300"}`}>
-                    {allAssessmentsPublished
-                      ? "All assessments published — ready to generate course grades"
-                      : `Publish all assessments before generating course grades`}
-                  </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    {allAssessmentsPublished
-                      ? "This will compile all listed assessment scores into a course grade for each student"
-                      : `${assessments.filter((a: any) => !assessmentPublishStatus[normalizeId(a._id)]).length} of ${assessments.length} assessment${assessments.length !== 1 ? "s" : ""} still unpublished`}
-                  </p>
-                </div>
-                <Button
-                  className="shrink-0 bg-[#003366] hover:bg-[#002B57] disabled:opacity-50"
-                  onClick={generateCourseGrades}
-                  disabled={!allAssessmentsPublished || machine.isDirty || machine.isSaving || machine.isGenerating}
-                  title={
-                    !allAssessmentsPublished
-                      ? "Publish all assessment grades before generating course grades"
-                      : machine.isDirty
-                        ? "Save changes before generating"
-                        : "Generate course grades for all students"
-                  }
-                >
-                  {machine.isGenerating ? "Generating…" : "Generate Course Grades"}
-                </Button>
-              </div>
-            </div>
 
             <div className="sticky bottom-0 z-20 rounded-xl border border-[#003366] bg-slate-900 p-3 text-white" tabIndex={0}>
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
