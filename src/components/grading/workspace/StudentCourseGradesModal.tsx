@@ -103,19 +103,37 @@ export const StudentCourseGradesModal: React.FC<Props> = ({
   // Build the display list from grade records (primary source) so the course name and
   // courseId always come from the populated data — no cross-source ID matching required.
   const getCourseTitle = (courseId: any): string => {
-    if (!courseId) return "Unknown Course";
-    if (typeof courseId === "object") return courseId.title || courseId.name || "Unknown Course";
-    return "Unknown Course";
+    if (!courseId) return "";
+    if (typeof courseId === "object") return courseId.title || courseId.name || "";
+    return "";
   };
 
-  const gradedEntries = courseGrades.map((g: any) => ({
-    courseId: resolveId(g.courseId),         // actual ID from the grade record
-    courseName: getCourseTitle(g.courseId),  // title from populated course object
-    teacherName: courseList.find(c => c.courseId === resolveId(g.courseId))?.teacherName || "",
-    grade: g,
-  }));
+  const gradedEntries = courseGrades.map((g: any) => {
+    let courseId = resolveId(g.courseId);
+    let courseName = getCourseTitle(g.courseId);
 
-  const gradedIds = new Set(gradedEntries.map((e) => e.courseId));
+    // Repair: courseId is null in old DB records — recover from courseList.
+    // If there's only one course in the class it must be this one; otherwise match by name.
+    if (!courseId) {
+      const match =
+        courseList.length === 1
+          ? courseList[0]
+          : courseList.find((c) => c.courseName && courseName && c.courseName.toLowerCase() === courseName.toLowerCase());
+      if (match) {
+        courseId = match.courseId;
+        courseName = match.courseName;
+      }
+    }
+
+    return {
+      courseId,
+      courseName: courseName || "Unknown Course",
+      teacherName: courseList.find((c) => c.courseId === courseId)?.teacherName || "",
+      grade: g,
+    };
+  });
+
+  const gradedIds = new Set(gradedEntries.map((e) => e.courseId).filter(Boolean));
   const gradedNames = new Set(gradedEntries.map((e) => e.courseName.toLowerCase()));
 
   // Add class-list courses that have no matching grade (neither by ID nor by name)
