@@ -55,6 +55,7 @@ export const ClassTeacherGradingTab: React.FC<Props> = ({ onScopeChange, registe
   const [result, setResult] = useState<GenerationResult | null>(null);
   const [mobileStep, setMobileStep] = useState<1 | 2 | 3 | 4>(1);
   const [studentModalTarget, setStudentModalTarget] = useState<{ studentId: string; studentName: string } | null>(null);
+  const [isPublishing, setIsPublishing] = useState(false);
 
   const token = getAccessToken() || "";
 
@@ -187,6 +188,21 @@ export const ClassTeacherGradingTab: React.FC<Props> = ({ onScopeChange, registe
     await loadScopedData();
   };
 
+  const publish = async () => {
+    if (!selectedClass || !selectedTerm) return;
+    setIsPublishing(true);
+    setError(null);
+    try {
+      await gradingWorkspaceService.publishClassGrade(selectedClass, selectedTerm, token);
+      setSuccessMsg("Class term grades published. Notifications sent to students and parents.");
+      await loadScopedData();
+    } catch (e: any) {
+      setError(e?.message || "Failed to publish class grade");
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
   useEffect(() => {
     registerActions({ refresh: loadScopedData, primary: () => setConfirmOpen(true), export: () => { gradingWorkspaceService.exportPlaceholder(); } });
   }, [selectedClass, selectedTerm, blockers.length]);
@@ -254,23 +270,47 @@ export const ClassTeacherGradingTab: React.FC<Props> = ({ onScopeChange, registe
                 onReviewCourses={(row) => setStudentModalTarget({ studentId: row.studentId, studentName: row.studentName })}
               />
 
-              {/* Generate Cumulative Class Grade — shown only when all students have term grades */}
+              {/* Generate / Publish Cumulative Class Grade */}
               <div className={`rounded-xl border p-4 ${allStudentsHaveTermGrades ? "border-[#003366] bg-[#EBF0F7] dark:border-slate-600 dark:bg-slate-800" : "border-[#D7E1ED] bg-white dark:border-slate-700 dark:bg-slate-800"}`}>
                 {allStudentsHaveTermGrades ? (
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
-                        All {rows.length} students have term grades — ready to generate cumulative class grade
+                        All {rows.length} students have term grades
+                        {summary?.classGradeGenerated ? (summary?.classGradePublished ? " — grades published" : " — class grade generated") : " — ready to generate cumulative class grade"}
                       </p>
-                      <p className="text-xs text-slate-500">Calculates class average, rankings, and overall performance</p>
+                      <p className="text-xs text-slate-500">
+                        {summary?.classGradePublished
+                          ? "Students and parents can view class positions."
+                          : summary?.classGradeGenerated
+                          ? "Generate again to re-rank after new grades, then publish to share positions with students."
+                          : "Calculates class average, rankings, and overall performance"}
+                      </p>
                     </div>
-                    <Button
-                      className="shrink-0 bg-[#003366] hover:bg-[#002B57]"
-                      onClick={() => setConfirmOpen(true)}
-                      disabled={machine.isGenerating}
-                    >
-                      Generate Cumulative Class Grade
-                    </Button>
+                    <div className="flex shrink-0 gap-2">
+                      <Button
+                        className="bg-slate-600 hover:bg-slate-700"
+                        onClick={() => setConfirmOpen(true)}
+                        disabled={machine.isGenerating}
+                        title={summary?.classGradeGenerated ? "Re-generate to update positions after new course grades" : "Generate class cumulative grade"}
+                      >
+                        {summary?.classGradeGenerated ? "Re-generate" : "Generate Cumulative Class Grade"}
+                      </Button>
+                      {summary?.classGradeGenerated && !summary?.classGradePublished && (
+                        <Button
+                          className="bg-green-700 hover:bg-green-800"
+                          onClick={publish}
+                          disabled={isPublishing}
+                        >
+                          {isPublishing ? "Publishing..." : "Publish Class Grade"}
+                        </Button>
+                      )}
+                      {summary?.classGradePublished && (
+                        <span className="inline-flex items-center rounded-lg bg-green-100 px-3 py-2 text-sm font-medium text-green-800 dark:bg-green-900 dark:text-green-200">
+                          Published
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   <div>

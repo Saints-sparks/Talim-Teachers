@@ -220,32 +220,53 @@ export const gradingWorkspaceService = {
       needsAttention,
       classAverage: classCumulative?.classAverage || 0,
       lastGenerated: classCumulative?.updatedAt ? { date: classCumulative.updatedAt, status: "success" } : null,
+      classGradeGenerated: !!classCumulative,
+      classGradePublished: !!(classCumulative as any)?.isPublished,
+      classCumulativeId: (classCumulative as any)?._id || null,
     };
   },
 
+  async publishClassGrade(classId: string, termId: string, token: string): Promise<{ message: string }> {
+    const { apiClient } = await import("@/app/lib/api/apiClient");
+    const { API_BASE_URL } = await import("@/app/lib/api/config");
+    const response = await apiClient.post(
+      `${API_BASE_URL}/grade-records/class-cumulative-term-grade-records/${classId}/${termId}/publish`,
+      {},
+      { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } },
+    );
+    return response.data;
+  },
+
   async getStudentsPerformance(classId: string, termId: string, token: string): Promise<GradeRow[]> {
-    const [students, cumulative] = await Promise.all([
+    const [students, studentCumulatives, classCumulative] = await Promise.all([
       this.getCourseStudents(classId, token),
-      gradeRecordsApi.getClassCumulative(classId, termId, token),
+      gradeRecordsApi.getStudentCumulativeByClass(classId, termId, token).catch(() => [] as any[]),
+      gradeRecordsApi.getClassCumulative(classId, termId, token).catch(() => null),
     ]);
 
-    const map = new Map<string, any>();
-    (cumulative?.studentCumulativeTermGradeRecords || []).forEach((rec: any) => {
+    // Build lookup from studentId -> cumulative record (direct student term grades)
+    const termGradeMap = new Map<string, any>();
+    const rawList = Array.isArray(studentCumulatives) ? studentCumulatives : [];
+    rawList.forEach((rec: any) => {
       const sid = resolveId(rec.studentId);
-      if (sid) map.set(sid, rec);
+      if (sid) termGradeMap.set(sid, rec);
     });
 
+    // Show positions only if class cumulative is published
+    const isPublished = !!(classCumulative as any)?.isPublished;
+
     return students.map((s: any) => {
-      const rec = map.get(resolveId(s));
+      const sid = resolveId(s._id);
+      const rec = termGradeMap.get(sid);
       const pct = rec?.percentage ?? null;
       return {
-        studentId: resolveId(s._id),
+        studentId: sid,
         studentName: resolveStudentName(s),
         score: pct,
         maxScore: 100,
         gradePreview: rec?.grade,
-        position: rec?.position,
-        status: rec ? (pct < 60 ? "needs_review" : "ready_to_generate") : "not_graded",
+        position: isPublished ? rec?.position : undefined,
+        status: rec ? (pct !== null && pct < 60 ? "needs_review" : "ready_to_generate") : "not_graded",
         lastUpdated: rec?.updatedAt
           ? new Date(rec.updatedAt).toISOString()
           : undefined,

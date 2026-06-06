@@ -685,11 +685,14 @@ export class GradeRecordsApiService {
     token: string,
   ): Promise<any[]> {
     try {
+      const headers = this.getAuthHeaders(token);
       const response = await apiClient.get(
-        `${API_BASE_URL}/grade-records/student-cumulative-term-grade-records/class/${classId}/term/${termId}`,
-        this.getAuthHeaders(token),
+        `${API_BASE_URL}/grade-records/student-cumulative-term-grade-records/class/${classId}/term/${termId}?limit=1000`,
+        headers,
       );
-      return response.data || [];
+      // Backend returns PaginatedResponseDto: { data: [...], total, page, ... }
+      const payload = response.data;
+      return Array.isArray(payload) ? payload : (payload?.data ?? []);
     } catch (error: any) {
       console.error("Error fetching student cumulative records by class:", error);
       if (error.response?.status === 404) {
