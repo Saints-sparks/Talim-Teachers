@@ -687,7 +687,7 @@ export class GradeRecordsApiService {
     try {
       const headers = this.getAuthHeaders(token);
       const response = await apiClient.get(
-        `${API_BASE_URL}/grade-records/student-cumulative-term-grade-records/class/${classId}/term/${termId}?limit=1000`,
+        `${API_BASE_URL}/grade-records/student-cumulative-term-grade-records/class/${classId}/term/${termId}?limit=200`,
         headers,
       );
       // Backend returns PaginatedResponseDto: { data: [...], total, page, ... }
