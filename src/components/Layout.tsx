@@ -38,7 +38,7 @@ function Layout({ children }: LayoutProps) {
       <div
         className={`fixed left-0 top-0 h-full z-50 transform transition-all duration-300 ease-in-out ${
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } md:translate-x-0 md:relative ${isDesktopSidebarCollapsed ? "md:w-[84px]" : "md:w-[280px]"}`}
+        } md:translate-x-0 md:relative ${isDesktopSidebarCollapsed ? "md:w-[90px]" : "md:w-[266px]"}`}
       >
         <Sidebar
           isOpen={isSidebarOpen}
