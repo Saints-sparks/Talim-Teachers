@@ -1,5 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import { gradingWorkspaceService } from "@/app/services/grading-workspace/grading-workspace.service";
@@ -29,8 +34,12 @@ export const StudentCourseGradesModal: React.FC<Props> = ({
   const [error, setError] = useState<string | null>(null);
   const [courseList, setCourseList] = useState<any[]>([]);
   const [courseGrades, setCourseGrades] = useState<any[]>([]);
-  const [assessmentDetails, setAssessmentDetails] = useState<Record<string, any[]>>({});
-  const [loadingAssessments, setLoadingAssessments] = useState<Record<string, boolean>>({});
+  const [assessmentDetails, setAssessmentDetails] = useState<
+    Record<string, any[]>
+  >({});
+  const [loadingAssessments, setLoadingAssessments] = useState<
+    Record<string, boolean>
+  >({});
   const [expandedCourse, setExpandedCourse] = useState<string | null>(null);
   const [termGrade, setTermGrade] = useState<any | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -39,7 +48,12 @@ export const StudentCourseGradesModal: React.FC<Props> = ({
   const resolveId = (val: any): string => {
     if (!val) return "";
     if (typeof val === "string") return val;
-    return val._id?.toString?.() || "";
+    return (
+      val._id?.toString?.() ||
+      val.id?.toString?.() ||
+      val.courseId?.toString?.() ||
+      ""
+    );
   };
 
   useEffect(() => {
@@ -60,7 +74,11 @@ export const StudentCourseGradesModal: React.FC<Props> = ({
     try {
       const [courses, grades, existingTermGrade] = await Promise.all([
         gradingWorkspaceService.getClassCourseList(classId, termId, token),
-        gradingWorkspaceService.getStudentCourseGrades(studentId, termId, token),
+        gradingWorkspaceService.getStudentCourseGrades(
+          studentId,
+          termId,
+          token,
+        ),
         gradingWorkspaceService.getStudentTermGrade(studentId, termId, token),
       ]);
       setCourseList(courses);
@@ -100,25 +118,78 @@ export const StudentCourseGradesModal: React.FC<Props> = ({
     }
   };
 
-  // Build the display list from grade records (primary source) so the course name and
-  // courseId always come from the populated data — no cross-source ID matching required.
-  const getCourseTitle = (courseId: any): string => {
-    if (!courseId) return "";
-    if (typeof courseId === "object") return courseId.title || courseId.name || "";
-    return "";
+  // Course grade records can contain raw, populated, or legacy course refs.
+  // Use the class course list to enrich graded rows before falling back.
+  const normalizeText = (value: any): string =>
+    String(value || "")
+      .trim()
+      .toLowerCase();
+
+  const getCourseTitle = (course: any): string => {
+    if (!course || typeof course !== "object") return "";
+    return (
+      course.courseName ||
+      course.title ||
+      course.name ||
+      course.subjectName ||
+      course.code ||
+      ""
+    );
+  };
+
+  const getCourseTeacherName = (course: any): string => {
+    if (!course || typeof course !== "object") return "";
+    if (course.teacherName) return course.teacherName;
+
+    const teacher = course.teacherId;
+    const teacherUser = teacher?.userId || teacher;
+    const fullName =
+      `${teacherUser?.firstName || ""} ${teacherUser?.lastName || ""}`.trim();
+    return teacherUser?.name || fullName || "";
+  };
+
+  const classCourseById = new Map(
+    courseList
+      .map(
+        (course) => [resolveId(course.courseId || course._id), course] as const,
+      )
+      .filter(([id]) => Boolean(id)),
+  );
+
+  const resolveCourseListEntry = (courseId: string, courseName: string) => {
+    if (courseId && classCourseById.has(courseId))
+      return classCourseById.get(courseId);
+    if (courseName) {
+      return courseList.find(
+        (course) =>
+          normalizeText(course.courseName) === normalizeText(courseName),
+      );
+    }
+    if (!courseId && courseList.length === 1) return courseList[0];
+    return null;
   };
 
   const gradedEntries = courseGrades.map((g: any) => {
     let courseId = resolveId(g.courseId);
     let courseName = getCourseTitle(g.courseId);
+    const matchedCourse = resolveCourseListEntry(courseId, courseName);
 
     // Repair: courseId is null in old DB records — recover from courseList.
     // If there's only one course in the class it must be this one; otherwise match by name.
-    if (!courseId) {
+    if (matchedCourse) {
+      courseId =
+        resolveId(matchedCourse.courseId || matchedCourse._id) || courseId;
+      courseName = matchedCourse.courseName || courseName;
+    } else if (!courseId) {
       const match =
         courseList.length === 1
           ? courseList[0]
-          : courseList.find((c) => c.courseName && courseName && c.courseName.toLowerCase() === courseName.toLowerCase());
+          : courseList.find(
+              (c) =>
+                c.courseName &&
+                courseName &&
+                c.courseName.toLowerCase() === courseName.toLowerCase(),
+            );
       if (match) {
         courseId = match.courseId;
         courseName = match.courseName;
@@ -126,23 +197,40 @@ export const StudentCourseGradesModal: React.FC<Props> = ({
     }
 
     return {
-      courseId,
+      courseId: courseId || resolveId(g._id),
       courseName: courseName || "Unknown Course",
-      teacherName: courseList.find((c) => c.courseId === courseId)?.teacherName || "",
+      teacherName:
+        matchedCourse?.teacherName || getCourseTeacherName(g.courseId),
       grade: g,
     };
   });
 
-  const gradedIds = new Set(gradedEntries.map((e) => e.courseId).filter(Boolean));
-  const gradedNames = new Set(gradedEntries.map((e) => e.courseName.toLowerCase()));
+  const gradedIds = new Set(
+    gradedEntries.map((e) => e.courseId).filter(Boolean),
+  );
+  const gradedNames = new Set(
+    gradedEntries.map((e) => e.courseName.toLowerCase()),
+  );
 
   // Add class-list courses that have no matching grade (neither by ID nor by name)
   const ungradedEntries = courseList
-    .filter((c) => !gradedIds.has(c.courseId) && !gradedNames.has(c.courseName.toLowerCase()))
-    .map((c) => ({ courseId: c.courseId, courseName: c.courseName, teacherName: c.teacherName, grade: null as any }));
+    .filter((c) => {
+      const courseId = resolveId(c.courseId || c._id);
+      const courseName = c.courseName || getCourseTitle(c);
+      return (
+        !gradedIds.has(courseId) && !gradedNames.has(normalizeText(courseName))
+      );
+    })
+    .map((c) => ({
+      courseId: resolveId(c.courseId || c._id),
+      courseName: c.courseName || getCourseTitle(c) || "Unknown Course",
+      teacherName: c.teacherName || getCourseTeacherName(c),
+      grade: null as any,
+    }));
 
   const displayCourses = [...gradedEntries, ...ungradedEntries];
-  const allCoursesGraded = ungradedEntries.length === 0 && gradedEntries.length > 0;
+  const allCoursesGraded =
+    ungradedEntries.length === 0 && gradedEntries.length > 0;
   const ungradedCount = ungradedEntries.length;
 
   const handleGenerateTermGrade = async () => {
@@ -150,7 +238,11 @@ export const StudentCourseGradesModal: React.FC<Props> = ({
     setError(null);
     setGenerateMsg(null);
     try {
-      await gradingWorkspaceService.generateStudentTermGrade(studentId, termId, token);
+      await gradingWorkspaceService.generateStudentTermGrade(
+        studentId,
+        termId,
+        token,
+      );
       setGenerateMsg("Term grade generated successfully.");
       await loadData();
       onTermGradeGenerated?.();
@@ -165,9 +257,12 @@ export const StudentCourseGradesModal: React.FC<Props> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-base">{studentName} — Course Grade Review</DialogTitle>
+          <DialogTitle className="text-base">
+            {studentName} — Course Grade Review
+          </DialogTitle>
           <p className="text-sm text-slate-500">
-            Review all course grades and assessments before generating the term grade
+            Review all course grades and assessments before generating the term
+            grade
           </p>
         </DialogHeader>
 
@@ -192,7 +287,10 @@ export const StudentCourseGradesModal: React.FC<Props> = ({
                   Term Grade: {termGrade.grade}{" "}
                   <span className="font-normal">
                     ({(termGrade.percentage ?? 0).toFixed(1)}%
-                    {termGrade.position ? ` · Position ${termGrade.position}` : ""})
+                    {termGrade.position
+                      ? ` · Position ${termGrade.position}`
+                      : ""}
+                    )
                   </span>
                 </p>
               </div>
@@ -207,7 +305,10 @@ export const StudentCourseGradesModal: React.FC<Props> = ({
             {/* Summary row */}
             <div className="flex items-center gap-4 rounded-lg border border-[#D7E1ED] bg-[#EBF0F7] px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800">
               <span className="text-slate-600 dark:text-slate-300">
-                <span className="font-medium text-slate-800 dark:text-slate-100">{gradedEntries.length}</span>/{displayCourses.length} courses graded
+                <span className="font-medium text-slate-800 dark:text-slate-100">
+                  {gradedEntries.length}
+                </span>
+                /{displayCourses.length} courses graded
               </span>
               {!allCoursesGraded && ungradedCount > 0 && (
                 <span className="text-amber-700 dark:text-amber-400">
@@ -218,7 +319,9 @@ export const StudentCourseGradesModal: React.FC<Props> = ({
 
             {/* Course list */}
             {displayCourses.length === 0 ? (
-              <p className="py-8 text-center text-sm text-slate-500">No courses found for this class and term.</p>
+              <p className="py-8 text-center text-sm text-slate-500">
+                No courses found for this class and term.
+              </p>
             ) : (
               displayCourses.map((course) => {
                 const courseGrade = course.grade;
@@ -242,14 +345,19 @@ export const StudentCourseGradesModal: React.FC<Props> = ({
                           <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
                         )}
                         <div>
-                          <p className="text-sm font-medium">{course.courseName}</p>
-                          <p className="text-xs text-slate-500">{course.teacherName}</p>
+                          <p className="text-sm font-medium">
+                            {course.courseName}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            {course.teacherName}
+                          </p>
                         </div>
                       </div>
                       <div>
                         {courseGrade ? (
                           <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">
-                            {courseGrade.gradeLevel} · {(courseGrade.percentage ?? 0).toFixed(1)}%
+                            {courseGrade.gradeLevel} ·{" "}
+                            {(courseGrade.percentage ?? 0).toFixed(1)}%
                           </span>
                         ) : (
                           <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-900 dark:text-amber-300">
@@ -263,27 +371,45 @@ export const StudentCourseGradesModal: React.FC<Props> = ({
                       <div className="border-t border-[#D7E1ED] bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900">
                         {isLoadingDetails ? (
                           <div className="flex items-center gap-2 py-2 text-sm text-slate-500">
-                            <Loader2 className="h-4 w-4 animate-spin" /> Loading assessments...
+                            <Loader2 className="h-4 w-4 animate-spin" /> Loading
+                            assessments...
                           </div>
                         ) : !details || details.length === 0 ? (
-                          <p className="py-2 text-sm text-slate-500">No assessment records found.</p>
+                          <p className="py-2 text-sm text-slate-500">
+                            No assessment records found.
+                          </p>
                         ) : (
                           <div className="overflow-auto rounded-lg border border-[#D7E1ED] bg-white dark:border-slate-700 dark:bg-slate-800">
                             <table className="w-full text-xs">
                               <thead className="bg-[#EBF0F7] text-left dark:bg-slate-700">
                                 <tr>
-                                  <th className="p-2 font-medium">Assessment</th>
-                                  <th className="p-2 text-right font-medium">Score</th>
-                                  <th className="p-2 text-right font-medium">Max</th>
-                                  <th className="p-2 text-right font-medium">%</th>
+                                  <th className="p-2 font-medium">
+                                    Assessment
+                                  </th>
+                                  <th className="p-2 text-right font-medium">
+                                    Score
+                                  </th>
+                                  <th className="p-2 text-right font-medium">
+                                    Max
+                                  </th>
+                                  <th className="p-2 text-right font-medium">
+                                    %
+                                  </th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {details.map((a, idx) => (
-                                  <tr key={a.assessmentGradeRecordId ?? idx} className="border-t border-[#E4EAF2] dark:border-slate-700">
+                                  <tr
+                                    key={a.assessmentGradeRecordId ?? idx}
+                                    className="border-t border-[#E4EAF2] dark:border-slate-700"
+                                  >
                                     <td className="p-2">{a.assessmentName}</td>
-                                    <td className="p-2 text-right">{a.actualScore ?? "-"}</td>
-                                    <td className="p-2 text-right">{a.maxScore ?? "-"}</td>
+                                    <td className="p-2 text-right">
+                                      {a.actualScore ?? "-"}
+                                    </td>
+                                    <td className="p-2 text-right">
+                                      {a.maxScore ?? "-"}
+                                    </td>
                                     <td className="p-2 text-right">
                                       {a.actualScore != null && a.maxScore
                                         ? `${((a.actualScore / a.maxScore) * 100).toFixed(1)}%`
@@ -295,8 +421,10 @@ export const StudentCourseGradesModal: React.FC<Props> = ({
                             </table>
                             {courseGrade && (
                               <div className="border-t border-[#D7E1ED] bg-[#EBF0F7] p-2 text-xs font-medium dark:border-slate-700 dark:bg-slate-700">
-                                Course total: {courseGrade.cumulativeScore}/{courseGrade.maxScore} ={" "}
-                                {(courseGrade.percentage ?? 0).toFixed(1)}% ({courseGrade.gradeLevel})
+                                Course total: {courseGrade.cumulativeScore}/
+                                {courseGrade.maxScore} ={" "}
+                                {(courseGrade.percentage ?? 0).toFixed(1)}% (
+                                {courseGrade.gradeLevel})
                               </div>
                             )}
                           </div>
@@ -310,15 +438,19 @@ export const StudentCourseGradesModal: React.FC<Props> = ({
 
             {/* Generate term grade footer */}
             {!termGrade && displayCourses.length > 0 && (
-              <div className={`rounded-xl border p-4 ${allCoursesGraded ? "border-[#003366] bg-[#EBF0F7] dark:border-slate-600 dark:bg-slate-800" : "border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950"}`}>
+              <div
+                className={`rounded-xl border p-4 ${allCoursesGraded ? "border-[#003366] bg-[#EBF0F7] dark:border-slate-600 dark:bg-slate-800" : "border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950"}`}
+              >
                 {allCoursesGraded ? (
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
-                        All {displayCourses.length} courses graded — ready to generate term grade
+                        All {displayCourses.length} courses graded — ready to
+                        generate term grade
                       </p>
                       <p className="text-xs text-slate-500">
-                        Calculates {studentName}'s cumulative score and class position
+                        Calculates {studentName}'s cumulative score and class
+                        position
                       </p>
                     </div>
                     <Button
@@ -327,7 +459,10 @@ export const StudentCourseGradesModal: React.FC<Props> = ({
                       disabled={isGenerating}
                     >
                       {isGenerating ? (
-                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Generating...</>
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
                       ) : (
                         "Generate Term Grade"
                       )}
@@ -335,8 +470,12 @@ export const StudentCourseGradesModal: React.FC<Props> = ({
                   </div>
                 ) : (
                   <p className="text-sm text-amber-800 dark:text-amber-300">
-                    <span className="font-medium">Cannot generate term grade yet.</span>{" "}
-                    {ungradedCount} course{ungradedCount !== 1 ? "s" : ""} still need{ungradedCount === 1 ? "s" : ""} course grades from the respective subject teachers.
+                    <span className="font-medium">
+                      Cannot generate term grade yet.
+                    </span>{" "}
+                    {ungradedCount} course{ungradedCount !== 1 ? "s" : ""} still
+                    need{ungradedCount === 1 ? "s" : ""} course grades from the
+                    respective subject teachers.
                   </p>
                 )}
               </div>
