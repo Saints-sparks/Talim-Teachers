@@ -9,6 +9,9 @@ import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "@/components/CustomToast";
 import { authService } from "../services/auth.service";
+import { getApiError } from "../lib/apiError";
+import { isPasswordValid } from "../lib/passwordPolicy";
+import PasswordRequirements from "@/components/auth/PasswordRequirements";
 
 type Step = 'email' | 'otp' | 'newPassword';
 
@@ -26,41 +29,39 @@ const ForgotPasswordPage: React.FC = () => {
 
   const handleEmailSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
-    if (!email) {
+    if (!email.trim()) {
       toast.error('Please enter your email address');
       return;
     }
 
     setLoading(true);
-    
     try {
-      const response = await authService.forgotPassword(email);
-      toast.success('Reset code sent to your email!');
+      await authService.forgotPassword(email);
+      toast.success('If that email is registered, a 6-digit code is on its way.');
+      setOtp('');
       setCurrentStep('otp');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to send reset code. Please try again.');
+    } catch (error) {
+      toast.error(getApiError(error, 'Failed to send reset code. Please try again.').message);
     } finally {
       setLoading(false);
     }
   };
 
+  // The code is checked with the server here, so a wrong code is caught
+  // before the teacher types a new password.
   const handleOtpSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
-    if (!otp || otp.length !== 6) {
-      toast.error('Please enter a valid 6-digit OTP');
+    if (!/^\d{6}$/.test(otp)) {
+      toast.error('Enter the 6-digit code from your email');
       return;
     }
 
     setLoading(true);
-    
     try {
-      // Just validate OTP format for now, actual validation will be done in password reset
-      toast.success('OTP verified successfully!');
+      await authService.verifyResetCode(email, otp);
       setCurrentStep('newPassword');
     } catch (error) {
-      toast.error('Invalid OTP. Please try again.');
+      toast.error(getApiError(error, 'That code is invalid or has expired. Request a new one.').message);
     } finally {
       setLoading(false);
     }
@@ -68,34 +69,31 @@ const ForgotPasswordPage: React.FC = () => {
 
   const handlePasswordSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
-    if (!newPassword || newPassword.length < 6) {
-      toast.error('Password must be at least 6 characters long');
+    if (!isPasswordValid(newPassword)) {
+      toast.error("Your new password doesn't meet every requirement.");
       return;
     }
-
     if (newPassword !== confirmPassword) {
       toast.error('Passwords do not match');
       return;
     }
 
     setLoading(true);
-    
     try {
-      const response = await authService.resetPassword(email, otp, newPassword);
-      
-      // Show success modal
+      await authService.resetPassword(email, otp, newPassword);
       setShowSuccessModal(true);
-      
-      // Hide modal and redirect after animation completes
       setTimeout(() => {
         setShowSuccessModal(false);
-        setTimeout(() => {
-          router.push('/');
-        }, 500);
+        setTimeout(() => router.push('/signin'), 500);
       }, 3000);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to reset password. Please try again.');
+    } catch (error) {
+      const info = getApiError(error, 'Failed to reset password. Please try again.');
+      if (info.fieldErrors.token) {
+        // The code expired or was used up while the teacher was typing.
+        setCurrentStep('otp');
+        setOtp('');
+      }
+      toast.error(info.fieldErrors.newPassword ?? info.message);
     } finally {
       setLoading(false);
     }
@@ -200,7 +198,7 @@ const ForgotPasswordPage: React.FC = () => {
         disabled={loading}
         className="w-full bg-[#003366] hover:bg-[#002B5B]/90 text-white h-[50px] rounded-lg text-lg font-medium disabled:opacity-50"
       >
-        {loading ? 'Verifying...' : 'Verify OTP'}
+        {loading ? 'Checking code...' : 'Continue'}
       </Button>
 
       <div className="text-center">
@@ -241,6 +239,7 @@ const ForgotPasswordPage: React.FC = () => {
             {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
           </button>
         </div>
+        <PasswordRequirements password={newPassword} />
       </div>
 
       <div className="space-y-2">

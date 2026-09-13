@@ -34,6 +34,10 @@ import {
 } from "lucide-react";
 import { useAppContext } from "@/app/context/AppContext";
 import { useAuth } from "@/app/hooks/useAuth";
+import { authService } from "@/app/services/auth.service";
+import { getApiError } from "@/app/lib/apiError";
+import { isPasswordValid } from "@/app/lib/passwordPolicy";
+import PasswordRequirements from "@/components/auth/PasswordRequirements";
 import {
   useTeacherOnboarding,
   TEACHER_ONBOARDING_STEPS,
@@ -371,22 +375,22 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
   const [showNext, setShowNext]       = useState(false);
   const [saving, setSaving]           = useState(false);
 
+  const [formError, setFormError] = useState<string | null>(null);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (next !== confirm) { toast.error("New passwords do not match."); return; }
-    if (next.length < 8)  { toast.error("Password must be at least 8 characters."); return; }
+    setFormError(null);
+    if (next !== confirm) { setFormError("New passwords do not match."); return; }
+    if (!isPasswordValid(next)) { setFormError("Your new password doesn't meet every requirement below."); return; }
 
     setSaving(true);
     try {
-      await apiClient.post("/settings/security/change-password", {
-        currentPassword: current,
-        newPassword:     next,
-        confirmPassword: confirm,
-      });
-      toast.success("Password updated successfully.");
+      await authService.changePassword(current, next, confirm);
+      toast.success("Password updated. Other devices have been signed out.");
       onClose();
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Failed to update password.");
+    } catch (err) {
+      const info = getApiError(err, "Failed to update password.");
+      setFormError(info.fieldErrors.currentPassword ?? info.fieldErrors.newPassword ?? info.fieldErrors.confirmPassword ?? info.message);
     } finally {
       setSaving(false);
     }
@@ -432,6 +436,10 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
               </div>
             </div>
           ))}
+          <PasswordRequirements password={next} />
+          {formError && (
+            <p role="alert" className="text-xs text-red-600 dark:text-red-400">{formError}</p>
+          )}
           <div className="flex gap-3 pt-2">
             <button
               type="button"

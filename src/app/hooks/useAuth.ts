@@ -8,7 +8,7 @@ import { authService } from "../services/auth.service";
 import { LoginCredentials, User } from "../../types/auth";
 import { API_BASE_URL } from "../lib/api/config";
 import { apiClient } from "../lib/api/apiClient";
-import { TEACHER_ONBOARDING_STEPS } from "../context/OnboardingContext";
+import { resolvePostLoginRoute } from "../lib/postLoginRoute";
 
 export interface UseAuthReturn {
   login: (credentials: LoginCredentials) => Promise<any>;
@@ -150,35 +150,15 @@ export const useAuth = (): UseAuthReturn => {
       setIsAuthenticated(true);
       setUser(userData);
 
-      toast.success("Login successful!");
-
-      // Ensure cookies are set before redirecting
-      setTimeout(() => {
-        try {
-          const onboardingRequiredSteps = TEACHER_ONBOARDING_STEPS.filter(
-            (step) => step.required
-          );
-          const onboardingRaw = localStorage.getItem(
-            `teacher_onboarding_${userData.userId || userData._id || userData.id}`
-          );
-          const onboardingState = onboardingRaw ? JSON.parse(onboardingRaw) : null;
-          const completedSteps = onboardingState?.completedSteps || [];
-          const hasCompletedSetup = onboardingRequiredSteps.every((step) =>
-            completedSteps.includes(step.id)
-          );
-          const destination = !onboardingState?.phase1Completed
-            ? "/onboarding"
-            : hasCompletedSetup
-            ? "/dashboard"
-            : "/onboarding/setup";
-          router.push(destination);
-          if (window.location.pathname !== destination) {
-            window.location.href = destination;
-          }
-        } catch (navError) {
-          window.location.href = "/onboarding";
-        }
-      }, 300); // Slight delay to ensure cookies are set
+      // A temporary password must be replaced before anything else;
+      // otherwise continue to onboarding or the dashboard.
+      const destination = resolvePostLoginRoute(userData);
+      if (userData.mustChangePassword) {
+        toast.info("Set a new password to finish signing in.");
+      } else {
+        toast.success("Login successful!");
+      }
+      router.replace(destination);
 
       return response;
     } catch (error) {

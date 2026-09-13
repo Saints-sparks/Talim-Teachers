@@ -38,6 +38,8 @@ export interface User {
   staffNumber?: string;
   userAvatar?: string;
   isTwoFactorEnabled?: boolean;
+  /** True until a teacher created with a temporary password sets their own. */
+  mustChangePassword?: boolean;
   createdAt?: string;
   updatedAt?: string;
   devices?: Array<{

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { TeacherOnboardingProvider } from "@/app/context/OnboardingContext";
 import { useAppContext } from "@/app/context/AppContext";
 import { useOnboardingSync } from "@/app/hooks/useOnboardingSync";
+import PasswordChangeGate from "@/components/auth/PasswordChangeGate";
 
 const SYNC_THROTTLE_MS = 60_000;
 
@@ -49,6 +50,7 @@ export default function OnboardingShell({
 
   return (
     <TeacherOnboardingProvider userId={userId}>
+      <PasswordChangeGate />
       <OnboardingSyncEffect />
       {children}
     </TeacherOnboardingProvider>

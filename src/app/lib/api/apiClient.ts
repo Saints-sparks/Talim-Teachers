@@ -28,7 +28,8 @@ const processQueue = (error: unknown, token: string | null) => {
   pendingQueue = [];
 };
 
-const setAccessTokenCookie = (token: string) => {
+/** Stores the access token where the request interceptor reads it. */
+export const setAccessTokenCookie = (token: string) => {
   nookies.set(undefined, "access_token", token, {
     maxAge: 30 * 24 * 60 * 60,
     path: "/",
@@ -121,6 +122,17 @@ const attachInterceptors = (instance: AxiosInstance) => {
         } finally {
           isRefreshing = false;
         }
+      }
+
+      // A teacher still using a temporary password may only set a new one.
+      const errorCode = (error.response?.data as { error?: { code?: string } } | undefined)?.error?.code;
+      if (
+        error.response?.status === 403 &&
+        errorCode === "PASSWORD_CHANGE_REQUIRED" &&
+        typeof window !== "undefined" &&
+        window.location.pathname !== "/set-password"
+      ) {
+        window.location.assign("/set-password");
       }
 
       return Promise.reject(error);
