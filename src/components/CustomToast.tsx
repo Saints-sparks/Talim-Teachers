@@ -15,6 +15,8 @@ export type ToastType = "success" | "error" | "warning" | "info";
 export interface ToastOptions {
   title?: string;
   duration?: number;
+  /** Makes the toast clickable; it closes after the click. */
+  onClick?: () => void;
 }
 
 export interface ToastProps {
@@ -23,6 +25,7 @@ export interface ToastProps {
   title?: string;
   message: string;
   duration?: number;
+  onClick?: () => void;
   onClose: (id: string) => void;
 }
 
@@ -39,6 +42,7 @@ const normalizeOptions = (
   return {
     title: titleOrOptions?.title,
     duration: titleOrOptions?.duration ?? duration,
+    onClick: titleOrOptions?.onClick,
   };
 };
 
@@ -48,6 +52,7 @@ const Toast: React.FC<ToastProps> = ({
   title,
   message,
   duration = 4000,
+  onClick,
   onClose,
 }) => {
   const [isVisible, setIsVisible] = useState(false);
@@ -131,7 +136,30 @@ const Toast: React.FC<ToastProps> = ({
         <Icon className={`h-6 w-6 ${config.iconColor}`} />
       </div>
 
-      <div className="min-w-0 flex-1">
+      <div
+        className={`min-w-0 flex-1 ${onClick ? "cursor-pointer" : ""}`}
+        role={onClick ? "button" : undefined}
+        tabIndex={onClick ? 0 : undefined}
+        onClick={
+          onClick
+            ? () => {
+                onClick();
+                handleClose();
+              }
+            : undefined
+        }
+        onKeyDown={
+          onClick
+            ? (event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onClick();
+                  handleClose();
+                }
+              }
+            : undefined
+        }
+      >
         {title && (
           <h4 className="mb-1 text-sm font-semibold leading-tight text-gray-900">
             {title}

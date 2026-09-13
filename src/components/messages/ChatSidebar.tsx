@@ -45,7 +45,6 @@ export default function ChatSidebar({ onSelectChat, className = "" }: ChatSideba
     refreshChatRooms, 
     searchChatRooms, 
     getFilteredChatRooms,
-    selectRoom,
     selectedRoomId
   } = useChat();
 
@@ -62,8 +61,8 @@ export default function ChatSidebar({ onSelectChat, className = "" }: ChatSideba
 
   const displayRooms = getDisplayRooms();
 
+  // Opening the chat selects (and joins) the room; the sidebar never joins itself.
   const handleSelectChat = (room: RealtimeChatRoom) => {
-    selectRoom(room.roomId);
     onSelectChat({ 
       type: room.type === 'one_to_one' ? "private" : "group", 
       room 
@@ -261,16 +260,18 @@ export default function ChatSidebar({ onSelectChat, className = "" }: ChatSideba
                     <h3 className="font-medium text-gray-900 truncate text-sm">
                       {room.displayName}
                     </h3>
-                    {room.lastMessage?.timestamp && (
+                    {room.lastMessage?.createdAt && (
                       <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
-                        {formatTime(room.lastMessage.timestamp)}
+                        {formatTime(room.lastMessage.createdAt)}
                       </span>
                     )}
                   </div>
                   
                   <div className="flex items-center justify-between">
                     <p className="text-sm text-gray-500 truncate pr-2">
-                      {room.lastMessage?.content || "No messages yet"}
+                      {room.lastMessage
+                        ? room.lastMessage.preview || "Sent a message"
+                        : "No messages yet"}
                     </p>
                     {room.unreadCount > 0 && (
                       <span className="inline-flex items-center justify-center min-w-5 h-5 px-1.5 text-xs font-medium text-white bg-blue-600 rounded-full">

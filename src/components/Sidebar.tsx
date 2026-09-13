@@ -61,13 +61,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   const { logout } = useAuth();
   const pathname = usePathname();
   const { user } = useAppContext();
-  const { chatRooms } = useChat();
+  // Server total from unread-messages-update, kept live by the chat provider.
+  const { totalUnread } = useChat();
   const { counts: notifCounts } = useNotifications();
-
-  const totalUnread = chatRooms.reduce(
-    (acc, room) => acc + (room.unreadCount || 0),
-    0,
-  );
 
   if (!user) return null;
 

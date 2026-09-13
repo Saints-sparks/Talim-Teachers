@@ -44,6 +44,31 @@ const clearAuthCookies = () => {
   nookies.destroy(undefined, "refreshToken", { path: "/" });
 };
 
+let refreshInFlight: Promise<string> | null = null;
+
+/**
+ * Exchanges the refresh token for a new access token and stores it. Concurrent
+ * callers (the API client and the realtime socket) share one request.
+ */
+export const refreshAccessToken = (): Promise<string> => {
+  if (!refreshInFlight) {
+    refreshInFlight = axios
+      .post(`${API_BASE_URL}/auth/refresh`, null, { withCredentials: true })
+      .then((refreshResponse) => {
+        const newToken = (refreshResponse.data as any)?.access_token;
+        if (!newToken) {
+          throw new Error("No access token returned from refresh");
+        }
+        setAccessTokenCookie(newToken);
+        return newToken as string;
+      })
+      .finally(() => {
+        refreshInFlight = null;
+      });
+  }
+  return refreshInFlight;
+};
+
 const attachInterceptors = (instance: AxiosInstance) => {
   instance.interceptors.request.use((config) => {
     const cookies = nookies.get(undefined);
@@ -91,18 +116,7 @@ const attachInterceptors = (instance: AxiosInstance) => {
 
         isRefreshing = true;
         try {
-          const refreshResponse = await axios.post(
-            `${API_BASE_URL}/auth/refresh`,
-            null,
-            { withCredentials: true }
-          );
-
-          const newToken = (refreshResponse.data as any)?.access_token;
-          if (!newToken) {
-            throw new Error("No access token returned from refresh");
-          }
-
-          setAccessTokenCookie(newToken);
+          const newToken = await refreshAccessToken();
           processQueue(null, newToken);
 
           const headers = originalRequest.headers ?? {};

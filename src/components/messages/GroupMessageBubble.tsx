@@ -4,6 +4,7 @@ import MessageOptionsDropdown from "./MessageDropdown";
 import AudioMessage from "./AudioMessage";
 import VideoMessage from "./VideoMessage";
 import { generateColorFromString, getUserInitials } from "@/lib/colorUtils";
+import SendStatus from "./SendStatus";
 
 interface MessageBubbleProps {
   msg: {
@@ -16,11 +17,14 @@ interface MessageBubbleProps {
     videoThumbnail?: string;
     duration?: string;
     time: string;
+    status?: "sent" | "pending" | "failed";
   };
   index: number;
   openSubMenu: { index: number; type: string } | null;
   toggleSubMenu: (index: number, type: string) => void;
   setReplyingMessage: (msg: any) => void;
+  onRetry?: () => void;
+  onDelete?: () => void;
 }
 
 export default function GroupMessageBubble({
@@ -29,9 +33,12 @@ export default function GroupMessageBubble({
   openSubMenu,
   toggleSubMenu,
   setReplyingMessage,
+  onRetry,
+  onDelete,
 }: MessageBubbleProps) {
   const initials = getUserInitials(msg.sender);
   const bgColor = msg.color || generateColorFromString(msg.sender);
+  const isUnsent = msg.status === "pending" || msg.status === "failed";
 
   return (
     <div
@@ -62,7 +69,7 @@ export default function GroupMessageBubble({
           msg.senderType === "self" ? "items-end" : "items-start"
         }`}>
           {/* Sender Name - only show for group messages from others */}
-          {msg.sender !== "me" && msg.senderType !== "self" && (
+          {msg.senderType !== "self" && (
             <div className="mb-1 px-1">
               <p 
                 className="text-xs font-semibold"
@@ -109,7 +116,14 @@ export default function GroupMessageBubble({
             msg.senderType === "self" ? "flex-row-reverse" : "flex-row"
           }`}>
             <span>{msg.time}</span>
-            {msg.senderType === "self" && (
+            {msg.senderType === "self" && isUnsent && (
+              <SendStatus
+                status={msg.status as "pending" | "failed"}
+                onRetry={onRetry}
+                onDelete={onDelete}
+              />
+            )}
+            {msg.senderType === "self" && !isUnsent && (
               <svg 
                 width="12" 
                 height="12" 

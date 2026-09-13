@@ -1,14 +1,9 @@
 "use client";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Layout from "@/components/Layout";
 import MessagesLayout from "@/components/messages/MessagesLayout";
 
 export default function ChatUI() {
-  const [replyingMessage, setReplyingMessage] = useState<{
-    sender: string;
-    text: string;
-  } | null>(null);
-  
   const [openSubMenu, setOpenSubMenu] = useState<{
     index: number;
     type: string;
@@ -29,12 +24,13 @@ export default function ChatUI() {
   return (
     <Layout>
       <div className="h-full font-manrope text-[#030E18] flex flex-col bg-gray-50" data-guide="messages-shell">
-        <MessagesLayout
-          replyingMessage={replyingMessage}
-          setReplyingMessage={setReplyingMessage}
-          openSubMenu={openSubMenu}
-          toggleSubMenu={toggleSubMenu}
-        />
+        {/* MessagesLayout reads the open room from ?room=<id>. */}
+        <Suspense fallback={null}>
+          <MessagesLayout
+            openSubMenu={openSubMenu}
+            toggleSubMenu={toggleSubMenu}
+          />
+        </Suspense>
       </div>
     </Layout>
   );

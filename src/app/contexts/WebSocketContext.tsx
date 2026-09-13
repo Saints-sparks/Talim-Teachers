@@ -13,36 +13,20 @@ interface WebSocketProviderProps {
 export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
   children,
 }) => {
-  const { isAuthenticated, user, getAccessToken } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const webSocket = useWebSocket();
+  const userId = user?.userId || user?._id;
+  const { connect, disconnect } = webSocket;
 
-  // Auto-connect when user is authenticated
+  // One socket per signed-in user. Socket.IO reconnects it by itself, so this only
+  // runs when the user signs in, switches or signs out.
   useEffect(() => {
-    const userId = user?.userId || user?._id;
-    const accessToken = getAccessToken();
-
-    if (
-      isAuthenticated &&
-      userId &&
-      accessToken &&
-      !webSocket.isConnected &&
-      webSocket.connectionStatus !== "connecting" &&
-      webSocket.connectionStatus !== "error"
-    ) {
-      webSocket.connect(userId);
-    } else if (!isAuthenticated && webSocket.isConnected) {
-      webSocket.disconnect();
+    if (isAuthenticated && userId) {
+      connect(userId);
+      return () => disconnect();
     }
-  }, [
-    isAuthenticated,
-    user?.userId,
-    user?._id,
-    getAccessToken,
-    webSocket.isConnected,
-    webSocket.connectionStatus,
-    webSocket.connect,
-    webSocket.disconnect,
-  ]);
+    disconnect();
+  }, [isAuthenticated, userId, connect, disconnect]);
 
   return (
     <WebSocketContext.Provider value={webSocket}>

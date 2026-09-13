@@ -1,36 +1,15 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, ReactNode } from 'react';
-import { useRealtimeChat, RealtimeChatRoom } from '@/app/hooks/useRealtimeChat';
-import { ChatMessage } from '@/app/hooks/useWebSocket';
+import React, { createContext, useContext, ReactNode } from 'react';
+import {
+  useRealtimeChat,
+  RealtimeChatRoom,
+  UseRealtimeChatReturn,
+} from '@/app/hooks/useRealtimeChat';
+import { useChatAlerts } from '@/app/hooks/useChatAlerts';
 
-interface ChatContextType {
-  // Chat state
-  chatRooms: RealtimeChatRoom[];
-  isLoading: boolean;
-  isConnected: boolean;
-  error: string | null;
-  
-  // Current chat selection
-  selectedRoomId: string | null;
+interface ChatContextType extends UseRealtimeChatReturn {
   selectedRoom: RealtimeChatRoom | null;
-  
-  // Chat operations
-  refreshChatRooms: () => void;
-  searchChatRooms: (searchTerm: string) => RealtimeChatRoom[];
-  getFilteredChatRooms: (type?: string) => RealtimeChatRoom[];
-  
-  // Room management
-  selectRoom: (roomId: string) => void;
-  unselectRoom: () => void;
-  
-  // Message operations
-  sendMessage: (content: string, type?: 'text' | 'voice', duration?: number) => void;
-  markAsRead: (messageId: string) => void;
-  
-  // Event handlers
-  onNewMessage: (callback: (message: ChatMessage) => void) => () => void;
-  onRoomUpdate: (callback: (roomId: string, room: RealtimeChatRoom) => void) => () => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -41,9 +20,16 @@ interface ChatProviderProps {
 
 export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   const realtimeChat = useRealtimeChat();
-  
+
+  // App-wide chat toasts, tab title, notification events and push clicks.
+  useChatAlerts({
+    currentUserId: realtimeChat.currentUserId,
+    totalUnread: realtimeChat.totalUnread,
+    isRoomOpen: realtimeChat.isRoomOpen,
+  });
+
   // Find selected room
-  const selectedRoom = realtimeChat.selectedRoomId 
+  const selectedRoom = realtimeChat.selectedRoomId
     ? realtimeChat.chatRooms.find(room => room.roomId === realtimeChat.selectedRoomId) || null
     : null;
 

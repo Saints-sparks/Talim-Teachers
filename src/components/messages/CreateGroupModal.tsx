@@ -19,7 +19,10 @@ import {
   Loader2,
 } from "lucide-react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useAppContext } from "@/app/context/AppContext";
+import { useChat } from "@/app/context/ChatContext";
+import { messagesRoomUrl } from "@/app/hooks/useChatAlerts";
 import { useAuth } from "@/app/hooks/useAuth";
 import { getCurrentTerm } from "@/app/services/api.service";
 import {
@@ -69,8 +72,9 @@ export default function CreateGroupModal({
     message: string;
   } | null>(null);
 
-  const { classes, courses, isLoading, user, refreshChatRooms } =
-    useAppContext() as any;
+  const { classes, courses, isLoading, user } = useAppContext();
+  const { chatRooms, refreshChatRooms } = useChat();
+  const router = useRouter();
   const { getAccessToken } = useAuth();
   const { markStepComplete } = useTeacherOnboarding();
 
@@ -131,7 +135,11 @@ export default function CreateGroupModal({
      
 
       const response = await createGroupChat(payload, token);
-      
+      const created: any = (response.data as any)?.data ?? response.data;
+      const roomId = String(created?._id || created?.roomId || created?.id || "");
+      // The server reuses an existing class/course group instead of creating a second one.
+      const reused =
+        Boolean(created?.reused) || chatRooms.some((room) => room.roomId === roomId);
 
       // Refresh chat rooms after creating a group
       refreshChatRooms();
@@ -140,18 +148,19 @@ export default function CreateGroupModal({
       // Show success notification
       setNotification({
         type: "success",
-        message: `${
-          type === "class" ? "Class" : "Course"
-        } group chat created successfully!`,
+        message: reused
+          ? "Opened the existing group chat."
+          : `${type === "class" ? "Class" : "Course"} group chat created successfully!`,
       });
 
-      // Close modal after a brief delay
+      // Open the group, then close the modal after a brief delay
+      if (roomId) router.push(messagesRoomUrl(roomId));
       setTimeout(() => {
         onOpenChange(false);
         setCurrentStep("selection");
         setSearchTerm("");
         setNotification(null);
-      }, 2000);
+      }, 1200);
     } catch (error: any) {
       console.error("Error creating group:", error);
       setNotification({

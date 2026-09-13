@@ -1,30 +1,48 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import ChatSidebar from "./ChatSidebar";
 import GroupChat from "./GroupChat";
 import PrivateChat from "./PrivateChat";
 import { RealtimeChatRoom } from "@/app/hooks/useRealtimeChat";
+import { useChat } from "@/app/context/ChatContext";
+import { useChatRoom } from "@/app/hooks/useChatRoom";
+import { messagesRoomUrl } from "@/app/hooks/useChatAlerts";
 
-interface SelectedChat {
-  type: "private" | "group";
-  room?: RealtimeChatRoom;
-}
+type ReplyingMessage = { sender: string; text: string } | null;
 
 interface MessagesLayoutProps {
-  replyingMessage: { sender: string; text: string } | null;
-  setReplyingMessage: (msg: any) => void;
   openSubMenu: { index: number; type: string } | null;
   toggleSubMenu: (index: number, type: string) => void;
 }
 
 export default function MessagesLayout({
-  replyingMessage,
-  setReplyingMessage,
   openSubMenu,
   toggleSubMenu,
 }: MessagesLayoutProps) {
-  const [selectedChat, setSelectedChat] = useState<SelectedChat | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  // Reply previews belong to the chat they were started in.
+  const [repliesByRoom, setRepliesByRoom] = useState<Record<string, ReplyingMessage>>({});
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { chatRooms, selectRoom, unselectRoom } = useChat();
+
+  // The open chat lives in the URL (/messages?room=<id>), so deep links, push
+  // clicks, toasts and the browser back button all open the same way.
+  const roomId = searchParams.get("room");
+  const room = roomId ? chatRooms.find((r) => r.roomId === roomId) ?? null : null;
+  const thread = useChatRoom(roomId);
+  const roomType = room?.type ?? thread.room?.type ?? null;
+
+  // Selecting a room is what joins it; exactly once per open chat.
+  useEffect(() => {
+    if (roomId) selectRoom(roomId);
+    else unselectRoom();
+  }, [roomId, selectRoom, unselectRoom]);
+
+  // Leaving the messages page leaves the room.
+  useEffect(() => () => unselectRoom(), [unselectRoom]);
 
   // Detect mobile screen size
   useEffect(() => {
@@ -38,13 +56,36 @@ export default function MessagesLayout({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const handleSelectChat = (chat: SelectedChat) => {
-    setSelectedChat(chat);
+  const handleSelectChat = (chat: { room?: RealtimeChatRoom }) => {
+    if (chat.room && chat.room.roomId !== roomId) {
+      router.push(messagesRoomUrl(chat.room.roomId));
+    }
   };
 
   const handleBackToChats = () => {
-    setSelectedChat(null);
+    router.replace("/messages");
   };
+
+  const setReplyingMessage = useCallback(
+    (msg: ReplyingMessage) => {
+      if (!roomId) return;
+      setRepliesByRoom((prev) => ({ ...prev, [roomId]: msg }));
+    },
+    [roomId],
+  );
+
+  const selectedChat = Boolean(roomId);
+  const threadProps = roomId
+    ? {
+        roomId,
+        room,
+        replyingMessage: repliesByRoom[roomId] ?? null,
+        setReplyingMessage,
+        openSubMenu,
+        toggleSubMenu,
+        onBack: handleBackToChats,
+      }
+    : null;
 
   return (
     <div className="flex h-full w-full bg-gray-50 relative">
@@ -71,27 +112,34 @@ export default function MessagesLayout({
             ? 'flex flex-1' 
             : 'hidden lg:flex lg:flex-1'
       } flex-col bg-white h-full`} data-guide="messages-chat-area">
-        {selectedChat ? (
-          selectedChat.type === "group" ? (
-            <GroupChat
-              key={selectedChat.room?.roomId}
-              replyingMessage={replyingMessage}
-              setReplyingMessage={setReplyingMessage}
-              openSubMenu={openSubMenu}
-              toggleSubMenu={toggleSubMenu}
-              room={selectedChat.room}
-              onBack={handleBackToChats}
-            />
+        {threadProps ? (
+          roomType === "one_to_one" ? (
+            <PrivateChat key={threadProps.roomId} {...threadProps} />
+          ) : roomType ? (
+            <GroupChat key={threadProps.roomId} {...threadProps} />
+          ) : thread.joinStatus === "error" ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center">
+              <p className="text-sm text-red-500">{thread.joinError || "Couldn't load this chat"}</p>
+              <div className="flex gap-2">
+                <button
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm"
+                  onClick={thread.retryJoin}
+                >
+                  Retry
+                </button>
+                <button
+                  className="px-4 py-2 border border-gray-200 rounded-md text-sm"
+                  onClick={handleBackToChats}
+                >
+                  Back to chats
+                </button>
+              </div>
+            </div>
           ) : (
-            <PrivateChat
-              key={selectedChat.room?.roomId}
-              replyingMessage={replyingMessage}
-              setReplyingMessage={setReplyingMessage}
-              openSubMenu={openSubMenu}
-              toggleSubMenu={toggleSubMenu}
-              room={selectedChat.room}
-              onBack={handleBackToChats}
-            />
+            <div className="flex flex-1 flex-col items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-2" />
+              <p className="text-sm text-gray-500">Loading chat...</p>
+            </div>
           )
         ) : (
           // Empty state for desktop when no chat is selected
