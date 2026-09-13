@@ -23,6 +23,7 @@ import { fetchTeacherDetails } from "../services/api.service";
 import { Teacher } from "@/types/student";
 import { useAppContext } from "../context/AppContext";
 import { API_BASE_URL } from "../lib/api/config";
+import { CLOUDINARY_UPLOAD_PRESET, cloudinaryUploadUrl } from "../lib/cloudinary";
 
 const tabs = [
   { label: "Personal Information", icon: <UserRound /> },
@@ -39,8 +40,6 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTab, setSelectedTab] = useState(tabs[0].label);
-  const CLOUD_NAME = "ddbs7m7nt";
-  const UPLOAD_PRESET = "presetOne";
   const [uploading, setUploading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -70,14 +69,11 @@ export default function Profile() {
       // Upload to Cloudinary
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("upload_preset", UPLOAD_PRESET);
-      const cloudRes = await fetch(
-        `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
+      formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+      const cloudRes = await fetch(cloudinaryUploadUrl("image"), {
+        method: "POST",
+        body: formData,
+      });
       const cloudData = await cloudRes.json();
       if (!cloudData.secure_url) throw new Error("Cloudinary upload failed");
       // Send to backend

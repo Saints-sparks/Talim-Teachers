@@ -22,6 +22,7 @@ import {
 } from "../../app/services/api.service";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/app/hooks/useAuth";
+import { CLOUDINARY_UPLOAD_PRESET, cloudinaryUploadUrl } from "@/app/lib/cloudinary";
 import {
   Upload,
   FileText,
@@ -94,9 +95,7 @@ export function UploadModal({
         ]
       : availableClasses;
 
-  // Replace these with your actual Cloudinary details
-  const CLOUD_NAME = "ddbs7m7nt";
-  const UPLOAD_PRESET = "presetOne";
+  const UPLOAD_PRESET = CLOUDINARY_UPLOAD_PRESET;
 
   useEffect(() => {
     if (!user || !isOpen) return;
@@ -204,7 +203,7 @@ export function UploadModal({
       formData.append("upload_preset", UPLOAD_PRESET);
 
       const cloudinaryResponse = await fetch(
-        `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/upload`,
+        cloudinaryUploadUrl("auto"),
         {
           method: "POST",
           body: formData,
