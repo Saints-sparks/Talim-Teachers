@@ -9,10 +9,11 @@ import { LoginCredentials, User } from "../../types/auth";
 import { API_BASE_URL } from "../lib/api/config";
 import { apiClient } from "../lib/api/apiClient";
 import { resolvePostLoginRoute } from "../lib/postLoginRoute";
+import { unsubscribeWebPushOnLogout } from "./usePushNotifications";
 
 export interface UseAuthReturn {
   login: (credentials: LoginCredentials) => Promise<any>;
-  logout: () => void;
+  logout: () => Promise<void>;
   getUser: () => User | null;
   getAccessToken: () => string | null;
   getRefreshToken: () => string | null;
@@ -145,6 +146,8 @@ export const useAuth = (): UseAuthReturn => {
 
       // Store user data in localStorage
       localStorage.setItem("user", JSON.stringify(userData));
+      // Other useAuth instances (e.g. the realtime provider) pick up the new user.
+      window.dispatchEvent(new Event("user-updated"));
 
       // Update state
       setIsAuthenticated(true);
@@ -182,7 +185,14 @@ export const useAuth = (): UseAuthReturn => {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    // Stop this browser's push notifications for this user while the token still
+    // works, but never hold up signing out for long.
+    await Promise.race([
+      unsubscribeWebPushOnLogout(),
+      new Promise((resolve) => setTimeout(resolve, 3000)),
+    ]);
+
     // Clear cookies
     nookies.destroy(undefined, "access_token", { path: "/" });
     nookies.destroy(undefined, "refresh_token", { path: "/" });

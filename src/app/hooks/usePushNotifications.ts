@@ -4,8 +4,25 @@ import { useCallback, useEffect, useState } from "react";
 import nookies from "nookies";
 import { API_BASE_URL } from "@/app/lib/api/config";
 
-const STORAGE_KEY = "talim:push-subscribed";
 const SW_PATH = "/sw.js";
+
+/** Per user, so the next person on this browser doesn't inherit the flag. */
+const storageKey = (userId: string) => `talim:push-subscribed:${userId}`;
+
+function getCurrentUserId(): string | null {
+  try {
+    const user = JSON.parse(localStorage.getItem("user") || "null");
+    return user?.userId || user?._id || null;
+  } catch {
+    return null;
+  }
+}
+
+const pushSupported = () =>
+  typeof window !== "undefined" &&
+  "serviceWorker" in navigator &&
+  "PushManager" in window &&
+  "Notification" in window;
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -39,15 +56,42 @@ async function authFetch(url: string, options: RequestInit = {}): Promise<Respon
   });
 }
 
-/** Sync pushEnabled to the backend NotificationPreference — best-effort, never throws. */
+/**
+ * Sync webPushEnabled to the backend NotificationPreference — best-effort, never
+ * throws. Browsers have their own switch; pushEnabled controls phones.
+ */
 async function syncPushPreference(enabled: boolean): Promise<void> {
   try {
     await authFetch(`${API_BASE_URL}/notifications/preferences`, {
       method: "PATCH",
-      body: JSON.stringify({ pushEnabled: enabled }),
+      body: JSON.stringify({ webPushEnabled: enabled }),
     });
   } catch {
     // Non-fatal — subscription state is already persisted by the browser
+  }
+}
+
+/**
+ * Removes this browser's push subscription for the signed-in user. Call before
+ * the auth cookies are cleared on sign-out. Best-effort, never throws.
+ */
+export async function unsubscribeWebPushOnLogout(): Promise<void> {
+  const userId = getCurrentUserId();
+  if (userId) localStorage.removeItem(storageKey(userId));
+  localStorage.removeItem("talim:push-subscribed"); // old flag shared by every user
+  if (!pushSupported()) return;
+  try {
+    const reg = await navigator.serviceWorker.getRegistration(SW_PATH);
+    const subscription = await reg?.pushManager.getSubscription();
+    if (!subscription) return;
+    await authFetch(`${API_BASE_URL}/notifications/web-push/subscribe`, {
+      method: "DELETE",
+      body: JSON.stringify({ endpoint: subscription.endpoint }),
+      keepalive: true,
+    }).catch(() => undefined);
+    await subscription.unsubscribe();
+  } catch {
+    // Signing out must never fail because of push cleanup.
   }
 }
 
@@ -70,17 +114,29 @@ export function usePushNotifications(): UsePushNotificationsReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // The toggle reflects the browser's real subscription, and only counts as on
+  // for the user who turned it on.
   useEffect(() => {
-    if (
-      typeof window !== "undefined" &&
-      "serviceWorker" in navigator &&
-      "PushManager" in window &&
-      "Notification" in window
-    ) {
-      setIsSupported(true);
-      setPermission(Notification.permission as PushPermission);
-      setIsSubscribed(localStorage.getItem(STORAGE_KEY) === "true");
-    }
+    if (!pushSupported()) return;
+    setIsSupported(true);
+    setPermission(Notification.permission as PushPermission);
+
+    let cancelled = false;
+    const userId = getCurrentUserId();
+    navigator.serviceWorker
+      .getRegistration(SW_PATH)
+      .then((reg) => reg?.pushManager.getSubscription())
+      .then((subscription) => {
+        if (cancelled) return;
+        const flagged = userId ? localStorage.getItem(storageKey(userId)) === "true" : false;
+        setIsSubscribed(Boolean(subscription) && flagged);
+      })
+      .catch(() => {
+        if (!cancelled) setIsSubscribed(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const getVapidKey = useCallback(async (): Promise<string> => {
@@ -144,10 +200,11 @@ export function usePushNotifications(): UsePushNotificationsReturn {
         throw new Error(body?.message || "Failed to save push subscription on server");
       }
 
-      localStorage.setItem(STORAGE_KEY, "true");
+      const userId = getCurrentUserId();
+      if (userId) localStorage.setItem(storageKey(userId), "true");
       setIsSubscribed(true);
 
-      // Sync pushEnabled=true to NotificationPreference
+      // Sync webPushEnabled=true to NotificationPreference
       await syncPushPreference(true);
     } catch (err: any) {
       setError(err.message || "Failed to enable push notifications");
@@ -162,7 +219,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
     setError(null);
 
     try {
-      // Sync pushEnabled=false to NotificationPreference before removing subscription
+      // Sync webPushEnabled=false to NotificationPreference before removing subscription
       await syncPushPreference(false);
 
       const reg = await navigator.serviceWorker.getRegistration(SW_PATH);
@@ -176,7 +233,8 @@ export function usePushNotifications(): UsePushNotificationsReturn {
         await subscription.unsubscribe();
       }
 
-      localStorage.removeItem(STORAGE_KEY);
+      const userId = getCurrentUserId();
+      if (userId) localStorage.removeItem(storageKey(userId));
       setIsSubscribed(false);
     } catch (err: any) {
       setError(err.message || "Failed to disable push notifications");

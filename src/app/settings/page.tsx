@@ -794,7 +794,7 @@ function NotificationsSection() {
       <Card>
         <CardHeader title="Delivery" />
         <div className="px-5">
-          <ToggleRow label="Push notifications"  desc="Send alerts to this device"   checked={prefs.pushEnabled}  onChange={(v) => toggle("pushEnabled", v)}  disabled={saving.pushEnabled} />
+          <ToggleRow label="Mobile push notifications"  desc="Alerts on the Talim mobile app"   checked={prefs.pushEnabled}  onChange={(v) => toggle("pushEnabled", v)}  disabled={saving.pushEnabled} />
           <ToggleRow label="Email notifications" desc="Receive updates via email"    checked={prefs.emailEnabled} onChange={(v) => toggle("emailEnabled", v)} disabled={saving.emailEnabled} />
           <PushNotificationToggle />
         </div>
