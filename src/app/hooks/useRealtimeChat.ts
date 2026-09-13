@@ -77,6 +77,7 @@ const NO_SOCKET: WebSocketContextType = {
   socket: null,
   isConnected: false,
   connectionStatus: "disconnected",
+  isSocketConnected: () => false,
   joinChatRoom: offline,
   leaveChatRoom: noop,
   sendChatMessage: offline,
@@ -211,8 +212,8 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
   // Called unconditionally so React's hook call order is stable across renders.
   const webSocket = useWebSocketContextSafe() ?? NO_SOCKET;
   const {
-    socket,
     isConnected,
+    isSocketConnected,
     fetchChatRooms,
     fetchUnreadCount,
     joinChatRoom,
@@ -234,16 +235,11 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
   const selectedRoomIdRef = useRef<string | null>(null);
   const currentUserIdRef = useRef<string | null>(currentUserId);
   const userRef = useRef(user);
-  const socketRef = useRef(socket);
   const chatRoomsRef = useRef<RealtimeChatRoom[]>([]);
   const joinTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const inFlightSendsRef = useRef<Set<string>>(new Set());
   const markedReadRef = useRef<Set<string>>(new Set());
   const loadingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    socketRef.current = socket;
-  }, [socket]);
 
   useEffect(() => {
     chatRoomsRef.current = chatRooms;
@@ -265,8 +261,6 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     }
   }, [currentUserId]);
 
-  const socketConnected = () => Boolean(socketRef.current?.connected);
-
   const updateRooms = useCallback(
     (updater: (rooms: RealtimeChatRoom[]) => RealtimeChatRoom[]) => {
       setChatRooms((prev) => {
@@ -277,6 +271,13 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     },
     [],
   );
+
+  // The list spinner never outlives a request that got no answer.
+  const beginLoading = useCallback(() => {
+    setIsLoading(true);
+    if (loadingTimerRef.current) clearTimeout(loadingTimerRef.current);
+    loadingTimerRef.current = setTimeout(() => setIsLoading(false), JOIN_TIMEOUT_MS);
+  }, []);
 
   const clearJoinTimer = useCallback((roomId: string) => {
     const timer = joinTimersRef.current.get(roomId);
@@ -305,7 +306,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
   const markRoomRead = useCallback(
     (roomId: string) => {
       const me = currentUserIdRef.current;
-      if (!me || selectedRoomIdRef.current !== roomId || !socketConnected()) return;
+      if (!me || selectedRoomIdRef.current !== roomId || !isSocketConnected()) return;
       if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
 
       const unread = roomStore
@@ -325,7 +326,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
         markMessageAsRead(message._id);
       });
     },
-    [markMessageAsRead],
+    [markMessageAsRead, isSocketConnected],
   );
 
   /** Keeps asking for newer messages after `cursor` until caught up. */
@@ -360,7 +361,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
       );
 
       // Offline: the timer runs, and the next `connect` joins again.
-      if (!socketConnected()) return;
+      if (!isSocketConnected()) return;
 
       joinChatRoom(roomId).then((ack) => {
         if (ack.ok || selectedRoomIdRef.current !== roomId) return;
@@ -371,7 +372,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
       // Catch up on anything newer than what we already hold for this room.
       if (backfillCursor) backfill(roomId, backfillCursor);
     },
-    [joinChatRoom, backfill, clearJoinTimer, failJoin],
+    [joinChatRoom, backfill, clearJoinTimer, failJoin, isSocketConnected],
   );
 
   const markFailed = useCallback(
@@ -406,7 +407,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
       const clientMessageId = message.clientMessageId;
       if (!clientMessageId || inFlightSendsRef.current.has(clientMessageId)) return;
       // Offline: stays pending and is sent on the next `connect`.
-      if (!socketConnected()) return;
+      if (!isSocketConnected()) return;
 
       inFlightSendsRef.current.add(clientMessageId);
       sendChatMessage({
@@ -432,20 +433,18 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
         markFailed(message.roomId, clientMessageId, ack.error?.message);
       });
     },
-    [sendChatMessage, markFailed],
+    [sendChatMessage, markFailed, isSocketConnected],
   );
 
   // Subscriptions. The socket's listener registry keeps these across reconnects.
   useEffect(() => {
     const handleConnect = () => {
       // Rejoin + backfill the open room, then refresh the list and unread total.
+      // Read marks sent before a drop may have been lost; the rejoin brings fresh readBy.
+      markedReadRef.current.clear();
       const roomId = selectedRoomIdRef.current;
       if (roomId) startJoin(roomId);
-      if (chatRoomsRef.current.length === 0) {
-        setIsLoading(true);
-        if (loadingTimerRef.current) clearTimeout(loadingTimerRef.current);
-        loadingTimerRef.current = setTimeout(() => setIsLoading(false), JOIN_TIMEOUT_MS);
-      }
+      if (chatRoomsRef.current.length === 0) beginLoading();
       fetchChatRooms();
       fetchUnreadCount();
       roomStore.pendingMessages().forEach(emitSend);
@@ -613,6 +612,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     fetchChatRooms,
     fetchUnreadCount,
     leaveChatRoom,
+    beginLoading,
     startJoin,
     emitSend,
     markFailed,
@@ -643,11 +643,11 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
 
   // Chat room operations
   const refreshChatRooms = useCallback(() => {
-    if (socketConnected()) {
-      setIsLoading(true);
+    if (isSocketConnected()) {
+      beginLoading();
       fetchChatRooms();
     }
-  }, [fetchChatRooms]);
+  }, [fetchChatRooms, isSocketConnected, beginLoading]);
 
   const searchChatRooms = useCallback(
     (searchTerm: string): RealtimeChatRoom[] => {
@@ -785,7 +785,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
   const loadOlderMessages = useCallback(
     (roomId: string) => {
       const state = roomStore.get(roomId);
-      if (state.loadingOlder || !state.hasMore || !state.nextCursor || !socketConnected()) return;
+      if (state.loadingOlder || !state.hasMore || !state.nextCursor || !isSocketConnected()) return;
       roomStore.update(roomId, (s) => ({ ...s, loadingOlder: true }));
       fetchMessages({ roomId, cursor: state.nextCursor, direction: "before", limit: 20 }).then(
         (ack) => {
@@ -793,7 +793,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
         },
       );
     },
-    [fetchMessages],
+    [fetchMessages, isSocketConnected],
   );
 
   const setDraft = useCallback((roomId: string, text: string) => {

@@ -145,6 +145,8 @@ export interface WebSocketContextType {
   socket: Socket | null;
   isConnected: boolean;
   connectionStatus: ConnectionStatus;
+  /** Live connection state, safe to read inside event handlers. */
+  isSocketConnected: () => boolean;
 
   // Chat functions
   joinChatRoom: (roomId: string) => Promise<ChatAck>;
@@ -204,7 +206,6 @@ export const useWebSocket = (): WebSocketContextType => {
     useState<ConnectionStatus>("disconnected");
   const listenersRef = useRef<Map<string, Set<(...args: any[]) => void>>>(new Map());
   const authRetryUsedRef = useRef(false);
-  const authFailedRef = useRef(false);
   const authRetryResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const roomsFetchRef = useRef<{ lastAt: number; trailing: ReturnType<typeof setTimeout> | null }>({
     lastAt: 0,
@@ -270,7 +271,6 @@ export const useWebSocket = (): WebSocketContextType => {
       });
 
       next.on("connect", () => {
-        authFailedRef.current = false;
         setIsConnected(true);
         setConnectionStatus("connected");
         // A connection that stays authenticated earns a fresh token-refresh attempt.
@@ -290,10 +290,6 @@ export const useWebSocket = (): WebSocketContextType => {
         setConnectionStatus("connecting");
       });
 
-      next.on("exception", (payload: any) => {
-        if (isUnauthenticated(payload)) authFailedRef.current = true;
-      });
-
       next.on("disconnect", (reason) => {
         setIsConnected(false);
         if (authRetryResetRef.current) clearTimeout(authRetryResetRef.current);
@@ -302,14 +298,12 @@ export const useWebSocket = (): WebSocketContextType => {
           return;
         }
         if (reason === "io server disconnect") {
-          // The server only drops a socket like this when the token was refused;
-          // Socket.IO won't reconnect by itself in that case.
-          if (authFailedRef.current) {
-            void recoverFromAuthFailure(next);
-          } else {
-            setConnectionStatus("connecting");
-            next.connect();
-          }
+          // The server drops a socket like this when it refuses the token (after an
+          // UNAUTHENTICATED exception), and Socket.IO won't reconnect by itself.
+          // Refresh once and reconnect; the attempt is only re-armed after a
+          // connection has stayed up for 5 s, so a refused token can't loop.
+          setConnectionStatus("connecting");
+          void recoverFromAuthFailure(next);
           return;
         }
         setConnectionStatus("connecting");
@@ -336,7 +330,6 @@ export const useWebSocket = (): WebSocketContextType => {
       setSocket(null);
     }
     authRetryUsedRef.current = false;
-    authFailedRef.current = false;
     setIsConnected(false);
     setConnectionStatus("disconnected");
   }, []);
@@ -350,6 +343,8 @@ export const useWebSocket = (): WebSocketContextType => {
       current.connect();
     }
   }, []);
+
+  const isSocketConnected = useCallback(() => Boolean(socketRef.current?.connected), []);
 
   const emitWithAck = useCallback(
     (event: string, payload: unknown, timeoutMs = ACK_TIMEOUT_MS): Promise<ChatAck> => {
@@ -475,6 +470,7 @@ export const useWebSocket = (): WebSocketContextType => {
     socket,
     isConnected,
     connectionStatus,
+    isSocketConnected,
 
     // Chat functions
     joinChatRoom,
