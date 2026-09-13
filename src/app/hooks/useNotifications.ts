@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "./useAuth";
 import { apiClient } from "../lib/api/apiClient";
 import nookies from "nookies";
+import { NOTIFICATION_EVENT } from "./useChatAlerts";
 
 export type NotificationSource = "school" | "talim" | "system";
 
@@ -87,7 +88,41 @@ const getTextBlob = (item: any) =>
     .join(" ")
     .toLowerCase();
 
+// Backend NotificationType values (talimBE-V2 notification.interfaces.ts).
+const CATEGORY_BY_TYPE: Record<string, NotificationCategory> = {
+  chat_message: "messages",
+  chat_message_reminder: "messages",
+  announcement: "announcement",
+  attendance_alert: "attendance",
+  result_published: "grading",
+  grade_released: "grading",
+  assessment_reminder: "academics",
+  assignment_due: "academics",
+  timetable_update: "academics",
+  class_assigned: "academics",
+  class_unassigned: "academics",
+  course_assigned: "academics",
+  course_unassigned: "academics",
+  assignment_or_resource: "resources",
+  security_alert: "account",
+  login_alert: "account",
+  system_alert: "other",
+  system_notice: "other",
+  app_update: "other",
+  fee_reminder: "other",
+  fee_overdue: "other",
+  payment_confirmed: "other",
+  receipt_generated: "other",
+};
+
 const inferCategory = (item: any, fallback: NotificationCategory) => {
+  // The notification's type decides when it's one we know; text matching is
+  // only a fallback ("late" would otherwise match "translate").
+  const typed =
+    CATEGORY_BY_TYPE[String(item?.type || "").toLowerCase()] ??
+    CATEGORY_BY_TYPE[String(item?.category || item?.metadata?.category || "").toLowerCase()];
+  if (typed) return typed;
+
   const explicit = String(
     item?.category || item?.type || item?.metadata?.category || item?.metadata?.module || "",
   ).toLowerCase();
@@ -324,6 +359,24 @@ const useNotifications = () => {
 
     return () => clearInterval(interval);
   }, [fetchNotifications]);
+
+  // Live in-app notifications from the socket (relayed by useChatAlerts).
+  useEffect(() => {
+    if (!userId) return;
+    const handleNotification = (event: Event) => {
+      const item = (event as CustomEvent).detail;
+      if (!item?._id || isSchoolAnnouncementNotification(item)) return;
+      const incoming = normalizeSystemNotification(item, userId);
+      setNotifications((prev) => {
+        if (prev.some((notification) => notification.id === incoming.id)) return prev;
+        const next = sortByNewest([incoming, ...prev]);
+        if (cacheKey) localStorage.setItem(cacheKey, JSON.stringify(next));
+        return next;
+      });
+    };
+    window.addEventListener(NOTIFICATION_EVENT, handleNotification);
+    return () => window.removeEventListener(NOTIFICATION_EVENT, handleNotification);
+  }, [cacheKey, userId]);
 
   const persistNotifications = useCallback(
     (nextNotifications: TeacherNotification[]) => {
