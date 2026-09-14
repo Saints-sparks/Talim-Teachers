@@ -26,6 +26,7 @@ export default function MessageContent({ message, isOwn }: MessageContentProps) 
           tone={isOwn ? "inverted" : "default"}
           progress={message.status === "sent" ? undefined : message.uploadProgress}
           pending={message.status !== "sent"}
+          failed={message.status === "failed"}
           onPlaybackError={showPlaybackError}
         />
       )}
