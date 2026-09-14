@@ -3,6 +3,7 @@
 import { useCallback, useSyncExternalStore } from "react";
 import { useChat } from "../context/ChatContext";
 import { EMPTY_ROOM, roomStore } from "../lib/chat/roomStore";
+import type { OutgoingMedia } from "./useRealtimeChat";
 
 /**
  * One chat thread: its messages, loading state and actions. Private and group
@@ -20,8 +21,8 @@ export function useChatRoom(roomId: string | null) {
   const { sendMessage, retryMessage, deleteMessage, loadOlderMessages, retryJoin, setDraft } = chat;
 
   const send = useCallback(
-    (text: string) => {
-      if (roomId) sendMessage(roomId, text);
+    (text: string, media?: OutgoingMedia) => {
+      if (roomId) sendMessage(roomId, text, media);
     },
     [roomId, sendMessage],
   );

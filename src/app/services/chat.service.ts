@@ -105,13 +105,24 @@ export interface ChatAttachmentUpload {
   playbackUrl?: string;
 }
 
-/** Uploads one file with POST /upload/chat-attachment. */
-export const uploadChatAttachment = async (file: File): Promise<ChatAttachmentUpload> => {
+/** Uploads one file with POST /upload/chat-attachment, reporting progress (0–1) when asked. */
+export const uploadChatAttachment = async (
+  file: File,
+  onProgress?: (fraction: number) => void,
+): Promise<ChatAttachmentUpload> => {
   const form = new FormData();
   form.append("file", file);
   try {
     // No Content-Type: the browser adds the multipart boundary.
-    const response = await apiClient.post(`${API_BASE_URL}/upload/chat-attachment`, form);
+    const response = await apiClient.post(`${API_BASE_URL}/upload/chat-attachment`, form, {
+      onUploadProgress: onProgress
+        ? (event) => {
+            const total = event.total || file.size;
+            // Stop short of 1: the server still has to store the file.
+            if (total) onProgress(Math.min(0.99, event.loaded / total));
+          }
+        : undefined,
+    });
     const body: any = response.data;
     const result = body?.url ? body : body?.data;
     if (!result?.url) throw new Error("The upload didn't return a file URL");

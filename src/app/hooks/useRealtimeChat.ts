@@ -19,6 +19,15 @@ import {
 import { useWebSocketContextSafe } from "../contexts/WebSocketContext";
 import { useAuth } from "./useAuth";
 import {
+  fileKind,
+  messageTypeFor,
+  uploadAttachments,
+  type AttachmentKind,
+  type ChatUploadFn,
+  type UploadItem,
+} from "@/components/chat-kit";
+import { uploadChatAttachment } from "../services/chat.service";
+import {
   ChatMessageView,
   createClientMessageId,
   normalizeMessage,
@@ -51,6 +60,28 @@ export interface ChatRoomRemovedDetail {
   /** The room was open when it happened. */
   wasOpen: boolean;
 }
+
+/** Files picked in the composer, or a recorded voice note. */
+export interface OutgoingMedia {
+  files?: File[];
+  voice?: { file: File; duration: number };
+}
+
+/** A pending message's files: kept outside the store so a retry re-uploads only what failed. */
+interface OutboxEntry {
+  items: UploadItem[];
+  duration?: number;
+  /** Object URLs behind the pending bubble's previews. */
+  previewUrls: string[];
+}
+
+/** The app's upload helper in the shape the chat kit expects. */
+const uploadChatFile: ChatUploadFn = (file, onProgress) => uploadChatAttachment(file, onProgress);
+
+const revokePreviews = (entry: OutboxEntry) => {
+  entry.previewUrls.forEach((url) => URL.revokeObjectURL(url));
+  entry.previewUrls = [];
+};
 
 export interface RealtimeChatRoom extends ChatRoomData {
   displayName: string;
@@ -85,7 +116,8 @@ export interface UseRealtimeChatReturn {
   isRoomOpen: (roomId: string) => boolean;
 
   // Message operations
-  sendMessage: (roomId: string, text: string) => void;
+  /** Sends text, or files / a voice note with `text` as the caption. */
+  sendMessage: (roomId: string, text: string, media?: OutgoingMedia) => void;
   retryMessage: (roomId: string, clientMessageId: string) => void;
   deleteMessage: (roomId: string, clientMessageId: string) => void;
   loadOlderMessages: (roomId: string) => void;
@@ -299,6 +331,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
   const chatRoomsRef = useRef<RealtimeChatRoom[]>([]);
   const joinTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const inFlightSendsRef = useRef<Set<string>>(new Set());
+  const outboxRef = useRef<Map<string, OutboxEntry>>(new Map());
   /** The read position last sent (or being sent) per room. */
   const readSentRef = useRef<Map<string, ReadPosition>>(new Map());
   const loadingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -318,6 +351,8 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     if (previous && previous !== currentUserId) {
       roomStore.reset();
       readSentRef.current.clear();
+      outboxRef.current.forEach(revokePreviews);
+      outboxRef.current.clear();
       setChatRooms([]);
       setServerUnread(null);
     }
@@ -521,22 +556,74 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     [],
   );
 
+  /** Forgets a message's files once it is stored or deleted. */
+  const finishOutbox = useCallback((clientMessageId: string) => {
+    const entry = outboxRef.current.get(clientMessageId);
+    if (!entry) return;
+    revokePreviews(entry);
+    outboxRef.current.delete(clientMessageId);
+  }, []);
+
+  /** Records a pending bubble's upload progress for one file. */
+  const setUploadProgress = useCallback(
+    (roomId: string, clientMessageId: string, index: number, fraction: number) => {
+      roomStore.update(roomId, (s) => {
+        let changed = false;
+        const messages = s.messages.map((m) => {
+          if (m.clientMessageId !== clientMessageId || m.status !== "pending") return m;
+          if (m.uploadProgress?.[index] === fraction) return m;
+          const uploadProgress = [...(m.uploadProgress ?? [])];
+          uploadProgress[index] = fraction;
+          changed = true;
+          return { ...m, uploadProgress };
+        });
+        return changed ? { ...s, messages } : s;
+      });
+    },
+    [],
+  );
+
   const emitSend = useCallback(
-    (message: ChatMessageView) => {
+    async (message: ChatMessageView) => {
       const clientMessageId = message.clientMessageId;
       if (!clientMessageId || inFlightSendsRef.current.has(clientMessageId)) return;
       // Offline: stays pending and is sent on the next `connect`.
       if (!isSocketConnected()) return;
 
       inFlightSendsRef.current.add(clientMessageId);
+      const entry = outboxRef.current.get(clientMessageId);
+      let attachments: Awaited<ReturnType<typeof uploadAttachments>> = [];
+      if (entry?.items.length) {
+        try {
+          // Items that already uploaded are skipped, so a retry only uploads the rest.
+          attachments = await uploadAttachments(entry.items, uploadChatFile, {
+            onProgress: (index, fraction) =>
+              setUploadProgress(message.roomId, clientMessageId, index, fraction),
+          });
+        } catch (error) {
+          inFlightSendsRef.current.delete(clientMessageId);
+          markFailed(
+            message.roomId,
+            clientMessageId,
+            error instanceof Error && error.message ? error.message : "Couldn't upload the file",
+          );
+          return;
+        }
+      }
+
       sendChatMessage({
         roomId: message.roomId,
         text: message.text,
         type: message.type,
         clientMessageId,
+        ...(attachments.length ? { attachments } : {}),
+        ...(message.type === "voice" && entry?.duration !== undefined
+          ? { duration: entry.duration }
+          : {}),
       }).then((ack) => {
         inFlightSendsRef.current.delete(clientMessageId);
         if (ack.ok && ack.message) {
+          finishOutbox(clientMessageId);
           const saved = normalizeMessage(ack.message);
           if (saved) {
             roomStore.update(message.roomId, (s) => ({
@@ -550,9 +637,14 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
         }
         if (ack.error?.code === "OFFLINE") return;
         markFailed(message.roomId, clientMessageId, ack.error?.message);
+        // The stored copy may already have replaced the bubble (chat-message came first).
+        const stillLocal = roomStore
+          .get(message.roomId)
+          .messages.some((m) => m.clientMessageId === clientMessageId && m.status !== "sent");
+        if (!stillLocal) finishOutbox(clientMessageId);
       });
     },
-    [sendChatMessage, markFailed, isSocketConnected],
+    [sendChatMessage, markFailed, isSocketConnected, setUploadProgress, finishOutbox],
   );
 
   // Subscriptions. The socket's listener registry keeps these across reconnects.
@@ -815,9 +907,12 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
 
   useEffect(() => {
     const timers = joinTimersRef.current;
+    const outbox = outboxRef.current;
     return () => {
       timers.forEach((timer) => clearTimeout(timer));
       timers.clear();
+      outbox.forEach(revokePreviews);
+      outbox.clear();
       if (loadingTimerRef.current) clearTimeout(loadingTimerRef.current);
     };
   }, []);
@@ -903,12 +998,44 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
 
   // Message operations
   const sendMessage = useCallback(
-    (roomId: string, text: string) => {
+    (roomId: string, text: string, media?: OutgoingMedia) => {
       const trimmed = text.trim();
-      if (!roomId || !trimmed) return;
+      const voice = media?.voice;
+      const files = voice ? [voice.file] : media?.files ?? [];
+      if (!roomId || (!trimmed && files.length === 0)) return;
 
       const me = userRef.current;
       const clientMessageId = createClientMessageId();
+
+      // Files: local previews in the pending bubble until the stored message replaces it.
+      const kinds: AttachmentKind[] = files.map((file) => (voice ? "audio" : fileKind(file)));
+      const type = messageTypeFor(kinds, Boolean(voice));
+      const duration = voice?.duration;
+      const previewUrls: string[] = [];
+      const attachments = files.map((file, i) => {
+        const kind = kinds[i];
+        let url = "";
+        if (kind === "image" || kind === "video" || kind === "audio") {
+          url = URL.createObjectURL(file);
+          previewUrls.push(url);
+        }
+        return {
+          url,
+          type: kind,
+          name: file.name,
+          mimeType: file.type,
+          size: file.size,
+          ...(kind === "audio" && duration !== undefined ? { duration } : {}),
+        };
+      });
+      if (files.length) {
+        outboxRef.current.set(clientMessageId, {
+          items: files.map((file, i) => ({ file, kind: kinds[i], duration })),
+          duration,
+          previewUrls,
+        });
+      }
+
       const pending: ChatMessageView = {
         _id: `local:${clientMessageId}`,
         roomId,
@@ -917,14 +1044,16 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
         senderName: `${me?.firstName || ""} ${me?.lastName || ""}`.trim() || "You",
         senderAvatar: me?.userAvatar ?? null,
         text: trimmed,
-        type: "text",
-        attachments: [],
+        type,
+        attachments,
+        duration,
         readBy: [],
         createdAt: new Date().toISOString(),
         status: "pending",
+        uploadProgress: files.length ? files.map(() => 0) : undefined,
       };
 
-      // The text now lives in the bubble, so the composer can be cleared.
+      // The text (or caption) now lives in the bubble, so the composer can be cleared.
       roomStore.update(roomId, (s) => ({
         ...s,
         draft: "",
@@ -952,14 +1081,20 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     [emitSend],
   );
 
-  const deleteMessage = useCallback((roomId: string, clientMessageId: string) => {
-    roomStore.update(roomId, (s) => ({
-      ...s,
-      messages: s.messages.filter(
-        (m) => m.clientMessageId !== clientMessageId || m.status === "sent",
-      ),
-    }));
-  }, []);
+  const deleteMessage = useCallback(
+    (roomId: string, clientMessageId: string) => {
+      // A send already on its way can't be taken back.
+      if (inFlightSendsRef.current.has(clientMessageId)) return;
+      finishOutbox(clientMessageId);
+      roomStore.update(roomId, (s) => ({
+        ...s,
+        messages: s.messages.filter(
+          (m) => m.clientMessageId !== clientMessageId || m.status === "sent",
+        ),
+      }));
+    },
+    [finishOutbox],
+  );
 
   const loadOlderMessages = useCallback(
     (roomId: string) => {

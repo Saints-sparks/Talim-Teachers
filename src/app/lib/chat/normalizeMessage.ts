@@ -9,10 +9,14 @@ export type MessageStatus = "sent" | "pending" | "failed";
 export interface ChatAttachmentView {
   url: string;
   type: string;
+  /** Audio only: an MP3 rendition to play when present. */
+  playbackUrl?: string;
   name?: string;
   mimeType?: string;
   size?: number;
   duration?: number;
+  width?: number;
+  height?: number;
 }
 
 export interface ChatMessageView {
@@ -31,6 +35,8 @@ export interface ChatMessageView {
   createdAt: string;
   status: MessageStatus;
   error?: string;
+  /** Pending media: upload progress per attachment, 0–1. */
+  uploadProgress?: number[];
 }
 
 const idOf = (value: unknown): string => {
@@ -61,10 +67,13 @@ const toAttachment = (value: any): ChatAttachmentView | null => {
   return {
     url: value.url,
     type: value.type || "file",
+    playbackUrl: typeof value.playbackUrl === "string" ? value.playbackUrl : undefined,
     name: value.name,
     mimeType: value.mimeType,
     size: value.size,
     duration: value.duration,
+    width: value.width,
+    height: value.height,
   };
 };
 

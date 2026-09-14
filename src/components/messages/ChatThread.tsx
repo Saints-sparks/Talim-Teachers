@@ -315,6 +315,8 @@ export default function ChatThread({
         value={thread.draft}
         onChange={(e: React.ChangeEvent<HTMLInputElement>) => thread.setDraft(e.target.value)}
         onSend={() => thread.send(thread.draft)}
+        onSendFiles={(files, caption) => thread.send(caption, { files })}
+        onSendVoice={(file, duration) => thread.send("", { voice: { file, duration } })}
         disabled={!roomId}
         placeholder="Type a message..."
       />
