@@ -10,6 +10,10 @@ import {
   ChatRoomJoinedData,
   ChatRoomsUpdateData,
   FetchMessagesData,
+  MessagesReadData,
+  ParticipantsChangedData,
+  RoomReadData,
+  RoomUpdatedData,
   WebSocketContextType,
 } from "./useWebSocket";
 import { useWebSocketContextSafe } from "../contexts/WebSocketContext";
@@ -20,7 +24,33 @@ import {
   normalizeMessage,
   normalizeMessages,
 } from "../lib/chat/normalizeMessage";
-import { mergeMessages, newestServerMessageId, roomStore } from "../lib/chat/roomStore";
+import {
+  EMPTY_ROOM,
+  mergeMessages,
+  newestServerMessageId,
+  roomStore,
+} from "../lib/chat/roomStore";
+import {
+  ReadPosition,
+  applyMessagesRead,
+  newestReadableMessage,
+  shouldSendReadPosition,
+} from "../lib/chat/readModel";
+
+/**
+ * Fired on window when I stop being a member of a room (removed, or I left),
+ * so the app-wide alerts can tell the user and leave the chat if it is open.
+ */
+export const CHAT_ROOM_REMOVED_EVENT = "talim:chat-room-removed";
+
+export interface ChatRoomRemovedDetail {
+  roomId: string;
+  name: string;
+  /** I removed myself (left the group). */
+  byMe: boolean;
+  /** The room was open when it happened. */
+  wasOpen: boolean;
+}
 
 export interface RealtimeChatRoom extends ChatRoomData {
   displayName: string;
@@ -60,12 +90,26 @@ export interface UseRealtimeChatReturn {
   deleteMessage: (roomId: string, clientMessageId: string) => void;
   loadOlderMessages: (roomId: string) => void;
   setDraft: (roomId: string, text: string) => void;
+
+  /**
+   * Forgets a room I'm no longer a member of: drops it from the list and leaves
+   * it if open. Safe to call more than once (participants-changed also does it).
+   */
+  dropRoom: (roomId: string, options?: { byMe?: boolean }) => void;
+  /** Applies saved group details right away (room-updated brings the same). */
+  applyRoomDetails: (
+    roomId: string,
+    details: { name?: string; description?: string | null; avatarUrl?: string | null },
+  ) => void;
 }
 
 const JOIN_TIMEOUT_MS = 10000;
 const JOIN_ERROR = "Couldn't load this chat";
 const MAX_BACKFILL_PAGES = 5;
-const MAX_MARK_READ = 50;
+
+const isWindowActive = () =>
+  typeof document === "undefined" ||
+  (document.visibilityState === "visible" && document.hasFocus());
 
 const offline = (): Promise<ChatAck> =>
   Promise.resolve({ ok: false, error: { code: "OFFLINE", message: "You're offline." } });
@@ -81,7 +125,7 @@ const NO_SOCKET: WebSocketContextType = {
   joinChatRoom: offline,
   leaveChatRoom: noop,
   sendChatMessage: offline,
-  markMessageAsRead: noop,
+  markRoomRead: offline,
   fetchChatRooms: noop,
   fetchUnreadCount: noop,
   fetchMessages: offline,
@@ -94,6 +138,10 @@ const NO_SOCKET: WebSocketContextType = {
   onChatRoomActivity: noopSubscribe,
   onChatError: noopSubscribe,
   onUnreadMessagesUpdate: noopSubscribe,
+  onMessagesRead: noopSubscribe,
+  onRoomRead: noopSubscribe,
+  onRoomUpdated: noopSubscribe,
+  onParticipantsChanged: noopSubscribe,
   connect: noop,
   disconnect: noop,
   reconnect: noop,
@@ -127,6 +175,9 @@ const normalizeRoom = (raw: any): ChatRoomData => ({
   lastMessage: normalizeLastMessage(raw.lastMessage),
   unreadCount: raw.unreadCount || 0,
   updatedAt: raw.updatedAt || raw.createdAt || "",
+  description: typeof raw.description === "string" ? raw.description : "",
+  avatarUrl: raw.avatarUrl || null,
+  createdBy: raw.createdBy ? idOf(raw.createdBy) : undefined,
 });
 
 const roomTime = (room: ChatRoomData) =>
@@ -183,15 +234,21 @@ const transformChatRoom = (
       }
       break;
     }
-    case "class_group":
-    case "course_group": {
+    default: {
       displayName =
-        room.name || (room.type === "class_group" ? "Class Group" : "Course Group");
-      avatarInfo = {
-        type: "initials",
-        value: initialsOf(displayName),
-        bgColor: generateColorFromString(displayName),
-      };
+        room.name ||
+        (room.type === "class_group"
+          ? "Class Group"
+          : room.type === "course_group"
+            ? "Course Group"
+            : "Group Chat");
+      avatarInfo = room.avatarUrl
+        ? { type: "image", value: room.avatarUrl }
+        : {
+            type: "initials",
+            value: initialsOf(displayName),
+            bgColor: generateColorFromString(displayName),
+          };
       break;
     }
   }
@@ -219,7 +276,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     joinChatRoom,
     leaveChatRoom,
     sendChatMessage,
-    markMessageAsRead,
+    markRoomRead: emitMarkRoomRead,
     fetchMessages,
     onConnect,
     onChatRoomsUpdate,
@@ -229,6 +286,10 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     onChatRoomActivity,
     onChatError,
     onUnreadMessagesUpdate,
+    onMessagesRead,
+    onRoomRead,
+    onRoomUpdated,
+    onParticipantsChanged,
   } = webSocket;
 
   // Event handlers read these refs so they never act on a stale room or user.
@@ -238,7 +299,8 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
   const chatRoomsRef = useRef<RealtimeChatRoom[]>([]);
   const joinTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const inFlightSendsRef = useRef<Set<string>>(new Set());
-  const markedReadRef = useRef<Set<string>>(new Set());
+  /** The read position last sent (or being sent) per room. */
+  const readSentRef = useRef<Map<string, ReadPosition>>(new Map());
   const loadingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -255,7 +317,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     currentUserIdRef.current = currentUserId;
     if (previous && previous !== currentUserId) {
       roomStore.reset();
-      markedReadRef.current.clear();
+      readSentRef.current.clear();
       setChatRooms([]);
       setServerUnread(null);
     }
@@ -299,34 +361,91 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
   );
 
   /**
-   * Marks messages from others that I haven't read, while the room is open and
-   * the tab is visible. Bounded to the most recent ones; step 4 replaces this
-   * with a bulk read.
+   * Reads the open room up to the newest message from someone else, with one
+   * `mark-room-read`. Only while the room is open and the window is visible and
+   * focused; never re-sends a position already sent or an older one.
    */
   const markRoomRead = useCallback(
     (roomId: string) => {
       const me = currentUserIdRef.current;
       if (!me || selectedRoomIdRef.current !== roomId || !isSocketConnected()) return;
-      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      if (!isWindowActive()) return;
 
-      const unread = roomStore
-        .get(roomId)
-        .messages.filter(
-          (m) =>
-            m.status === "sent" &&
-            m.senderId &&
-            m.senderId !== me &&
-            !m.readBy.includes(me) &&
-            !markedReadRef.current.has(m._id),
-        )
-        .slice(-MAX_MARK_READ);
+      const newest = newestReadableMessage(roomStore.get(roomId).messages, me);
+      if (!newest) return;
+      const position: ReadPosition = { messageId: newest._id, createdAt: newest.createdAt };
+      const previous = readSentRef.current.get(roomId);
+      if (!shouldSendReadPosition(position, previous)) return;
 
-      unread.forEach((message) => {
-        markedReadRef.current.add(message._id);
-        markMessageAsRead(message._id);
+      readSentRef.current.set(roomId, position);
+      emitMarkRoomRead(roomId, newest._id).then((ack) => {
+        if (ack.ok) {
+          updateRooms((prev) =>
+            prev.some((r) => r.roomId === roomId && r.unreadCount)
+              ? prev.map((r) => (r.roomId === roomId ? { ...r, unreadCount: 0 } : r))
+              : prev,
+          );
+          return;
+        }
+        // Not stored: forget it, so the next chance (reconnect, focus) sends it again.
+        if (readSentRef.current.get(roomId)?.messageId === position.messageId) {
+          if (previous) readSentRef.current.set(roomId, previous);
+          else readSentRef.current.delete(roomId);
+        }
       });
     },
-    [markMessageAsRead, isSocketConnected],
+    [emitMarkRoomRead, isSocketConnected, updateRooms],
+  );
+
+  const applyRoomDetails = useCallback(
+    (
+      roomId: string,
+      details: { name?: string; description?: string | null; avatarUrl?: string | null },
+    ) => {
+      const patch: Partial<ChatRoomData> = {};
+      if (details.name !== undefined) patch.name = details.name ?? "";
+      if (details.description !== undefined) patch.description = details.description ?? "";
+      if (details.avatarUrl !== undefined) patch.avatarUrl = details.avatarUrl || null;
+      const me = currentUserIdRef.current;
+      updateRooms((prev) =>
+        prev.map((r) => (r.roomId === roomId ? transformChatRoom({ ...r, ...patch }, me) : r)),
+      );
+      roomStore.update(roomId, (s) => (s.room ? { ...s, room: { ...s.room, ...patch } } : s));
+    },
+    [updateRooms],
+  );
+
+  const dropRoom = useCallback(
+    (roomId: string, options?: { byMe?: boolean }) => {
+      const listed = chatRoomsRef.current.find((r) => r.roomId === roomId);
+      const wasOpen = selectedRoomIdRef.current === roomId;
+      if (!listed && !wasOpen) return;
+      const name = listed?.displayName || roomStore.get(roomId).room?.name || "the group";
+
+      if (wasOpen) {
+        leaveChatRoom(roomId);
+        const timer = joinTimersRef.current.get(roomId);
+        if (timer) clearTimeout(timer);
+        joinTimersRef.current.delete(roomId);
+        selectedRoomIdRef.current = null;
+        setSelectedRoomId(null);
+      }
+      updateRooms((prev) => prev.filter((r) => r.roomId !== roomId));
+      roomStore.update(roomId, () => EMPTY_ROOM);
+      readSentRef.current.delete(roomId);
+      fetchUnreadCount();
+
+      if (typeof window !== "undefined") {
+        const detail: ChatRoomRemovedDetail = {
+          roomId,
+          name,
+          byMe: Boolean(options?.byMe),
+          wasOpen,
+        };
+        window.dispatchEvent(new CustomEvent(CHAT_ROOM_REMOVED_EVENT, { detail }));
+      }
+    },
+    [leaveChatRoom, updateRooms, fetchUnreadCount],
   );
 
   /** Keeps asking for newer messages after `cursor` until caught up. */
@@ -440,8 +559,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
   useEffect(() => {
     const handleConnect = () => {
       // Rejoin + backfill the open room, then refresh the list and unread total.
-      // Read marks sent before a drop may have been lost; the rejoin brings fresh readBy.
-      markedReadRef.current.clear();
+      // A read mark lost in the drop failed its ack, so the rejoin sends it again.
       const roomId = selectedRoomIdRef.current;
       if (roomId) startJoin(roomId);
       if (chatRoomsRef.current.length === 0) beginLoading();
@@ -550,7 +668,8 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
         return;
       }
       const lastMessage = normalizeLastMessage(data.lastMessage)!;
-      const isOpen = data.roomId === selectedRoomIdRef.current;
+      // Only a room being looked at right now stays at zero; otherwise it is read on focus.
+      const isOpen = data.roomId === selectedRoomIdRef.current && isWindowActive();
       const fromMe = lastMessage.senderId === currentUserIdRef.current;
       updateRooms((prev) =>
         sortRooms(
@@ -570,6 +689,54 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
 
     const handleUnread = (data: { unreadCount: number }) => {
       if (typeof data?.unreadCount === "number") setServerUnread(data.unreadCount);
+    };
+
+    const handleMessagesRead = (data: MessagesReadData) => {
+      if (!data?.roomId || !data.userId || !data.readAt) return;
+      roomStore.update(data.roomId, (s) => {
+        const messages = applyMessagesRead(s.messages, data.userId, data.readAt);
+        return messages === s.messages ? s : { ...s, messages };
+      });
+    };
+
+    const handleRoomRead = (data: RoomReadData) => {
+      if (!data?.roomId) return;
+      // Read on another device (or this one): clear the badge.
+      updateRooms((prev) =>
+        prev.some((r) => r.roomId === data.roomId && r.unreadCount)
+          ? prev.map((r) => (r.roomId === data.roomId ? { ...r, unreadCount: 0 } : r))
+          : prev,
+      );
+    };
+
+    const handleRoomUpdated = (data: RoomUpdatedData) => {
+      if (!data?.roomId) return;
+      applyRoomDetails(data.roomId, data);
+    };
+
+    const handleParticipantsChanged = (data: ParticipantsChangedData) => {
+      if (!data?.roomId) return;
+      const me = currentUserIdRef.current;
+      if (me && Array.isArray(data.removed) && data.removed.includes(me)) {
+        dropRoom(data.roomId, { byMe: data.by === me });
+        return;
+      }
+      const participants = Array.isArray(data.participants) ? data.participants : [];
+      if (!chatRoomsRef.current.some((r) => r.roomId === data.roomId)) {
+        // I was just added to this room.
+        fetchChatRooms();
+        return;
+      }
+      updateRooms((prev) =>
+        prev.map((r) =>
+          r.roomId === data.roomId ? transformChatRoom({ ...r, participants }, me) : r,
+        ),
+      );
+      roomStore.update(data.roomId, (s) =>
+        s === EMPTY_ROOM
+          ? s
+          : { ...s, participants, room: s.room ? { ...s.room, participants } : s.room },
+      );
     };
 
     const handleError = (data: ChatErrorData) => {
@@ -597,6 +764,10 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
       onChatMessage(handleChatMessage),
       onChatRoomActivity(handleActivity),
       onUnreadMessagesUpdate(handleUnread),
+      onMessagesRead(handleMessagesRead),
+      onRoomRead(handleRoomRead),
+      onRoomUpdated(handleRoomUpdated),
+      onParticipantsChanged(handleParticipantsChanged),
       onChatError(handleError),
     ];
     return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
@@ -608,6 +779,10 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     onChatMessage,
     onChatRoomActivity,
     onUnreadMessagesUpdate,
+    onMessagesRead,
+    onRoomRead,
+    onRoomUpdated,
+    onParticipantsChanged,
     onChatError,
     fetchChatRooms,
     fetchUnreadCount,
@@ -619,17 +794,23 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     failJoin,
     clearJoinTimer,
     markRoomRead,
+    dropRoom,
+    applyRoomDetails,
     updateRooms,
   ]);
 
-  // Coming back to the tab reads what arrived in the open room meanwhile.
+  // Coming back to the tab or window reads what arrived in the open room meanwhile.
   useEffect(() => {
-    const handleVisibility = () => {
+    const readOpenRoom = () => {
       const roomId = selectedRoomIdRef.current;
-      if (roomId && document.visibilityState === "visible") markRoomRead(roomId);
+      if (roomId) markRoomRead(roomId);
     };
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () => document.removeEventListener("visibilitychange", handleVisibility);
+    document.addEventListener("visibilitychange", readOpenRoom);
+    window.addEventListener("focus", readOpenRoom);
+    return () => {
+      document.removeEventListener("visibilitychange", readOpenRoom);
+      window.removeEventListener("focus", readOpenRoom);
+    };
   }, [markRoomRead]);
 
   useEffect(() => {
@@ -670,9 +851,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
         case "teachers":
           return chatRooms.filter((room) => room.type === "one_to_one");
         case "groups":
-          return chatRooms.filter(
-            (room) => room.type === "class_group" || room.type === "course_group",
-          );
+          return chatRooms.filter((room) => room.type !== "one_to_one");
         default:
           return chatRooms.filter((room) => room.type === type);
       }
@@ -829,6 +1008,8 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     deleteMessage,
     loadOlderMessages,
     setDraft,
+    dropRoom,
+    applyRoomDetails,
   };
 };
 

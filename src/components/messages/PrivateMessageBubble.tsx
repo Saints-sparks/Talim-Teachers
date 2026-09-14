@@ -1,24 +1,27 @@
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { CheckCheck } from "lucide-react";
 import MessageOptionsDropdown from "./MessageDropdown";
-import AudioMessage from "./AudioMessage";
+import MessageContent from "./MessageContent";
+import MessageReceipt from "./MessageReceipt";
 import { generateColorFromString, getUserInitials } from "@/lib/colorUtils";
-import SendStatus from "./SendStatus";
+import { ChatMessageView } from "@/app/lib/chat/normalizeMessage";
+import type { ReceiptState } from "@/app/lib/chat/readModel";
 
-interface MessageBubbleProps {
+export interface MessageBubbleProps {
   msg: {
     senderType: string;
     avatar: string;
     sender: string;
     color: string;
-    type: string;
     text?: string;
-    videoThumbnail?: string;
-    duration?: string;
     time: string;
-    status?: "sent" | "pending" | "failed";
   };
+  /** The message itself; its body is rendered by MessageContent. */
+  message: ChatMessageView;
+  /** Tick state, for my own messages only. */
+  receipt?: ReceiptState;
+  /** Groups: "Read by N" under my latest message. */
+  readByLabel?: string;
   index: number;
   openSubMenu: { index: number; type: string } | null;
   toggleSubMenu: (index: number, type: string) => void;
@@ -29,6 +32,9 @@ interface MessageBubbleProps {
 
 export default function MessageBubble({
   msg,
+  message,
+  receipt,
+  readByLabel,
   index,
   openSubMenu,
   toggleSubMenu,
@@ -39,7 +45,6 @@ export default function MessageBubble({
   const initials = getUserInitials(msg.sender);
   const bgColor = msg.color || generateColorFromString(msg.sender);
   const isOwn = msg.senderType === "self" || msg.senderType === "me";
-  const isUnsent = msg.status === "pending" || msg.status === "failed";
 
   return (
     <div
@@ -55,7 +60,7 @@ export default function MessageBubble({
           <div className="relative w-8 h-8 flex-shrink-0 self-end mb-1">
             <Avatar className="w-8 h-8 rounded-full">
               <AvatarImage src={msg.avatar} />
-              <AvatarFallback 
+              <AvatarFallback
                 className="text-white font-medium text-xs"
                 style={{ backgroundColor: bgColor }}
               >
@@ -85,13 +90,7 @@ export default function MessageBubble({
               setReplyingMessage={setReplyingMessage}
             />
 
-            {msg.type === "text" ? (
-              <p className="text-sm sm:text-base leading-relaxed break-words">
-                {msg.text}
-              </p>
-            ) : (
-              <AudioMessage sender={msg.sender} />
-            )}
+            <MessageContent message={message} isOwn={isOwn} />
           </Card>
 
           {/* Time and Status */}
@@ -99,15 +98,13 @@ export default function MessageBubble({
             isOwn ? "flex-row-reverse" : "flex-row"
           }`}>
             <span>{msg.time}</span>
-            {isOwn && isUnsent && (
-              <SendStatus
-                status={msg.status as "pending" | "failed"}
+            {isOwn && receipt && (
+              <MessageReceipt
+                state={receipt}
+                readByLabel={readByLabel}
                 onRetry={onRetry}
                 onDelete={onDelete}
               />
-            )}
-            {isOwn && !isUnsent && (
-              <CheckCheck size={12} className="text-blue-400" />
             )}
           </div>
         </div>

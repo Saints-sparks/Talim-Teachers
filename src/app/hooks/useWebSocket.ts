@@ -79,6 +79,13 @@ export interface ChatRoomData {
   updatedAt: string;
   classId?: string;
   courseId?: string;
+  /** Groups only. */
+  description?: string;
+  /** Groups only: picture uploaded through POST /upload/chat-attachment. */
+  avatarUrl?: string | null;
+  createdBy?: string;
+  /** When the current user last read this room. */
+  lastReadAt?: string;
 }
 
 export interface ChatRoomsUpdateData {
@@ -112,6 +119,33 @@ export interface FetchMessagesData {
 export interface ChatRoomActivityData {
   roomId: string;
   lastMessage: ChatLastMessage;
+}
+
+/** Another member read the room up to a message (they share read receipts). */
+export interface MessagesReadData {
+  roomId: string;
+  userId: string;
+  upToMessageId: string;
+  readAt: string;
+}
+
+/** I read the room on one of my devices. */
+export type RoomReadData = MessagesReadData;
+
+export interface RoomUpdatedData {
+  roomId: string;
+  name: string;
+  description: string;
+  avatarUrl: string | null;
+  updatedBy: string;
+}
+
+export interface ParticipantsChangedData {
+  roomId: string;
+  added: string[];
+  removed: string[];
+  by: string;
+  participants: ChatParticipant[];
 }
 
 export interface ChatErrorData {
@@ -152,7 +186,8 @@ export interface WebSocketContextType {
   joinChatRoom: (roomId: string) => Promise<ChatAck>;
   leaveChatRoom: (roomId: string) => void;
   sendChatMessage: (payload: SendChatMessagePayload) => Promise<ChatAck>;
-  markMessageAsRead: (messageId: string) => void;
+  /** Reads the room up to a message (and everything before it). */
+  markRoomRead: (roomId: string, upToMessageId: string) => Promise<ChatAck>;
   fetchChatRooms: () => void;
   fetchUnreadCount: () => void;
   fetchMessages: (data: {
@@ -174,6 +209,10 @@ export interface WebSocketContextType {
   onUnreadMessagesUpdate: (
     callback: (data: { userId: string; unreadCount: number }) => void,
   ) => Unsubscribe;
+  onMessagesRead: (callback: (data: MessagesReadData) => void) => Unsubscribe;
+  onRoomRead: (callback: (data: RoomReadData) => void) => Unsubscribe;
+  onRoomUpdated: (callback: (data: RoomUpdatedData) => void) => Unsubscribe;
+  onParticipantsChanged: (callback: (data: ParticipantsChangedData) => void) => Unsubscribe;
 
   // Connection management
   connect: (userId: string) => void;
@@ -383,11 +422,11 @@ export const useWebSocket = (): WebSocketContextType => {
     [emitWithAck],
   );
 
-  const markMessageAsRead = useCallback((messageId: string) => {
-    if (socketRef.current?.connected) {
-      socketRef.current.emit("mark-message-read", { messageId });
-    }
-  }, []);
+  const markRoomRead = useCallback(
+    (roomId: string, upToMessageId: string) =>
+      emitWithAck("mark-room-read", { roomId, upToMessageId }),
+    [emitWithAck],
+  );
 
   // Coalesces bursts: at most one request a second, with a trailing request so the
   // last call is never lost.
@@ -456,6 +495,22 @@ export const useWebSocket = (): WebSocketContextType => {
       subscribe("unread-messages-update", cb),
     [subscribe],
   );
+  const onMessagesRead = useCallback(
+    (cb: (data: MessagesReadData) => void) => subscribe("messages-read", cb),
+    [subscribe],
+  );
+  const onRoomRead = useCallback(
+    (cb: (data: RoomReadData) => void) => subscribe("room-read", cb),
+    [subscribe],
+  );
+  const onRoomUpdated = useCallback(
+    (cb: (data: RoomUpdatedData) => void) => subscribe("room-updated", cb),
+    [subscribe],
+  );
+  const onParticipantsChanged = useCallback(
+    (cb: (data: ParticipantsChangedData) => void) => subscribe("participants-changed", cb),
+    [subscribe],
+  );
 
   // Cleanup on unmount
   useEffect(() => {
@@ -476,7 +531,7 @@ export const useWebSocket = (): WebSocketContextType => {
     joinChatRoom,
     leaveChatRoom,
     sendChatMessage,
-    markMessageAsRead,
+    markRoomRead,
     fetchChatRooms,
     fetchUnreadCount,
     fetchMessages,
@@ -491,6 +546,10 @@ export const useWebSocket = (): WebSocketContextType => {
     onChatRoomActivity,
     onChatError,
     onUnreadMessagesUpdate,
+    onMessagesRead,
+    onRoomRead,
+    onRoomUpdated,
+    onParticipantsChanged,
 
     // Connection management
     connect,

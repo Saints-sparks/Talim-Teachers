@@ -12,6 +12,7 @@ import { useAppContext } from "@/app/context/AppContext";
 import { RealtimeChatRoom } from "@/app/hooks/useRealtimeChat";
 import { ChatParticipant } from "@/app/hooks/useWebSocket";
 import { ChatMessageView } from "@/app/lib/chat/normalizeMessage";
+import { readersOf, receiptState } from "@/app/lib/chat/readModel";
 import { generateColorFromString } from "@/lib/colorUtils";
 
 const NEAR_BOTTOM_PX = 120;
@@ -59,15 +60,6 @@ const groupByDate = (messages: ChatMessageView[]) => {
     else groups.push({ dateKey, messages: [message] });
   }
   return groups;
-};
-
-/** Media the bubbles can't render yet still shows something readable. */
-const bubbleContent = (message: ChatMessageView) => {
-  if (message.type === "image") return { type: "text", text: message.text || "Photo" };
-  if (message.type === "file") {
-    return { type: "text", text: message.text || message.attachments[0]?.name || "File" };
-  }
-  return { type: message.type, text: message.text };
 };
 
 /**
@@ -149,6 +141,20 @@ export default function ChatThread({
       ? thread.room.participants
       : thread.participants;
   const others = participants.filter((p) => participantId(p) !== me);
+  const roomData = room ?? thread.room;
+
+  // Receipts: in a direct message, read once the other person has read it; in a
+  // group, "Read by N" under my latest stored message only.
+  const otherParticipantId = variant === "private" ? (others[0] ? participantId(others[0]) : null) : undefined;
+  let latestOwnId: string | null = null;
+  if (variant === "group" && me) {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].senderId === me && messages[i].status === "sent") {
+        latestOwnId = messages[i]._id;
+        break;
+      }
+    }
+  }
 
   const header = (() => {
     if (variant === "private") {
@@ -161,7 +167,6 @@ export default function ChatThread({
       };
     }
 
-    const roomData = room ?? thread.room;
     let name = roomData?.name || "";
     if (!name && roomData?.type === "class_group" && roomData.classId) {
       name = classes?.find((c: any) => (c._id || c.id) === roomData.classId)?.name || "Class Group";
@@ -175,7 +180,7 @@ export default function ChatThread({
     const names = others.map(participantName);
     return {
       name: name || room?.displayName || "Group Chat",
-      avatar: room?.avatarInfo?.type === "image" ? room.avatarInfo.value : "",
+      avatar: roomData?.avatarUrl || "",
       status:
         onlineCount === 0
           ? "Group chat"
@@ -201,8 +206,6 @@ export default function ChatThread({
         name={header.name}
         status={header.status}
         subtext={header.subtext}
-        participants={participants}
-        currentUserId={me || undefined}
         onBack={onBack}
         showBackButton={true}
       />
@@ -263,22 +266,22 @@ export default function ChatThread({
 
               {dayMessages.map((message, index) => {
                 const isOwn = Boolean(me) && message.senderId === me;
-                const content = bubbleContent(message);
                 const clientMessageId = message.clientMessageId;
+                const readCount = message._id === latestOwnId ? readersOf(message, me).length : 0;
                 return (
                   <Bubble
                     key={messageKey(message)}
                     msg={{
                       sender: message.senderName,
-                      text: content.text,
+                      text: message.text,
                       time: formatTime(message.createdAt),
-                      type: content.type,
                       senderType: isOwn ? "self" : "other",
                       avatar: message.senderAvatar || "/icons/user-placeholder.svg",
                       color: generateColorFromString(message.senderName || message.senderId),
-                      duration: message.duration ? String(message.duration) : undefined,
-                      status: message.status,
                     }}
+                    message={message}
+                    receipt={isOwn ? receiptState(message, me, otherParticipantId) : undefined}
+                    readByLabel={readCount > 0 ? `Read by ${readCount}` : undefined}
                     index={index}
                     openSubMenu={openSubMenu}
                     toggleSubMenu={toggleSubMenu}

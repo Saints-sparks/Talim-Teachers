@@ -6,13 +6,12 @@ interface SendStatusProps {
   onDelete?: () => void;
 }
 
-/** "Sending..." under a pending bubble, "Not sent · Retry · Delete" under a failed one. */
+/** A clock under a pending bubble, "Not sent · Retry · Delete" under a failed one. */
 export default function SendStatus({ status, onRetry, onDelete }: SendStatusProps) {
   if (status === "pending") {
     return (
-      <span className="flex items-center gap-1 text-gray-400">
-        <Clock size={11} />
-        Sending...
+      <span className="flex items-center text-gray-400" role="status" aria-label="Sending" title="Sending">
+        <Clock size={12} />
       </span>
     );
   }
