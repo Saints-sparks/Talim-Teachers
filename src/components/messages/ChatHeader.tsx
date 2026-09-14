@@ -3,6 +3,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ArrowLeft, MoreVertical, Search, X, Info } from "lucide-react";
 import { useState } from "react";
 import GroupInfoModal from "./GroupInfoModal";
+import ContactCard, { type ContactInfo } from "./ContactCard";
 import { generateColorFromString, getUserInitials } from "@/lib/colorUtils";
 
 interface ChatHeaderProps {
@@ -10,8 +11,10 @@ interface ChatHeaderProps {
   name: string;
   status?: string;
   subtext?: string; // For group members
-  /** Groups only: opens the group info panel. Direct messages have none. */
+  /** Groups: opens the group info panel. */
   roomId?: string;
+  /** Direct messages: opens a contact card for the other person. */
+  contact?: ContactInfo;
   onBack?: () => void; // Navigation back to chat list
   showBackButton?: boolean; // Whether to show back button (mobile)
 }
@@ -22,12 +25,14 @@ export default function ChatHeader({
   status,
   subtext,
   roomId,
+  contact,
   onBack,
   showBackButton = true,
 }: ChatHeaderProps) {
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const hasInfo = Boolean(roomId || contact);
 
   return (
     <div className="flex w-full items-center bg-white border-b border-gray-200 px-3 py-2 sm:px-4 sm:py-3">
@@ -62,12 +67,12 @@ export default function ChatHeader({
 
         {/* Chat Info */}
         <div
-          className={`flex-1 min-w-0 ${roomId ? "cursor-pointer" : ""}`}
-          onClick={roomId ? () => setIsModalOpen(true) : undefined}
-          role={roomId ? "button" : undefined}
-          tabIndex={roomId ? 0 : undefined}
+          className={`flex-1 min-w-0 ${hasInfo ? "cursor-pointer" : ""}`}
+          onClick={hasInfo ? () => setIsModalOpen(true) : undefined}
+          role={hasInfo ? "button" : undefined}
+          tabIndex={hasInfo ? 0 : undefined}
           onKeyDown={
-            roomId
+            hasInfo
               ? (event) => {
                   if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault();
@@ -81,7 +86,7 @@ export default function ChatHeader({
             <p className="font-medium text-sm sm:text-base text-gray-900 truncate">
               {name}
             </p>
-            {roomId && <Info size={14} className="text-gray-400 flex-shrink-0 hidden sm:block" />}
+            {hasInfo && <Info size={14} className="text-gray-400 flex-shrink-0 hidden sm:block" />}
           </div>
           {!isSearching && status && (
             <p className="text-xs text-gray-500 truncate">{status}</p>
@@ -136,6 +141,9 @@ export default function ChatHeader({
         </div>
 
         {/* Group Info Modal */}
+        {!roomId && contact && (
+          <ContactCard open={isModalOpen} onClose={() => setIsModalOpen(false)} contact={contact} />
+        )}
         {roomId && (
           <GroupInfoModal
             isOpen={isModalOpen}

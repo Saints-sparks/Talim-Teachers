@@ -207,6 +207,16 @@ export default function ChatThread({
         status={header.status}
         subtext={header.subtext}
         roomId={variant === "group" ? roomId : undefined}
+        contact={
+          variant === "private" && others[0]
+            ? {
+                name: header.name,
+                avatar: others[0].userAvatar,
+                role: others[0].role,
+                isOnline: others[0].isOnline,
+              }
+            : undefined
+        }
         onBack={onBack}
         showBackButton={true}
       />
