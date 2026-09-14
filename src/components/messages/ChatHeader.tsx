@@ -1,47 +1,17 @@
 "use client";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import {
-  ArrowLeft,
-  MoreVertical,
-  Phone,
-  Search,
-  Video,
-  X,
-  Info,
-} from "lucide-react";
+import { ArrowLeft, MoreVertical, Search, X, Info } from "lucide-react";
 import { useState } from "react";
 import GroupInfoModal from "./GroupInfoModal";
 import { generateColorFromString, getUserInitials } from "@/lib/colorUtils";
-
-// Utility function to process participants data (handle Mongoose documents)
-function processParticipants(participants: any[], currentUserId?: string) {
-  return participants
-    .map((p: any) => {
-      // Handle Mongoose documents - data might be in _doc property
-      const participantData = p._doc || p;
-      const participantId = participantData.userId || participantData._id || p.userId || p._id;
-      
-      return {
-        id: participantId,
-        firstName: participantData.firstName || p.firstName,
-        lastName: participantData.lastName || p.lastName,
-        name: participantData.name || p.name,
-        email: participantData.email || p.email,
-        avatar: participantData.userAvatar || participantData.avatar || p.userAvatar || p.avatar,
-        role: participantData.role || p.role,
-        isOnline: participantData.isOnline || p.isOnline || false,
-      };
-    })
-    .filter((p: any) => p.id !== currentUserId); // Filter out current user
-}
 
 interface ChatHeaderProps {
   avatar: string;
   name: string;
   status?: string;
   subtext?: string; // For group members
-  participants?: any[]; // Real participants data
-  currentUserId?: string; // Current user ID to filter out
+  /** Groups only: opens the group info panel. Direct messages have none. */
+  roomId?: string;
   onBack?: () => void; // Navigation back to chat list
   showBackButton?: boolean; // Whether to show back button (mobile)
 }
@@ -51,17 +21,13 @@ export default function ChatHeader({
   name,
   status,
   subtext,
-  participants = [],
-  currentUserId,
+  roomId,
   onBack,
   showBackButton = true,
 }: ChatHeaderProps) {
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // Process participants to get clean data
-  const processedParticipants = processParticipants(participants, currentUserId);
 
   return (
     <div className="flex w-full items-center bg-white border-b border-gray-200 px-3 py-2 sm:px-4 sm:py-3">
@@ -96,14 +62,26 @@ export default function ChatHeader({
 
         {/* Chat Info */}
         <div
-          className="flex-1 min-w-0 cursor-pointer"
-          onClick={() => setIsModalOpen(true)}
+          className={`flex-1 min-w-0 ${roomId ? "cursor-pointer" : ""}`}
+          onClick={roomId ? () => setIsModalOpen(true) : undefined}
+          role={roomId ? "button" : undefined}
+          tabIndex={roomId ? 0 : undefined}
+          onKeyDown={
+            roomId
+              ? (event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    setIsModalOpen(true);
+                  }
+                }
+              : undefined
+          }
         >
           <div className="flex items-center gap-1">
             <p className="font-medium text-sm sm:text-base text-gray-900 truncate">
               {name}
             </p>
-            <Info size={14} className="text-gray-400 flex-shrink-0 hidden sm:block" />
+            {roomId && <Info size={14} className="text-gray-400 flex-shrink-0 hidden sm:block" />}
           </div>
           {!isSearching && status && (
             <p className="text-xs text-gray-500 truncate">{status}</p>
@@ -141,14 +119,6 @@ export default function ChatHeader({
             </div>
           ) : (
             <>
-              {/* Call Icons - Hidden on very small screens */}
-              <button className="hidden sm:flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 transition-colors">
-                <Phone size={18} className="text-gray-600" />
-              </button>
-              <button className="hidden sm:flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 transition-colors">
-                <Video size={18} className="text-gray-600" />
-              </button>
-              
               {/* Search Button */}
               <button
                 onClick={() => setIsSearching(true)}
@@ -166,15 +136,14 @@ export default function ChatHeader({
         </div>
 
         {/* Group Info Modal */}
-        <GroupInfoModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          avatar={avatar}
-          name={name}
-          description={`Welcome to the Class Group! \n
-          This is your space to collaborate, share ideas, ask questions, and stay connected with your classmates. Whether you need help with an assignment, want to share resources, or just discuss what's going on in class, feel free to engage here.`}
-          participants={processedParticipants}
-        />
+        {roomId && (
+          <GroupInfoModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            roomId={roomId}
+            fallbackName={name}
+          />
+        )}
       </div>
     </div>
   );

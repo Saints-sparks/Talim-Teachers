@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { toast } from "@/components/CustomToast";
 import { useWebSocketContextSafe } from "../contexts/WebSocketContext";
 import type { ChatRoomActivityData, NotificationData } from "./useWebSocket";
+import { CHAT_ROOM_REMOVED_EVENT, type ChatRoomRemovedDetail } from "./useRealtimeChat";
 
 /** Fired on window for every in-app notification, so bell counts update live. */
 export const NOTIFICATION_EVENT = "talim:notification";
@@ -80,6 +81,22 @@ export function useChatAlerts({ currentUserId, totalUnread, isRoomOpen }: UseCha
       });
     });
   }, [onNotification]);
+
+  // Removed from a group (or left it): say so, and leave the chat if it is on screen.
+  useEffect(() => {
+    const handleRemoved = (event: Event) => {
+      const detail = (event as CustomEvent<ChatRoomRemovedDetail>).detail;
+      if (!detail?.roomId) return;
+      if (!detail.byMe) toast.warning(`You were removed from ${detail.name}`);
+      const onMessages = pathnameRef.current?.startsWith("/messages");
+      const openRoom = new URLSearchParams(window.location.search).get("room");
+      if (onMessages && (openRoom === detail.roomId || detail.wasOpen)) {
+        routerRef.current.replace("/messages");
+      }
+    };
+    window.addEventListener(CHAT_ROOM_REMOVED_EVENT, handleRemoved);
+    return () => window.removeEventListener(CHAT_ROOM_REMOVED_EVENT, handleRemoved);
+  }, []);
 
   // "(3) Talim Teachers" while there are unread messages.
   useEffect(() => {

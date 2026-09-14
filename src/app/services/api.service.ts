@@ -92,6 +92,23 @@ export const getStudentsByClass = async (classId: string, token: string) => {
   }
 };
 
+/** Every student in a class, a page of 100 at a time. Throws when the first page fails. */
+export const getAllStudentsByClass = async (classId: string, token: string) => {
+  const limit = 100;
+  const students: any[] = [];
+  for (let page = 1; page <= 20; page++) {
+    const response = await apiClient.get(`${API_BASE_URL}/students/by-class/${classId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      params: { page, limit },
+    });
+    const data = Array.isArray(response.data?.data) ? response.data.data : [];
+    students.push(...data);
+    const lastPage = Number(response.data?.meta?.lastPage) || 1;
+    if (data.length < limit || page >= lastPage) break;
+  }
+  return students;
+};
+
 export const fetchStudent = async (
   id: string,
   token: string,

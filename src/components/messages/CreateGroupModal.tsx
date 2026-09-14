@@ -137,9 +137,12 @@ export default function CreateGroupModal({
       const response = await createGroupChat(payload, token);
       const created: any = (response.data as any)?.data ?? response.data;
       const roomId = String(created?._id || created?.roomId || created?.id || "");
-      // The server reuses an existing class/course group instead of creating a second one.
+      // The server reuses an existing class/course group instead of creating a second one
+      // and says so with `reused`; older servers don't, so fall back to the room list.
       const reused =
-        Boolean(created?.reused) || chatRooms.some((room) => room.roomId === roomId);
+        typeof created?.reused === "boolean"
+          ? created.reused
+          : chatRooms.some((room) => room.roomId === roomId);
 
       // Refresh chat rooms after creating a group
       refreshChatRooms();
@@ -149,7 +152,7 @@ export default function CreateGroupModal({
       setNotification({
         type: "success",
         message: reused
-          ? "Opened the existing group chat."
+          ? "Opened the existing group"
           : `${type === "class" ? "Class" : "Course"} group chat created successfully!`,
       });
 

@@ -206,6 +206,7 @@ export default function ChatThread({
         name={header.name}
         status={header.status}
         subtext={header.subtext}
+        roomId={variant === "group" ? roomId : undefined}
         onBack={onBack}
         showBackButton={true}
       />
