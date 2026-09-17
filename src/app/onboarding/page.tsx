@@ -19,6 +19,7 @@ import { useAppContext } from "@/app/context/AppContext";
 import { useAuth } from "@/app/hooks/useAuth";
 import { fetchTeacherDetails } from "@/app/services/api.service";
 import { API_BASE_URL } from "@/app/lib/api/config";
+import { CLOUDINARY_UPLOAD_PRESET, cloudinaryUploadUrl } from "../lib/cloudinary";
 import { useTeacherOnboarding } from "@/app/context/OnboardingContext";
 
 export default function TeacherOnboardingPhase1() {
@@ -102,10 +103,10 @@ export default function TeacherOnboardingPhase1() {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("upload_preset", "presetOne");
+      formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
 
       const cloudRes = await fetch(
-        "https://api.cloudinary.com/v1_1/ddbs7m7nt/image/upload",
+        cloudinaryUploadUrl("image"),
         { method: "POST", body: formData }
       );
       const cloudData = await cloudRes.json();

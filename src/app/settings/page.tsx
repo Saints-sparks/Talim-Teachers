@@ -47,6 +47,7 @@ import { apiClient } from "@/app/lib/api/apiClient";
 import { toast } from "@/components/CustomToast";
 import { useTheme, Theme } from "@/providers/theme-provider";
 import Layout from "@/components/Layout";
+import { CLOUDINARY_UPLOAD_PRESET, cloudinaryUploadUrl } from "../lib/cloudinary";
 import { PushNotificationToggle } from "@/components/notifications/PushNotificationToggle";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -502,10 +503,10 @@ function AccountSection() {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("upload_preset", "presetOne");
+      formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
 
       const uploadResponse = await fetch(
-        "https://api.cloudinary.com/v1_1/ddbs7m7nt/image/upload",
+        cloudinaryUploadUrl("image"),
         { method: "POST", body: formData }
       );
       const uploadData = await uploadResponse.json();
