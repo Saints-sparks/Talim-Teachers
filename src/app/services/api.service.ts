@@ -1,418 +1,485 @@
-import { API_BASE_URL } from "../lib/api/config";
+/**
+ * Teacher-facing REST calls that have not yet moved into a resource-specific
+ * service. Every request goes through the one typed client (`api`), which
+ * attaches the bearer token, refreshes it once on 401 and raises `ApiError`.
+ *
+ * The `token` argument every function still accepts is ignored — it is kept
+ * only so the call sites written before the single client compile unchanged.
+ * Drop it as each page is migrated.
+ *
+ * Reads that a page renders should be wrapped in a TanStack query keyed from
+ * `src/lib/queryKeys.ts` rather than called on every mount; see
+ * `src/hooks/academic/useCurrentTerm.ts` for the pattern that replaced the
+ * hand-rolled five-minute term cache this module used to keep.
+ */
+import { api } from "@/lib/apiClient";
+import { logger } from "@/lib/logger";
+import { getErrorMessage } from "@/lib/apiError";
 import { Student } from "@/types/student";
-import { apiClient } from "../lib/api/apiClient";
 
-// Simple cache for current term to prevent repeated requests
-let currentTermCache: { data: any; timestamp: number } | null = null;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+/**
+ * The response shape of an endpoint whose consumers have not been typed yet.
+ *
+ * Several of these calls are read by pages in areas still being migrated, and
+ * each of those pages narrows the record to the fields it needs. Kept in one
+ * named place (rather than `any` scattered through the file) so it is obvious
+ * what is left to type; each becomes a real interface as its page is migrated.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Untyped = any;
 
-// Function to clear the current term cache
-export const clearCurrentTermCache = () => {
-  currentTermCache = null;
- 
-};
+/** A page of records as the list endpoints return them. */
+export interface PaginatedBody<T> {
+  data?: T[];
+  meta?: { total?: number; page?: number; lastPage?: number };
+}
 
-// Fetch classes assigned to a teacher
-export const getAssignedClasses = async (userId: string, token: string) => {
+/** One entry of a course's weekly timetable. */
+export interface CourseTimetableEntry {
+  day?: string;
+  startTime?: string;
+  endTime?: string;
+  time?: string;
+  classId?: unknown;
+}
+
+/** A course (subject) as the teacher record carries it. */
+export interface TeacherCourseRecord {
+  _id: string;
+  title?: string;
+  courseCode?: string;
+  description?: string;
+  classId?: unknown;
+  timetable?: CourseTimetableEntry[];
+}
+
+/** A class as `/classes/:id` returns it. */
+export interface ClassRecord {
+  _id: string;
+  name?: string;
+  classDescription?: string;
+  classCapacity?: string | number;
+  [key: string]: unknown;
+}
+
+/**
+ * The teacher record behind a user. The roster fields are the ones pages read;
+ * the index signature covers the rest of the document until it is typed.
+ */
+export interface TeacherRecord {
+  _id?: string;
+  assignedClasses?: unknown[];
+  assignedCourses?: TeacherCourseRecord[];
+  classTeacherClasses?: unknown[];
+  classTeacherCourses?: TeacherCourseRecord[];
+  staffNumber?: string;
+  totalStudents?: number;
+  [key: string]: unknown;
+}
+
+/** The school's current academic term. */
+export interface CurrentTerm {
+  _id: string;
+  name?: string;
+  startDate?: string;
+  endDate?: string;
+  academicYearId?: string | { _id?: string; name?: string };
+  isCurrent?: boolean;
+  [key: string]: unknown;
+}
+
+/** A teaching resource uploaded by a teacher. */
+export interface ResourceRecord {
+  _id: string;
+  title?: string;
+  description?: string;
+  fileUrl?: string;
+  [key: string]: unknown;
+}
+
+/** One row of a class's attendance status for a date. */
+export interface ClassAttendanceStudent {
+  studentId?: string;
+  attendanceMarked?: boolean;
+  status?: string;
+  [key: string]: unknown;
+}
+
+/** `/attendance/class/:id/status` response. */
+export interface ClassAttendanceStatus {
+  students?: ClassAttendanceStudent[];
+  [key: string]: unknown;
+}
+
+/** `/attendance/student/:id/kpis` response. */
+export interface StudentAttendanceKpis {
+  present?: number;
+  absent?: number;
+  late?: number;
+  attendanceRate?: number;
+  [key: string]: unknown;
+}
+
+/** An assessment that is open for grading in the current term. */
+export interface AssessmentRecord {
+  _id: string;
+  name?: string;
+  type?: string;
+  [key: string]: unknown;
+}
+
+/** A weekly timetable as `/timetable/teacher/:id` returns it. */
+export interface TeacherTimetable {
+  _id?: string;
+  entries?: CourseTimetableEntry[];
+  [key: string]: unknown;
+}
+
+/** Body accepted by `POST /attendance`. Mirrors `CreateAttendanceDto`. */
+export interface AttendancePayload {
+  studentId: string;
+  classId: string;
+  date: string;
+  status: string;
+  termId: string;
+  absenceReason?: string;
+}
+
+/** Body accepted by `POST /resources` and `PUT /resources/:id`. */
+export interface ResourcePayload {
+  title?: string;
+  description?: string;
+  fileUrl?: string;
+  courseId?: string;
+  classId?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * The classes a teacher is assigned to, each loaded in full.
+ *
+ * @param userId - The teacher's user id.
+ * @param _token - Ignored; the client holds the session token.
+ * @returns The class records, or an empty list when the roster cannot be read.
+ */
+export const getAssignedClasses = async (userId: string, _token?: string): Promise<ClassRecord[]> => {
   try {
-    const teacherResponse = await apiClient.get(
-      `${API_BASE_URL}/teachers/${userId}`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      },
+    const teacher = await api.get<TeacherRecord>(`/teachers/${userId}`);
+    const assignedClassIds = Array.isArray(teacher.assignedClasses) ? teacher.assignedClasses : [];
+    if (assignedClassIds.length === 0) return [];
+
+    return await Promise.all(
+      assignedClassIds.map((classId) => api.get<ClassRecord>(`/classes/${String(classId)}`)),
     );
-
-    const assignedClassIds = teacherResponse.data.assignedClasses || [];
-    if (!Array.isArray(assignedClassIds) || assignedClassIds.length === 0) {
-      return [];
-    }
-
-    const classPromises = assignedClassIds.map((classId) =>
-      apiClient
-        .get(`${API_BASE_URL}/classes/${classId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        .then((res) => res.data),
-    );
-
-    return await Promise.all(classPromises);
   } catch (error) {
-   
+    logger.error("api.service", "Could not load the teacher's classes", error);
     return [];
   }
 };
 
-// Fetch courses assigned to a teacher
-export const getTeacherCourses = async (teacherId: string, token: string) => {
+/**
+ * The courses a teacher teaches, in the shape the subject pages expect.
+ *
+ * @param teacherId - The teacher's user id.
+ * @param _token - Ignored; the client holds the session token.
+ * @returns The courses, or an empty list when the record cannot be read.
+ */
+export const getTeacherCourses = async (teacherId: string, _token?: string): Promise<TeacherCourseRecord[]> => {
   try {
-    const teacherData = await fetchTeacherDetails(teacherId, token);
+    const teacher: TeacherRecord = await fetchTeacherDetails(teacherId);
+    if (!Array.isArray(teacher.assignedCourses)) return [];
 
-    if (
-      !teacherData.assignedCourses ||
-      !Array.isArray(teacherData.assignedCourses)
-    ) {
-     
-      return [];
-    }
-
-    // Map the assignedCourses to the expected format
-    const courses = teacherData.assignedCourses.map((course: any) => ({
+    return teacher.assignedCourses.map((course) => ({
       _id: course._id,
       title: course.title,
       courseCode: course.courseCode,
       description: course.description,
       classId: course.classId,
-      timetable: course.timetable || [],
+      timetable: course.timetable ?? [],
     }));
-
-    return courses;
   } catch (error) {
-    console.error("Error fetching teacher courses:", error);
+    logger.error("api.service", "Could not load the teacher's courses", error);
     return [];
   }
 };
 
-// Fetch students by class
-export const getStudentsByClass = async (classId: string, token: string) => {
+/**
+ * The first page of a class's students (10 records).
+ *
+ * @param classId - The class to read.
+ * @param _token - Ignored; the client holds the session token.
+ * @returns The students, or an empty list when the page cannot be read.
+ */
+export const getStudentsByClass = async (classId: string, _token?: string): Promise<Student[]> => {
   try {
-    const response = await apiClient.get(
-      `${API_BASE_URL}/students/by-class/${classId}`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-        params: {
-          page: 1,
-          limit: 10,
-        },
-      },
-    );
-    return response.data.data || [];
+    const body = await api.get<PaginatedBody<Student>>(`/students/by-class/${classId}`, {
+      params: { page: 1, limit: 10 },
+    });
+    return body.data ?? [];
   } catch (error) {
-    console.error("Error fetching students:", error);
+    logger.error("api.service", "Could not load the class roster", error);
     return [];
   }
 };
 
-/** Every student in a class, a page of 100 at a time. Throws when the first page fails. */
-export const getAllStudentsByClass = async (classId: string, token: string) => {
+/**
+ * Every student in a class, a page of 100 at a time.
+ *
+ * @param classId - The class to read.
+ * @param _token - Ignored; the client holds the session token.
+ * @returns Every student in the class.
+ * @throws ApiError when a page fails; nothing partial is returned silently.
+ */
+export const getAllStudentsByClass = async (classId: string, _token?: string): Promise<Student[]> => {
   const limit = 100;
-  const students: any[] = [];
+  const students: Student[] = [];
   for (let page = 1; page <= 20; page++) {
-    const response = await apiClient.get(`${API_BASE_URL}/students/by-class/${classId}`, {
-      headers: { Authorization: `Bearer ${token}` },
+    const body = await api.get<PaginatedBody<Student>>(`/students/by-class/${classId}`, {
       params: { page, limit },
     });
-    const data = Array.isArray(response.data?.data) ? response.data.data : [];
+    const data = Array.isArray(body.data) ? body.data : [];
     students.push(...data);
-    const lastPage = Number(response.data?.meta?.lastPage) || 1;
+    const lastPage = Number(body.meta?.lastPage) || 1;
     if (data.length < limit || page >= lastPage) break;
   }
   return students;
 };
 
-export const fetchStudent = async (
-  id: string,
-  token: string,
-): Promise<Student | null> => {
+/**
+ * One student's full record.
+ *
+ * @param id - The student id.
+ * @param _token - Ignored; the client holds the session token.
+ * @returns The student, or `null` when the record is empty.
+ * @throws Error with a user-safe message when the request fails.
+ */
+export const fetchStudent = async (id: string, _token?: string): Promise<Student | null> => {
   if (!id) throw new Error("Student ID is missing.");
-  if (!token) throw new Error("Unauthorized: No token found.");
 
   try {
-    const response = await apiClient.get(`${API_BASE_URL}/students/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    return response.data.data[0] || null; // Assuming student is in `data.data[0]`
+    const body = await api.get<PaginatedBody<Student>>(`/students/${id}`);
+    return body.data?.[0] ?? null;
   } catch (err) {
-    throw new Error(
-      (err as any).response?.data?.message || "Failed to fetch student data.",
-    );
+    throw new Error(getErrorMessage(err, "Failed to fetch student data."));
   }
 };
 
-export const fetchTeacherDetails = async (id: string, token: string) => {
+/**
+ * The teacher record behind a user id, with its class and course roster.
+ *
+ * @param id - The teacher's user id.
+ * @param _token - Ignored; the client holds the session token.
+ * @returns The teacher record.
+ * @throws Error with a user-safe message when the request fails.
+ */
+export const fetchTeacherDetails = async (id: string, _token?: string): Promise<Untyped> => {
   if (!id) throw new Error("Teacher ID is missing.");
-  if (!token) throw new Error("Unauthorized: No token found.");
 
   try {
-    const response = await apiClient.get(`${API_BASE_URL}/teachers/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    return response.data || null;
+    return await api.get<TeacherRecord>(`/teachers/${id}`);
   } catch (err) {
-    throw new Error(
-      (err as any).response?.data?.message || "Failed to fetch teacher data.",
-    );
+    throw new Error(getErrorMessage(err, "Failed to fetch teacher data."));
   }
 };
 
-export const fetchResources = async (token: string, teacherId?: string) => {
+/**
+ * Teaching resources — every resource in the school, or just one teacher's.
+ *
+ * @param _token - Ignored; the client holds the session token.
+ * @param teacherId - Limit to the resources this teacher uploaded.
+ * @returns The resources, or an empty list when they cannot be read.
+ */
+export const fetchResources = async (_token?: string, teacherId?: string): Promise<Untyped[]> => {
   try {
-    // If teacherId is provided, fetch only resources uploaded by that teacher
-    const endpoint = teacherId
-      ? `${API_BASE_URL}/resources/user/${teacherId}`
-      : `${API_BASE_URL}/resources`;
-
-    const response = await apiClient.get(endpoint, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return response.data || [];
+    const endpoint = teacherId ? `/resources/user/${teacherId}` : "/resources";
+    const body = await api.get<ResourceRecord[]>(endpoint);
+    return Array.isArray(body) ? body : [];
   } catch (error) {
-    console.error("Error fetching resources:", error);
+    logger.error("api.service", "Could not load resources", error);
     return [];
   }
 };
 
-export const deleteResource = async (id: string, token: string) => {
+/**
+ * Deletes one teaching resource.
+ *
+ * @param id - The resource id.
+ * @param _token - Ignored; the client holds the session token.
+ * @returns True when the server accepted the delete.
+ */
+export const deleteResource = async (id: string, _token?: string): Promise<boolean> => {
   try {
-    await apiClient.delete(`${API_BASE_URL}/resources/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    await api.delete(`/resources/${id}`);
     return true;
   } catch (error) {
-    console.error("Error deleting resource:", error);
+    logger.error("api.service", "Could not delete the resource", error);
     return false;
   }
 };
 
-export const getCurrentTerm = async (token: string) => {
-  try {
-    // Check cache first
-    if (
-      currentTermCache &&
-      Date.now() - currentTermCache.timestamp < CACHE_DURATION
-    ) {
-   
-      return currentTermCache.data;
-    }
+/**
+ * The school's current academic term.
+ *
+ * This is reference data that changes at most once a term, so render it
+ * through `useCurrentTerm()` (a cached query on
+ * `queryKeys.academic.currentTerm`) rather than calling this on every mount.
+ *
+ * @param _token - Ignored; the client holds the session token.
+ * @returns The current term.
+ * @throws ApiError when the term cannot be read.
+ */
+export const getCurrentTerm = async (_token?: string): Promise<CurrentTerm> =>
+  api.get<CurrentTerm>("/academic-year-term/term/current");
 
-    const response = await apiClient.get(
-      `${API_BASE_URL}/academic-year-term/term/current`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      },
-    );
-    const data = response.data;
+/**
+ * Creates a teaching resource.
+ *
+ * @param data - The resource to create.
+ * @param _token - Ignored; the client holds the session token.
+ * @returns The created resource.
+ * @throws ApiError when the server rejects the payload.
+ */
+export const uploadResource = async (data: ResourcePayload, _token?: string): Promise<Untyped> =>
+  api.post<ResourceRecord>("/resources", data);
 
-    // Update cache
-    currentTermCache = {
-      data,
-      timestamp: Date.now(),
-    };
+/**
+ * Creates a teaching resource.
+ *
+ * @param resourceData - The resource to create.
+ * @param _token - Ignored; the client holds the session token.
+ * @returns The created resource.
+ * @throws ApiError when the server rejects the payload.
+ */
+export const createResource = async (resourceData: ResourcePayload, _token?: string): Promise<Untyped> =>
+  api.post<ResourceRecord>("/resources", resourceData);
 
-  
-    return data;
-  } catch (error) {
-   
-    // Return cached data if available, even if expired
-    if (currentTermCache) {
-     
-      return currentTermCache.data;
-    }
-    throw error;
-  }
-};
-
-export const uploadResource = async (data: any, token: string) => {
-  try {
-    const response = await apiClient.post(`${API_BASE_URL}/resources`, data, {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error uploading resource:", error);
-    throw error;
-  }
-};
-
-export const createResource = async (resourceData: any, token: string) => {
-  try {
-    const response = await apiClient.post(
-      `${API_BASE_URL}/resources`,
-      resourceData,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      },
-    );
-    return response.data;
-  } catch (error) {
-    console.error("Error creating resource:", error);
-    throw error;
-  }
-};
-
-// api.service.ts
+/**
+ * Replaces a teaching resource.
+ *
+ * @param resourceId - The resource to update.
+ * @param data - The new values.
+ * @param _token - Ignored; the client holds the session token.
+ * @returns The updated resource.
+ * @throws ApiError when the server rejects the payload.
+ */
 export const updateResource = async (
   resourceId: string,
-  data: any,
-  token: string,
-) => {
-  const response = await apiClient.put(
-    `${API_BASE_URL}/resources/${resourceId}`,
-    data,
-    {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  );
-  return response.data;
+  data: ResourcePayload,
+  _token?: string,
+): Promise<Untyped> => api.put<ResourceRecord>(`/resources/${resourceId}`, data);
+
+/**
+ * Records one student's attendance for a day.
+ *
+ * @param payload - Exactly the fields `CreateAttendanceDto` declares.
+ * @param _token - Ignored; the client holds the session token.
+ * @returns The stored attendance record.
+ * @throws ApiError when the server rejects the payload.
+ */
+export const submitAttendance = async (payload: AttendancePayload, _token?: string): Promise<Untyped> =>
+  api.post("/attendance", payload);
+
+/**
+ * A teacher's weekly timetable.
+ *
+ * @param teacherId - The teacher's user id.
+ * @param _token - Ignored; the client holds the session token.
+ * @returns The timetable.
+ * @throws ApiError when the timetable cannot be read.
+ */
+export const getTeacherTimetable = async (teacherId: string, _token?: string): Promise<Untyped> =>
+  api.get<TeacherTimetable>(`/timetable/teacher/${teacherId}`);
+
+/**
+ * One course (subject) by its id.
+ *
+ * @param courseId - The course id.
+ * @param _token - Ignored; the client holds the session token.
+ * @returns The course.
+ * @throws ApiError when the course cannot be read.
+ */
+export const fetchCourseById = async (courseId: string, _token?: string): Promise<Untyped> => {
+  const body = await api.get<{ data: TeacherCourseRecord }>(`/courses/${courseId}`);
+  return body.data;
 };
 
-export const submitAttendance = async (
-  payload: {
-    studentId: string;
-    classId: string;
-    date: string;
-    status: string;
-    termId: string;
-    absenceReason?: string;
-  },
-  token: string,
-) => {
-  const res = await apiClient.post(`${API_BASE_URL}/attendance`, payload, {
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-  });
-  return res.data;
-};
-
-export const getTeacherTimetable = async (teacherId: string, token: string) => {
-  try {
-    const response = await apiClient.get(
-      `${API_BASE_URL}/timetable/teacher/${teacherId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    );
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching timetable:", error);
-    throw error;
-  }
-};
-
-// Fetch a single course (subject) by its ID
-export const fetchCourseById = async (courseId: string, token: string) => {
-  const res = await apiClient.get(`${API_BASE_URL}/courses/${courseId}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return res.data.data; // adjust if your API wraps differently
-};
-
-// Get active assessments by term
+/**
+ * The assessments open for grading in a term.
+ *
+ * @param termId - The term to read.
+ * @param _token - Ignored; the client holds the session token.
+ * @returns The active assessments, or an empty list when they cannot be read.
+ */
 export const getActiveAssessmentsByTerm = async (
   termId: string,
-  token: string,
-) => {
+  _token?: string,
+): Promise<Untyped[]> => {
   try {
-    const response = await apiClient.get(
-      `${API_BASE_URL}/assessments/term/${termId}/active`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      },
-    );
-    return response.data || [];
+    const body = await api.get<AssessmentRecord[]>(`/assessments/term/${termId}/active`);
+    return Array.isArray(body) ? body : [];
   } catch (error) {
-    console.error("Error fetching active assessments:", error);
+    logger.error("api.service", "Could not load active assessments", error);
     return [];
   }
 };
 
-// Get class attendance status for a specific date
+/**
+ * Whether each student in a class has been marked for a date.
+ *
+ * @param classId - The class to read.
+ * @param _token - Ignored; the client holds the session token.
+ * @param date - ISO date; the server's today when omitted.
+ * @returns The status, or `null` when it cannot be read.
+ */
 export const getClassAttendanceStatus = async (
   classId: string,
-  token: string,
+  _token?: string,
   date?: string,
-) => {
+): Promise<ClassAttendanceStatus | null> => {
   try {
-    const dateQuery = date ? `?date=${date}` : "";
-    const response = await apiClient.get(
-      `${API_BASE_URL}/attendance/class/${classId}/status${dateQuery}`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      },
-    );
-    return response.data;
+    return await api.get<ClassAttendanceStatus>(`/attendance/class/${classId}/status`, {
+      params: { date },
+    });
   } catch (error) {
-    console.error("Error fetching class attendance status:", error);
+    logger.error("api.service", "Could not load the class attendance status", error);
     return null;
   }
 };
 
-// Get student attendance KPIs
+/**
+ * One student's attendance KPIs over a term or date range.
+ *
+ * @param studentId - The student to read.
+ * @param _token - Ignored; the client holds the session token.
+ * @param options - Term or date-range filter.
+ * @param options.termId - Limit to one term.
+ * @param options.startDate - Start of the range.
+ * @param options.endDate - End of the range.
+ * @returns The KPIs, or `null` when they cannot be read.
+ */
 export const getStudentAttendanceKPIs = async (
   studentId: string,
-  token: string,
-  options?: {
-    termId?: string;
-    startDate?: string;
-    endDate?: string;
-  },
-) => {
+  _token?: string,
+  options?: { termId?: string; startDate?: string; endDate?: string },
+): Promise<StudentAttendanceKpis | null> => {
   try {
-    const queryParams = new URLSearchParams();
-    if (options?.termId) queryParams.append("termId", options.termId);
-    if (options?.startDate) queryParams.append("startDate", options.startDate);
-    if (options?.endDate) queryParams.append("endDate", options.endDate);
-
-    const queryString = queryParams.toString();
-    const url = `${API_BASE_URL}/attendance/student/${studentId}/kpis${
-      queryString ? `?${queryString}` : ""
-    }`;
-
-    const response = await apiClient.get(url, {
-      headers: { Authorization: `Bearer ${token}` },
+    return await api.get<StudentAttendanceKpis>(`/attendance/student/${studentId}/kpis`, {
+      params: { termId: options?.termId, startDate: options?.startDate, endDate: options?.endDate },
     });
-    return response.data;
   } catch (error) {
-    console.error("Error fetching student attendance KPIs:", error);
+    logger.error("api.service", "Could not load the student's attendance KPIs", error);
     return null;
   }
 };
 
-// Fetch teacher dashboard KPIs
-export const getTeacherDashboardKPIs = async (
-  teacherId: string,
-  token: string,
-) => {
-  try {
-    const response = await apiClient.get(
-      `${API_BASE_URL}/teachers/${teacherId}/dashboard/kpis`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      },
-    );
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching teacher dashboard KPIs:", error);
-    return null;
-  }
-};
-
-// Fetch all teachers dashboard KPIs
-export const getAllTeachersDashboardKPIs = async (token: string) => {
-  try {
-    const response = await apiClient.get(
-      `${API_BASE_URL}/teachers/dashboard/kpis/all`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      },
-    );
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching all teachers dashboard KPIs:", error);
-    return null;
-  }
-};
+/**
+ * The dashboard KPIs for one teacher.
+ *
+ * @param teacherId - The teacher's user id.
+ * @param _token - Ignored; the client holds the session token.
+ * @returns The KPI payload.
+ * @throws ApiError when the KPIs cannot be read, so the caller can show an
+ *   error state instead of rendering zeroes as if they were real.
+ */
+export const getTeacherDashboardKPIs = async <T = unknown>(teacherId: string, _token?: string): Promise<T> =>
+  api.get<T>(`/teachers/${teacherId}/dashboard/kpis`);

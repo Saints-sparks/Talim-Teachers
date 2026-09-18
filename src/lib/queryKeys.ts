@@ -103,6 +103,13 @@ export const queryKeys = {
     all: ["profile"] as const,
     detail: (userId: string) => ["profile", userId] as const,
   },
+  settings: {
+    all: ["settings"] as const,
+    /** `/teacher/settings` — profile, employment, summary and stored preferences. */
+    teacher: (userId: string) => ["settings", userId, "teacher"] as const,
+    /** `/notifications/preferences` — per-category delivery switches. */
+    notificationPreferences: (userId: string) => ["settings", userId, "notification-preferences"] as const,
+  },
 } as const;
 
 /**
