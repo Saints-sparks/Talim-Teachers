@@ -37,6 +37,8 @@ export interface ScopedKpi {
 export interface GradeRow {
   studentId: string;
   studentName: string;
+  /** The saved score record's id, when one exists; absent means "not graded yet". */
+  gradeId?: string;
   score: number | null;
   maxScore: number;
   status: RowStatus;
@@ -52,5 +54,5 @@ export interface GenerationResult {
   successful: number;
   failed: number;
   skipped: number;
-  errors: Array<{ studentId: string; studentName?: string; reason: string }>;
+  errors: Array<{ studentId?: string; studentName?: string; reason: string }>;
 }

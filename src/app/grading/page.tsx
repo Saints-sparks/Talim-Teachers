@@ -6,11 +6,8 @@ import { ContextHeader } from "@/components/grading/workspace/ContextHeader";
 import { CourseTeacherGradingTab } from "@/components/grading/workspace/CourseTeacherGradingTab";
 import { ClassTeacherGradingTab } from "@/components/grading/workspace/ClassTeacherGradingTab";
 import { RoleMode } from "@/components/grading/workspace/types";
-import { gradingWorkspaceService } from "@/app/services/grading-workspace/grading-workspace.service";
-import { useAuth } from "@/app/hooks/useAuth";
 
 const GradingPage: React.FC = () => {
-  const { getAccessToken } = useAuth();
   const [role, setRole] = useState<RoleMode>("course");
   const [termLabel, setTermLabel] = useState("");
   const [scopeLabel, setScopeLabel] = useState("");

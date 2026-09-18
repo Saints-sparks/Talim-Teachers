@@ -3,7 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { gradingWorkspaceService } from "@/app/services/grading-workspace/grading-workspace.service";
+import {
+  gradingWorkspaceService,
+  resolveId,
+} from "@/app/services/grading-workspace/grading-workspace.service";
+import type { Term } from "@/app/services/grading-workspace/types";
+import { toCsv, downloadCsv, csvFileName } from "@/app/services/grading-workspace/grade-csv";
+import { getErrorMessage } from "@/lib/apiError";
+import { logger } from "@/lib/logger";
 import { ScopedKpiCards } from "./ScopedKpiCards";
 import { ClassPerformanceTable } from "./ClassPerformanceTable";
 import { AssessmentOverviewTab } from "./AssessmentOverviewTab";
@@ -13,8 +20,7 @@ import { ValidationResultModal } from "./ValidationResultModal";
 import { StudentCourseGradesModal } from "./StudentCourseGradesModal";
 import { GenerationResult, GradeRow, ScopedKpi } from "./types";
 import { useGradingStateMachine } from "./useGradingStateMachine";
-import { useAuth } from "@/app/hooks/useAuth";
-import { useAppContext } from "@/app/context/AppContext";
+import { useAppContext, type TeacherClass } from "@/app/context/AppContext";
 
 type ClassSubTab = "students" | "overview" | "history";
 
@@ -24,27 +30,19 @@ interface Props {
 }
 
 export const ClassTeacherGradingTab: React.FC<Props> = ({ onScopeChange, registerActions }) => {
-  const normalizeId = (value: any): string => {
-    if (!value) return "";
-    if (typeof value === "string") return value;
-    return value._id?.toString?.() || "";
-  };
-
-  const { getAccessToken } = useAuth();
-  const { user } = useAppContext();
+  const { classes, isLoading: rosterLoading } = useAppContext();
   const machine = useGradingStateMachine();
 
-  const [classes, setClasses] = useState<any[]>([]);
-  const [terms, setTerms] = useState<any[]>([]);
+  const [terms, setTerms] = useState<Term[]>([]);
   const [selectedAcademicYear, setSelectedAcademicYear] = useState("");
   const [selectedClass, setSelectedClass] = useState("");
   const [selectedTerm, setSelectedTerm] = useState("");
   const [currentTermId, setCurrentTermId] = useState("");
 
-  const [summary, setSummary] = useState<any | null>(null);
+  const [summary, setSummary] = useState<Awaited<ReturnType<typeof gradingWorkspaceService.getClassSummary>> | null>(null);
   const [rows, setRows] = useState<GradeRow[]>([]);
-  const [historyRows, setHistoryRows] = useState<any[]>([]);
-  const [overviewRows, setOverviewRows] = useState<any[]>([]);
+  const [historyRows, setHistoryRows] = useState<Awaited<ReturnType<typeof gradingWorkspaceService.getGenerationHistory>>>([]);
+  const [overviewRows, setOverviewRows] = useState<Awaited<ReturnType<typeof gradingWorkspaceService.getAssessmentOverview>>>([]);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [subTab, setSubTab] = useState<ClassSubTab>("students");
@@ -57,11 +55,9 @@ export const ClassTeacherGradingTab: React.FC<Props> = ({ onScopeChange, registe
   const [studentModalTarget, setStudentModalTarget] = useState<{ studentId: string; studentName: string } | null>(null);
   const [isPublishing, setIsPublishing] = useState(false);
 
-  const token = getAccessToken() || "";
-
   const academicYears = useMemo(() => {
     const map = new Map<string, string>();
-    terms.forEach((t: any) => {
+    terms.forEach((t) => {
       const label = t.academicYearName || (t.name?.includes("/") ? t.name.split(" ").slice(-1)[0] : "Current Academic Year");
       map.set(label, label);
     });
@@ -70,60 +66,58 @@ export const ClassTeacherGradingTab: React.FC<Props> = ({ onScopeChange, registe
 
   const filteredTerms = useMemo(() => {
     if (!selectedAcademicYear) return terms;
-    return terms.filter((t: any) => (t.academicYearName || t.name || "").includes(selectedAcademicYear));
+    return terms.filter((t) => (t.academicYearName || t.name || "").includes(selectedAcademicYear));
   }, [terms, selectedAcademicYear]);
 
   const loadBase = async () => {
-    if (!user?.userId || !token) return;
     machine.dispatch({ type: "LOAD" });
     try {
-      const [assigned, termData] = await Promise.all([
-        gradingWorkspaceService.getAssignedCoursesAndClasses(user.userId, token),
-        gradingWorkspaceService.getTerms(token),
-      ]);
-      setClasses(assigned.classes || []);
-      setTerms(termData || []);
-      const activeTerm = termData.find((t: any) => t.isActive)?._id || termData?.[0]?._id || "";
-      const activeYear = termData.find((t: any) => t._id === activeTerm)?.academicYearName || "";
-      setCurrentTermId(normalizeId(activeTerm));
+      const termData = await gradingWorkspaceService.getTerms();
+      setTerms(termData);
+      const activeTerm = termData.find((t) => t.isActive)?._id || termData[0]?._id || "";
+      const activeYear = termData.find((t) => t._id === activeTerm)?.academicYearName || "";
+      setCurrentTermId(resolveId(activeTerm));
       setSelectedAcademicYear((prev) => prev || activeYear || academicYears[0] || "");
-      setSelectedTerm((prev) => prev || normalizeId(activeTerm));
-      setSelectedClass((prev) => prev || normalizeId((assigned.classes || [])[0]?._id));
+      setSelectedTerm((prev) => prev || resolveId(activeTerm));
+      setSelectedClass((prev) => prev || resolveId((classes as TeacherClass[])[0]?._id));
       machine.dispatch({ type: "LOAD_SUCCESS" });
-    } catch (e: any) {
-      setError(e?.message || "Failed to load class teacher workspace");
+    } catch (e) {
+      setError(getErrorMessage(e, "Failed to load class teacher workspace"));
       machine.dispatch({ type: "LOAD_ERROR" });
     }
   };
 
   const loadScopedData = async () => {
-    if (!selectedClass || !selectedTerm || !token) return;
+    if (!selectedClass || !selectedTerm) return;
     machine.dispatch({ type: "LOAD" });
     setError(null);
     try {
       const [summaryData, performanceData, historyData, overviewData] = await Promise.all([
-        gradingWorkspaceService.getClassSummary(selectedClass, selectedTerm, token),
-        gradingWorkspaceService.getStudentsPerformance(selectedClass, selectedTerm, token),
-        gradingWorkspaceService.getGenerationHistory(selectedClass, token),
-        gradingWorkspaceService.getAssessmentOverview(selectedClass, selectedTerm, token),
+        gradingWorkspaceService.getClassSummary(selectedClass, selectedTerm),
+        gradingWorkspaceService.getStudentsPerformance(selectedClass, selectedTerm),
+        gradingWorkspaceService.getGenerationHistory(selectedClass, selectedTerm),
+        gradingWorkspaceService.getAssessmentOverview(selectedClass, selectedTerm),
       ]);
       setSummary(summaryData);
       setRows(performanceData);
       setHistoryRows(historyData);
       setOverviewRows(overviewData);
       machine.dispatch({ type: "LOAD_SUCCESS" });
-    } catch (e: any) {
-      setError(e?.message || "Failed to load class data");
+    } catch (e) {
+      setError(getErrorMessage(e, "Failed to load class data"));
       machine.dispatch({ type: "LOAD_ERROR" });
     }
   };
 
-  useEffect(() => { loadBase(); }, [user?.userId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { loadBase(); }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadScopedData(); }, [selectedClass, selectedTerm]);
   useEffect(() => {
-    const classLabel = classes.find((c) => c._id === selectedClass)?.name || "";
+    const classLabel = (classes as TeacherClass[]).find((c) => c._id === selectedClass)?.name || "";
     const termLabel = terms.find((t) => t._id === selectedTerm)?.name || "";
     onScopeChange({ termLabel, scopeLabel: classLabel });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedClass, selectedTerm, classes, terms]);
 
   const allStudentsHaveTermGrades = useMemo(
@@ -165,27 +159,42 @@ export const ClassTeacherGradingTab: React.FC<Props> = ({ onScopeChange, registe
   const generate = async () => {
     if (!selectedClass || !selectedTerm || blockers.length > 0) return;
     machine.dispatch({ type: "GENERATE" });
-    const generation = await gradingWorkspaceService.generateClassSummary(selectedClass, selectedTerm, token);
-    setResult(generation);
-    setResultOpen(true);
-    if (generation.status === "failed") {
-      setError(generation.errors[0]?.reason || "Generation failed");
+    try {
+      const generation = await gradingWorkspaceService.generateClassSummary(selectedClass, { termId: selectedTerm });
+      setResult(generation);
+      setResultOpen(true);
+      if (generation.status === "failed") {
+        setError(generation.errors[0]?.reason || "Generation failed");
+        machine.dispatch({ type: "GENERATE_ERROR" });
+      } else {
+        setSuccessMsg("Generate Class Summary completed.");
+        machine.dispatch({ type: "GENERATE_SUCCESS" });
+        await loadScopedData();
+        setMobileStep(4);
+      }
+    } catch (e) {
+      logger.error("grading", "Generating class summary failed", e);
+      setError(getErrorMessage(e, "Generation failed"));
       machine.dispatch({ type: "GENERATE_ERROR" });
-    } else {
-      setSuccessMsg("Generate Class Summary completed.");
-      machine.dispatch({ type: "GENERATE_SUCCESS" });
-      await loadScopedData();
-      setMobileStep(4);
+    } finally {
+      setConfirmOpen(false);
     }
-    setConfirmOpen(false);
   };
 
   const retryFailed = async () => {
     if (!result || result.failed === 0 || !selectedClass) return;
-    const failedIds = result.errors.map((e) => e.studentId).filter(Boolean);
-    const retryResult = await gradingWorkspaceService.retryFailedStudents(selectedClass, result.runId || "", failedIds, token);
-    setResult(retryResult);
-    await loadScopedData();
+    const failedIds = result.errors.map((e) => e.studentId).filter((id): id is string => Boolean(id));
+    try {
+      const retryResult = await gradingWorkspaceService.retryFailedStudents(selectedClass, {
+        runId: result.runId || "",
+        studentIds: failedIds,
+      });
+      setResult(retryResult);
+      await loadScopedData();
+    } catch (e) {
+      logger.error("grading", "Retrying failed students failed", e);
+      setError(getErrorMessage(e, "Retry failed"));
+    }
   };
 
   const publish = async () => {
@@ -193,27 +202,40 @@ export const ClassTeacherGradingTab: React.FC<Props> = ({ onScopeChange, registe
     setIsPublishing(true);
     setError(null);
     try {
-      await gradingWorkspaceService.publishClassGrade(selectedClass, selectedTerm, token);
+      await gradingWorkspaceService.publishClassGrade(selectedClass, selectedTerm);
       setSuccessMsg("Class term grades published. Notifications sent to students and parents.");
       await loadScopedData();
-    } catch (e: any) {
-      setError(e?.message || "Failed to publish class grade");
+    } catch (e) {
+      logger.error("grading", "Publishing class grade failed", e);
+      setError(getErrorMessage(e, "Failed to publish class grade"));
     } finally {
       setIsPublishing(false);
     }
   };
 
-  useEffect(() => {
-    registerActions({ refresh: loadScopedData, primary: () => setConfirmOpen(true), export: () => { gradingWorkspaceService.exportPlaceholder(); } });
-  }, [selectedClass, selectedTerm, blockers.length]);
+  const exportRows = () => {
+    if (!rows.length) return;
+    const csv = toCsv(
+      ["Student name", "Average score", "Grade preview", "Position", "Status"],
+      rows.map((row) => [row.studentName, row.score ?? "", row.gradePreview ?? "", row.position ?? "", row.status]),
+    );
+    const classLabel = (classes as TeacherClass[]).find((c) => resolveId(c._id) === selectedClass)?.name;
+    const termLabel = terms.find((t) => t._id === selectedTerm)?.name;
+    downloadCsv(csvFileName("class-grades", classLabel, termLabel), csv);
+  };
 
-  const showStep = (step: 1 | 2 | 3 | 4) => typeof window !== "undefined" && window.innerWidth < 768 ? mobileStep === step : true;
+  useEffect(() => {
+    registerActions({ refresh: loadScopedData, primary: () => setConfirmOpen(true), export: exportRows });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedClass, selectedTerm, blockers.length, rows]);
+
+  const showStep = (step: 1 | 2 | 3 | 4) => (typeof window !== "undefined" && window.innerWidth < 768 ? mobileStep === step : true);
 
   return (
     <div className="space-y-4">
       <p className="text-sm text-slate-600 dark:text-slate-300">You are reviewing cumulative class performance and generating class summaries after course grades are completed.</p>
       <div className="rounded-lg border border-[#D7E1ED] bg-[#EBF0F7] px-3 py-2 text-sm text-[#003366] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-        Showing enrolled students for <span className="font-medium">{classes.find((c) => normalizeId(c._id) === selectedClass)?.name || "selected class"}</span> in current term only.
+        Showing enrolled students for <span className="font-medium">{(classes as TeacherClass[]).find((c) => resolveId(c._id) === selectedClass)?.name || "selected class"}</span> in current term only.
       </div>
       {successMsg && <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">{successMsg}</div>}
 
@@ -221,8 +243,8 @@ export const ClassTeacherGradingTab: React.FC<Props> = ({ onScopeChange, registe
         <Card className="border-[#D7E1ED] bg-white dark:border-slate-700 dark:bg-slate-800">
           <CardContent className="grid grid-cols-1 gap-3 p-4 md:grid-cols-3">
             <Select value={selectedAcademicYear} onValueChange={setSelectedAcademicYear} disabled><SelectTrigger aria-label="Academic year"><SelectValue placeholder="Academic Year" /></SelectTrigger><SelectContent>{academicYears.map((year) => <SelectItem key={year} value={year}>{year}</SelectItem>)}</SelectContent></Select>
-            <Select value={selectedTerm} onValueChange={setSelectedTerm} disabled><SelectTrigger aria-label="Term"><SelectValue placeholder="Term" /></SelectTrigger><SelectContent>{filteredTerms.filter((t: any) => normalizeId(t._id) === currentTermId).map((t: any) => <SelectItem key={normalizeId(t._id)} value={normalizeId(t._id)}>{t.name}</SelectItem>)}</SelectContent></Select>
-            <Select value={selectedClass} onValueChange={setSelectedClass}><SelectTrigger aria-label="Class"><SelectValue placeholder="Class" /></SelectTrigger><SelectContent>{classes.map((c: any) => <SelectItem key={normalizeId(c._id)} value={normalizeId(c._id)}>{c.name}</SelectItem>)}</SelectContent></Select>
+            <Select value={selectedTerm} onValueChange={setSelectedTerm} disabled><SelectTrigger aria-label="Term"><SelectValue placeholder="Term" /></SelectTrigger><SelectContent>{filteredTerms.filter((t) => resolveId(t._id) === currentTermId).map((t) => <SelectItem key={resolveId(t._id)} value={resolveId(t._id)}>{t.name}</SelectItem>)}</SelectContent></Select>
+            <Select value={selectedClass} onValueChange={setSelectedClass}><SelectTrigger aria-label="Class"><SelectValue placeholder="Class" /></SelectTrigger><SelectContent>{(classes as TeacherClass[]).map((c) => <SelectItem key={resolveId(c._id)} value={resolveId(c._id)}>{c.name}</SelectItem>)}</SelectContent></Select>
           </CardContent>
         </Card>
       )}
@@ -240,7 +262,7 @@ export const ClassTeacherGradingTab: React.FC<Props> = ({ onScopeChange, registe
         </CardContent>
       </Card>
 
-      <ScopedKpiCards data={kpis} loading={machine.isLoading} error={error} onRetry={loadScopedData} />
+      <ScopedKpiCards data={kpis} loading={machine.isLoading || rosterLoading} error={error} onRetry={loadScopedData} />
 
       {(showStep(2) || showStep(3) || showStep(4)) && (
         <>
@@ -338,14 +360,13 @@ export const ClassTeacherGradingTab: React.FC<Props> = ({ onScopeChange, registe
         studentName={studentModalTarget?.studentName || ""}
         classId={selectedClass}
         termId={selectedTerm}
-        token={token}
         onTermGradeGenerated={loadScopedData}
       />
 
       <GenerateSummaryModal
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        className={classes.find((c) => c._id === selectedClass)?.name || ""}
+        className={(classes as TeacherClass[]).find((c) => c._id === selectedClass)?.name || ""}
         termName={terms.find((t) => t._id === selectedTerm)?.name || ""}
         studentCount={summary?.studentsCount || 0}
         warnings={warnings}

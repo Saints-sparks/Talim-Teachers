@@ -1,16 +1,23 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { gradingWorkspaceService } from "@/app/services/grading-workspace/grading-workspace.service";
+import {
+  gradingWorkspaceService,
+  resolveId,
+} from "@/app/services/grading-workspace/grading-workspace.service";
+import type { Term, Assessment } from "@/app/services/grading-workspace/types";
+import { parseScoreCsv, matchScoreRows, toCsv, downloadCsv, csvFileName } from "@/app/services/grading-workspace/grade-csv";
+import { getErrorMessage } from "@/lib/apiError";
+import { logger } from "@/lib/logger";
 import { GradeEntryTable } from "./GradeEntryTable";
 import { ScopedKpiCards } from "./ScopedKpiCards";
 import { DetailsDrawer } from "./DetailsDrawer";
-import { GradeRow, ScopedKpi } from "./types";
+import { ValidationResultModal } from "./ValidationResultModal";
+import { GradeRow, GenerationResult, ScopedKpi } from "./types";
 import { useGradingStateMachine } from "./useGradingStateMachine";
-import { useAuth } from "@/app/hooks/useAuth";
-import { useAppContext } from "@/app/context/AppContext";
+import { useAppContext, type TeacherCourse, type TeacherClass } from "@/app/context/AppContext";
 
 interface Props {
   onScopeChange: (scope: { termLabel: string; scopeLabel: string }) => void;
@@ -18,20 +25,11 @@ interface Props {
 }
 
 export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, registerActions }) => {
-  const normalizeId = (value: any): string => {
-    if (!value) return "";
-    if (typeof value === "string") return value;
-    return value._id?.toString?.() || "";
-  };
-
-  const { getAccessToken } = useAuth();
-  const { user } = useAppContext();
+  const { courses, classes, isLoading: rosterLoading } = useAppContext();
   const machine = useGradingStateMachine();
 
-  const [courses, setCourses] = useState<any[]>([]);
-  const [classes, setClasses] = useState<any[]>([]);
-  const [terms, setTerms] = useState<any[]>([]);
-  const [assessments, setAssessments] = useState<any[]>([]);
+  const [terms, setTerms] = useState<Term[]>([]);
+  const [assessments, setAssessments] = useState<Assessment[]>([]);
 
   const [selectedAcademicYear, setSelectedAcademicYear] = useState("");
   const [selectedTerm, setSelectedTerm] = useState("");
@@ -65,14 +63,17 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
   const [publishedAssessmentIds, setPublishedAssessmentIds] = useState<Set<string>>(new Set());
   const [detailsRow, setDetailsRow] = useState<GradeRow | null>(null);
   const [canBatchUpload, setCanBatchUpload] = useState(false);
+  const [batchResult, setBatchResult] = useState<GenerationResult | null>(null);
+  const [batchResultOpen, setBatchResultOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const token = getAccessToken() || "";
-  const selectedCourseObj = courses.find((c) => normalizeId(c._id) === normalizeId(selectedCourse));
-  const effectiveClassId = normalizeId(selectedCourseObj?.classId || selectedClass);
+  const selectedCourseObj = (courses as TeacherCourse[]).find((c) => resolveId(c._id) === resolveId(selectedCourse));
+  const effectiveClassId = resolveId(selectedCourseObj?.classId) || resolveId(selectedClass);
 
   const academicYears = useMemo(() => {
     const map = new Map<string, string>();
-    terms.forEach((t: any) => {
+    terms.forEach((t) => {
       const label = t.academicYearName || (t.name?.includes("/") ? t.name.split(" ").slice(-1)[0] : "Current Academic Year");
       map.set(label, label);
     });
@@ -81,43 +82,39 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
 
   const filteredTerms = useMemo(() => {
     if (!selectedAcademicYear) return terms;
-    return terms.filter((t: any) => (t.academicYearName || t.name || "").includes(selectedAcademicYear));
+    return terms.filter((t) => (t.academicYearName || t.name || "").includes(selectedAcademicYear));
   }, [terms, selectedAcademicYear]);
 
   const loadBase = async () => {
-    if (!user?.userId || !token) return;
     machine.dispatch({ type: "LOAD" });
     setError(null);
     try {
-      const [assigned, termData, batchSupported] = await Promise.all([
-        gradingWorkspaceService.getAssignedCoursesAndClasses(user.userId, token),
-        gradingWorkspaceService.getTerms(token),
-        gradingWorkspaceService.batchUploadSupported(),
+      const [termData, capability] = await Promise.all([
+        gradingWorkspaceService.getTerms(),
+        gradingWorkspaceService.getBatchUploadCapability(),
       ]);
-      setCourses(assigned.courses || []);
-      setClasses(assigned.classes || []);
-      setTerms(termData || []);
-      setCanBatchUpload(batchSupported);
-      const activeTerm = (termData || []).find((t: any) => t.isActive)?._id || termData?.[0]?._id || "";
-      const activeYear = (termData || []).find((t: any) => t._id === activeTerm)?.academicYearName || "";
-      setCurrentTermId(normalizeId(activeTerm));
+      setTerms(termData);
+      setCanBatchUpload(capability.supported);
+      const activeTerm = termData.find((t) => t.isActive)?._id || termData[0]?._id || "";
+      const activeYear = termData.find((t) => t._id === activeTerm)?.academicYearName || "";
+      setCurrentTermId(resolveId(activeTerm));
       setSelectedAcademicYear((prev) => prev || activeYear || academicYears[0] || "");
-      setSelectedTerm((prev) => prev || normalizeId(activeTerm));
+      setSelectedTerm((prev) => prev || resolveId(activeTerm));
       machine.dispatch({ type: "LOAD_SUCCESS" });
-    } catch (e: any) {
-      setError(e?.message || "Failed to load grading workspace");
+    } catch (e) {
+      setError(getErrorMessage(e, "Failed to load grading workspace"));
       machine.dispatch({ type: "LOAD_ERROR" });
     }
   };
 
   const loadAssessments = async () => {
-    if (!token || !selectedTerm) return;
-    const data = await gradingWorkspaceService.getAssessmentsForScope(selectedTerm, token);
-    setAssessments(Array.isArray(data) ? data : []);
+    if (!selectedTerm) return;
+    const data = await gradingWorkspaceService.getAssessmentsForTerm(selectedTerm);
+    setAssessments(data);
   };
 
   const loadRows = async () => {
-    if (!token || !selectedAssessment || !selectedCourse || !effectiveClassId) return;
+    if (!selectedAssessment || !selectedCourse || !effectiveClassId) return;
     machine.dispatch({ type: "LOAD" });
     setError(null);
     try {
@@ -126,32 +123,30 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
         classId: effectiveClassId,
         courseId: selectedCourse,
         termId: selectedTerm,
-        token,
       });
       setRows(data);
       setInitialRows(data);
       machine.dispatch({ type: "LOAD_SUCCESS" });
-    } catch (e: any) {
-      setError(e?.message || "Failed to load rows");
+    } catch (e) {
+      setError(getErrorMessage(e, "Failed to load rows"));
       machine.dispatch({ type: "LOAD_ERROR" });
     }
   };
 
   const loadPublicationStatus = async () => {
-    if (!selectedAssessment || !selectedCourse || !selectedTerm || !token) return;
+    if (!selectedAssessment || !selectedCourse || !selectedTerm) return;
     try {
       const status = await gradingWorkspaceService.getPublicationStatus({
         assessmentId: selectedAssessment,
         courseId: selectedCourse,
         termId: selectedTerm,
-        token,
       });
       setAlreadyPublished(status.published);
       setAssessmentPublishStatus((prev) => ({ ...prev, [selectedAssessment]: status.published }));
       if (status.published) {
         setPublishedAssessmentIds((prev) => new Set([...prev, selectedAssessment]));
         if (status.kpis) {
-          setPublishSummary({ message: "Grades already published for this assessment.", kpis: status.kpis as any });
+          setPublishSummary({ message: "Grades already published for this assessment.", kpis: status.kpis });
         }
       } else {
         setPublishSummary(null);
@@ -161,15 +156,18 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
     }
   };
 
-  useEffect(() => { loadBase(); }, [user?.userId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { loadBase(); }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { loadAssessments(); }, [selectedTerm]);
   useEffect(() => {
     if (assessments.length > 0 && selectedCourse && selectedTerm) {
-      gradingWorkspaceService.loadAllPublicationStatuses(assessments, selectedCourse, selectedTerm, token).then(setAssessmentPublishStatus);
+      gradingWorkspaceService
+        .getPublicationStatuses(assessments.map((a) => resolveId(a._id)), selectedCourse, selectedTerm)
+        .then(setAssessmentPublishStatus);
     } else {
       setAssessmentPublishStatus({});
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assessments, selectedCourse, selectedTerm]);
   useEffect(() => {
     setRows([]);
@@ -183,16 +181,17 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
   }, [selectedCourse]);
   useEffect(() => {
     if (selectedCourseObj?.classId) {
-      setSelectedClass(normalizeId(selectedCourseObj.classId));
+      setSelectedClass(resolveId(selectedCourseObj.classId));
     }
   }, [selectedCourseObj?.classId]);
   useEffect(() => {
     if (selectedTerm && selectedCourseObj) {
       onScopeChange({
         termLabel: terms.find((t) => t._id === selectedTerm)?.name || "",
-        scopeLabel: `${selectedCourseObj.title || "Course"} • ${selectedCourseObj.className || "Class"}`,
+        scopeLabel: `${selectedCourseObj.title || "Course"} • ${selectedCourseObj.classId?.name || "Class"}`,
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTerm, selectedCourse, terms, selectedCourseObj]);
   useEffect(() => {
     if (selectedAssessment) {
@@ -205,19 +204,22 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
   const filteredAssessments = useMemo(() => {
     const q = assessmentSearch.toLowerCase().trim();
     if (!q) return assessments;
-    return assessments.filter((a: any) => (a.name || a.title || "").toLowerCase().includes(q));
+    return assessments.filter((a) => (a.name || a.title || "").toLowerCase().includes(q));
   }, [assessments, assessmentSearch]);
   useEffect(() => {
     if (!selectedCourse || !filteredAssessments.length) return;
     if (!selectedAssessment) {
-      setSelectedAssessment(normalizeId(filteredAssessments[0]._id));
+      setSelectedAssessment(resolveId(filteredAssessments[0]._id));
     }
   }, [selectedCourse, filteredAssessments, selectedAssessment]);
 
-  const dirtyCount = useMemo(() => rows.filter((r, idx) => r.score !== initialRows[idx]?.score || r.maxScore !== initialRows[idx]?.maxScore).length, [rows, initialRows]);
+  const dirtyCount = useMemo(
+    () => rows.filter((r, idx) => r.score !== initialRows[idx]?.score || r.maxScore !== initialRows[idx]?.maxScore).length,
+    [rows, initialRows],
+  );
   const allStudentsGraded = rows.length > 0 && rows.every((row) => typeof row.score === "number");
   const allAssessmentsPublished = useMemo(
-    () => assessments.length > 0 && assessments.every((a: any) => assessmentPublishStatus[normalizeId(a._id)] === true),
+    () => assessments.length > 0 && assessments.every((a) => assessmentPublishStatus[resolveId(a._id)] === true),
     [assessments, assessmentPublishStatus],
   );
   const canPublish =
@@ -239,6 +241,7 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
 
   useEffect(() => {
     if (dirtyCount > 0) machine.dispatch({ type: "EDIT" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dirtyCount]);
 
   const kpis: ScopedKpi[] = useMemo(() => {
@@ -248,11 +251,18 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
     const avg = graded ? rows.reduce((sum, r) => sum + ((r.score || 0) / r.maxScore) * 100, 0) / graded : 0;
     return [
       { id: "students", label: "Students graded", value: `${graded}/${total}`, progress: total ? (graded / total) * 100 : 0 },
-      { id: "assessments", label: "Assessments completed", value: selectedAssessment ? `1/${Math.max(assessments.length, 1)}` : `0/${assessments.length || 0}`, progress: assessments.length ? (selectedAssessment ? 100 / assessments.length : 0) : 0 },
+      {
+        id: "assessments",
+        label: "Assessments completed",
+        value: selectedAssessment ? `1/${Math.max(assessments.length, 1)}` : `0/${assessments.length || 0}`,
+        progress: assessments.length ? (selectedAssessment ? 100 / assessments.length : 0) : 0,
+      },
       { id: "pending", label: "Pending reviews", value: `${pending}` },
       { id: "average", label: "Average score", value: graded ? `${avg.toFixed(1)}%` : "Unavailable", progress: graded ? avg : 0 },
     ];
   }, [rows, selectedAssessment, assessments.length]);
+
+  const nameOf = (studentId: string): string | undefined => rows.find((r) => r.studentId === studentId)?.studentName;
 
   const updateScore = (studentId: string, score: number) => {
     setRows((prev) =>
@@ -272,8 +282,7 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
     const changedCount = rows.filter((row) => row.maxScore !== appliedMax).length;
     setRows((prev) =>
       prev.map((row) => {
-        const nextScore =
-          typeof row.score === "number" ? Math.min(row.score, appliedMax) : row.score;
+        const nextScore = typeof row.score === "number" ? Math.min(row.score, appliedMax) : row.score;
         return {
           ...row,
           maxScore: appliedMax,
@@ -295,18 +304,22 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
     const index = rows.findIndex((r) => r.studentId === studentId);
     if (index >= 0 && index < rows.length - 1) {
       const nextId = rows[index + 1].studentId;
-      const el = document.querySelector<HTMLInputElement>(`input[aria-label=\"Score for ${rows[index + 1].studentName}\"]`);
-      if (el) el.focus();
-      if (!el) {
+      const el = document.querySelector<HTMLInputElement>(`input[aria-label="Score for ${rows[index + 1].studentName}"]`);
+      if (el) {
+        el.focus();
+      } else {
         const fallback = document.querySelectorAll<HTMLInputElement>("input[type='number']")[index + 1];
         fallback?.focus();
       }
+      void nextId;
     }
   };
 
   const saveAll = async () => {
-    if (!selectedAssessment || !selectedCourse || !effectiveClassId || !token) return;
-    const changed = rows.filter((r, idx) => r.score !== initialRows[idx]?.score && typeof r.score === "number") as Array<GradeRow & { score: number }>;
+    if (!selectedAssessment || !selectedCourse || !effectiveClassId) return;
+    const changed = rows.filter(
+      (r, idx) => r.score !== initialRows[idx]?.score && typeof r.score === "number",
+    ) as Array<GradeRow & { score: number }>;
     if (!changed.length) return;
     const confirmed = window.confirm(
       `You are about to save ${changed.length} grade record${changed.length > 1 ? "s" : ""}. Continue?`,
@@ -315,19 +328,24 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
 
     machine.dispatch({ type: "SAVE" });
     try {
-      await gradingWorkspaceService.saveAssessmentScores({
+      const result = await gradingWorkspaceService.saveAssessmentScores({
         assessmentId: selectedAssessment,
-        classId: effectiveClassId,
         courseId: selectedCourse,
-        token,
-        rows: changed.map((row) => ({ studentId: row.studentId, score: row.score, maxScore: row.maxScore })),
+        rows: changed.map((row) => ({ studentId: row.studentId, score: row.score, maxScore: row.maxScore, gradeId: row.gradeId })),
+        nameOf,
       });
       await loadRows();
-      setSuccessMsg("Save Changes completed successfully.");
-      machine.dispatch({ type: "SAVE_SUCCESS" });
-      setMobileStep(3);
-    } catch (e: any) {
-      setError(e?.message || "Failed to save assessment grades. Please try again.");
+      if (result.failures.length > 0) {
+        setError(`${result.saved} saved, ${result.failures.length} failed: ${result.failures[0].reason}`);
+        machine.dispatch({ type: "SAVE_ERROR" });
+      } else {
+        setSuccessMsg("Save Changes completed successfully.");
+        machine.dispatch({ type: "SAVE_SUCCESS" });
+        setMobileStep(3);
+      }
+    } catch (e) {
+      logger.error("grading", "Saving all assessment grades failed", e);
+      setError(getErrorMessage(e, "Failed to save assessment grades. Please try again."));
       machine.dispatch({ type: "SAVE_ERROR" });
     }
   };
@@ -341,7 +359,7 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
   };
 
   const saveSingle = async (studentId: string) => {
-    if (!selectedAssessment || !selectedCourse || !effectiveClassId || !token) return;
+    if (!selectedAssessment || !selectedCourse || !effectiveClassId) return;
     const index = rows.findIndex((row) => row.studentId === studentId);
     if (index < 0) return;
     const row = rows[index];
@@ -353,45 +371,50 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
     machine.dispatch({ type: "SAVE" });
     setError(null);
     try {
-      await gradingWorkspaceService.saveAssessmentScores({
+      const result = await gradingWorkspaceService.saveAssessmentScores({
         assessmentId: selectedAssessment,
-        classId: effectiveClassId,
         courseId: selectedCourse,
-        token,
-        rows: [{ studentId: row.studentId, score: row.score, maxScore: row.maxScore }],
+        rows: [{ studentId: row.studentId, score: row.score, maxScore: row.maxScore, gradeId: row.gradeId }],
+        nameOf,
       });
       await loadRows();
-      setSuccessMsg(`Saved ${row.studentName}'s score.`);
-      machine.dispatch({ type: "SAVE_SUCCESS" });
-    } catch (e: any) {
-      setError(e?.message || "Failed to save this student's assessment grade.");
+      if (result.failures.length > 0) {
+        setError(result.failures[0].reason);
+        machine.dispatch({ type: "SAVE_ERROR" });
+      } else {
+        setSuccessMsg(`Saved ${row.studentName}'s score.`);
+        machine.dispatch({ type: "SAVE_SUCCESS" });
+      }
+    } catch (e) {
+      logger.error("grading", "Saving one assessment grade failed", e);
+      setError(getErrorMessage(e, "Failed to save this student's assessment grade."));
       machine.dispatch({ type: "SAVE_ERROR" });
     }
   };
 
   const generateCourseGrades = async () => {
-    if (!selectedCourse || !effectiveClassId || !selectedTerm || !token) return;
+    if (!selectedCourse || !effectiveClassId || !selectedTerm) return;
     machine.dispatch({ type: "GENERATE" });
     try {
       await gradingWorkspaceService.generateCourseGrades({
         classId: effectiveClassId,
         courseId: selectedCourse,
         termId: selectedTerm,
-        token,
         studentIds: rows.filter((r) => typeof r.score === "number").map((r) => r.studentId),
       });
       await loadRows();
       setSuccessMsg("Generate Course Grades completed.");
       machine.dispatch({ type: "GENERATE_SUCCESS" });
       setMobileStep(4);
-    } catch (e: any) {
-      setError(e?.message || "Generation failed");
+    } catch (e) {
+      logger.error("grading", "Generating course grades failed", e);
+      setError(getErrorMessage(e, "Generation failed"));
       machine.dispatch({ type: "GENERATE_ERROR" });
     }
   };
 
   const publishAssessmentGrades = async () => {
-    if (!selectedAssessment || !selectedCourse || !selectedTerm || !token || !allStudentsGraded || machine.isDirty) return;
+    if (!selectedAssessment || !selectedCourse || !selectedTerm || !allStudentsGraded || machine.isDirty) return;
     const confirmed = window.confirm("Publish this assessment's grades to students and parents?");
     if (!confirmed) return;
 
@@ -403,19 +426,85 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
         assessmentId: selectedAssessment,
         courseId: selectedCourse,
         termId: selectedTerm,
-        token,
       });
-      const payload = (result as any)?.data || result;
-      const kpis = payload?.kpis;
-      const message = payload?.message || (result as any)?.message || "Assessment grades published successfully.";
-      setPublishSummary({ message, kpis });
+      const message = result.message || "Assessment grades published successfully.";
+      setPublishSummary({ message, kpis: result.kpis });
       setSuccessMsg(message);
       setAlreadyPublished(true);
       setPublishedAssessmentIds((prev) => new Set([...prev, selectedAssessment]));
-    } catch (e: any) {
-      setError(e?.message || "Failed to publish assessment grades.");
+    } catch (e) {
+      logger.error("grading", "Publishing assessment grades failed", e);
+      setError(getErrorMessage(e, "Failed to publish assessment grades."));
     } finally {
       setIsPublishing(false);
+    }
+  };
+
+  const exportRows = () => {
+    if (!rows.length) return;
+    const assessmentLabel = filteredAssessments.find((a) => resolveId(a._id) === selectedAssessment)?.name
+      || filteredAssessments.find((a) => resolveId(a._id) === selectedAssessment)?.title
+      || "assessment";
+    const csv = toCsv(
+      ["Student name", "Score", "Max score", "Percentage", "Status", "Last updated"],
+      rows.map((row) => [
+        row.studentName,
+        row.score ?? "",
+        row.maxScore,
+        typeof row.score === "number" ? `${((row.score / row.maxScore) * 100).toFixed(1)}%` : "",
+        row.status,
+        row.lastUpdated ? new Date(row.lastUpdated).toLocaleString() : "",
+      ]),
+    );
+    downloadCsv(csvFileName("grades", selectedCourseObj?.title, assessmentLabel), csv);
+  };
+
+  const handleBatchFile = async (file: File) => {
+    setIsUploading(true);
+    setError(null);
+    try {
+      const text = await file.text();
+      const parsed = parseScoreCsv(text);
+      const matched = matchScoreRows(
+        parsed,
+        rows.map((row) => ({ studentId: row.studentId, studentName: row.studentName, maxScore: row.maxScore })),
+      );
+      const fileFailures = parsed.errors.map((err) => ({ studentId: "", studentName: undefined, reason: `Line ${err.line}: ${err.reason}` }));
+      const allFailures = [...fileFailures, ...matched.failures];
+
+      if (matched.scores.length === 0) {
+        setBatchResult({
+          status: "failed",
+          successful: 0,
+          failed: allFailures.length || 1,
+          skipped: 0,
+          errors: allFailures.length ? allFailures : [{ reason: "No matching student scores were found in this file." }],
+        });
+        setBatchResultOpen(true);
+        return;
+      }
+
+      const result = await gradingWorkspaceService.batchUploadScores({
+        assessmentId: selectedAssessment,
+        courseId: selectedCourse,
+        scores: matched.scores,
+        nameOf,
+      });
+      await loadRows();
+      setBatchResult({
+        status: result.failures.length === 0 ? "completed" : result.saved > 0 ? "partial_failed" : "failed",
+        successful: result.saved,
+        failed: result.failures.length + allFailures.length,
+        skipped: 0,
+        errors: [...allFailures, ...result.failures],
+      });
+      setBatchResultOpen(true);
+      if (result.saved > 0) setSuccessMsg(`Imported ${result.saved} score${result.saved > 1 ? "s" : ""}.`);
+    } catch (e) {
+      logger.error("grading", "Batch score upload failed", e);
+      setError(getErrorMessage(e, "Failed to import scores from this file."));
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -424,14 +513,15 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
       refresh: loadRows,
       primary: () => {
         if (!selectedAssessment && filteredAssessments[0]) {
-          setSelectedAssessment(normalizeId(filteredAssessments[0]._id));
+          setSelectedAssessment(resolveId(filteredAssessments[0]._id));
         }
         if (selectedAssessment) setMobileStep(2);
       },
-      export: () => { gradingWorkspaceService.exportPlaceholder(); },
-      batch: canBatchUpload ? () => undefined : undefined,
+      export: exportRows,
+      batch: canBatchUpload ? () => fileInputRef.current?.click() : undefined,
     });
-  }, [selectedAssessment, filteredAssessments, canBatchUpload]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAssessment, filteredAssessments, canBatchUpload, rows]);
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -444,14 +534,28 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [machine.isDirty]);
 
-  const showStep = (step: 1 | 2 | 3 | 4) => typeof window !== "undefined" && window.innerWidth < 768 ? mobileStep === step : true;
+  const showStep = (step: 1 | 2 | 3 | 4) => (typeof window !== "undefined" && window.innerWidth < 768 ? mobileStep === step : true);
 
   return (
     <div className="space-y-4">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".csv,text/csv"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          e.target.value = "";
+          if (file) handleBatchFile(file);
+        }}
+      />
       <p className="text-sm text-slate-600 dark:text-slate-300">You are grading assessments for courses assigned to you. Scores entered here are used to generate course grades for eligible students.</p>
       <div className="rounded-lg border border-[#D7E1ED] bg-[#EBF0F7] px-3 py-2 text-sm text-[#003366] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-        Showing enrolled students for <span className="font-medium">{selectedCourseObj?.classId?.name || classes.find((c) => normalizeId(c._id) === selectedClass)?.name || "selected class"}</span> in current term only.
+        Showing enrolled students for <span className="font-medium">{selectedCourseObj?.classId?.name || (classes as TeacherClass[]).find((c) => resolveId(c._id) === selectedClass)?.name || "selected class"}</span> in current term only.
       </div>
+      {isUploading && (
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700">Importing scores…</div>
+      )}
       {successMsg && !publishSummary?.kpis && (
         <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">{successMsg}</div>
       )}
@@ -484,16 +588,16 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
         <Card className="border-[#D7E1ED] bg-white dark:border-slate-700 dark:bg-slate-800">
           <CardContent className="grid grid-cols-1 gap-3 p-4 md:grid-cols-6">
             <Select value={selectedAcademicYear} onValueChange={setSelectedAcademicYear} disabled><SelectTrigger aria-label="Academic year" className="bg-[#0B1736] text-white border-[#29446E]"><SelectValue placeholder="Academic Year" /></SelectTrigger><SelectContent>{academicYears.map((year) => <SelectItem key={year} value={year}>{year}</SelectItem>)}</SelectContent></Select>
-            <Select value={selectedTerm} onValueChange={setSelectedTerm} disabled><SelectTrigger aria-label="Term" className="bg-[#0B1736] text-white border-[#29446E]"><SelectValue placeholder="Term" /></SelectTrigger><SelectContent>{filteredTerms.filter((t: any) => normalizeId(t._id) === currentTermId).map((t: any) => <SelectItem key={normalizeId(t._id)} value={normalizeId(t._id)}>{t.name}</SelectItem>)}</SelectContent></Select>
-            <Select value={selectedCourse} onValueChange={setSelectedCourse}><SelectTrigger aria-label="Course" className="bg-[#0B1736] text-white border-[#29446E]"><SelectValue placeholder="Course" /></SelectTrigger><SelectContent>{courses.map((c: any) => <SelectItem key={normalizeId(c._id)} value={normalizeId(c._id)}>{c.title}</SelectItem>)}</SelectContent></Select>
-            <Select value={selectedClass} onValueChange={setSelectedClass} disabled={!!selectedCourse}><SelectTrigger aria-label="Class" className="bg-[#0B1736] text-white border-[#29446E]"><SelectValue placeholder="Class" /></SelectTrigger><SelectContent>{classes.map((c: any) => <SelectItem key={normalizeId(c._id)} value={normalizeId(c._id)}>{c.name}</SelectItem>)}</SelectContent></Select>
-            <Select value={selectedAssessment} onValueChange={setSelectedAssessment}><SelectTrigger aria-label="Assessment" className="bg-[#0B1736] text-white border-[#29446E]"><SelectValue placeholder="Assessment" /></SelectTrigger><SelectContent>{filteredAssessments.map((a: any) => <SelectItem key={normalizeId(a._id)} value={normalizeId(a._id)}>{a.name || a.title}</SelectItem>)}</SelectContent></Select>
+            <Select value={selectedTerm} onValueChange={setSelectedTerm} disabled><SelectTrigger aria-label="Term" className="bg-[#0B1736] text-white border-[#29446E]"><SelectValue placeholder="Term" /></SelectTrigger><SelectContent>{filteredTerms.filter((t) => resolveId(t._id) === currentTermId).map((t) => <SelectItem key={resolveId(t._id)} value={resolveId(t._id)}>{t.name}</SelectItem>)}</SelectContent></Select>
+            <Select value={selectedCourse} onValueChange={setSelectedCourse}><SelectTrigger aria-label="Course" className="bg-[#0B1736] text-white border-[#29446E]"><SelectValue placeholder="Course" /></SelectTrigger><SelectContent>{(courses as TeacherCourse[]).map((c) => <SelectItem key={resolveId(c._id)} value={resolveId(c._id)}>{c.title}</SelectItem>)}</SelectContent></Select>
+            <Select value={selectedClass} onValueChange={setSelectedClass} disabled={!!selectedCourse}><SelectTrigger aria-label="Class" className="bg-[#0B1736] text-white border-[#29446E]"><SelectValue placeholder="Class" /></SelectTrigger><SelectContent>{(classes as TeacherClass[]).map((c) => <SelectItem key={resolveId(c._id)} value={resolveId(c._id)}>{c.name}</SelectItem>)}</SelectContent></Select>
+            <Select value={selectedAssessment} onValueChange={setSelectedAssessment}><SelectTrigger aria-label="Assessment" className="bg-[#0B1736] text-white border-[#29446E]"><SelectValue placeholder="Assessment" /></SelectTrigger><SelectContent>{filteredAssessments.map((a) => <SelectItem key={resolveId(a._id)} value={resolveId(a._id)}>{a.name || a.title}</SelectItem>)}</SelectContent></Select>
             <Input aria-label="Search assessments" value={assessmentSearch} onChange={(e) => setAssessmentSearch(e.target.value)} placeholder="Search assessment..." className="bg-[#0B1736] text-white placeholder:text-slate-300 border-[#29446E]" />
           </CardContent>
         </Card>
       )}
 
-      <ScopedKpiCards data={kpis} loading={machine.isLoading} error={error} onRetry={loadRows} />
+      <ScopedKpiCards data={kpis} loading={machine.isLoading || rosterLoading} error={error} onRetry={loadRows} />
 
       {(showStep(2) || showStep(3) || showStep(4)) && (
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
@@ -501,12 +605,12 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
             <CardContent className="flex flex-col gap-3 p-3">
               <p className="text-sm font-medium">Assessments</p>
               <div className="space-y-2">
-                {filteredAssessments.map((a: any) => {
+                {filteredAssessments.map((a) => {
                   const status = (a.status || "not_started").toLowerCase();
-                  const selected = selectedAssessment === normalizeId(a._id);
-                  const isPublishedItem = publishedAssessmentIds.has(normalizeId(a._id));
+                  const selected = selectedAssessment === resolveId(a._id);
+                  const isPublishedItem = publishedAssessmentIds.has(resolveId(a._id));
                   return (
-                    <button key={normalizeId(a._id)} className={`w-full rounded-lg border p-2 text-left text-sm transition-colors ${selected ? "border-[#1D4ED8] bg-[#0F1F45] text-white" : "border-[#D7E1ED] bg-white text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"}`} onClick={() => setSelectedAssessment(normalizeId(a._id))}>
+                    <button key={resolveId(a._id)} className={`w-full rounded-lg border p-2 text-left text-sm transition-colors ${selected ? "border-[#1D4ED8] bg-[#0F1F45] text-white" : "border-[#D7E1ED] bg-white text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"}`} onClick={() => setSelectedAssessment(resolveId(a._id))}>
                       <div className="flex items-start justify-between gap-1">
                         <p className={`font-medium ${selected ? "text-white" : "text-inherit"}`}>{a.name || a.title}</p>
                         {isPublishedItem && (
@@ -527,7 +631,7 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
                 <div className={`mt-1 rounded-lg border p-3 ${allAssessmentsPublished ? "border-emerald-300 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-950" : "border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950"}`}>
                   {!allAssessmentsPublished && (
                     <p className="mb-2 text-xs text-amber-700 dark:text-amber-400">
-                      {assessments.filter((a: any) => !assessmentPublishStatus[normalizeId(a._id)]).length} unpublished — publish all before generating
+                      {assessments.filter((a) => !assessmentPublishStatus[resolveId(a._id)]).length} unpublished — publish all before generating
                     </p>
                   )}
                   <Button
@@ -625,6 +729,12 @@ export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, regist
         onOpenChange={(open) => !open && setDetailsRow(null)}
         row={detailsRow}
         history={detailsRow ? [{ label: "Current score", score: `${detailsRow.score ?? "-"}/${detailsRow.maxScore}`, date: detailsRow.lastUpdated ? new Date(detailsRow.lastUpdated).toLocaleString() : "-", by: "Teacher" }] : []}
+      />
+
+      <ValidationResultModal
+        open={batchResultOpen}
+        onOpenChange={setBatchResultOpen}
+        result={batchResult}
       />
     </div>
   );

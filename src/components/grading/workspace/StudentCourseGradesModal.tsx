@@ -7,7 +7,18 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
-import { gradingWorkspaceService } from "@/app/services/grading-workspace/grading-workspace.service";
+import {
+  gradingWorkspaceService,
+  resolveId,
+} from "@/app/services/grading-workspace/grading-workspace.service";
+import type {
+  AssessmentOverviewRow,
+  CourseGradeRecord,
+  StudentAssessmentHistoryRow,
+  StudentCumulativeRecord,
+} from "@/app/services/grading-workspace/types";
+import { getErrorMessage } from "@/lib/apiError";
+import { logger } from "@/lib/logger";
 
 interface Props {
   open: boolean;
@@ -16,8 +27,15 @@ interface Props {
   studentName: string;
   classId: string;
   termId: string;
-  token: string;
   onTermGradeGenerated?: () => void;
+}
+
+/** One course of the class, with the student's grade for it when there is one. */
+interface DisplayCourse {
+  courseId: string;
+  courseName: string;
+  teacherName: string;
+  grade: CourseGradeRecord | null;
 }
 
 export const StudentCourseGradesModal: React.FC<Props> = ({
@@ -27,34 +45,22 @@ export const StudentCourseGradesModal: React.FC<Props> = ({
   studentName,
   classId,
   termId,
-  token,
   onTermGradeGenerated,
 }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [courseList, setCourseList] = useState<any[]>([]);
-  const [courseGrades, setCourseGrades] = useState<any[]>([]);
+  const [courseList, setCourseList] = useState<AssessmentOverviewRow[]>([]);
+  const [courseGrades, setCourseGrades] = useState<CourseGradeRecord[]>([]);
   const [assessmentDetails, setAssessmentDetails] = useState<
-    Record<string, any[]>
+    Record<string, StudentAssessmentHistoryRow[]>
   >({});
   const [loadingAssessments, setLoadingAssessments] = useState<
     Record<string, boolean>
   >({});
   const [expandedCourse, setExpandedCourse] = useState<string | null>(null);
-  const [termGrade, setTermGrade] = useState<any | null>(null);
+  const [termGrade, setTermGrade] = useState<StudentCumulativeRecord | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateMsg, setGenerateMsg] = useState<string | null>(null);
-
-  const resolveId = (val: any): string => {
-    if (!val) return "";
-    if (typeof val === "string") return val;
-    return (
-      val._id?.toString?.() ||
-      val.id?.toString?.() ||
-      val.courseId?.toString?.() ||
-      ""
-    );
-  };
 
   useEffect(() => {
     if (open && studentId && classId && termId) {
@@ -65,6 +71,7 @@ export const StudentCourseGradesModal: React.FC<Props> = ({
       setGenerateMsg(null);
       setError(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, studentId, classId, termId]);
 
   const loadData = async () => {
@@ -73,19 +80,16 @@ export const StudentCourseGradesModal: React.FC<Props> = ({
     setGenerateMsg(null);
     try {
       const [courses, grades, existingTermGrade] = await Promise.all([
-        gradingWorkspaceService.getClassCourseList(classId, termId, token),
-        gradingWorkspaceService.getStudentCourseGrades(
-          studentId,
-          termId,
-          token,
-        ),
-        gradingWorkspaceService.getStudentTermGrade(studentId, termId, token),
+        gradingWorkspaceService.getAssessmentOverview(classId, termId),
+        gradingWorkspaceService.getStudentCourseGrades(studentId, termId),
+        gradingWorkspaceService.getStudentTermGrade(studentId, termId),
       ]);
       setCourseList(courses);
       setCourseGrades(grades);
       setTermGrade(existingTermGrade);
-    } catch (e: any) {
-      setError(e?.message || "Failed to load course data");
+    } catch (e) {
+      logger.error("grading", "Loading a student's course grades failed", e);
+      setError(getErrorMessage(e, "Failed to load course data"));
     } finally {
       setLoading(false);
     }
@@ -99,10 +103,10 @@ export const StudentCourseGradesModal: React.FC<Props> = ({
         studentId,
         courseId,
         termId,
-        token,
       );
       setAssessmentDetails((prev) => ({ ...prev, [courseId]: history }));
-    } catch {
+    } catch (e) {
+      logger.error("grading", "Loading a student's assessment history failed", e);
       setAssessmentDetails((prev) => ({ ...prev, [courseId]: [] }));
     } finally {
       setLoadingAssessments((prev) => ({ ...prev, [courseId]: false }));
@@ -118,77 +122,42 @@ export const StudentCourseGradesModal: React.FC<Props> = ({
     }
   };
 
-  // Course grade records can contain raw, populated, or legacy course refs.
-  // Use the class course list to enrich graded rows before falling back.
-  const normalizeText = (value: any): string =>
-    String(value || "")
-      .trim()
-      .toLowerCase();
+  // Course grade records can carry a raw or populated course ref. Match
+  // against the class's course list (built from the assessment overview,
+  // which always carries a clean id and name) before falling back to the
+  // grade record's own — possibly stale — fields.
+  const normalizeText = (value: string | undefined): string => (value || "").trim().toLowerCase();
 
-  const getCourseTitle = (course: any): string => {
+  const getCourseTitle = (course: CourseGradeRecord["courseId"]): string => {
     if (!course || typeof course !== "object") return "";
-    return (
-      course.courseName ||
-      course.title ||
-      course.name ||
-      course.subjectName ||
-      course.code ||
-      ""
-    );
+    return course.title || course.courseName || "";
   };
 
-  const getCourseTeacherName = (course: any): string => {
-    if (!course || typeof course !== "object") return "";
-    if (course.teacherName) return course.teacherName;
+  const classCourseById = new Map(courseList.map((course) => [course.courseId, course] as const));
 
-    const teacher = course.teacherId;
-    const teacherUser = teacher?.userId || teacher;
-    const fullName =
-      `${teacherUser?.firstName || ""} ${teacherUser?.lastName || ""}`.trim();
-    return teacherUser?.name || fullName || "";
-  };
-
-  const classCourseById = new Map(
-    courseList
-      .map(
-        (course) => [resolveId(course.courseId || course._id), course] as const,
-      )
-      .filter(([id]) => Boolean(id)),
-  );
-
-  const resolveCourseListEntry = (courseId: string, courseName: string) => {
-    if (courseId && classCourseById.has(courseId))
-      return classCourseById.get(courseId);
+  const resolveCourseListEntry = (courseId: string, courseName: string): AssessmentOverviewRow | undefined => {
+    if (courseId && classCourseById.has(courseId)) return classCourseById.get(courseId);
     if (courseName) {
-      return courseList.find(
-        (course) =>
-          normalizeText(course.courseName) === normalizeText(courseName),
-      );
+      return courseList.find((course) => normalizeText(course.courseName) === normalizeText(courseName));
     }
     if (!courseId && courseList.length === 1) return courseList[0];
-    return null;
+    return undefined;
   };
 
-  const gradedEntries = courseGrades.map((g: any) => {
+  const gradedEntries: DisplayCourse[] = courseGrades.map((g) => {
     let courseId = resolveId(g.courseId);
     let courseName = getCourseTitle(g.courseId);
     const matchedCourse = resolveCourseListEntry(courseId, courseName);
 
-    // Repair: courseId is null in old DB records — recover from courseList.
-    // If there's only one course in the class it must be this one; otherwise match by name.
     if (matchedCourse) {
-      courseId =
-        resolveId(matchedCourse.courseId || matchedCourse._id) || courseId;
+      courseId = matchedCourse.courseId || courseId;
       courseName = matchedCourse.courseName || courseName;
     } else if (!courseId) {
       const match =
         courseList.length === 1
           ? courseList[0]
           : courseList.find(
-              (c) =>
-                c.courseName &&
-                courseName &&
-                c.courseName.toLowerCase() === courseName.toLowerCase(),
+              (c) => c.courseName && courseName && c.courseName.toLowerCase() === courseName.toLowerCase(),
             );
       if (match) {
         courseId = match.courseId;
@@ -199,38 +168,26 @@ export const StudentCourseGradesModal: React.FC<Props> = ({
     return {
       courseId: courseId || resolveId(g._id),
       courseName: courseName || "Unknown Course",
-      teacherName:
-        matchedCourse?.teacherName || getCourseTeacherName(g.courseId),
+      teacherName: matchedCourse?.teacherName || "",
       grade: g,
     };
   });
 
-  const gradedIds = new Set(
-    gradedEntries.map((e) => e.courseId).filter(Boolean),
-  );
-  const gradedNames = new Set(
-    gradedEntries.map((e) => e.courseName.toLowerCase()),
-  );
+  const gradedIds = new Set(gradedEntries.map((e) => e.courseId).filter(Boolean));
+  const gradedNames = new Set(gradedEntries.map((e) => e.courseName.toLowerCase()));
 
   // Add class-list courses that have no matching grade (neither by ID nor by name)
-  const ungradedEntries = courseList
-    .filter((c) => {
-      const courseId = resolveId(c.courseId || c._id);
-      const courseName = c.courseName || getCourseTitle(c);
-      return (
-        !gradedIds.has(courseId) && !gradedNames.has(normalizeText(courseName))
-      );
-    })
+  const ungradedEntries: DisplayCourse[] = courseList
+    .filter((c) => !gradedIds.has(c.courseId) && !gradedNames.has(normalizeText(c.courseName)))
     .map((c) => ({
-      courseId: resolveId(c.courseId || c._id),
-      courseName: c.courseName || getCourseTitle(c) || "Unknown Course",
-      teacherName: c.teacherName || getCourseTeacherName(c),
-      grade: null as any,
+      courseId: c.courseId,
+      courseName: c.courseName || "Unknown Course",
+      teacherName: c.teacherName || "",
+      grade: null,
     }));
 
   const displayCourses = [...gradedEntries, ...ungradedEntries];
-  const allCoursesGraded =
-    ungradedEntries.length === 0 && gradedEntries.length > 0;
+  const allCoursesGraded = ungradedEntries.length === 0 && gradedEntries.length > 0;
   const ungradedCount = ungradedEntries.length;
 
   const handleGenerateTermGrade = async () => {
@@ -238,16 +195,13 @@ export const StudentCourseGradesModal: React.FC<Props> = ({
     setError(null);
     setGenerateMsg(null);
     try {
-      await gradingWorkspaceService.generateStudentTermGrade(
-        studentId,
-        termId,
-        token,
-      );
+      await gradingWorkspaceService.generateStudentTermGrade(studentId, termId);
       setGenerateMsg("Term grade generated successfully.");
       await loadData();
       onTermGradeGenerated?.();
-    } catch (e: any) {
-      setError(e?.message || "Failed to generate term grade");
+    } catch (e) {
+      logger.error("grading", "Generating a student's term grade failed", e);
+      setError(getErrorMessage(e, "Failed to generate term grade"));
     } finally {
       setIsGenerating(false);
     }
