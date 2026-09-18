@@ -9,8 +9,8 @@ import {
   FolderOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ResourcesTable } from "@/components/resorces/ResourceTable";
-import { UploadModal } from "@/components/resorces/uploadmodal";
+import { ResourcesTable } from "@/components/resources/ResourceTable";
+import { UploadModal } from "@/components/resources/uploadmodal";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Layout from "@/components/Layout";

@@ -95,7 +95,12 @@ async function send<T>(
 /**
  * The app-wide client, in the axios shape the existing services use.
  * Prefer `api` from `@/lib/apiClient` in new code.
+ *
+ * The `T = any` defaults mirror axios's own: the call sites still to be
+ * migrated do not pass a type argument, and `unknown` would break every one
+ * of them at once. Each becomes a real type as its page is migrated to `api`.
  */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export const apiClient = {
   /**
    * `GET` request.
@@ -141,6 +146,8 @@ export const apiClient = {
    */
   delete: <T = any>(url: string, config?: LegacyRequestConfig) => send<T>("DELETE", url, undefined, config),
 };
+
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 /** The axios-shaped client, as returned by {@link createApiClient}. */
 export type LegacyApiClient = typeof apiClient;

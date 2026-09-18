@@ -49,10 +49,11 @@ const idOf = (value: unknown): string => {
   return String(value);
 };
 
-const nameOf = (value: any): string => {
+const nameOf = (value: unknown): string => {
   if (!value || typeof value !== "object") return "";
-  const full = `${value.firstName || ""} ${value.lastName || ""}`.trim();
-  return full || value.name || "";
+  const person = value as { firstName?: string; lastName?: string; name?: string };
+  const full = `${person.firstName || ""} ${person.lastName || ""}`.trim();
+  return full || person.name || "";
 };
 
 const toIsoDate = (value: unknown): string => {
@@ -60,25 +61,29 @@ const toIsoDate = (value: unknown): string => {
   return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
 };
 
-const toAttachment = (value: any): ChatAttachmentView | null => {
+const toAttachment = (value: unknown): ChatAttachmentView | null => {
   if (!value) return null;
   if (typeof value === "string") return { url: value, type: "file" };
-  if (typeof value.url !== "string") return null;
+  const raw = value as Partial<ChatAttachmentView>;
+  if (typeof raw.url !== "string") return null;
   return {
-    url: value.url,
-    type: value.type || "file",
-    playbackUrl: typeof value.playbackUrl === "string" ? value.playbackUrl : undefined,
-    name: value.name,
-    mimeType: value.mimeType,
-    size: value.size,
-    duration: value.duration,
-    width: value.width,
-    height: value.height,
+    url: raw.url,
+    type: raw.type || "file",
+    playbackUrl: typeof raw.playbackUrl === "string" ? raw.playbackUrl : undefined,
+    name: raw.name,
+    mimeType: raw.mimeType,
+    size: raw.size,
+    duration: raw.duration,
+    width: raw.width,
+    height: raw.height,
   };
 };
 
-export function normalizeMessage(raw: any): ChatMessageView | null {
-  if (!raw || typeof raw !== "object") return null;
+export function normalizeMessage(input: unknown): ChatMessageView | null {
+  if (!input || typeof input !== "object") return null;
+  // The socket and the REST endpoints disagree on this payload's shape; every
+  // field below is read defensively.
+  const raw = input as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
   const _id = idOf(raw._id ?? raw.id);
   if (!_id) return null;
 
