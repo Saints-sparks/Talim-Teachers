@@ -16,7 +16,7 @@ import {
   RoomUpdatedData,
   WebSocketContextType,
 } from "./useWebSocket";
-import { useWebSocketContextSafe } from "../contexts/WebSocketContext";
+import { useWebSocketContextSafe } from "../context/WebSocketContext";
 import { useAuth } from "./useAuth";
 import {
   fileKind,

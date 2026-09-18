@@ -2,7 +2,9 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { Manrope } from "next/font/google";
 import { AppProvider } from "@/app/context/AppContext";
-import { WebSocketProvider } from "@/app/contexts/WebSocketContext";
+import { AuthProvider } from "@/app/context/AuthContext";
+import { QueryProvider } from "@/providers/query-provider";
+import { WebSocketProvider } from "@/app/context/WebSocketContext";
 import { ChatProvider } from "@/app/context/ChatContext";
 import OnboardingShell from "./onboarding-provider";
 import { ToastViewport } from "@/components/CustomToast";
@@ -34,16 +36,20 @@ export default function RootLayout({
       </head>
       <body className={manrope.className}>
         <ThemeProvider>
-          <AppProvider>
-            <OnboardingShell>
-              <WebSocketProvider>
-                <ChatProvider>
-                  {children}
-                  <ToastViewport />
-                </ChatProvider>
-              </WebSocketProvider>
-            </OnboardingShell>
-          </AppProvider>
+          <QueryProvider>
+            <AuthProvider>
+              <AppProvider>
+                <OnboardingShell>
+                  <WebSocketProvider>
+                    <ChatProvider>
+                      {children}
+                      <ToastViewport />
+                    </ChatProvider>
+                  </WebSocketProvider>
+                </OnboardingShell>
+              </AppProvider>
+            </AuthProvider>
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>

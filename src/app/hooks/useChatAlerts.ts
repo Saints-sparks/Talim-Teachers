@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { toast } from "@/components/CustomToast";
-import { useWebSocketContextSafe } from "../contexts/WebSocketContext";
+import { useWebSocketContextSafe } from "../context/WebSocketContext";
 import type { ChatRoomActivityData, NotificationData } from "./useWebSocket";
 import { CHAT_ROOM_REMOVED_EVENT, type ChatRoomRemovedDetail } from "./useRealtimeChat";
 

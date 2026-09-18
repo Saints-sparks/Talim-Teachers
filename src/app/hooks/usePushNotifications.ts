@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import nookies from "nookies";
+import { sessionStore } from "@/lib/session";
 import { API_BASE_URL } from "@/app/lib/api/config";
 
 const SW_PATH = "/sw.js";
@@ -35,13 +35,13 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return output;
 }
 
+/**
+ * The session's access token, from the one session store.
+ *
+ * @returns The token, or `null` when signed out.
+ */
 function getAccessToken(): string | null {
-  try {
-    const cookies = nookies.get(undefined);
-    return cookies.access_token || null;
-  } catch {
-    return null;
-  }
+  return sessionStore.getToken();
 }
 
 async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {

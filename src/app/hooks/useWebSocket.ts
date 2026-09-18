@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import nookies from "nookies";
+import { sessionStore } from "@/lib/session";
 import { io, Socket } from "socket.io-client";
 import { API_BASE_URL } from "../lib/api/config";
 import { refreshAccessToken } from "../lib/api/apiClient";
@@ -299,7 +299,7 @@ export const useWebSocket = (): WebSocketContextType => {
       // The server authenticates the socket with the access token. The callback runs
       // on every connect and reconnect, so a refreshed token is always used.
       const next = io(WEBSOCKET_URL, {
-        auth: (cb) => cb({ token: nookies.get(undefined).access_token }),
+        auth: (cb) => cb({ token: sessionStore.getToken() }),
         query: { userId },
         transports: ["websocket", "polling"],
         timeout: 20000,

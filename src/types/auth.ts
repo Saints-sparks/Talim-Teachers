@@ -9,6 +9,10 @@ export interface LoginCredentials {
 export interface User {
   _id: string;
   userId: string;
+  /** Some endpoints return `id` rather than `_id`. */
+  id?: string;
+  /** Present on teacher accounts; the teacher record's own id. */
+  teacherId?: string;
   email: string;
   role: string;
   firstName: string;
@@ -35,6 +39,7 @@ export interface User {
         updatedAt: string;
       };
   schoolName: string;
+  schoolLogo?: string;
   staffNumber?: string;
   userAvatar?: string;
   isTwoFactorEnabled?: boolean;

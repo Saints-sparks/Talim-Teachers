@@ -95,7 +95,7 @@ const CourseTeacherView: React.FC = () => {
     
     try {
       const token = getAccessToken();
-      if (!token) throw new Error("No auth token");
+      if (!token || !user) throw new Error("No auth token");
 
       // Load teacher courses and terms in parallel
       const [teacherData, currentTerm, allTerms] = (await Promise.all([

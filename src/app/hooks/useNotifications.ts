@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "./useAuth";
 import { apiClient } from "../lib/api/apiClient";
-import nookies from "nookies";
+import { sessionStore } from "@/lib/session";
 import { NOTIFICATION_EVENT } from "./useChatAlerts";
 
 export type NotificationSource = "school" | "talim" | "system";
@@ -284,7 +284,7 @@ const useNotifications = () => {
   const cacheKey = userId ? `teacher-notifications:${userId}` : "";
 
   const fetchNotifications = useCallback(async () => {
-    const token = nookies.get(undefined).access_token;
+    const token = sessionStore.getToken();
 
     if (!token) {
       setNotifications([]);

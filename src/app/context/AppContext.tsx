@@ -1,17 +1,52 @@
 "use client";
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { fetchTeacherDetails } from "../services/api.service";
-import { useAuth } from "../hooks/useAuth";
 
-type AppContextType = {
-  user: any;
-  teacherData: any;
-  classes: any[];
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { fetchTeacherDetails } from "../services/api.service";
+import { useAuth } from "./AuthContext";
+import { logger } from "@/lib/logger";
+import type { User } from "@/types/auth";
+
+/**
+ * The teacher roster endpoints are not typed yet: every page casts the class
+ * and course records to the shape it needs. Kept deliberately loose in one
+ * named place (rather than `any` scattered through the file) so the page pass
+ * can replace it resource by resource.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Untyped = any;
+
+/** A class as the teacher record returns it. */
+export type TeacherClass = Untyped;
+
+/** A course as the teacher record returns it. */
+export type TeacherCourse = Untyped;
+
+/** The teacher record behind the signed-in user, with their roster. */
+export interface TeacherDetails {
+  _id?: string;
+  classTeacherClasses?: TeacherClass[];
+  assignedClasses?: TeacherClass[];
+  assignedCourses?: TeacherCourse[];
+  classTeacherCourses?: TeacherCourse[];
+  [key: string]: unknown;
+}
+
+/** What `useAppContext()` provides. */
+export interface AppContextType {
+  /** The signed-in user — owned by `AuthContext`, mirrored here for convenience. */
+  user: User | null;
+  /** The teacher record for that user, once loaded. */
+  teacherData: TeacherDetails | null;
+  /** The classes this teacher is responsible for. */
+  classes: TeacherClass[];
+  /** Reloads the teacher record and its roster. */
   refreshClasses: () => Promise<void>;
   isLoading: boolean;
-  courses: any[];
-  updateUser: (updates: Record<string, any>) => void;
-};
+  /** The courses this teacher teaches. */
+  courses: TeacherCourse[];
+  /** Merges fields into the signed-in user. */
+  updateUser: (updates: Partial<User>) => void;
+}
 
 const AppContext = createContext<AppContextType>({
   user: null,
@@ -23,75 +58,52 @@ const AppContext = createContext<AppContextType>({
   updateUser: () => {},
 });
 
-export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
-  const { getUser, getAccessToken } = useAuth();
+/**
+ * Loads the teacher record (classes and courses) for the signed-in user.
+ *
+ * The user itself is no longer stored here: `AuthContext` owns the session and
+ * this context reads it, so there is one source of truth and no window event
+ * keeping two copies in step.
+ *
+ * @param props - Standard children.
+ * @param props.children - The app tree.
+ * @returns The provider element.
+ */
+export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, accessToken, updateUser } = useAuth();
 
-  const [user, setUser] = useState<any>(null);
-  const [teacherData, setTeacherData] = useState<any>(null);
-  const [classes, setClasses] = useState<any[]>([]);
+  const [teacherData, setTeacherData] = useState<TeacherDetails | null>(null);
+  const [classes, setClasses] = useState<TeacherClass[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [courses, setCourses] = useState<any[]>([]);
+  const [courses, setCourses] = useState<TeacherCourse[]>([]);
 
-  useEffect(() => {
-    const storedUser = getUser();
-    if (storedUser) {
-      setUser(storedUser);
-    }
-  }, []);
+  const userId = user?.userId;
 
-  const updateUser = (updates: Record<string, any>) => {
-    setUser((prev: any) => {
-      const next = { ...(prev || {}), ...updates };
-      if (typeof window !== "undefined") {
-        localStorage.setItem("user", JSON.stringify(next));
-        window.dispatchEvent(new Event("user-updated"));
-      }
-      return next;
-    });
-  };
-
-  const fetchTeacherAndClasses = async () => {
-    if (!user || isLoading) return; // Prevent duplicate calls if already loading
+  const fetchTeacherAndClasses = useCallback(async () => {
+    if (!userId || !accessToken) return;
 
     setIsLoading(true);
     try {
-      const token = getAccessToken();
-      if (!token) return;
-
-      const teacherDetails = await fetchTeacherDetails(user.userId, token);
-     
-
+      const teacherDetails: TeacherDetails = await fetchTeacherDetails(userId, accessToken);
       setTeacherData(teacherDetails);
-
-      // Extract classes from teacher data - use classTeacherClasses or assignedClasses
-      const teacherClasses =
-        teacherDetails?.classTeacherClasses ||
-        teacherDetails?.assignedClasses ||
-        [];
-     
-      setClasses(teacherClasses);
-
-      // Extract courses from teacher data - use assignedCourses first, then fallback to classTeacherCourses
-      const teacherCourses =
-        teacherDetails?.assignedCourses ||
-        teacherDetails?.classTeacherCourses ||
-        [];
-     
-      setCourses(teacherCourses);
+      setClasses(teacherDetails?.classTeacherClasses || teacherDetails?.assignedClasses || []);
+      setCourses(teacherDetails?.assignedCourses || teacherDetails?.classTeacherCourses || []);
     } catch (error) {
-      console.error("Error fetching teacher data:", error);
+      logger.error("app-context", "Could not load the teacher record", error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [userId, accessToken]);
 
   useEffect(() => {
-    if (user && !teacherData && !isLoading) {
-      fetchTeacherAndClasses();
+    if (!userId) {
+      setTeacherData(null);
+      setClasses([]);
+      setCourses([]);
+      return;
     }
-  }, [user?.userId]); // Only depend on user ID
+    fetchTeacherAndClasses();
+  }, [userId, fetchTeacherAndClasses]);
 
   return (
     <AppContext.Provider
@@ -110,4 +122,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 };
 
-export const useAppContext = () => useContext(AppContext);
+/**
+ * The teacher record and roster for the signed-in user.
+ *
+ * @returns The app context value.
+ */
+export const useAppContext = (): AppContextType => useContext(AppContext);

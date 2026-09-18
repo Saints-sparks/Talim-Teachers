@@ -1,15 +1,22 @@
-import axios from "axios";
-import { API_BASE_URL } from "../lib/api/config";
-import { apiClient, setAccessTokenCookie } from "../lib/api/apiClient";
-import { AuthResponse, LoginCredentials } from "../../types/auth";
+import { api, apiClient } from "@/lib/apiClient";
+import { persistAccessToken } from "@/lib/session";
+import { AuthResponse, LoginCredentials, User } from "../../types/auth";
 
-/** Unauthenticated client for sign-in and password-reset calls (sends the refresh cookie). */
-const publicClient = axios.create({ baseURL: API_BASE_URL, withCredentials: true });
+/** `POST /auth/introspect` response. */
+export interface IntrospectResponse {
+  active: boolean;
+  user?: User;
+}
+
+/** `POST /auth/refresh` response — the refresh token itself stays in an httpOnly cookie. */
+export interface RefreshResponse {
+  access_token: string;
+}
 
 /**
- * Authentication calls for the Teachers portal. Every method throws the
- * underlying AxiosError on failure; callers turn it into a message with
- * `getApiError()`, which also exposes `fieldErrors` for form binding.
+ * Authentication calls for the Teachers portal. Every method throws `ApiError`
+ * on failure; callers turn it into a message with `getErrorMessage()` or read
+ * `fieldErrors()` for form binding.
  */
 class AuthService {
   /**
@@ -19,8 +26,34 @@ class AuthService {
    * @returns The access token (the refresh token is set as an httpOnly cookie).
    */
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    const { data } = await publicClient.post<AuthResponse>("/auth/login", credentials);
-    return data;
+    return api.post<AuthResponse>("/auth/login", credentials, { skipAuth: true });
+  }
+
+  /**
+   * Loads the user behind an access token.
+   *
+   * @param token - The access token to introspect.
+   * @returns Whether the token is active and, if so, its user.
+   */
+  async introspect(token: string): Promise<IntrospectResponse> {
+    return api.post<IntrospectResponse>("/auth/introspect", { token }, {
+      skipAuth: true,
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  }
+
+  /**
+   * Exchanges the httpOnly refresh cookie for a new access token.
+   *
+   * @returns The new access token.
+   */
+  async refresh(): Promise<RefreshResponse> {
+    return api.post<RefreshResponse>("/auth/refresh", undefined, { skipAuth: true });
+  }
+
+  /** Revokes the refresh cookie server-side. Failing here only means it expires on its own. */
+  async logout(): Promise<void> {
+    await apiClient.post("/auth/logout", undefined, { skipAuth: true });
   }
 
   /**
@@ -28,10 +61,10 @@ class AuthService {
    * the email is registered.
    *
    * @param email - The account's email address.
+   * @returns The server's confirmation message.
    */
   async forgotPassword(email: string): Promise<{ message: string }> {
-    const { data } = await publicClient.post<{ message: string }>("/auth/forgot-password", { email: email.trim() });
-    return data;
+    return api.post<{ message: string }>("/auth/forgot-password", { email: email.trim() }, { skipAuth: true });
   }
 
   /**
@@ -40,11 +73,11 @@ class AuthService {
    *
    * @param email - The account's email address.
    * @param token - The 6-digit code.
-   * @throws AxiosError with `VALIDATION_FAILED` (field `token`) for a wrong or expired code.
+   * @returns `{ valid: true }` when the code is usable.
+   * @throws ApiError with `VALIDATION_FAILED` (field `token`) for a wrong or expired code.
    */
   async verifyResetCode(email: string, token: string): Promise<{ valid: true }> {
-    const { data } = await publicClient.post<{ valid: true }>("/auth/verify-reset-code", { email: email.trim(), token });
-    return data;
+    return api.post<{ valid: true }>("/auth/verify-reset-code", { email: email.trim(), token }, { skipAuth: true });
   }
 
   /**
@@ -53,30 +86,44 @@ class AuthService {
    * @param email - The account's email address.
    * @param token - The 6-digit code.
    * @param newPassword - Must satisfy the password policy.
+   * @returns The server's confirmation message.
    */
   async resetPassword(email: string, token: string, newPassword: string): Promise<{ message: string }> {
-    const { data } = await publicClient.post<{ message: string }>("/auth/reset-password", { email: email.trim(), token, newPassword });
-    return data;
+    return api.post<{ message: string }>(
+      "/auth/reset-password",
+      { email: email.trim(), token, newPassword },
+      { skipAuth: true },
+    );
   }
 
   /**
    * Changes the signed-in teacher's password — from settings, or to replace a
-   * temporary password on first sign-in. Stores the fresh access token the
-   * server returns (other sessions are signed out).
+   * temporary password on first sign-in. The server rotates the session and
+   * returns a fresh access token, which the caller must adopt.
    *
    * @param currentPassword - Current or temporary password.
    * @param newPassword - Must satisfy the password policy.
    * @param confirmPassword - Must equal `newPassword`.
-   * @returns The server's confirmation message.
+   * @returns The new access token and the server's confirmation message.
    */
-  async changePassword(currentPassword: string, newPassword: string, confirmPassword: string): Promise<{ message: string }> {
-    const { data } = await apiClient.post<{ access_token: string; message: string }>("/auth/change-password", {
+  async changePassword(
+    currentPassword: string,
+    newPassword: string,
+    confirmPassword: string,
+  ): Promise<{ access_token: string; message: string }> {
+    const result = await api.post<{ access_token: string; message: string }>("/auth/change-password", {
       currentPassword,
       newPassword,
       confirmPassword,
     });
-    if (data.access_token) setAccessTokenCookie(data.access_token);
-    return { message: data.message };
+    // The server rotated the session; adopt the new token immediately so the
+    // next request does not 401, whether or not the caller went through
+    // `AuthContext.changePassword`.
+    if (result.access_token) {
+      apiClient.setAccessToken(result.access_token);
+      persistAccessToken(result.access_token);
+    }
+    return result;
   }
 }
 

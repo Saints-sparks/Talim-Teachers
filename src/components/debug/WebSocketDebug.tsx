@@ -1,6 +1,6 @@
 "use client";
 
-import { useWebSocketContext } from "@/app/contexts/WebSocketContext";
+import { useWebSocketContext } from "@/app/context/WebSocketContext";
 import { useChat } from "@/app/context/ChatContext";
 import { useAuth } from "@/app/hooks/useAuth";
 

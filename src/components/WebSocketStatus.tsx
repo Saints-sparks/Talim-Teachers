@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { useWebSocketContext } from '@/app/contexts/WebSocketContext';
+import { useWebSocketContext } from '@/app/context/WebSocketContext';
 
 export const WebSocketStatus: React.FC = () => {
   const { connectionStatus, isConnected, reconnect } = useWebSocketContext();

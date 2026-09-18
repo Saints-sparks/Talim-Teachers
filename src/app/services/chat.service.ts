@@ -1,6 +1,7 @@
 import { API_BASE_URL } from "../lib/api/config";
 import { ChatRoom } from "@/types/chat";
 import { apiClient } from "../lib/api/apiClient";
+import { apiClient as client } from "@/lib/apiClient";
 
 // Types for chat service
 export interface CreateGroupChatPayload {
@@ -114,16 +115,7 @@ export const uploadChatAttachment = async (
   form.append("file", file);
   try {
     // No Content-Type: the browser adds the multipart boundary.
-    const response = await apiClient.post(`${API_BASE_URL}/upload/chat-attachment`, form, {
-      onUploadProgress: onProgress
-        ? (event) => {
-            const total = event.total || file.size;
-            // Stop short of 1: the server still has to store the file.
-            if (total) onProgress(Math.min(0.99, event.loaded / total));
-          }
-        : undefined,
-    });
-    const body: any = response.data;
+    const body: any = await client.upload<unknown>("/upload/chat-attachment", form, onProgress);
     const result = body?.url ? body : body?.data;
     if (!result?.url) throw new Error("The upload didn't return a file URL");
     return result as ChatAttachmentUpload;

@@ -1,12 +1,11 @@
-import { AxiosInstance } from 'axios';
 import { Subject } from '../../types/types';
 import { Course } from '../../types/types';
 import { ResponseMessageDto } from '../../types/response-message';
 import { CreateSubjectDto, UpdateSubjectDto, CreateCourseDto, UpdateCourseDto } from '../../types/dtos';
-import { createApiClient } from '../lib/api/apiClient';
+import { createApiClient, type LegacyApiClient } from '../lib/api/apiClient';
 
 export class SubjectService {
-  private readonly axiosInstance: AxiosInstance;
+  private readonly axiosInstance: LegacyApiClient;
   private readonly token: string | null;
 
   constructor(token: string | null) {

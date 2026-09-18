@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, ReactNode } from "react";
-import { useAuth } from "../hooks/useAuth";
+import { useAuth } from "./AuthContext";
 import { useWebSocket, WebSocketContextType } from "../hooks/useWebSocket";
 
 const WebSocketContext = createContext<WebSocketContextType | null>(null);
