@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { sessionStore } from "@/lib/session";
-import { API_BASE_URL } from "@/app/lib/api/config";
+import { api, apiClient } from "@/lib/apiClient";
+import { getErrorMessage } from "@/lib/apiError";
 
 const SW_PATH = "/sw.js";
 
@@ -36,36 +36,12 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 }
 
 /**
- * The session's access token, from the one session store.
- *
- * @returns The token, or `null` when signed out.
- */
-function getAccessToken(): string | null {
-  return sessionStore.getToken();
-}
-
-async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
-  const token = getAccessToken();
-  return fetch(url, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options.headers || {}),
-    },
-  });
-}
-
-/**
  * Sync webPushEnabled to the backend NotificationPreference — best-effort, never
  * throws. Browsers have their own switch; pushEnabled controls phones.
  */
 async function syncPushPreference(enabled: boolean): Promise<void> {
   try {
-    await authFetch(`${API_BASE_URL}/notifications/preferences`, {
-      method: "PATCH",
-      body: JSON.stringify({ webPushEnabled: enabled }),
-    });
+    await api.patch("/notifications/preferences", { webPushEnabled: enabled });
   } catch {
     // Non-fatal — subscription state is already persisted by the browser
   }
@@ -84,19 +60,24 @@ export async function unsubscribeWebPushOnLogout(): Promise<void> {
     const reg = await navigator.serviceWorker.getRegistration(SW_PATH);
     const subscription = await reg?.pushManager.getSubscription();
     if (!subscription) return;
-    await authFetch(`${API_BASE_URL}/notifications/web-push/subscribe`, {
-      method: "DELETE",
-      body: JSON.stringify({ endpoint: subscription.endpoint }),
-      keepalive: true,
-    }).catch(() => undefined);
+    await apiClient
+      .request("/notifications/web-push/subscribe", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint: subscription.endpoint }),
+        keepalive: true,
+      })
+      .catch(() => undefined);
     await subscription.unsubscribe();
   } catch {
     // Signing out must never fail because of push cleanup.
   }
 }
 
+/** The browser's notification permission for this origin. */
 export type PushPermission = "default" | "granted" | "denied";
 
+/** What {@link usePushNotifications} returns. */
 export interface UsePushNotificationsReturn {
   isSupported: boolean;
   permission: PushPermission;
@@ -107,6 +88,11 @@ export interface UsePushNotificationsReturn {
   unsubscribe: () => Promise<void>;
 }
 
+/**
+ * Manages this browser's web-push subscription for the signed-in teacher.
+ *
+ * @returns Whether push is supported and subscribed, plus subscribe/unsubscribe.
+ */
 export function usePushNotifications(): UsePushNotificationsReturn {
   const [isSupported, setIsSupported] = useState(false);
   const [permission, setPermission] = useState<PushPermission>("default");
@@ -140,9 +126,10 @@ export function usePushNotifications(): UsePushNotificationsReturn {
   }, []);
 
   const getVapidKey = useCallback(async (): Promise<string> => {
-    const res = await fetch(`${API_BASE_URL}/notifications/web-push/vapid-public-key`);
-    if (!res.ok) throw new Error("Unable to load push configuration from server");
-    const { publicKey } = await res.json();
+    const { publicKey } = await api.get<{ publicKey: string }>("/notifications/web-push/vapid-public-key", {
+      skipAuth: true,
+    });
+    if (!publicKey) throw new Error("Unable to load push configuration from server");
     return publicKey;
   }, []);
 
@@ -186,19 +173,11 @@ export function usePushNotifications(): UsePushNotificationsReturn {
         keys: { p256dh: string; auth: string };
       };
 
-      const res = await authFetch(`${API_BASE_URL}/notifications/web-push/subscribe`, {
-        method: "POST",
-        body: JSON.stringify({
-          endpoint: subJson.endpoint,
-          keys: subJson.keys,
-          userAgent: navigator.userAgent,
-        }),
+      await api.post("/notifications/web-push/subscribe", {
+        endpoint: subJson.endpoint,
+        keys: subJson.keys,
+        userAgent: navigator.userAgent,
       });
-
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body?.message || "Failed to save push subscription on server");
-      }
 
       const userId = getCurrentUserId();
       if (userId) localStorage.setItem(storageKey(userId), "true");
@@ -206,8 +185,8 @@ export function usePushNotifications(): UsePushNotificationsReturn {
 
       // Sync webPushEnabled=true to NotificationPreference
       await syncPushPreference(true);
-    } catch (err: any) {
-      setError(err.message || "Failed to enable push notifications");
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to enable push notifications"));
       throw err;
     } finally {
       setIsLoading(false);
@@ -226,8 +205,9 @@ export function usePushNotifications(): UsePushNotificationsReturn {
       const subscription = await reg?.pushManager.getSubscription();
 
       if (subscription) {
-        await authFetch(`${API_BASE_URL}/notifications/web-push/subscribe`, {
+        await apiClient.request("/notifications/web-push/subscribe", {
           method: "DELETE",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ endpoint: subscription.endpoint }),
         });
         await subscription.unsubscribe();
@@ -236,8 +216,8 @@ export function usePushNotifications(): UsePushNotificationsReturn {
       const userId = getCurrentUserId();
       if (userId) localStorage.removeItem(storageKey(userId));
       setIsSubscribed(false);
-    } catch (err: any) {
-      setError(err.message || "Failed to disable push notifications");
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to disable push notifications"));
       throw err;
     } finally {
       setIsLoading(false);
