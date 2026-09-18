@@ -13,6 +13,8 @@ export const queryKeys = {
     detail: (teacherId: string) => ["teacher", teacherId] as const,
     kpis: (schoolId: string, teacherId: string) => ["teacher", schoolId, teacherId, "kpis"] as const,
     progress: (schoolId: string, teacherId: string) => ["teacher", schoolId, teacherId, "progress"] as const,
+    /** `GET /teachers/dashboard/me` — KPIs, schedule, grading/attendance/resources summaries, activity and setup progress in one payload. */
+    dashboard: (schoolId: string, teacherId: string) => ["teacher", schoolId, teacherId, "dashboard"] as const,
   },
   academic: {
     all: ["academic"] as const,
