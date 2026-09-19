@@ -145,6 +145,13 @@ export interface MessageDeletedData {
   messageId: string;
 }
 
+/** Someone I share a room with came online or went offline. */
+export interface PresenceChangedData {
+  userId: string;
+  isOnline: boolean;
+  lastSeenAt?: string;
+}
+
 /** I read the room on one of my devices. */
 export type RoomReadData = MessagesReadData;
 
@@ -249,6 +256,7 @@ export interface WebSocketContextType {
   onMessagesRead: (callback: (data: MessagesReadData) => void) => Unsubscribe;
   onRoomRead: (callback: (data: RoomReadData) => void) => Unsubscribe;
   onMessageDeleted: (callback: (data: MessageDeletedData) => void) => Unsubscribe;
+  onPresenceChanged: (callback: (data: PresenceChangedData) => void) => Unsubscribe;
   onRoomUpdated: (callback: (data: RoomUpdatedData) => void) => Unsubscribe;
   onParticipantsChanged: (callback: (data: ParticipantsChangedData) => void) => Unsubscribe;
 
@@ -556,6 +564,10 @@ export const useWebSocket = (): WebSocketContextType => {
     (cb: (data: RoomReadData) => void) => subscribe("room-read", cb),
     [subscribe],
   );
+  const onPresenceChanged = useCallback(
+    (cb: (data: PresenceChangedData) => void) => subscribe("presence-changed", cb),
+    [subscribe],
+  );
   const onMessageDeleted = useCallback(
     (cb: (data: MessageDeletedData) => void) => subscribe("message-deleted", cb),
     [subscribe],
@@ -606,6 +618,7 @@ export const useWebSocket = (): WebSocketContextType => {
     onMessagesRead,
     onRoomRead,
     onMessageDeleted,
+    onPresenceChanged,
     onRoomUpdated,
     onParticipantsChanged,
 

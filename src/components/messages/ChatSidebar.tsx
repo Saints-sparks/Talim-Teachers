@@ -47,15 +47,8 @@ export default function ChatSidebar({ onSelectChat, className = "" }: ChatSideba
   } = useChat();
 
   // Get filtered and searched rooms
-  const getDisplayRooms = (): RealtimeChatRoom[] => {
-    let rooms = getFilteredChatRooms(filterType);
-    
-    if (searchTerm.trim()) {
-      rooms = searchChatRooms(searchTerm);
-    }
-    
-    return rooms;
-  };
+  // The filter narrows first and the search matches inside it.
+  const getDisplayRooms = (): RealtimeChatRoom[] => searchChatRooms(searchTerm, filterType);
 
   const displayRooms = getDisplayRooms();
 

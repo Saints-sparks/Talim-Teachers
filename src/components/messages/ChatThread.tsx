@@ -8,13 +8,11 @@ import GroupMessageBubble from "./GroupMessageBubble";
 import PrivateMessageBubble from "./PrivateMessageBubble";
 import { ReplyBar, type ReplyDraft } from "@/components/chat-kit";
 import { useChatRoom } from "@/app/hooks/useChatRoom";
-import { useAppContext } from "@/app/context/AppContext";
 import { RealtimeChatRoom } from "@/app/hooks/useRealtimeChat";
 import { ChatParticipant } from "@/app/hooks/useWebSocket";
 import { ChatMessageView } from "@/app/lib/chat/normalizeMessage";
 import { readersOf, receiptState } from "@/app/lib/chat/readModel";
 import { generateColorFromString } from "@/lib/colorUtils";
-import type { ClassRecord, CourseRecord } from "./helpers";
 
 const NEAR_BOTTOM_PX = 120;
 const LOAD_OLDER_AT_PX = 40;
@@ -74,7 +72,6 @@ export default function ChatThread({
   onBack,
 }: ChatThreadProps) {
   const thread = useChatRoom(roomId);
-  const { classes, courses } = useAppContext();
   const me = thread.currentUserId;
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -164,19 +161,11 @@ export default function ChatThread({
       };
     }
 
-    let name = roomData?.name || "";
-    if (!name && roomData?.type === "class_group" && roomData.classId) {
-      name = (classes as ClassRecord[] | undefined)?.find((c) => (c._id || c.id) === roomData.classId)?.name || "Class Group";
-    }
-    if (!name && roomData?.type === "course_group" && roomData.courseId) {
-      const course = (courses as CourseRecord[] | undefined)?.find((c) => (c._id || c.id) === roomData.courseId);
-      name = course?.title || course?.name || "Course Group";
-    }
-
     const onlineCount = others.filter((p) => p.isOnline).length;
     const names = others.map(participantName);
     return {
-      name: name || room?.displayName || "Group Chat",
+      // The server always names a group, so no class/course lookup is needed here.
+      name: roomData?.name || room?.displayName || "Group Chat",
       avatar: roomData?.avatarUrl || "",
       status:
         onlineCount === 0

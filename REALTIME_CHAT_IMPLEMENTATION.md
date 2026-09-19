@@ -244,7 +244,7 @@ NEXT_PUBLIC_WS_DEBUG=true
 ### Connection Settings
 
 The WebSocket connection is configured with:
-- **Auto-reconnection**: Up to 10 attempts
+- **Auto-reconnection**: Unlimited attempts (Socket.IO backs off up to 10 s between tries); the socket rejoins the open room and backfills what it missed
 - **Fallback transport**: WebSocket → Polling
 - **Timeout**: 20 seconds
 - **Reconnection delay**: 1-3 seconds

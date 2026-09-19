@@ -12,6 +12,7 @@ import {
   FetchMessagesData,
   MessageDeletedData,
   MessagesReadData,
+  PresenceChangedData,
   ParticipantsChangedData,
   RoomReadData,
   RoomUpdatedData,
@@ -30,6 +31,8 @@ import {
 } from "@/components/chat-kit";
 import { deleteChatMessage, uploadChatAttachment } from "../services/chat.service";
 import { applyDeletedToRooms } from "../lib/chat/deletedMessage";
+import { applyPresenceToRooms } from "../lib/chat/presence";
+import { filterRooms } from "../lib/chat/roomFilter";
 import {
   ChatMessageView,
   applyMessageDeleted,
@@ -114,7 +117,8 @@ export interface UseRealtimeChatReturn {
 
   // Chat room operations
   refreshChatRooms: () => void;
-  searchChatRooms: (searchTerm: string) => RealtimeChatRoom[];
+  /** Search within a filter: `type` narrows first, then `searchTerm` matches inside it. */
+  searchChatRooms: (searchTerm: string, type?: string) => RealtimeChatRoom[];
   getFilteredChatRooms: (type?: string) => RealtimeChatRoom[];
 
   // Room selection and management. A room is joined only while it is selected.
@@ -184,6 +188,7 @@ const NO_SOCKET: WebSocketContextType = {
   onMessagesRead: noopSubscribe,
   onRoomRead: noopSubscribe,
   onMessageDeleted: noopSubscribe,
+  onPresenceChanged: noopSubscribe,
   onRoomUpdated: noopSubscribe,
   onParticipantsChanged: noopSubscribe,
   connect: noop,
@@ -363,6 +368,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     onMessagesRead,
     onRoomRead,
     onMessageDeleted,
+    onPresenceChanged,
     onRoomUpdated,
     onParticipantsChanged,
   } = webSocket;
@@ -713,8 +719,8 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
       const me = currentUserIdRef.current;
       const rooms = data.rooms.map((raw) => {
         const room = transformChatRoom(normalizeRoom(raw), me);
-        // The open room is being read right now.
-        return room.roomId === selectedRoomIdRef.current ? { ...room, unreadCount: 0 } : room;
+        // The open room is being read right now — only if the window is actually in front.
+        return room.roomId === selectedRoomIdRef.current && isWindowActive() ? { ...room, unreadCount: 0 } : room;
       });
       updateRooms(() => sortRooms(rooms));
       setIsLoading(false);
@@ -844,6 +850,12 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
       updateRooms((prev) => applyDeletedToRooms(prev, data.roomId, data.messageId));
     };
 
+    const handlePresenceChanged = (data: PresenceChangedData) => {
+      if (!data?.userId || typeof data.isOnline !== "boolean") return;
+      const isOnline = data.isOnline;
+      updateRooms((prev) => applyPresenceToRooms(prev, data.userId, isOnline));
+    };
+
     const handleRoomRead = (data: RoomReadData) => {
       if (!data?.roomId) return;
       // Read on another device (or this one): clear the badge.
@@ -912,6 +924,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
       onMessagesRead(handleMessagesRead),
       onRoomRead(handleRoomRead),
       onMessageDeleted(handleMessageDeleted),
+      onPresenceChanged(handlePresenceChanged),
       onRoomUpdated(handleRoomUpdated),
       onParticipantsChanged(handleParticipantsChanged),
       onChatError(handleError),
@@ -928,6 +941,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     onMessagesRead,
     onRoomRead,
     onMessageDeleted,
+    onPresenceChanged,
     onRoomUpdated,
     onParticipantsChanged,
     onChatError,
@@ -981,31 +995,12 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
   }, [fetchChatRooms, isSocketConnected, beginLoading]);
 
   const searchChatRooms = useCallback(
-    (searchTerm: string): RealtimeChatRoom[] => {
-      if (!searchTerm.trim()) return chatRooms;
-      const term = searchTerm.toLowerCase();
-      return chatRooms.filter(
-        (room) =>
-          room.displayName.toLowerCase().includes(term) ||
-          room.lastMessage?.preview.toLowerCase().includes(term),
-      );
-    },
+    (searchTerm: string, type?: string): RealtimeChatRoom[] => filterRooms(chatRooms, type, searchTerm),
     [chatRooms],
   );
 
   const getFilteredChatRooms = useCallback(
-    (type?: string): RealtimeChatRoom[] => {
-      if (!type || type === "all") return chatRooms;
-
-      switch (type) {
-        case "teachers":
-          return chatRooms.filter((room) => room.type === "one_to_one");
-        case "groups":
-          return chatRooms.filter((room) => room.type !== "one_to_one");
-        default:
-          return chatRooms.filter((room) => room.type === type);
-      }
-    },
+    (type?: string): RealtimeChatRoom[] => filterRooms(chatRooms, type, ""),
     [chatRooms],
   );
 
