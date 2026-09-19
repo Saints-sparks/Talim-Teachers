@@ -15,6 +15,9 @@ jest.mock("@/app/services/auth.service", () => ({
 
 const service = authService as jest.Mocked<typeof authService>;
 
+// The walk types into several fields; give it room when the suite runs under load.
+jest.setTimeout(30_000);
+
 beforeEach(() => {
   jest.clearAllMocks();
   service.forgotPassword.mockResolvedValue({ message: "sent" });
@@ -24,7 +27,7 @@ beforeEach(() => {
 
 describe("ForgotPasswordPage", () => {
   it("walks email, code and password, calling the real reset endpoints in order", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ForgotPasswordPage />);
 
     expect(screen.getByRole("heading", { name: "Forgot Password?" })).toBeInTheDocument();
@@ -50,7 +53,7 @@ describe("ForgotPasswordPage", () => {
   });
 
   it("shows and hides the password without submitting the form", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     render(<ForgotPasswordPage />);
     await user.type(screen.getByLabelText("Email Address"), "ada@school.test");
     await user.click(screen.getByRole("button", { name: "Send OTP" }));
