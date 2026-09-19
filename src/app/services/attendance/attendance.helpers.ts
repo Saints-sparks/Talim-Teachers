@@ -337,9 +337,11 @@ export function classifySubmitFailure(error: unknown): SubmitFailure {
         reconcile: false,
         retryable: false,
       };
+    case "CONFLICT":
     case "BAD_REQUEST":
     case "VALIDATION_FAILED":
-      // "Already recorded" arrives as BAD_REQUEST, so the roster is re-read to tell the cases apart.
+      // "Already recorded" is a 409 CONFLICT today (it was a 400 BAD_REQUEST), so the roster is
+      // re-read to tell "someone else already marked this student" from a real rejection.
       return {
         kind: "rejected",
         message: error.message || "The server rejected this mark. Check it and try again.",

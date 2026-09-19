@@ -206,6 +206,14 @@ describe("classifySubmitFailure", () => {
     expect(classifySubmitFailure(err)).toMatchObject({ kind: "rejected", reconcile: true });
   });
 
+  it("treats a 409 CONFLICT (a duplicate mark) as possibly already recorded and asks for a re-read", () => {
+    const err = ApiError.fromResponse(
+      { status: 409 },
+      { error: { code: "CONFLICT", message: "Attendance already recorded for this student on this date" } },
+    );
+    expect(classifySubmitFailure(err)).toMatchObject({ kind: "rejected", reconcile: true, retryable: true });
+  });
+
   it("does not offer a retry for a 403", () => {
     const err = ApiError.fromResponse({ status: 403 }, { error: { code: "FORBIDDEN", message: "Only teachers can mark attendance" } });
     expect(classifySubmitFailure(err)).toMatchObject({ kind: "forbidden", retryable: false, reconcile: false });
