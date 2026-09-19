@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { sessionStore } from "@/lib/session";
 import { io, Socket } from "socket.io-client";
 import { API_BASE_URL } from "../lib/api/config";
-import { refreshAccessToken } from "../lib/api/apiClient";
+import { authService } from "../services/auth.service";
 import type { ChatAttachmentView } from "../lib/chat/normalizeMessage";
 
 // WebSocket connection configuration - Socket.IO can handle HTTP/HTTPS URLs directly
@@ -324,7 +324,7 @@ export const useWebSocket = (): WebSocketContextType => {
     }
     authRetryUsedRef.current = true;
     try {
-      await refreshAccessToken();
+      await authService.refreshSession();
       if (socketRef.current === target) target.connect();
     } catch {
       if (socketRef.current === target) {

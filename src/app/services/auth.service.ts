@@ -51,6 +51,23 @@ class AuthService {
     return api.post<RefreshResponse>("/auth/refresh", undefined, { skipAuth: true });
   }
 
+  /**
+   * Refreshes the session and adopts the new access token everywhere at once
+   * (the API client, `sessionStore` and the persisted copy), so the next
+   * request and the next socket handshake both use it. Concurrent callers share
+   * one request because the refresh runs through the single client.
+   *
+   * @returns The new access token.
+   * @throws ApiError when the refresh cookie is missing or rejected; Error when the server returns no token.
+   */
+  async refreshSession(): Promise<string> {
+    const { access_token } = await this.refresh();
+    if (!access_token) throw new Error("No access token returned from refresh");
+    apiClient.setAccessToken(access_token);
+    persistAccessToken(access_token);
+    return access_token;
+  }
+
   /** Revokes the refresh cookie server-side. Failing here only means it expires on its own. */
   async logout(): Promise<void> {
     await apiClient.post("/auth/logout", undefined, { skipAuth: true });

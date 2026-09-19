@@ -3,6 +3,7 @@
  */
 import { act, renderHook } from "@testing-library/react";
 import { useWebSocket } from "@/app/hooks/useWebSocket";
+import { authService } from "@/app/services/auth.service";
 
 /** A stand-in for a Socket.IO client that records listeners and lets a test fire events. */
 class FakeSocket {
@@ -48,7 +49,7 @@ jest.mock("socket.io-client", () => ({
     return socket;
   },
 }));
-jest.mock("@/app/lib/api/apiClient", () => ({ refreshAccessToken: jest.fn().mockResolvedValue("new-token") }));
+jest.mock("@/app/services/auth.service", () => ({ authService: { refreshSession: jest.fn().mockResolvedValue("new-token") } }));
 
 describe("useWebSocket", () => {
   it("attaches listeners registered before the socket existed, once it connects", () => {
@@ -114,6 +115,7 @@ describe("useWebSocket", () => {
       socket.fire("connect_error", Object.assign(new Error("nope"), { data: { code: "UNAUTHENTICATED" } }));
     });
 
+    expect(authService.refreshSession).toHaveBeenCalledTimes(1);
     expect(connect).toHaveBeenCalledTimes(1);
   });
 });
