@@ -6,7 +6,7 @@ import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
 import GroupMessageBubble from "./GroupMessageBubble";
 import PrivateMessageBubble from "./PrivateMessageBubble";
-import ReplyPreview from "./ReplyPreview";
+import { ReplyBar, type ReplyDraft } from "@/components/chat-kit";
 import { useChatRoom } from "@/app/hooks/useChatRoom";
 import { useAppContext } from "@/app/context/AppContext";
 import { RealtimeChatRoom } from "@/app/hooks/useRealtimeChat";
@@ -14,7 +14,7 @@ import { ChatParticipant } from "@/app/hooks/useWebSocket";
 import { ChatMessageView } from "@/app/lib/chat/normalizeMessage";
 import { readersOf, receiptState } from "@/app/lib/chat/readModel";
 import { generateColorFromString } from "@/lib/colorUtils";
-import type { ClassRecord, CourseRecord, ReplyTarget } from "./helpers";
+import type { ClassRecord, CourseRecord } from "./helpers";
 
 const NEAR_BOTTOM_PX = 120;
 const LOAD_OLDER_AT_PX = 40;
@@ -24,8 +24,8 @@ export interface ChatThreadProps {
   roomId: string;
   /** The room as listed in the sidebar, kept live by chat-rooms-update. */
   room?: RealtimeChatRoom | null;
-  replyingMessage: ReplyTarget | null;
-  setReplyingMessage: (msg: ReplyTarget | null) => void;
+  replyingMessage: ReplyDraft | null;
+  setReplyingMessage: (msg: ReplyDraft | null) => void;
   onBack?: () => void;
 }
 
@@ -196,6 +196,31 @@ export default function ChatThread({
   const isInitialLoad = messages.length === 0 && (joinStatus === "joining" || joinStatus === "idle");
   const Bubble = variant === "group" ? GroupMessageBubble : PrivateMessageBubble;
 
+  const loadedIds = new Set(messages.map((m) => m._id));
+  const clearReply = () => setReplyingMessage(null);
+
+  /** Delete is offered for my own messages, and in a group for others' (the server decides who may). */
+  const deleteHandlerFor = (message: ChatMessageView) => {
+    if (message.status !== "sent" || message.isDeleted) return undefined;
+    const mine = Boolean(me) && message.senderId === me;
+    if (!mine && variant !== "group") return undefined;
+    return () => thread.removeStored(message._id);
+  };
+
+  const jump = (messageId: string) => {
+    const el = document.getElementById(`msg-${messageId}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.add("bg-blue-50");
+    window.setTimeout(() => el.classList.remove("bg-blue-50"), 1200);
+  };
+
+  /** Sends with the reply attached, then drops the reply bar. */
+  const sendWithReply = (text: string, media?: Parameters<typeof thread.send>[1]) => {
+    thread.send(text, { ...media, replyTo: replyingMessage ?? undefined });
+    clearReply();
+  };
+
   return (
     <div className="w-full h-full flex flex-col relative bg-white">
       <ChatHeader
@@ -277,8 +302,8 @@ export default function ChatThread({
                 const clientMessageId = message.clientMessageId;
                 const readCount = message._id === latestOwnId ? readersOf(message, me).length : 0;
                 return (
+                  <div key={messageKey(message)} id={`msg-${message._id}`} className="transition-colors duration-500">
                   <Bubble
-                    key={messageKey(message)}
                     msg={{
                       sender: message.senderName,
                       text: message.text,
@@ -290,10 +315,13 @@ export default function ChatThread({
                     message={message}
                     receipt={isOwn ? receiptState(message, me, otherParticipantId) : undefined}
                     readByLabel={readCount > 0 ? `Read by ${readCount}` : undefined}
-                    setReplyingMessage={setReplyingMessage}
+                    onReply={setReplyingMessage}
+                    onDeleteMessage={deleteHandlerFor(message)}
+                    onJump={message.replyTo && loadedIds.has(message.replyTo.messageId) ? jump : undefined}
                     onRetry={clientMessageId ? () => thread.retry(clientMessageId) : undefined}
                     onDelete={clientMessageId ? () => thread.remove(clientMessageId) : undefined}
                   />
+                  </div>
                 );
               })}
             </div>
@@ -309,18 +337,15 @@ export default function ChatThread({
       )}
 
       {replyingMessage && (
-        <ReplyPreview
-          replyingMessage={replyingMessage}
-          onCancel={() => setReplyingMessage(null)}
-        />
+        <ReplyBar reply={replyingMessage} onCancel={clearReply} className="mx-2 sm:mx-4" />
       )}
 
       <MessageInput
         value={thread.draft}
-        onChange={(e: React.ChangeEvent<HTMLInputElement>) => thread.setDraft(e.target.value)}
-        onSend={() => thread.send(thread.draft)}
-        onSendFiles={(files, caption) => thread.send(caption, { files })}
-        onSendVoice={(file, duration) => thread.send("", { voice: { file, duration } })}
+        onValueChange={thread.setDraft}
+        onSend={() => sendWithReply(thread.draft)}
+        onSendFiles={(files, caption) => sendWithReply(caption, { files })}
+        onSendVoice={(file, duration) => sendWithReply("", { voice: { file, duration } })}
         disabled={!roomId}
         placeholder="Type a message..."
       />

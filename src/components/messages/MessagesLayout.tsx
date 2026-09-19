@@ -9,17 +9,11 @@ import { RealtimeChatRoom } from "@/app/hooks/useRealtimeChat";
 import { useChat } from "@/app/context/ChatContext";
 import { useChatRoom } from "@/app/hooks/useChatRoom";
 import { messagesRoomUrl } from "@/app/hooks/useChatAlerts";
+import type { ReplyDraft } from "@/components/chat-kit";
 
-type ReplyingMessage = { sender: string; text: string } | null;
+type ReplyingMessage = ReplyDraft | null;
 
-interface MessagesLayoutProps {
-  /** @deprecated The message menu no longer has submenus; `messages/page.tsx` can stop passing this. */
-  openSubMenu?: { index: number; type: string } | null;
-  /** @deprecated See `openSubMenu`. */
-  toggleSubMenu?: (index: number, type: string) => void;
-}
-
-export default function MessagesLayout(_props: MessagesLayoutProps) {
+export default function MessagesLayout() {
   const [isMobile, setIsMobile] = useState(false);
   // Reply previews belong to the chat they were started in.
   const [repliesByRoom, setRepliesByRoom] = useState<Record<string, ReplyingMessage>>({});

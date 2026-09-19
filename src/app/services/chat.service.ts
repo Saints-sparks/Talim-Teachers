@@ -141,3 +141,14 @@ export const addChatParticipants = async (roomId: string, participantIds: string
  */
 export const removeChatParticipant = async (roomId: string, userId: string): Promise<ChatRoom> =>
   api.patch<ChatRoom>(`/chat/rooms/${encodeURIComponent(roomId)}/participants/${encodeURIComponent(userId)}/remove`);
+
+/**
+ * Deletes a message: its sender, or whoever can manage the room. The text and
+ * attachments are blanked and members get `message-deleted`.
+ *
+ * @param messageId - The stored message's `_id`.
+ * @throws ApiError with `FORBIDDEN` when the caller may not delete it.
+ */
+export const deleteChatMessage = async (messageId: string): Promise<void> => {
+  await api.delete(`/chat/messages/${encodeURIComponent(messageId)}`);
+};

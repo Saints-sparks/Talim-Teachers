@@ -10,6 +10,7 @@ import {
   ChatRoomJoinedData,
   ChatRoomsUpdateData,
   FetchMessagesData,
+  MessageDeletedData,
   MessagesReadData,
   ParticipantsChangedData,
   RoomReadData,
@@ -24,11 +25,14 @@ import {
   uploadAttachments,
   type AttachmentKind,
   type ChatUploadFn,
+  type ReplyDraft,
   type UploadItem,
 } from "@/components/chat-kit";
-import { uploadChatAttachment } from "../services/chat.service";
+import { deleteChatMessage, uploadChatAttachment } from "../services/chat.service";
+import { applyDeletedToRooms } from "../lib/chat/deletedMessage";
 import {
   ChatMessageView,
+  applyMessageDeleted,
   createClientMessageId,
   normalizeMessage,
   normalizeMessages,
@@ -66,6 +70,8 @@ export interface ChatRoomRemovedDetail {
 export interface OutgoingMedia {
   files?: File[];
   voice?: { file: File; duration: number };
+  /** The message being replied to. */
+  replyTo?: ReplyDraft;
 }
 
 /** A pending message's files: kept outside the store so a retry re-uploads only what failed. */
@@ -123,6 +129,8 @@ export interface UseRealtimeChatReturn {
   sendMessage: (roomId: string, text: string, media?: OutgoingMedia) => void;
   retryMessage: (roomId: string, clientMessageId: string) => void;
   deleteMessage: (roomId: string, clientMessageId: string) => void;
+  /** Deletes a stored message (mine, or any if I can manage the room). Rejects with the server's message. */
+  deleteStoredMessage: (roomId: string, messageId: string) => Promise<void>;
   loadOlderMessages: (roomId: string) => void;
   setDraft: (roomId: string, text: string) => void;
 
@@ -175,6 +183,7 @@ const NO_SOCKET: WebSocketContextType = {
   onUnreadMessagesUpdate: noopSubscribe,
   onMessagesRead: noopSubscribe,
   onRoomRead: noopSubscribe,
+  onMessageDeleted: noopSubscribe,
   onRoomUpdated: noopSubscribe,
   onParticipantsChanged: noopSubscribe,
   connect: noop,
@@ -353,6 +362,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     onUnreadMessagesUpdate,
     onMessagesRead,
     onRoomRead,
+    onMessageDeleted,
     onRoomUpdated,
     onParticipantsChanged,
   } = webSocket;
@@ -650,6 +660,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
         type: message.type,
         clientMessageId,
         ...(attachments.length ? { attachments } : {}),
+        ...(message.replyTo ? { replyToId: message.replyTo.messageId } : {}),
         ...(message.type === "voice" && entry?.duration !== undefined
           ? { duration: entry.duration }
           : {}),
@@ -824,6 +835,15 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
       });
     };
 
+    const handleMessageDeleted = (data: MessageDeletedData) => {
+      if (!data?.roomId || !data.messageId) return;
+      roomStore.update(data.roomId, (s) => {
+        const messages = applyMessageDeleted(s.messages, data.messageId);
+        return messages === s.messages ? s : { ...s, messages };
+      });
+      updateRooms((prev) => applyDeletedToRooms(prev, data.roomId, data.messageId));
+    };
+
     const handleRoomRead = (data: RoomReadData) => {
       if (!data?.roomId) return;
       // Read on another device (or this one): clear the badge.
@@ -891,6 +911,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
       onUnreadMessagesUpdate(handleUnread),
       onMessagesRead(handleMessagesRead),
       onRoomRead(handleRoomRead),
+      onMessageDeleted(handleMessageDeleted),
       onRoomUpdated(handleRoomUpdated),
       onParticipantsChanged(handleParticipantsChanged),
       onChatError(handleError),
@@ -906,6 +927,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     onUnreadMessagesUpdate,
     onMessagesRead,
     onRoomRead,
+    onMessageDeleted,
     onRoomUpdated,
     onParticipantsChanged,
     onChatError,
@@ -1084,6 +1106,9 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
         createdAt: new Date().toISOString(),
         status: "pending",
         uploadProgress: files.length ? files.map(() => 0) : undefined,
+        replyTo: media?.replyTo
+          ? { messageId: media.replyTo.messageId, senderName: media.replyTo.senderName, preview: media.replyTo.preview }
+          : undefined,
       };
 
       // The text (or caption) now lives in the bubble, so the composer can be cleared.
@@ -1112,6 +1137,20 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
       emitSend(retried);
     },
     [emitSend],
+  );
+
+  const deleteStoredMessage = useCallback(
+    async (roomId: string, messageId: string) => {
+      await deleteChatMessage(messageId);
+      // The server also sends `message-deleted`; applying it here updates the
+      // deleter's screen at once, and applying twice is a no-op.
+      roomStore.update(roomId, (s) => {
+        const messages = applyMessageDeleted(s.messages, messageId);
+        return messages === s.messages ? s : { ...s, messages };
+      });
+      updateRooms((prev) => applyDeletedToRooms(prev, roomId, messageId));
+    },
+    [updateRooms],
   );
 
   const deleteMessage = useCallback(
@@ -1174,6 +1213,7 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     sendMessage,
     retryMessage,
     deleteMessage,
+    deleteStoredMessage,
     loadOlderMessages,
     setDraft,
     dropRoom,

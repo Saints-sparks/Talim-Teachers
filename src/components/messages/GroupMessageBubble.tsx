@@ -1,6 +1,6 @@
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
-import MessageOptionsDropdown from "./MessageDropdown";
+import BubbleMenu from "./BubbleMenu";
 import MessageContent from "./MessageContent";
 import MessageReceipt from "./MessageReceipt";
 import { generateColorFromString, getUserInitials } from "@/lib/colorUtils";
@@ -11,7 +11,9 @@ export default function GroupMessageBubble({
   message,
   receipt,
   readByLabel,
-  setReplyingMessage,
+  onReply,
+  onDeleteMessage,
+  onJump,
   onRetry,
   onDelete,
 }: MessageBubbleProps) {
@@ -61,18 +63,20 @@ export default function GroupMessageBubble({
 
           {/* Message Bubble */}
           <Card
-            className={`px-3 py-2 sm:px-4 sm:py-3 border-none shadow-sm relative ${
+            className={`px-3 py-2 sm:px-4 sm:py-3 border-none shadow-sm relative group ${
               isOwn
                 ? "bg-blue-500 text-white rounded-2xl rounded-br-md"
                 : "bg-white text-gray-900 border border-gray-200 rounded-2xl rounded-bl-md"
             }`}
           >
-            <MessageOptionsDropdown
-              msg={msg}
-              setReplyingMessage={setReplyingMessage}
+            <BubbleMenu
+              message={message}
+              isOwn={isOwn}
+              onReply={onReply}
+              onDeleteMessage={onDeleteMessage}
             />
 
-            <MessageContent message={message} isOwn={isOwn} />
+            <MessageContent message={message} isOwn={isOwn} onJump={onJump} />
           </Card>
 
           {/* Time and Status */}

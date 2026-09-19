@@ -1,11 +1,11 @@
 "use client";
 import { useRef, useState } from "react";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Mic, Paperclip, SendHorizontal, X } from "lucide-react";
 import {
   ATTACHMENT_ACCEPT,
   ComposerAttachments,
+  ComposerTextarea,
   addToSelection,
   formatDuration,
   useVoiceRecorder,
@@ -14,7 +14,7 @@ import {
 
 interface MessageInputProps {
   value?: string;
-  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onValueChange?: (value: string) => void;
   onSend?: () => void;
   /** Sends the picked files with whatever was typed as their caption. */
   onSendFiles?: (files: File[], caption: string) => void;
@@ -30,7 +30,7 @@ interface MessageInputProps {
  */
 export default function MessageInput({
   value,
-  onChange,
+  onValueChange,
   onSend,
   onSendFiles,
   onSendVoice,
@@ -49,9 +49,9 @@ export default function MessageInput({
   // The 5-minute limit sends what was recorded; unmount cancels it.
   const recorder = useVoiceRecorder({ onAutoStop: sendRecording });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (onChange) onChange(e);
-    else setMessage(e.target.value);
+  const handleChange = (text: string) => {
+    if (onValueChange) onValueChange(text);
+    else setMessage(text);
   };
 
   const currentMessage = value !== undefined ? value : message;
@@ -160,18 +160,17 @@ export default function MessageInput({
             </Button>
 
             <div className="flex-1">
-              <Input
+              <ComposerTextarea
+                aria-label="Message"
                 placeholder={hasFiles ? "Add a caption..." : placeholder}
-                className="border border-gray-300 rounded-full bg-gray-50 focus:bg-white focus:border-blue-500 transition-colors"
+                className="block w-full border border-gray-300 rounded-2xl bg-gray-50 px-4 py-2 text-sm leading-6 outline-none focus:bg-white focus:border-blue-500 transition-colors disabled:opacity-60"
                 value={currentMessage}
-                onChange={handleChange}
-                disabled={disabled}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    if (canSend) handleSend();
-                  }
+                onValueChange={handleChange}
+                // Enter sends with a mouse; on a touch screen it is a new line and Send sends.
+                onSubmit={() => {
+                  if (canSend) handleSend();
                 }}
+                disabled={disabled}
               />
             </div>
           </>

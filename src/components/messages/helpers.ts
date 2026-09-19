@@ -6,12 +6,6 @@
  * here once and the raw records are narrowed at the call site.
  */
 
-/** What the reply bar shows: who wrote the message and what it said. */
-export interface ReplyTarget {
-  sender: string;
-  text: string;
-}
-
 /** A class from the teacher roster, as far as the chat screens read it. */
 export interface ClassRecord {
   _id?: string;

@@ -139,6 +139,12 @@ export interface MessagesReadData {
   readAt: string;
 }
 
+/** A message in one of my rooms was deleted. */
+export interface MessageDeletedData {
+  roomId: string;
+  messageId: string;
+}
+
 /** I read the room on one of my devices. */
 export type RoomReadData = MessagesReadData;
 
@@ -193,6 +199,8 @@ export interface SendChatMessagePayload {
   type?: string;
   attachments?: ChatAttachmentView[];
   duration?: number;
+  /** The message being replied to (same room). */
+  replyToId?: string;
 }
 
 /** Where the socket connection stands. */
@@ -240,6 +248,7 @@ export interface WebSocketContextType {
   ) => Unsubscribe;
   onMessagesRead: (callback: (data: MessagesReadData) => void) => Unsubscribe;
   onRoomRead: (callback: (data: RoomReadData) => void) => Unsubscribe;
+  onMessageDeleted: (callback: (data: MessageDeletedData) => void) => Unsubscribe;
   onRoomUpdated: (callback: (data: RoomUpdatedData) => void) => Unsubscribe;
   onParticipantsChanged: (callback: (data: ParticipantsChangedData) => void) => Unsubscribe;
 
@@ -548,6 +557,10 @@ export const useWebSocket = (): WebSocketContextType => {
     (cb: (data: RoomReadData) => void) => subscribe("room-read", cb),
     [subscribe],
   );
+  const onMessageDeleted = useCallback(
+    (cb: (data: MessageDeletedData) => void) => subscribe("message-deleted", cb),
+    [subscribe],
+  );
   const onRoomUpdated = useCallback(
     (cb: (data: RoomUpdatedData) => void) => subscribe("room-updated", cb),
     [subscribe],
@@ -593,6 +606,7 @@ export const useWebSocket = (): WebSocketContextType => {
     onUnreadMessagesUpdate,
     onMessagesRead,
     onRoomRead,
+    onMessageDeleted,
     onRoomUpdated,
     onParticipantsChanged,
 

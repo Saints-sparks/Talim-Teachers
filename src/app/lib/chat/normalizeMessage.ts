@@ -4,6 +4,8 @@
  * attachment objects, type) and falls back to the deprecated aliases.
  */
 
+import type { ChatReplyTo } from "@/components/chat-kit";
+
 export type MessageStatus = "sent" | "pending" | "failed";
 
 export interface ChatAttachmentView {
@@ -37,6 +39,10 @@ export interface ChatMessageView {
   error?: string;
   /** Pending media: upload progress per attachment, 0–1. */
   uploadProgress?: number[];
+  /** The message this one replies to (a server-side snapshot). */
+  replyTo?: ChatReplyTo;
+  /** Deleted: `text` and `attachments` are blank; shown as a placeholder. */
+  isDeleted?: boolean;
 }
 
 const idOf = (value: unknown): string => {
@@ -79,6 +85,21 @@ const toAttachment = (value: unknown): ChatAttachmentView | null => {
   };
 };
 
+/** The server's `replyTo` snapshot, or undefined when absent or malformed. */
+const toReplyTo = (value: unknown): ChatReplyTo | undefined => {
+  if (!value || typeof value !== "object") return undefined;
+  const raw = value as Record<string, unknown>;
+  const messageId = idOf(raw.messageId);
+  if (!messageId) return undefined;
+  return {
+    messageId,
+    senderId: idOf(raw.senderId) || undefined,
+    senderName: typeof raw.senderName === "string" && raw.senderName ? raw.senderName : "Unknown",
+    preview: typeof raw.preview === "string" ? raw.preview : "",
+    type: typeof raw.type === "string" ? raw.type : undefined,
+  };
+};
+
 export function normalizeMessage(input: unknown): ChatMessageView | null {
   if (!input || typeof input !== "object") return null;
   // The socket and the REST endpoints disagree on this payload's shape; every
@@ -107,6 +128,8 @@ export function normalizeMessage(input: unknown): ChatMessageView | null {
     readBy: (Array.isArray(raw.readBy) ? raw.readBy : []).map(idOf).filter(Boolean),
     createdAt: toIsoDate(raw.createdAt ?? raw.timestamp),
     status: "sent",
+    replyTo: toReplyTo(raw.replyTo),
+    isDeleted: raw.isDeleted === true ? true : undefined,
   };
 }
 
@@ -123,4 +146,16 @@ export function createClientMessageId(): string {
   }
   const random = () => Math.random().toString(36).slice(2, 10);
   return `${Date.now().toString(36)}-${random()}-${random()}`;
+}
+
+/**
+ * Marks a message deleted the way the server stores it: blank text and
+ * attachments. Returns the same array when it isn't loaded or is already deleted.
+ */
+export function applyMessageDeleted(messages: ChatMessageView[], messageId: string): ChatMessageView[] {
+  const at = messages.findIndex((m) => m._id === messageId);
+  if (at === -1 || messages[at].isDeleted) return messages;
+  const next = messages.slice();
+  next[at] = { ...messages[at], text: "", attachments: [], isDeleted: true, uploadProgress: undefined };
+  return next;
 }

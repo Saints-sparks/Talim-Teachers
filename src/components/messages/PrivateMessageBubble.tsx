@@ -1,12 +1,12 @@
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import MessageOptionsDropdown from "./MessageDropdown";
+import BubbleMenu from "./BubbleMenu";
 import MessageContent from "./MessageContent";
 import MessageReceipt from "./MessageReceipt";
 import { generateColorFromString, getUserInitials } from "@/lib/colorUtils";
 import { ChatMessageView } from "@/app/lib/chat/normalizeMessage";
 import type { ReceiptState } from "@/app/lib/chat/readModel";
-import type { ReplyTarget } from "./helpers";
+import type { ReplyDraft } from "@/components/chat-kit";
 
 export interface MessageBubbleProps {
   msg: {
@@ -23,7 +23,12 @@ export interface MessageBubbleProps {
   receipt?: ReceiptState;
   /** Groups: "Read by N" under my latest message. */
   readByLabel?: string;
-  setReplyingMessage: (msg: ReplyTarget | null) => void;
+  /** Start a reply to this message. */
+  onReply?: (reply: ReplyDraft) => void;
+  /** Present when this user may delete this message. */
+  onDeleteMessage?: () => Promise<void>;
+  /** Scroll to a quoted message; omitted for one that isn't loaded. */
+  onJump?: (messageId: string) => void;
   onRetry?: () => void;
   onDelete?: () => void;
 }
@@ -33,7 +38,9 @@ export default function MessageBubble({
   message,
   receipt,
   readByLabel,
-  setReplyingMessage,
+  onReply,
+  onDeleteMessage,
+  onJump,
   onRetry,
   onDelete,
 }: MessageBubbleProps) {
@@ -71,18 +78,20 @@ export default function MessageBubble({
         }`}>
           {/* Message Bubble */}
           <Card
-            className={`px-3 py-2 sm:px-4 sm:py-3 border-none shadow-sm relative ${
+            className={`px-3 py-2 sm:px-4 sm:py-3 border-none shadow-sm relative group ${
               isOwn
                 ? "bg-blue-500 text-white rounded-2xl rounded-br-md"
                 : "bg-white text-gray-900 border border-gray-200 rounded-2xl rounded-bl-md"
             }`}
           >
-            <MessageOptionsDropdown
-              msg={msg}
-              setReplyingMessage={setReplyingMessage}
+            <BubbleMenu
+              message={message}
+              isOwn={isOwn}
+              onReply={onReply}
+              onDeleteMessage={onDeleteMessage}
             />
 
-            <MessageContent message={message} isOwn={isOwn} />
+            <MessageContent message={message} isOwn={isOwn} onJump={onJump} />
           </Card>
 
           {/* Time and Status */}

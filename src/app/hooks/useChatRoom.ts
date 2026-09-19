@@ -18,7 +18,7 @@ export function useChatRoom(roomId: string | null) {
     () => EMPTY_ROOM,
   );
 
-  const { sendMessage, retryMessage, deleteMessage, loadOlderMessages, retryJoin, setDraft } = chat;
+  const { sendMessage, retryMessage, deleteMessage, deleteStoredMessage, loadOlderMessages, retryJoin, setDraft } = chat;
 
   const send = useCallback(
     (text: string, media?: OutgoingMedia) => {
@@ -37,6 +37,10 @@ export function useChatRoom(roomId: string | null) {
       if (roomId) deleteMessage(roomId, clientMessageId);
     },
     [roomId, deleteMessage],
+  );
+  const removeStored = useCallback(
+    (messageId: string) => (roomId ? deleteStoredMessage(roomId, messageId) : Promise.resolve()),
+    [roomId, deleteStoredMessage],
   );
   const loadOlder = useCallback(() => {
     if (roomId) loadOlderMessages(roomId);
@@ -58,6 +62,7 @@ export function useChatRoom(roomId: string | null) {
     send,
     retry,
     remove,
+    removeStored,
     loadOlder,
     retryJoin: retryLoad,
     setDraft: updateDraft,
