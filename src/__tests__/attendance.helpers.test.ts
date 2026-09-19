@@ -12,6 +12,7 @@ import {
   orderForMarking,
   percentOf,
   pruneDrafts,
+  attendanceDateFor,
 } from "@/app/services/attendance/attendance.helpers";
 import type { ClassAttendanceStatus, StudentAttendanceStatus } from "@/types/attendance";
 
@@ -46,7 +47,8 @@ describe("buildAttendancePayload", () => {
       payload: {
         studentId: IDS.studentId,
         classId: IDS.classId,
-        date: "2026-09-18T08:30:00.000Z",
+        // the teacher's local calendar day at UTC midnight, not the instant
+        date: `${localDayKey(NOW)}T00:00:00.000Z`,
         status: "Present",
         termId: IDS.termId,
       },
@@ -223,5 +225,17 @@ describe("localDayKey", () => {
   it("zero-pads month and day from the local calendar", () => {
     expect(localDayKey(new Date(2026, 0, 5, 23, 59))).toBe("2026-01-05");
     expect(localDayKey(new Date(2026, 11, 31, 0, 0))).toBe("2026-12-31");
+  });
+});
+
+describe("attendanceDateFor", () => {
+  it("sends the local calendar day at UTC midnight, not the UTC instant", () => {
+    // 00:30 on the 19th local time, built from local parts so it holds in any timezone.
+    const justAfterMidnight = new Date(2026, 8, 19, 0, 30);
+    expect(attendanceDateFor(justAfterMidnight)).toBe("2026-09-19T00:00:00.000Z");
+  });
+
+  it("gives the same day for morning and evening marks", () => {
+    expect(attendanceDateFor(new Date(2026, 8, 19, 7, 5))).toBe(attendanceDateFor(new Date(2026, 8, 19, 23, 55)));
   });
 });

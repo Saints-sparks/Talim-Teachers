@@ -44,6 +44,20 @@ export function localDayKey(now: Date = new Date()): string {
   return `${now.getFullYear()}-${month}-${day}`;
 }
 
+/**
+ * The `date` the API buckets a mark under: the teacher's own calendar day at
+ * UTC midnight. `toISOString()` of "now" would send the UTC instant, which is
+ * the wrong day for a teacher marking just after midnight local time (00:30 in
+ * UTC+1 is still the previous UTC day). The mobile app sends the same shape, so
+ * one register lands on one day whichever app took the marks.
+ *
+ * @param now - The moment the mark is made.
+ * @returns `YYYY-MM-DDT00:00:00.000Z` for the local day.
+ */
+export function attendanceDateFor(now: Date): string {
+  return `${localDayKey(now)}T00:00:00.000Z`;
+}
+
 /** What the marking screen knows about one student before submitting. */
 export interface MarkInput {
   studentId: string;
@@ -81,7 +95,7 @@ export function buildAttendancePayload(input: MarkInput): PayloadResult {
   const payload: CreateAttendancePayload = {
     studentId: input.studentId,
     classId: input.classId,
-    date: (input.now ?? new Date()).toISOString(),
+    date: attendanceDateFor(input.now ?? new Date()),
     status: input.status,
     termId: input.termId,
   };
