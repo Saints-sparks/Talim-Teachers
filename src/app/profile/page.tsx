@@ -22,9 +22,8 @@ import { useAuth } from "../hooks/useAuth";
 import { fetchTeacherDetails } from "../services/api.service";
 import { Teacher } from "@/types/student";
 import { useAppContext } from "../context/AppContext";
-import { API_BASE_URL } from "../lib/api/config";
+import { uploadProfileAvatar } from "../lib/avatarUpload";
 import { getErrorMessage } from "@/lib/apiError";
-import { CLOUDINARY_UPLOAD_PRESET, cloudinaryUploadUrl } from "../lib/cloudinary";
 
 const tabs = [
   { label: "Personal Information", icon: <UserRound /> },
@@ -67,28 +66,7 @@ export default function Profile() {
     setUploading(true);
     setErrorMsg(null);
     try {
-      // Upload to Cloudinary
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-      const cloudRes = await fetch(cloudinaryUploadUrl("image"), {
-        method: "POST",
-        body: formData,
-      });
-      const cloudData = await cloudRes.json();
-      if (!cloudData.secure_url) throw new Error("Cloudinary upload failed");
-      // Send to backend
-      const avatarUrl = cloudData.secure_url;
-      
-      const apiRes = await fetch(`${API_BASE_URL}/auth/profile/avatar`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ avatarUrl }),
-      });
-      if (!apiRes.ok) throw new Error("Failed to update avatar");
+      const avatarUrl = await uploadProfileAvatar(file);
       updateUser({ userAvatar: avatarUrl });
     } catch (err) {
       setErrorMsg(getErrorMessage(err, "Upload failed"));

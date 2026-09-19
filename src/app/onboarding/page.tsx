@@ -17,8 +17,8 @@ import {
 import { useAppContext } from "@/app/context/AppContext";
 import { useAuth } from "@/app/hooks/useAuth";
 import { fetchTeacherDetails } from "@/app/services/api.service";
-import { API_BASE_URL } from "@/app/lib/api/config";
-import { CLOUDINARY_UPLOAD_PRESET, cloudinaryUploadUrl } from "../lib/cloudinary";
+import { uploadProfileAvatar } from "../lib/avatarUpload";
+import { getErrorMessage } from "@/lib/apiError";
 import { useTeacherOnboarding } from "@/app/context/OnboardingContext";
 
 /** The parts of the teacher record the onboarding summary reads. */
@@ -46,6 +46,7 @@ export default function TeacherOnboardingPhase1() {
   const [teacher, setTeacher] = useState<TeacherRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const userId = user?.userId || user?._id || user?.id;
   const userAvatar = user?.userAvatar;
@@ -110,34 +111,16 @@ export default function TeacherOnboardingPhase1() {
 
   const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    const token = getAccessToken();
-    if (!file || !token) return;
+    if (!file) return;
 
     setUploading(true);
+    setUploadError(null);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-
-      const cloudRes = await fetch(
-        cloudinaryUploadUrl("image"),
-        { method: "POST", body: formData }
-      );
-      const cloudData = await cloudRes.json();
-      if (!cloudData.secure_url) throw new Error("Image upload failed");
-
-      const apiRes = await fetch(`${API_BASE_URL}/auth/profile/avatar`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ avatarUrl: cloudData.secure_url }),
-      });
-      if (!apiRes.ok) throw new Error("Failed to update profile photo");
-
-      setAvatarPreview(cloudData.secure_url);
-      updateUser({ userAvatar: cloudData.secure_url });
+      const avatarUrl = await uploadProfileAvatar(file);
+      setAvatarPreview(avatarUrl);
+      updateUser({ userAvatar: avatarUrl });
+    } catch (err) {
+      setUploadError(getErrorMessage(err, "The photo could not be saved. Please try again."));
     } finally {
       setUploading(false);
       event.target.value = "";
@@ -219,6 +202,11 @@ export default function TeacherOnboardingPhase1() {
                     disabled={uploading}
                   />
                 </label>
+                {uploadError && (
+                  <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">
+                    {uploadError}
+                  </p>
+                )}
               </div>
             </div>
           </section>
