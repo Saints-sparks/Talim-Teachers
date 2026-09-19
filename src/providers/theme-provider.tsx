@@ -46,7 +46,8 @@ const ThemeContext = createContext<ThemeContextValue>({
   },
 });
 
-const themeColors: Record<"light" | "dark", ThemeContextValue["colors"]> = {
+/** The palette per theme. `primary` and `success` are used as text and clear AA (4.5:1) on `surface`, `surfaceAlt` and `bg`. */
+export const themeColors: Record<"light" | "dark", ThemeContextValue["colors"]> = {
   light: {
     bg: "#F8FAFC",
     surface: "#FFFFFF",
@@ -57,7 +58,7 @@ const themeColors: Record<"light" | "dark", ThemeContextValue["colors"]> = {
     textTertiary: "#667085",
     border: "#E4E7EC",
     borderLight: "#F0F2F5",
-    success: "#15803D",
+    success: "#147A3A",
     warning: "#F59E0B",
     error: "#EF4444",
   },
@@ -65,7 +66,7 @@ const themeColors: Record<"light" | "dark", ThemeContextValue["colors"]> = {
     bg: "#020617",
     surface: "#0F172A",
     surfaceAlt: "#132238",
-    primary: "#3B82F6",
+    primary: "#60A5FA",
     text: "#F8FAFC",
     textSecondary: "#CBD5E1",
     textTertiary: "#94A3B8",

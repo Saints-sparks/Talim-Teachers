@@ -44,6 +44,9 @@ export function useDashboardStyles() {
     page: { backgroundColor: colors.bg, color: colors.text } as CSSProperties,
     card,
     primaryText: isDark ? colors.text : colors.surface,
+    // Dark `colors.primary` is a light blue that reads as text on the dark surfaces,
+    // so a filled primary button uses a deeper blue that keeps its light label AA.
+    primaryFill: isDark ? "#2563EB" : colors.primary,
   };
 }
 
@@ -150,8 +153,8 @@ export function HeroAction({
       href={href}
       className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-transform hover:-translate-y-0.5"
       style={{
-        backgroundColor: primary ? styles.colors.primary : styles.colors.surface,
-        borderColor: primary ? styles.colors.primary : styles.colors.border,
+        backgroundColor: primary ? styles.primaryFill : styles.colors.surface,
+        borderColor: primary ? styles.primaryFill : styles.colors.border,
         color: primary ? styles.primaryText : styles.colors.primary,
       }}
     >
