@@ -1,5 +1,5 @@
 import React from "react";
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft, Edit, Plus } from "lucide-react";
 import { courseTitle, type Curriculum } from "@/hooks/curriculum/types";
 import CurriculumCard from "./CurriculumCard";
 
@@ -19,7 +19,8 @@ export interface CourseCurriculumListProps {
 }
 
 /**
- * A course's curriculum page body: the heading with its Create button, then
+ * A course's curriculum page body: the heading with its primary action (Create,
+ * or Edit once a curriculum exists, since a course has one per term), then
  * either the curriculum card or an invitation to write the first one.
  *
  * @param props - See {@link CourseCurriculumListProps}.
@@ -58,15 +59,15 @@ const CourseCurriculumList: React.FC<CourseCurriculumListProps> = ({
         </button>
         <h1 className="text-3xl font-bold text-[#030E18]">{courseName} Curriculum</h1>
       </div>
-      {canCreate && !curriculum && (
+      {(curriculum ? canModify : canCreate) && (
         <button
           type="button"
-          onClick={onCreate}
+          onClick={() => (curriculum ? onEdit(curriculum) : onCreate())}
           className="bg-[#003366] text-white px-6 py-2 rounded-lg hover:bg-[#002244] transition-colors duration-200 shadow-none flex items-center gap-2"
           data-guide="curriculum-primary-action"
         >
-          <Plus className="w-5 h-5" />
-          Create Curriculum
+          {curriculum ? <Edit className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+          {curriculum ? "Edit Curriculum" : "Create Curriculum"}
         </button>
       )}
     </div>
