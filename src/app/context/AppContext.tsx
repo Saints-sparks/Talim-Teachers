@@ -78,9 +78,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [courses, setCourses] = useState<TeacherCourse[]>([]);
 
   const userId = user?.userId;
+  // The API refuses everything but the password change until a temporary password
+  // is replaced, so the record is not asked for before then.
+  const mustChangePassword = Boolean(user?.mustChangePassword);
 
   const fetchTeacherAndClasses = useCallback(async () => {
-    if (!userId || !accessToken) return;
+    if (!userId || !accessToken || mustChangePassword) return;
 
     setIsLoading(true);
     try {
@@ -93,7 +96,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } finally {
       setIsLoading(false);
     }
-  }, [userId, accessToken]);
+  }, [userId, accessToken, mustChangePassword]);
 
   useEffect(() => {
     if (!userId) {

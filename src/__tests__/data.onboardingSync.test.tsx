@@ -10,9 +10,10 @@ import * as notifications from "@/app/services/notifications.service";
 
 const markStepComplete = jest.fn();
 const teacher = { userId: "u1", _id: "u1", firstName: "Ada", lastName: "Bello" };
+let signedIn: typeof teacher & { mustChangePassword?: boolean } = teacher;
 
 jest.mock("@/app/context/OnboardingContext", () => ({ useTeacherOnboarding: () => ({ markStepComplete }) }));
-jest.mock("@/app/context/AppContext", () => ({ useAppContext: () => ({ user: teacher, classes: [{ _id: "c1" }] }) }));
+jest.mock("@/app/context/AppContext", () => ({ useAppContext: () => ({ user: signedIn, classes: [{ _id: "c1" }] }) }));
 jest.mock("@/app/services/api.service");
 jest.mock("@/app/services/curriculum.services");
 jest.mock("@/app/services/chat.service");
@@ -44,6 +45,7 @@ async function ticked(): Promise<string[]> {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  signedIn = teacher;
   mocked.resources.mockResolvedValue([]);
   mocked.curricula.mockResolvedValue([]);
   mocked.rooms.mockResolvedValue([]);
@@ -53,6 +55,12 @@ beforeEach(() => {
 });
 
 describe("useOnboardingSync", () => {
+  it("asks for nothing while a temporary password is still in use", async () => {
+    signedIn = { ...teacher, mustChangePassword: true };
+    expect(await ticked()).toEqual([]);
+    for (const probe of Object.values(mocked)) expect(probe).not.toHaveBeenCalled();
+  });
+
   it("ticks only the profile step for a teacher who has done nothing else", async () => {
     expect(await ticked()).toEqual(["teacher-profile"]);
   });

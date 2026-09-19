@@ -8,7 +8,6 @@ import { Eye, EyeOff, KeyRound, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "@/components/CustomToast";
 import PasswordRequirements from "@/components/auth/PasswordRequirements";
 import { useAuth } from "../hooks/useAuth";
-import { authService } from "../services/auth.service";
 import { getApiError } from "../lib/apiError";
 import { isPasswordValid } from "../lib/passwordPolicy";
 import { resolvePostLoginRoute } from "../lib/postLoginRoute";
@@ -24,7 +23,7 @@ type FieldErrors = Partial<Record<"currentPassword" | "newPassword" | "confirmPa
  */
 export default function SetPasswordPage() {
   const router = useRouter();
-  const { logout } = useAuth();
+  const { logout, changePassword, updateUser } = useAuth();
   const [user, setUser] = useState<User | null>(null);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -65,10 +64,11 @@ export default function SetPasswordPage() {
 
     setSaving(true);
     try {
-      await authService.changePassword(currentPassword, newPassword, confirmPassword);
+      // Adopts the rotated session and refreshes the user in the auth context, so the
+      // rest of the app (teacher record, onboarding sync) stops treating the account as locked.
+      await changePassword(currentPassword, newPassword, confirmPassword);
+      updateUser({ mustChangePassword: false });
       const updated: User = { ...user, mustChangePassword: false };
-      localStorage.setItem("user", JSON.stringify(updated));
-      window.dispatchEvent(new Event("user-updated"));
       toast.success("Your password is set. Welcome to Talim!");
       router.replace(resolvePostLoginRoute(updated));
     } catch (err) {

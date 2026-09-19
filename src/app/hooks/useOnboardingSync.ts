@@ -47,7 +47,8 @@ export function useOnboardingSync() {
 
   const syncProgress = useCallback(async () => {
     const userId = user?.userId || user?._id || user?.id;
-    if (!userId) return;
+    // Every probe would be refused while a temporary password is still in use.
+    if (!userId || user?.mustChangePassword) return;
 
     if (user?.firstName && user?.lastName) {
       markStepComplete("teacher-profile");
