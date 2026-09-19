@@ -8,8 +8,19 @@
  *
  * The API runs `whitelist + forbidNonWhitelisted`: a payload carrying one
  * field the DTO does not declare is a 400. The `*Payload` types below are
- * therefore exact — never spread an extra field into one.
+ * therefore exact — never spread an extra field into one. The `*Payload`
+ * types are aliases of the generated contract (`@/types/apiPayloads`), so a DTO
+ * change that the portal has not followed fails `tsc`.
  */
+import type {
+  AssessmentScoreBody,
+  BulkCourseGradeRow,
+  GenerateClassSummaryBody,
+  PublishAssessmentBody,
+  RetryClassSummaryBody,
+  SaveAssessmentScoresBody,
+  UpdateAssessmentScoreBody,
+} from "@/types/apiPayloads";
 
 /**
  * An id as the API returns it: a plain string, or the populated document it
@@ -111,11 +122,7 @@ export interface PaginatedResponse<T> {
 }
 
 /** One row of `SaveAssessmentScoresDto.scores` (`AssessmentScoreDto`). */
-export interface AssessmentScorePayload {
-  studentId: string;
-  score: number;
-  maxScore?: number;
-}
+export type AssessmentScorePayload = AssessmentScoreBody;
 
 /**
  * Body of `POST /grade-records/grading/assessments/:assessmentId/scores` and
@@ -123,17 +130,16 @@ export interface AssessmentScorePayload {
  * is accepted but ignored by the server (it uses the course's class), so it
  * is deliberately not sent.
  */
-export interface SaveAssessmentScoresPayload {
-  courseId: string;
-  scores: AssessmentScorePayload[];
-}
+export type SaveAssessmentScoresPayload = SaveAssessmentScoresBody;
 
 /** Body of `PUT /grade-records/:id` (`UpdateAssessmentGradeRecordDto`). */
-export interface UpdateAssessmentScorePayload {
-  actualScore?: number;
-  maxScore?: number;
-  isActive?: boolean;
-}
+export type UpdateAssessmentScorePayload = UpdateAssessmentScoreBody;
+
+/** Body of `POST /grade-records/assessment/:assessmentId/course/:courseId/publish`. */
+export type PublishAssessmentPayload = PublishAssessmentBody;
+
+/** One row of `BulkCreateCourseGradeRecordDto.grades` (`BulkCourseGradeDto`). */
+export type CourseGradeRowPayload = BulkCourseGradeRow;
 
 /** `GET /grade-records/grading/batch-upload/capability`. */
 export interface BatchUploadCapability {
@@ -222,16 +228,10 @@ export interface GenerationHistoryRow {
 }
 
 /** Body of `POST /grading/classes/:classId/generate-summary`. */
-export interface GenerateClassSummaryPayload {
-  termId: string;
-  academicYearId?: string;
-}
+export type GenerateClassSummaryPayload = GenerateClassSummaryBody;
 
 /** Body of `POST /grading/classes/:classId/generate-summary/retry`. */
-export interface RetryClassSummaryPayload {
-  runId: string;
-  studentIds: string[];
-}
+export type RetryClassSummaryPayload = RetryClassSummaryBody;
 
 /** The KPI block a publication carries. */
 export interface PublicationKpis {

@@ -13,6 +13,7 @@
  * where the API answers 404 for a record that simply has not been created.
  */
 
+import type { BulkCourseGradesBody } from "@/types/apiPayloads";
 import { api } from "@/lib/apiClient";
 import { ApiError } from "@/lib/apiError";
 import { logger } from "@/lib/logger";
@@ -24,6 +25,7 @@ import type {
   AssessmentGradeRecord,
   AssessmentOverviewRow,
   AssessmentScorePayload,
+  CourseGradeRowPayload,
   BatchUploadCapability,
   ClassCumulativeRecord,
   ClassGradingSummary,
@@ -36,6 +38,7 @@ import type {
   MessageResponse,
   PublicationStatus,
   PublishAssessmentResult,
+  PublishAssessmentPayload,
   RetryClassSummaryPayload,
   RosterStudent,
   SaveAssessmentScoresPayload,
@@ -462,9 +465,10 @@ export const gradingWorkspaceService = {
     courseId: string;
     termId: string;
   }): Promise<PublishAssessmentResult> {
+    const body: PublishAssessmentPayload = { termId: params.termId };
     return api.post<PublishAssessmentResult>(
       `/grade-records/assessment/${params.assessmentId}/course/${params.courseId}/publish`,
-      { termId: params.termId },
+      body,
     );
   },
 
@@ -513,7 +517,7 @@ export const gradingWorkspaceService = {
     const assessmentGrades = toArray<AssessmentGradeRecord>(payload);
 
     const grades = params.studentIds
-      .map((studentId) => {
+      .map((studentId): CourseGradeRowPayload | null => {
         const rows = assessmentGrades.filter((grade) => resolveId(grade.studentId) === studentId);
         if (rows.length === 0) return null;
 
@@ -530,13 +534,13 @@ export const gradingWorkspaceService = {
           percentage: maxScore > 0 ? (cumulativeScore / maxScore) * 100 : 0,
         };
       })
-      .filter((grade): grade is NonNullable<typeof grade> => grade !== null);
+      .filter((grade): grade is CourseGradeRowPayload => grade !== null);
 
     if (grades.length === 0) {
       return { successful: 0, failed: params.studentIds.length };
     }
 
-    await api.post<MessageResponse>("/grade-records/course-grade-records/bulk", { grades });
+    await api.post<MessageResponse>("/grade-records/course-grade-records/bulk", { grades } satisfies BulkCourseGradesBody);
     return { successful: grades.length, failed: params.studentIds.length - grades.length };
   },
 
