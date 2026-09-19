@@ -10,6 +10,12 @@ import { CHAT_ROOM_REMOVED_EVENT, type ChatRoomRemovedDetail } from "./useRealti
 /** Fired on window for every in-app notification, so bell counts update live. */
 export const NOTIFICATION_EVENT = "talim:notification";
 
+/**
+ * The messages page URL that opens a given room.
+ *
+ * @param roomId - The room to open.
+ * @returns e.g. `/messages?room=abc`.
+ */
 export const messagesRoomUrl = (roomId: string) =>
   `/messages?room=${encodeURIComponent(roomId)}`;
 

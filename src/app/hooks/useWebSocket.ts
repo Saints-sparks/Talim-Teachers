@@ -5,6 +5,7 @@ import { sessionStore } from "@/lib/session";
 import { io, Socket } from "socket.io-client";
 import { API_BASE_URL } from "../lib/api/config";
 import { refreshAccessToken } from "../lib/api/apiClient";
+import type { ChatAttachmentView } from "../lib/chat/normalizeMessage";
 
 // WebSocket connection configuration - Socket.IO can handle HTTP/HTTPS URLs directly
 const WEBSOCKET_URL = API_BASE_URL;
@@ -25,7 +26,8 @@ export interface ChatMessage {
   sender?: { _id: string; name: string; role?: string; avatar?: string | null };
   text?: string;
   type: string;
-  attachments?: any[];
+  /** Attachment objects, or bare URLs from older servers. */
+  attachments?: Array<ChatAttachmentView | string>;
   duration?: number;
   readBy?: string[];
   createdAt?: string;
@@ -37,17 +39,19 @@ export interface ChatMessage {
   senderName?: string;
 }
 
+/** An in-app notification pushed over the socket (`notification` event). */
 export interface NotificationData {
   _id: string;
   title: string;
   body?: string;
   message?: string;
   type: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   createdAt: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
+/** A member of a chat room, with live presence. */
 export interface ChatParticipant {
   _id: string;
   userId?: string;
@@ -59,6 +63,7 @@ export interface ChatParticipant {
   isOnline: boolean;
 }
 
+/** The preview line a room list shows for its newest message. */
 export interface ChatLastMessage {
   _id?: string;
   senderId: string;
@@ -68,6 +73,7 @@ export interface ChatLastMessage {
   createdAt: string;
 }
 
+/** A chat room as the socket and REST list it, after normalisation. */
 export interface ChatRoomData {
   roomId: string;
   _id?: string;
@@ -88,11 +94,13 @@ export interface ChatRoomData {
   lastReadAt?: string;
 }
 
+/** Payload of `chat-rooms-update`: the user's whole room list. */
 export interface ChatRoomsUpdateData {
   rooms: ChatRoomData[];
   totalRooms: number;
 }
 
+/** Payload of `chat-room-joined`: a room's first page of messages after joining. */
 export interface ChatRoomJoinedData {
   roomId: string;
   roomName: string;
@@ -106,6 +114,7 @@ export interface ChatRoomJoinedData {
   totalParticipants: number;
 }
 
+/** Payload of `messages-update`: one page of a room's history. */
 export interface FetchMessagesData {
   roomId: string;
   messages: ChatMessage[];
@@ -116,6 +125,7 @@ export interface FetchMessagesData {
   cursor?: string;
 }
 
+/** Payload of `chat-room-activity`: a room has a new last message. */
 export interface ChatRoomActivityData {
   roomId: string;
   lastMessage: ChatLastMessage;
@@ -132,6 +142,7 @@ export interface MessagesReadData {
 /** I read the room on one of my devices. */
 export type RoomReadData = MessagesReadData;
 
+/** Payload of `room-updated`: a group's name, description or picture changed. */
 export interface RoomUpdatedData {
   roomId: string;
   name: string;
@@ -140,6 +151,7 @@ export interface RoomUpdatedData {
   updatedBy: string;
 }
 
+/** Payload of `participants-changed`: members were added to or removed from a room. */
 export interface ParticipantsChangedData {
   roomId: string;
   added: string[];
@@ -148,6 +160,7 @@ export interface ParticipantsChangedData {
   participants: ChatParticipant[];
 }
 
+/** Payload of the socket's `error` event. */
 export interface ChatErrorData {
   code?: string;
   message?: string;
@@ -156,25 +169,41 @@ export interface ChatErrorData {
   clientMessageId?: string;
 }
 
+/**
+ * The server's acknowledgement of a socket emit. `ok` and `error` are on every
+ * ack; the rest depend on the event (`send-chat-message` returns the saved
+ * `message`, `fetch-messages` the paging fields).
+ */
 export interface ChatAck {
   ok: boolean;
   error?: { code: string; message: string };
-  [key: string]: any;
+  /** `send-chat-message`: the message as saved. */
+  message?: unknown;
+  /** `fetch-messages`: whether more pages exist in that direction. */
+  hasMore?: boolean;
+  nextCursor?: string | null;
+  prevCursor?: string | null;
 }
 
+/** Body of `send-chat-message`. */
 export interface SendChatMessagePayload {
   roomId: string;
   text: string;
   clientMessageId: string;
   type?: string;
-  attachments?: any[];
+  attachments?: ChatAttachmentView[];
   duration?: number;
 }
 
+/** Where the socket connection stands. */
 export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
 
 type Unsubscribe = () => void;
 
+/** A socket listener as stored and handed to Socket.IO, whatever its payload type. */
+type SocketListener = (...args: unknown[]) => void;
+
+/** What everything the hook consumes from the shared socket looks like. */
 export interface WebSocketContextType {
   socket: Socket | null;
   isConnected: boolean;
@@ -225,10 +254,26 @@ const offlineAck = (): ChatAck => ({
   error: { code: "OFFLINE", message: "You're offline." },
 });
 
-const isUnauthenticated = (payload: any): boolean => {
-  const code = payload?.error?.code ?? payload?.code ?? payload?.data?.code;
+/** The shapes a refused socket or a failed handshake reports its reason in. */
+interface AuthFailurePayload {
+  error?: { code?: string };
+  code?: string;
+  data?: { code?: string };
+  message?: string;
+}
+
+/**
+ * Whether a socket error means the server refused our token, judged by the
+ * server's `UNAUTHENTICATED` code first and the message only as a fallback.
+ *
+ * @param payload - A `connect_error`, its `data`, or an error event body.
+ * @returns True when the token was refused.
+ */
+const isUnauthenticated = (payload: unknown): boolean => {
+  const failure = (payload ?? {}) as AuthFailurePayload;
+  const code = failure.error?.code ?? failure.code ?? failure.data?.code;
   if (code === "UNAUTHENTICATED") return true;
-  const message = String(payload?.message ?? "").toLowerCase();
+  const message = String(failure.message ?? "").toLowerCase();
   return message.includes("unauthorized") || message.includes("unauthenticated");
 };
 
@@ -243,7 +288,7 @@ export const useWebSocket = (): WebSocketContextType => {
   const [isConnected, setIsConnected] = useState(false);
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>("disconnected");
-  const listenersRef = useRef<Map<string, Set<(...args: any[]) => void>>>(new Map());
+  const listenersRef = useRef<Map<string, Set<SocketListener>>>(new Map());
   const authRetryUsedRef = useRef(false);
   const authRetryResetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const roomsFetchRef = useRef<{ lastAt: number; trailing: ReturnType<typeof setTimeout> | null }>({
@@ -251,22 +296,22 @@ export const useWebSocket = (): WebSocketContextType => {
     trailing: null,
   });
 
-  const subscribe = useCallback(
-    (event: string, callback: (...args: any[]) => void): Unsubscribe => {
-      let set = listenersRef.current.get(event);
-      if (!set) {
-        set = new Set();
-        listenersRef.current.set(event, set);
-      }
-      set.add(callback);
-      socketRef.current?.on(event, callback);
-      return () => {
-        listenersRef.current.get(event)?.delete(callback);
-        socketRef.current?.off(event, callback);
-      };
-    },
-    [],
-  );
+  const subscribe = useCallback(<Args extends unknown[]>(event: string, callback: (...args: Args) => void): Unsubscribe => {
+    // The registry holds listeners of many payload types; each `onX` wrapper
+    // below pins its own payload type, so widening here is the one safe cast.
+    const listener = callback as unknown as SocketListener;
+    let set = listenersRef.current.get(event);
+    if (!set) {
+      set = new Set();
+      listenersRef.current.set(event, set);
+    }
+    set.add(listener);
+    socketRef.current?.on(event, listener);
+    return () => {
+      listenersRef.current.get(event)?.delete(listener);
+      socketRef.current?.off(event, listener);
+    };
+  }, []);
 
   /**
    * The server refused the token. Refresh it once through the API client's
@@ -319,9 +364,9 @@ export const useWebSocket = (): WebSocketContextType => {
         }, 5000);
       });
 
-      next.on("connect_error", (error: any) => {
+      next.on("connect_error", (error: Error & { data?: unknown }) => {
         setIsConnected(false);
-        if (isUnauthenticated(error) || isUnauthenticated(error?.data)) {
+        if (isUnauthenticated(error) || isUnauthenticated(error.data)) {
           void recoverFromAuthFailure(next);
           return;
         }

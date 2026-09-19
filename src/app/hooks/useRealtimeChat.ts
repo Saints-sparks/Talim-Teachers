@@ -52,6 +52,7 @@ import {
  */
 export const CHAT_ROOM_REMOVED_EVENT = "talim:chat-room-removed";
 
+/** Detail of {@link CHAT_ROOM_REMOVED_EVENT}. */
 export interface ChatRoomRemovedDetail {
   roomId: string;
   name: string;
@@ -83,6 +84,7 @@ const revokePreviews = (entry: OutboxEntry) => {
   entry.previewUrls = [];
 };
 
+/** A room as the sidebar shows it: the room plus its display name and avatar. */
 export interface RealtimeChatRoom extends ChatRoomData {
   displayName: string;
   avatarInfo: {
@@ -94,6 +96,7 @@ export interface RealtimeChatRoom extends ChatRoomData {
   lastSeen?: Date;
 }
 
+/** What {@link useRealtimeChat} provides to the chat provider. */
 export interface UseRealtimeChatReturn {
   chatRooms: RealtimeChatRoom[];
   isLoading: boolean;
@@ -186,7 +189,28 @@ const idOf = (value: unknown): string => {
   return String(value);
 };
 
-const normalizeLastMessage = (raw: any): ChatLastMessage | null => {
+/** A room's last message as the socket or REST sends it, before normalisation. */
+interface RawChatLastMessage {
+  _id?: unknown;
+  senderId?: unknown;
+  senderName?: string;
+  type?: string;
+  preview?: string;
+  content?: string;
+  text?: string;
+  createdAt?: string;
+  timestamp?: string;
+}
+
+/** A room as `chat-rooms-update`, `chat-room-joined` or REST sends it, before normalisation. */
+type RawChatRoom = Partial<Omit<ChatRoomData, "_id" | "lastMessage" | "createdBy">> & {
+  _id?: unknown;
+  createdAt?: string;
+  createdBy?: unknown;
+  lastMessage?: RawChatLastMessage | null;
+};
+
+const normalizeLastMessage = (raw: RawChatLastMessage | null | undefined): ChatLastMessage | null => {
   if (!raw) return null;
   return {
     _id: raw._id ? idOf(raw._id) : undefined,
@@ -199,10 +223,12 @@ const normalizeLastMessage = (raw: any): ChatLastMessage | null => {
 };
 
 /** Reads a room from `chat-rooms-update`, `chat-room-joined` or REST. */
-const normalizeRoom = (raw: any): ChatRoomData => ({
+const normalizeRoom = (raw: RawChatRoom): ChatRoomData => ({
   ...raw,
+  _id: raw._id ? idOf(raw._id) : undefined,
   roomId: idOf(raw.roomId) || idOf(raw._id),
   name: raw.name || "",
+  type: raw.type || "",
   participants: Array.isArray(raw.participants) ? raw.participants : [],
   lastMessage: normalizeLastMessage(raw.lastMessage),
   unreadCount: raw.unreadCount || 0,
@@ -288,6 +314,13 @@ const transformChatRoom = (
   return { ...room, displayName, avatarInfo, isOnline };
 };
 
+/**
+ * The chat provider's engine: the room list, the open room's messages, sends,
+ * retries, read receipts and the socket events behind them. Called once, by
+ * `ChatProvider`; pages read it through `useChat()` / `useChatRoom()`.
+ *
+ * @returns The room list, connection state and the chat actions.
+ */
 export const useRealtimeChat = (): UseRealtimeChatReturn => {
   const [chatRooms, setChatRooms] = useState<RealtimeChatRoom[]>([]);
   const [isLoading, setIsLoading] = useState(false);
