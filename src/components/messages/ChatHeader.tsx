@@ -1,6 +1,6 @@
 "use client";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowLeft, MoreVertical, Search, X, Info } from "lucide-react";
+import { ArrowLeft, Search, X, Info } from "lucide-react";
 import { useState } from "react";
 import GroupInfoModal from "./GroupInfoModal";
 import ContactCard, { type ContactInfo } from "./ContactCard";
@@ -130,11 +130,6 @@ export default function ChatHeader({
                 className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 transition-colors"
               >
                 <Search size={18} className="text-gray-600" />
-              </button>
-              
-              {/* More Options - Mobile */}
-              <button className="flex sm:hidden items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 transition-colors">
-                <MoreVertical size={18} className="text-gray-600" />
               </button>
             </>
           )}

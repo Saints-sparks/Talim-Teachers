@@ -13,14 +13,13 @@ import { messagesRoomUrl } from "@/app/hooks/useChatAlerts";
 type ReplyingMessage = { sender: string; text: string } | null;
 
 interface MessagesLayoutProps {
-  openSubMenu: { index: number; type: string } | null;
-  toggleSubMenu: (index: number, type: string) => void;
+  /** @deprecated The message menu no longer has submenus; `messages/page.tsx` can stop passing this. */
+  openSubMenu?: { index: number; type: string } | null;
+  /** @deprecated See `openSubMenu`. */
+  toggleSubMenu?: (index: number, type: string) => void;
 }
 
-export default function MessagesLayout({
-  openSubMenu,
-  toggleSubMenu,
-}: MessagesLayoutProps) {
+export default function MessagesLayout(_props: MessagesLayoutProps) {
   const [isMobile, setIsMobile] = useState(false);
   // Reply previews belong to the chat they were started in.
   const [repliesByRoom, setRepliesByRoom] = useState<Record<string, ReplyingMessage>>({});
@@ -81,8 +80,6 @@ export default function MessagesLayout({
         room,
         replyingMessage: repliesByRoom[roomId] ?? null,
         setReplyingMessage,
-        openSubMenu,
-        toggleSubMenu,
         onBack: handleBackToChats,
       }
     : null;

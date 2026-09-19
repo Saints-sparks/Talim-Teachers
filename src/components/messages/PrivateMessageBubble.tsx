@@ -23,9 +23,6 @@ export interface MessageBubbleProps {
   receipt?: ReceiptState;
   /** Groups: "Read by N" under my latest message. */
   readByLabel?: string;
-  index: number;
-  openSubMenu: { index: number; type: string } | null;
-  toggleSubMenu: (index: number, type: string) => void;
   setReplyingMessage: (msg: ReplyTarget | null) => void;
   onRetry?: () => void;
   onDelete?: () => void;
@@ -36,9 +33,6 @@ export default function MessageBubble({
   message,
   receipt,
   readByLabel,
-  index,
-  openSubMenu,
-  toggleSubMenu,
   setReplyingMessage,
   onRetry,
   onDelete,
@@ -84,10 +78,7 @@ export default function MessageBubble({
             }`}
           >
             <MessageOptionsDropdown
-              index={index}
               msg={msg}
-              openSubMenu={openSubMenu}
-              toggleSubMenu={toggleSubMenu}
               setReplyingMessage={setReplyingMessage}
             />
 

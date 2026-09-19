@@ -11,9 +11,6 @@ export default function GroupMessageBubble({
   message,
   receipt,
   readByLabel,
-  index,
-  openSubMenu,
-  toggleSubMenu,
   setReplyingMessage,
   onRetry,
   onDelete,
@@ -71,10 +68,7 @@ export default function GroupMessageBubble({
             }`}
           >
             <MessageOptionsDropdown
-              index={index}
               msg={msg}
-              openSubMenu={openSubMenu}
-              toggleSubMenu={toggleSubMenu}
               setReplyingMessage={setReplyingMessage}
             />
 

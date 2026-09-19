@@ -26,8 +26,6 @@ export interface ChatThreadProps {
   room?: RealtimeChatRoom | null;
   replyingMessage: ReplyTarget | null;
   setReplyingMessage: (msg: ReplyTarget | null) => void;
-  openSubMenu: { index: number; type: string } | null;
-  toggleSubMenu: (index: number, type: string) => void;
   onBack?: () => void;
 }
 
@@ -73,8 +71,6 @@ export default function ChatThread({
   room,
   replyingMessage,
   setReplyingMessage,
-  openSubMenu,
-  toggleSubMenu,
   onBack,
 }: ChatThreadProps) {
   const thread = useChatRoom(roomId);
@@ -276,7 +272,7 @@ export default function ChatThread({
                 </div>
               </div>
 
-              {dayMessages.map((message, index) => {
+              {dayMessages.map((message) => {
                 const isOwn = Boolean(me) && message.senderId === me;
                 const clientMessageId = message.clientMessageId;
                 const readCount = message._id === latestOwnId ? readersOf(message, me).length : 0;
@@ -294,9 +290,6 @@ export default function ChatThread({
                     message={message}
                     receipt={isOwn ? receiptState(message, me, otherParticipantId) : undefined}
                     readByLabel={readCount > 0 ? `Read by ${readCount}` : undefined}
-                    index={index}
-                    openSubMenu={openSubMenu}
-                    toggleSubMenu={toggleSubMenu}
                     setReplyingMessage={setReplyingMessage}
                     onRetry={clientMessageId ? () => thread.retry(clientMessageId) : undefined}
                     onDelete={clientMessageId ? () => thread.remove(clientMessageId) : undefined}
