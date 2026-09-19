@@ -6,7 +6,7 @@ import jsdoc from "eslint-plugin-jsdoc";
 
 export default [
   {
-    ignores: ["node_modules/", ".next/", "coverage/", "public/", "*.config.*"],
+    ignores: ["node_modules/", ".next/", "coverage/", "public/", "*.config.*", "src/types/api.d.ts"],
   },
   {
     files: ["**/*.ts", "**/*.tsx"],
