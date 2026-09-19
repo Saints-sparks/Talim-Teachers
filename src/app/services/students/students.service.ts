@@ -64,6 +64,22 @@ export const studentsService = {
    * @throws ApiError when any page fails; a partial roster is never returned.
    */
   listByClass: (classId: string): Promise<StudentRecord[]> => getAllStudentsByClass(classId),
+
+  /**
+   * The first few students of a class, for an avatar stack. One small page,
+   * not the roster.
+   *
+   * @param classId - The class.
+   * @param limit - How many students to fetch.
+   * @returns At most `limit` students.
+   * @throws ApiError when the page cannot be read.
+   */
+  previewByClass: async (classId: string, limit = 3): Promise<StudentRecord[]> => {
+    const body = await api.get<PaginatedBody<StudentRecord>>(`/students/by-class/${classId}`, {
+      params: { page: 1, limit },
+    });
+    return body.data ?? [];
+  },
 };
 
 /**

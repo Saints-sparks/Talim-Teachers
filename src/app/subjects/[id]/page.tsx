@@ -1,12 +1,12 @@
 "use client";
-import Layout from "@/components/Layout";
 import SubjectDetailPage from "@/components/SubjectDetail";
 
+/**
+ * A subject's detail page.
+ *
+ * @returns The page.
+ */
 const SubjectPage: React.FC = () => {
-  return (
-    // <Layout>
-    <SubjectDetailPage />
-    // </Layout>
-  );
+  return <SubjectDetailPage />;
 };
 export default SubjectPage;

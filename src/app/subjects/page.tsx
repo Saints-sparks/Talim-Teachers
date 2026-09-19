@@ -1,8 +1,12 @@
 "use client";
 import Layout from "@/components/Layout";
-import { RowNumber } from "@/components/RowNumber";
 import SubjectGrid from "@/components/SubjectGrid";
 
+/**
+ * The subjects page: the courses the teacher teaches.
+ *
+ * @returns The page.
+ */
 const SubjectPage: React.FC = () => {
   return (
     <Layout>

@@ -1,280 +1,69 @@
 "use client";
-import { useRouter } from "next/navigation";
-import { useCurriculum } from "@/app/hooks/useCurriculum";
-import { getCurriculumByCourseAndTerm } from "@/app/services/curriculum.services";
-import { useAuth } from "@/app/hooks/useAuth";
 import { useState } from "react";
+import { Eye, Pencil } from "lucide-react";
 import CurriculumActionModal from "./curriculum/CurriculumActionModal";
-import { toast } from "@/components/CustomToast";
-import { getCurrentTerm } from "@/app/services/api.service";
+import { AvatarStack } from "./subjects/AvatarStack";
+import { useClassAvatars } from "@/hooks/subjects/useClassAvatars";
+import { useSubjectCurriculumActions } from "@/hooks/subjects/useSubjectCurriculumActions";
+import { courseClassId, timetableLabel, type SubjectCourse } from "@/hooks/subjects/subjects.logic";
 
-interface SubjectCardProps {
-  _id: string;
-  title: string;
-  description?: string;
-  courseCode?: string;
-  studentAvatars?: Array<{ src?: string; initials: string; name: string }>;
-  timetable?: Array<{
-    day?: string;
-    startTime?: string;
-    endTime?: string;
-    time?: string;
-  }>;
-}
+const actionButton =
+  "flex min-w-0 items-center justify-center gap-2 rounded-lg border border-gray-200 py-2 text-sm font-medium text-[#0A2343] hover:bg-gray-50 dark:border-slate-700 dark:text-blue-300 dark:hover:bg-slate-800 sm:text-base disabled:opacity-60";
 
-const getSubjectIcon = (title: string, courseCode?: string) => {
-  const subject = title.toLowerCase();
-  const code = courseCode?.toLowerCase() || "";
-
-  if (subject.includes("math") || code.includes("math")) {
-    return "📊";
-  } else if (
-    subject.includes("english") ||
-    subject.includes("language") ||
-    code.includes("eng")
-  ) {
-    return "📝";
-  } else if (subject.includes("science") || code.includes("sci")) {
-    return "🔬";
-  } else if (subject.includes("history") || code.includes("hist")) {
-    return "📚";
-  } else if (subject.includes("art") || code.includes("art")) {
-    return "🎨";
-  } else if (subject.includes("music") || code.includes("mus")) {
-    return "🎵";
-  } else if (subject.includes("physics") || code.includes("phy")) {
-    return "⚡";
-  } else if (subject.includes("chemistry") || code.includes("chem")) {
-    return "🧪";
-  } else if (subject.includes("biology") || code.includes("bio")) {
-    return "🌱";
-  } else if (subject.includes("geography") || code.includes("geo")) {
-    return "🌍";
-  } else if (
-    subject.includes("computer") ||
-    subject.includes("programming") ||
-    code.includes("comp")
-  ) {
-    return "💻";
-  } else {
-    return "📖";
-  }
-};
-
-const getGradientColor = (title: string) => {
-  // Return consistent brand color instead of multiple gradients
-  return "bg-[#003366]";
-};
-
-const SubjectCard: React.FC<SubjectCardProps> = ({
-  _id,
-  title,
-  description,
-  courseCode,
-  studentAvatars = [],
-  timetable,
-}) => {
-  const router = useRouter();
-  const { fetchCurriculumByCourse, isLoading } = useCurriculum();
-  const { getAccessToken } = useAuth();
-  const [isCheckingCurriculum, setIsCheckingCurriculum] = useState(false);
+/**
+ * One subject the teacher teaches: course code, description, next slot, a
+ * stack of the class's students, and View / Edit for the current-term
+ * curriculum. Edit is offered only to users who may write that curriculum; a
+ * read-only user's card click goes straight to the view.
+ *
+ * @param props - The course to show.
+ * @returns The card.
+ */
+const SubjectCard: React.FC<SubjectCourse> = (course) => {
+  const { _id, title, description, courseCode, timetable } = course;
   const [showActionModal, setShowActionModal] = useState(false);
-  const [hasCurriculum, setHasCurriculum] = useState<boolean | null>(null);
-  const [curriculumData, setCurriculumData] = useState<any>(null);
+  const avatars = useClassAvatars(courseClassId(course.classId));
+  const actions = useSubjectCurriculumActions({ _id, title, courseCode });
 
-  const getCurriculumCreatePath = (termId: string) => {
-    const params = new URLSearchParams({
-      courseId: _id,
-      termId,
-      mode: "create",
-      courseTitle: title,
-      ...(courseCode ? { courseCode } : {}),
-    });
-
-    return `/curriculum?${params.toString()}`;
-  };
-
-  const getCurriculumEditPath = (termId: string, curriculumId: string) => {
-    const params = new URLSearchParams({
-      courseId: _id,
-      termId,
-      mode: "edit",
-      curriculumId,
-      courseTitle: title,
-      ...(courseCode ? { courseCode } : {}),
-    });
-
-    return `/curriculum?${params.toString()}`;
-  };
-
-  // Show modal on card click
-  // Open the action modal immediately on card click
   const handleCardClick = () => {
-    setShowActionModal(true);
-  };
-
-  // Handler for modal actions
-  const handleView = async () => {
-    setIsCheckingCurriculum(true);
-    const token = getAccessToken();
-    if (!token) {
-      
-      toast.error("You must be logged in to view curriculum.");
-      setIsCheckingCurriculum(false);
-      return;
-    }
-    try {
-      const term = await getCurrentTerm(token);
-     
-      if (!term || !term._id) {
-       
-        toast.error("No current term selected.");
-        return;
-      }
-     
-      
-      const curriculum = await getCurriculumByCourseAndTerm({
-        courseId: _id,
-        termId: term._id,
-        token,
-      });
-     
-      if (!curriculum) {
-        toast("No curriculum exists yet. Opening the editor to create one.");
-        router.push(getCurriculumCreatePath(term._id));
-        return;
-      }
-      router.push(
-        `/curriculum/view?courseId=${_id}&termId=${term._id}&curriculumId=${curriculum._id}`,
-      );
-    } catch (error) {
-     
-      const err = error as any;
-     
-      toast.error("Failed to fetch curriculum.");
-    } finally {
-      setIsCheckingCurriculum(false);
-    }
-  };
-  const handleEdit = async () => {
-    setIsCheckingCurriculum(true);
-    const token = getAccessToken();
-    if (!token) {
-     
-      toast.error("You must be logged in to edit curriculum.");
-      setIsCheckingCurriculum(false);
-      return;
-    }
-    try {
-      const term = await getCurrentTerm(token);
-     
-      if (!term || !term._id) {
-       
-        toast.error("No current term selected.");
-        return;
-      }
-    
-      const curriculum = await getCurriculumByCourseAndTerm({
-        courseId: _id,
-        termId: term._id,
-        token,
-      });
-    
-      if (!curriculum) {
-        toast("No curriculum exists yet. Opening the editor to create one.");
-        router.push(getCurriculumCreatePath(term._id));
-        return;
-      }
-      router.push(getCurriculumEditPath(term._id, curriculum._id));
-    } catch (error) {
-      
-      const err = error as any;
-     
-      toast.error("Failed to fetch curriculum for editing.");
-    } finally {
-      setIsCheckingCurriculum(false);
-    }
-  };
-
-
-  const getTimetableLabel = () => {
-    if (!timetable || timetable.length === 0) return "Schedule not set";
-    const first = timetable[0] || {};
-    const timeRange =
-      first.time ||
-      [first.startTime, first.endTime].filter(Boolean).join(" - ");
-    const label = [first.day, timeRange].filter(Boolean).join(" ");
-    if (timetable.length > 1) {
-      return `${label} +${timetable.length - 1} more`;
-    }
-    return label || "Schedule not set";
+    if (actions.canModify) setShowActionModal(true);
+    else void actions.view();
   };
 
   return (
     <>
       <div
         className={`group relative bg-white rounded-xl transition-all duration-300 cursor-pointer border border-[#F0F0F0] overflow-hidden dark:bg-slate-900 dark:border-slate-800 ${
-          isCheckingCurriculum || isLoading
-            ? "opacity-75 pointer-events-none"
-            : ""
+          actions.busy ? "opacity-75 pointer-events-none" : ""
         }`}
         onClick={handleCardClick}
       >
-        {/* Loading overlay */}
-        {(isCheckingCurriculum || isLoading) && (
-          <div className="absolute inset-0 bg-white/50 flex items-center justify-center z-10">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#003366]"></div>
+        {actions.busy && (
+          <div className="absolute inset-0 bg-white/50 dark:bg-slate-900/50 flex items-center justify-center z-10">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#003366] dark:border-blue-300" />
           </div>
         )}
-        {/* Content */}
         <div className="space-y-3 p-4 sm:p-5">
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 flex-col gap-2">
               <span className="mb-1 inline-block max-w-full truncate rounded-full border border-[#F2F2F2] px-2 text-[15px] font-semibold text-[#4D4D4D] dark:border-slate-700 dark:text-slate-200">
-                {courseCode || "ENG 213"}
+                {courseCode || title}
               </span>
             </div>
-            <div className="flex shrink-0 -space-x-2">
-              {studentAvatars.length > 0 ? studentAvatars.map((avatar, idx) => (
-                avatar.src ? (
-                  <img
-                  key={idx}
-                  src={avatar.src}
-                  alt={avatar.name}
-                  className="w-8 h-8 rounded-full border-2 border-white object-cover shadow -ml-1 dark:border-slate-900"
-                  style={{ zIndex: 10 - idx }}
-                />
-                ) : (
-                  <div
-                    key={idx}
-                    className="w-8 h-8 rounded-full border-2 border-white bg-[#003366] text-white shadow -ml-1 flex items-center justify-center text-[10px] font-semibold dark:border-slate-900"
-                    style={{ zIndex: 10 - idx }}
-                    title={avatar.name}
-                  >
-                    {avatar.initials}
-                  </div>
-                )
-              )) : (
-                <div className="w-8 h-8 rounded-full border-2 border-white bg-[#EAF2FB] text-[#003366] shadow flex items-center justify-center text-[10px] font-semibold">
-                  ST
-                </div>
-              )}
-            </div>
+            <AvatarStack avatars={avatars.data ?? []} />
           </div>
-          <div>
-            <p className="text-[14px] leading-6 text-[#4D4D4D] dark:text-slate-300">
-              {description ||
-                "English Language, you will be learning on grammar, essay writing and comprehension"}
-            </p>
-          </div>
+          <p className="text-[14px] leading-6 text-[#4D4D4D] dark:text-slate-300">
+            {description || `${title} — no description has been added yet.`}
+          </p>
           <div className="flex items-center gap-2 mt-2">
             <span className="flex min-w-0 items-center rounded bg-gray-100 px-3 py-1 text-xs text-gray-700 dark:bg-slate-800 dark:text-slate-300">
               <svg
-                className="w-4 h-4 mr-1"
+                className="w-4 h-4 mr-1 shrink-0"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
                 viewBox="0 0 24 24"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -282,68 +71,44 @@ const SubjectCard: React.FC<SubjectCardProps> = ({
                   d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                 />
               </svg>
-              <span className="truncate">{getTimetableLabel()}</span>
+              <span className="truncate">{timetableLabel(timetable)}</span>
             </span>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:gap-3 mt-4">
+          <div className={`grid gap-2 sm:gap-3 mt-4 ${actions.canModify ? "grid-cols-2" : "grid-cols-1"}`}>
             <button
-              className="flex min-w-0 items-center justify-center gap-2 rounded-lg border border-gray-200 py-2 text-sm font-medium text-[#0A2343] hover:bg-gray-50 dark:border-slate-700 dark:text-blue-300 dark:hover:bg-slate-800 sm:text-base"
+              type="button"
+              className={actionButton}
+              disabled={actions.busy}
               onClick={(e) => {
                 e.stopPropagation();
-                handleView();
+                void actions.view();
               }}
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                />
-              </svg>
+              <Eye className="w-5 h-5" />
               View
             </button>
-            <button
-              className="flex min-w-0 items-center justify-center gap-2 rounded-lg border border-gray-200 py-2 text-sm font-medium text-[#0A2343] hover:bg-gray-50 dark:border-slate-700 dark:text-blue-300 dark:hover:bg-slate-800 sm:text-base"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleEdit();
-              }}
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
+            {actions.canModify && (
+              <button
+                type="button"
+                className={actionButton}
+                disabled={actions.busy}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void actions.edit();
+                }}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-2.828 1.172H7v-2a4 4 0 011.172-2.828z"
-                />
-              </svg>
-              Edit
-            </button>
+                <Pencil className="w-5 h-5" />
+                Edit
+              </button>
+            )}
           </div>
         </div>
       </div>
-      {/* Curriculum Action Modal */}
       <CurriculumActionModal
         open={showActionModal}
         onClose={() => setShowActionModal(false)}
-        onView={handleView}
-        onEdit={handleEdit}
+        onView={() => void actions.view()}
+        onEdit={() => void actions.edit()}
       />
     </>
   );
