@@ -10,6 +10,7 @@
  * object. {@link Curriculum} is the union of both, with every field the two
  * shapes do not share optional.
  */
+import type { CreateCurriculumBody, UpdateCurriculumBody } from "@/types/apiPayloads";
 
 /** The course block of a curriculum. Flattened by `by-course-term`, populated elsewhere. */
 export interface CurriculumCourse {
@@ -53,17 +54,11 @@ export interface Curriculum {
   updatedAt?: string;
 }
 
-/** Body of `POST /curriculum`. Mirrors `CreateCurriculumDto`. */
-export interface CreateCurriculumPayload {
-  course: string;
-  term: string;
-  content: string;
-  attachments?: string[];
-  teacherId: string;
-}
+/** Body of `POST /curriculum` (`CreateCurriculumDto`), from the generated contract. */
+export type CreateCurriculumPayload = CreateCurriculumBody;
 
-/** Body of `PATCH /curriculum/:id`. Mirrors `UpdateCurriculumDto` (every field optional). */
-export type UpdateCurriculumPayload = Partial<CreateCurriculumPayload>;
+/** Body of `PATCH /curriculum/:id` (`UpdateCurriculumDto`, every field optional), from the generated contract. */
+export type UpdateCurriculumPayload = UpdateCurriculumBody;
 
 /** Filters `GET /curriculum` understands. */
 export interface CurriculumFilters {

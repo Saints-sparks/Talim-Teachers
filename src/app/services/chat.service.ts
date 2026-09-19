@@ -10,15 +10,17 @@
  */
 import { ChatRoom } from "@/types/chat";
 import { api, apiClient } from "@/lib/apiClient";
+import type { AddChatParticipantsBody, CreateGroupChatBody, UpdateChatRoomBody } from "@/types/apiPayloads";
 
-/** `CreateGroupChatDto` — the server rejects any other field. */
-export interface CreateGroupChatPayload {
-  type: "class_group" | "course_group";
-  classId?: string;
-  courseId?: string;
-  termId?: string;
+/**
+ * `CreateGroupChatDto` from the generated contract — the server rejects any
+ * other field. Teachers only create class and course groups, and always name
+ * the participants, so those two fields are narrower than the DTO's.
+ */
+export type CreateGroupChatPayload = Omit<CreateGroupChatBody, "type" | "participants"> & {
+  type: Extract<CreateGroupChatBody["type"], "class_group" | "course_group">;
   participants: string[];
-}
+};
 
 /** A chat room as `POST /chat/groups` returns it. */
 export type CreatedChatRoom = ChatRoom & {
@@ -100,14 +102,12 @@ export const uploadChatAttachment = async (
   return result;
 };
 
-/** `UpdateChatRoomDto` — any subset of a group's details. */
-export interface UpdateChatRoomPayload {
-  name?: string;
-  /** `null` or `''` clears it. */
-  description?: string | null;
-  /** From uploadChatAttachment; `null` removes the picture. */
-  avatarUrl?: string | null;
-}
+/**
+ * `UpdateChatRoomDto` from the generated contract — any subset of a group's
+ * details. `description` of `null` or `''` clears it; `avatarUrl` comes from
+ * `uploadChatAttachment`, and `null` removes the picture.
+ */
+export type UpdateChatRoomPayload = UpdateChatRoomBody;
 
 /**
  * Updates a group's name, description or picture.
@@ -129,7 +129,9 @@ export const updateChatRoom = async (roomId: string, payload: UpdateChatRoomPayl
  * @throws ApiError when the list is empty or the caller may not manage the group.
  */
 export const addChatParticipants = async (roomId: string, participantIds: string[]): Promise<ChatRoom> =>
-  api.post<ChatRoom>(`/chat/rooms/${encodeURIComponent(roomId)}/participants/batch`, { participantIds });
+  api.post<ChatRoom>(`/chat/rooms/${encodeURIComponent(roomId)}/participants/batch`, {
+    participantIds,
+  } satisfies AddChatParticipantsBody);
 
 /**
  * Removes a member from a group; removing yourself leaves it.

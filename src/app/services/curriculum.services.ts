@@ -11,6 +11,7 @@
  */
 import { api } from "@/lib/apiClient";
 import { ApiError } from "@/lib/apiError";
+import type { CurriculumByCourseTermBody } from "@/types/apiPayloads";
 import type {
   CreateCurriculumPayload,
   Curriculum,
@@ -101,7 +102,8 @@ export interface CourseTermQuery {
  */
 export const getCurriculumByCourseAndTerm = async ({ courseId, termId }: CourseTermQuery): Promise<Curriculum | null> => {
   try {
-    const body = await api.post<Curriculum | Curriculum[] | null>("/curriculum/by-course-term", { courseId, termId });
+    const request: CurriculumByCourseTermBody = { courseId, termId };
+    const body = await api.post<Curriculum | Curriculum[] | null>("/curriculum/by-course-term", request);
     if (Array.isArray(body)) return body[0] ?? null;
     return body ?? null;
   } catch (error) {

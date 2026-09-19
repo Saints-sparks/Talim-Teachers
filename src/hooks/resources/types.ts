@@ -8,6 +8,7 @@
  * stored as a User id rather than a Teacher id, for example) leaves `null`,
  * and a create/update response may not populate at all.
  */
+import type { CreateResourceBody, UpdateResourceBody } from "@/types/apiPayloads";
 
 /** A populated class (`select: 'name classDescription'`). */
 export interface ResourceClass {
@@ -67,28 +68,15 @@ export interface Resource {
   updatedAt?: string;
 }
 
-/** Body of `POST /resources`. Mirrors `CreateResourceDto`. */
-export interface CreateResourcePayload {
-  name: string;
-  classId: string;
-  courseId: string;
-  termId: string;
-  image: string;
-  files?: string[];
-  /** ISO date; the API defaults to now. */
-  uploadDate?: string;
-}
+/**
+ * Body of `POST /resources` (`CreateResourceDto`), from the generated contract.
+ * `uploadDate` is an ISO date the API defaults to now; `uploadedBy` is never
+ * sent (the server derives it from the token).
+ */
+export type CreateResourcePayload = CreateResourceBody;
 
-/** Body of `PUT /resources/:id`. Mirrors `UpdateResourceDto` (every field optional). */
-export interface UpdateResourcePayload {
-  name?: string;
-  classId?: string;
-  courseId?: string;
-  termId?: string;
-  uploadDate?: string;
-  image?: string;
-  files?: string[];
-}
+/** Body of `PUT /resources/:id` (`UpdateResourceDto`, every field optional), from the generated contract. */
+export type UpdateResourcePayload = UpdateResourceBody;
 
 /**
  * The id of a populated-or-bare reference.
