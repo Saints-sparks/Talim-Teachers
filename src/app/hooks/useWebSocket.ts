@@ -354,7 +354,6 @@ export const useWebSocket = (): WebSocketContextType => {
       // on every connect and reconnect, so a refreshed token is always used.
       const next = io(WEBSOCKET_URL, {
         auth: (cb) => cb({ token: sessionStore.getToken() }),
-        query: { userId },
         transports: ["websocket", "polling"],
         timeout: 20000,
         reconnection: true,
