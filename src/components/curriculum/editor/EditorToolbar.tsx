@@ -157,6 +157,9 @@ function currentFontSize(editor: Editor): number {
  */
 export function EditorToolbar({ editor }: { editor: Editor }) {
   const chain = () => editor.chain().focus();
+  // What the teacher is typing in the size box. Kept apart from the editor's size so a
+  // half-typed "1" on the way to "18" is not snapped back to the current size.
+  const [sizeDraft, setSizeDraft] = useState<string | null>(null);
 
   const insertImageFromUrl = () => {
     const url = window.prompt("Enter image URL:");
@@ -175,6 +178,7 @@ export function EditorToolbar({ editor }: { editor: Editor }) {
   };
 
   const onFontSizeChange = (value: string) => {
+    setSizeDraft(value);
     const size = Number(value);
     if (Number.isFinite(size) && size >= MIN_FONT_SIZE && size <= MAX_FONT_SIZE) {
       chain().setFontSize(`${size}px`).run();
@@ -205,8 +209,9 @@ export function EditorToolbar({ editor }: { editor: Editor }) {
           </select>
           <input
             type="number"
-            value={currentFontSize(editor)}
+            value={sizeDraft ?? currentFontSize(editor)}
             onChange={(e) => onFontSizeChange(e.target.value)}
+            onBlur={() => setSizeDraft(null)}
             className="w-16 px-2 py-2 border border-[#F0F0F0] rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-[#003366]"
             min={MIN_FONT_SIZE}
             max={MAX_FONT_SIZE}
