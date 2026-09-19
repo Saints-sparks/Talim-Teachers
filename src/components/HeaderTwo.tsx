@@ -95,7 +95,7 @@ export function Header({
                 src={user?.userAvatar || "/placeholder.svg"}
                 alt="User avatar"
               />
-              <AvatarFallback className="bg-green-300">
+              <AvatarFallback className="bg-green-700 text-white">
                 {getInitials()}
               </AvatarFallback>
             </Avatar>

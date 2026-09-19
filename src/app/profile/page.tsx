@@ -124,7 +124,7 @@ export default function Profile() {
           <div className="flex flex-col items-center justify-center gap-4 rounded-2xl bg-white px-4 py-8 dark:bg-slate-900 sm:flex-row sm:justify-start sm:rounded-3xl sm:p-10">
              <Avatar className="w-[100px] sm:w-[150px] h-[100px] sm:h-[150px]">
                 <AvatarImage src={user?.userAvatar || "/placeholder.svg"} alt="User avatar" />
-                <AvatarFallback className="bg-green-300">
+                <AvatarFallback className="bg-green-700 text-white">
                   {getInitials()}
                 </AvatarFallback>
               </Avatar>
