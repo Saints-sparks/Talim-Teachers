@@ -28,6 +28,17 @@
   --input: #e5e7eb;
   --ring: #003366;
   --radius: 0.5rem;
+  /* Text colours as RGB channels (tailwind.config.ts textColor). Each is AA
+     (>= 4.5:1) on white and on the light tints it sits on (gray-50/100, the
+     green/red-50 badges), and keeps its rank: gray/slate 400 lighter than 500,
+     500 lighter than the stock 600. */
+  --text-gray-400: 99 107 120;
+  --text-gray-500: 90 99 112;
+  --text-slate-400: 94 108 134;
+  --text-slate-500: 84 98 122;
+  --text-green-600: 21 128 61;
+  --text-yellow-600: 161 98 7;
+  --text-red-600: 200 30 30;
 }
 
 html.dark {
@@ -50,6 +61,24 @@ html.dark {
   --border: #1e293b;
   --input: #1e293b;
   --ring: #3b82f6;
+  /* The stock Tailwind values, except slate-500 (3.8:1 on slate-900 in stock; 5.7:1 here). */
+  --text-gray-400: 156 163 175;
+  --text-gray-500: 107 114 128;
+  --text-slate-400: 148 163 184;
+  --text-slate-500: 131 147 171;
+  --text-green-600: 22 163 74;
+  --text-yellow-600: 202 138 4;
+  --text-red-600: 220 38 38;
+}
+
+/* Light mode: the secondary hex greys that miss WCAG AA (text on white and near-white).
+   Every value maps to one AA grey just under #6F6F6F; the blue-greys to an AA blue-grey.
+   :where() keeps this at class specificity, so hover: and dark: variants still win. */
+:where(html:not(.dark)) :is(.text-\[\#878787\], .text-\[\#7B7B7B\], .text-\[\#898989\], .text-\[\#909090\], .text-\[\#999999\], .text-\[\#A5A5A5\]) {
+  color: #6b6b6b;
+}
+:where(html:not(.dark)) :is(.text-\[\#8A95A5\], .text-\[\#738195\]) {
+  color: #5b6a80;
 }
 
 /* Global Styles */
@@ -202,13 +231,15 @@ html.dark [class*="text-[#878787]"],
 html.dark [class*="text-[#898989]"],
 html.dark [class*="text-[#8A95A5]"] { color: #94a3b8; }
 
-/* Light gray → slate-500 */
+/* Light gray → slate-500 (raised from #64748b, 3.8:1 on slate-900, to a value that clears AA) */
 html.dark [class*="text-[#909090]"],
 html.dark [class*="text-[#98A2B3]"],
 html.dark [class*="text-[#999999]"],
 html.dark [class*="text-[#A0A0A0]"],
 html.dark [class*="text-[#A5A5A5]"],
-html.dark [class*="text-[#ABABAB]"],
+html.dark [class*="text-[#ABABAB]"] { color: #8393ab; }
+
+/* Near-white greys are decorative (empty-state icons): dimmer still */
 html.dark [class*="text-[#C0C0C0]"],
 html.dark [class*="text-[#D0D0D0]"],
 html.dark [class*="text-[#F0F0F0]"] { color: #64748b; }
@@ -242,7 +273,7 @@ html.dark textarea::placeholder { color: #64748b; }
 /* Tables */
 html.dark table { border-color: #1e293b; }
 html.dark thead { background-color: #1e293b; }
-html.dark thead th { color: #94a3b8; border-color: #334155; }
+html.dark thead th { color: #b4c0d2; border-color: #334155; }
 html.dark tbody tr { border-color: #1e293b; }
 html.dark tbody tr:hover { background-color: #1a2740; }
 html.dark td { border-color: #1e293b; color: #cbd5e1; }
