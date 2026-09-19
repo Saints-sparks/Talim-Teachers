@@ -11,24 +11,28 @@ import { useMutation, useQuery, useQueryClient, type UseQueryResult } from "@tan
 import { api } from "@/lib/apiClient";
 import { queryKeys, staleTimes } from "@/lib/queryKeys";
 import { useAuth } from "@/app/context/AuthContext";
+import type { NotificationPreferencesPayload } from "@/types/apiPayloads";
 
 /**
  * The switches this portal exposes. `UpdateNotificationPreferenceDto` declares
  * more (fees, timetable, security, system, timezone); a teacher does not set
  * those here, so they are read but never sent.
  */
-export interface NotificationPreferences {
-  announcementsEnabled: boolean;
-  attendanceEnabled: boolean;
-  resultsEnabled: boolean;
-  resourcesEnabled: boolean;
-  messagesEnabled: boolean;
-  emailEnabled: boolean;
-  pushEnabled: boolean;
-  quietHoursEnabled: boolean;
-  quietHoursStart: string;
-  quietHoursEnd: string;
-}
+export type NotificationPreferences = Required<
+  Pick<
+    NotificationPreferencesPayload,
+    | "announcementsEnabled"
+    | "attendanceEnabled"
+    | "resultsEnabled"
+    | "resourcesEnabled"
+    | "messagesEnabled"
+    | "emailEnabled"
+    | "pushEnabled"
+    | "quietHoursEnabled"
+    | "quietHoursStart"
+    | "quietHoursEnd"
+  >
+>;
 
 /** What a teacher sees switched on before the server has answered. */
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
@@ -82,8 +86,10 @@ export function useNotificationPreferences() {
   const query = useNotificationPreferencesQuery();
 
   const mutation = useMutation({
-    mutationFn: ({ field, value }: NotificationPreferencePatch) =>
-      api.patch<Partial<NotificationPreferences>>("/notifications/preferences", { [field]: value }),
+    mutationFn: ({ field, value }: NotificationPreferencePatch) => {
+      const body: NotificationPreferencesPayload = { [field]: value };
+      return api.patch<Partial<NotificationPreferences>>("/notifications/preferences", body);
+    },
     onMutate: async ({ field, value }) => {
       await queryClient.cancelQueries({ queryKey: key });
       const previous = queryClient.getQueryData<Partial<NotificationPreferences>>(key);

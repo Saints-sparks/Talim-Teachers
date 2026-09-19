@@ -14,52 +14,34 @@ import { useMutation, useQuery, useQueryClient, type UseQueryResult } from "@tan
 import { api } from "@/lib/apiClient";
 import { queryKeys, staleTimes } from "@/lib/queryKeys";
 import { useAuth } from "@/app/context/AuthContext";
+import type { TeacherPreferencesPayload, TeacherProfilePayload } from "@/types/apiPayloads";
 
-/** Notification switches stored with the teacher's workspace preferences. */
-export interface TeacherNotificationPrefs {
-  announcements: boolean;
-  attendance: boolean;
-  grading: boolean;
-  resources: boolean;
-  messages: boolean;
-  inApp: boolean;
-  email: boolean;
-  quietHoursEnabled: boolean;
-  quietStart: string;
-  quietEnd: string;
-}
+/** A section of `UpdateTeacherPreferencesDto` with every field required (the DTO makes them optional). */
+type FullSection<K extends keyof TeacherPreferencesPayload> = Required<NonNullable<TeacherPreferencesPayload[K]>>;
 
-/** Chat preferences. `defaultFilter` mirrors `TeacherMessagePreferencesDto`. */
-export interface TeacherMessagePrefs {
-  groupNotifications: boolean;
-  unreadBadge: boolean;
-  soundEnabled: boolean;
-  showOnlineStatus: boolean;
-  defaultFilter: "all" | "private" | "groups";
-}
+/** Notification switches stored with the teacher's workspace preferences (`TeacherNotificationPreferencesDto`). */
+export type TeacherNotificationPrefs = FullSection<"notifications">;
 
-/** Workspace defaults. Every value mirrors `TeacherTeachingPreferencesDto`. */
-export interface TeacherTeachingPrefs {
-  landingPage: "dashboard" | "timetable" | "attendance" | "messages";
-  gradingView: "course" | "class";
-  attendanceMode: "mark" | "view";
-  timetableDisplay: "week" | "today";
-  resourceDisplay: "grid" | "list";
-}
+/** Chat preferences (`TeacherMessagePreferencesDto`). */
+export type TeacherMessagePrefs = FullSection<"messages">;
 
-/** In-app guide preferences. */
-export interface TeacherGuidePrefs {
-  showAppTips: boolean;
-}
+/** Workspace defaults (`TeacherTeachingPreferencesDto`). */
+export type TeacherTeachingPrefs = FullSection<"teaching">;
 
-/** Everything `UpdateTeacherPreferencesDto` accepts, with nothing optional. */
-export interface TeacherPreferences {
+/** In-app guide preferences (`TeacherGuidePreferencesDto`). */
+export type TeacherGuidePrefs = FullSection<"guides">;
+
+/**
+ * Everything `UpdateTeacherPreferencesDto` accepts, with nothing optional.
+ * Derived from the generated contract: a field the DTO adds, renames or drops
+ * fails `tsc` here and in `DEFAULT_PREFERENCES`.
+ */
+export type TeacherPreferences = Required<TeacherPreferencesPayload> & {
   notifications: TeacherNotificationPrefs;
   messages: TeacherMessagePrefs;
   teaching: TeacherTeachingPrefs;
   guides: TeacherGuidePrefs;
-  theme: "light" | "dark" | "system";
-}
+};
 
 /** The profile block of `GET /teacher/settings`. */
 export interface TeacherSettingsProfile {
@@ -187,8 +169,8 @@ export function mergePreferences(stored: StoredPreferences | undefined): Teacher
  * @param updates - The sections the user changed.
  * @returns The payload to PATCH.
  */
-export function toPreferencesPayload(updates: Partial<TeacherPreferences>): Partial<TeacherPreferences> {
-  const payload: Partial<TeacherPreferences> = {};
+export function toPreferencesPayload(updates: Partial<TeacherPreferences>): TeacherPreferencesPayload {
+  const payload: TeacherPreferencesPayload = {};
   if (updates.notifications) payload.notifications = { ...DEFAULT_PREFERENCES.notifications, ...pickKnown(DEFAULT_PREFERENCES.notifications, updates.notifications) };
   if (updates.messages) payload.messages = { ...DEFAULT_PREFERENCES.messages, ...pickKnown(DEFAULT_PREFERENCES.messages, updates.messages) };
   if (updates.teaching) payload.teaching = { ...DEFAULT_PREFERENCES.teaching, ...pickKnown(DEFAULT_PREFERENCES.teaching, updates.teaching) };
@@ -271,7 +253,10 @@ export function useUpdateTeacherAvatar() {
   const userId = user?.userId ?? "";
 
   return useMutation({
-    mutationFn: (avatarUrl: string) => api.patch<TeacherSettings>("/teacher/settings/profile", { avatarUrl }),
+    mutationFn: (avatarUrl: string) => {
+      const body: TeacherProfilePayload = { avatarUrl };
+      return api.patch<TeacherSettings>("/teacher/settings/profile", body);
+    },
     onSuccess: (_data, avatarUrl) => {
       updateUser({ userAvatar: avatarUrl });
       queryClient.invalidateQueries({ queryKey: queryKeys.settings.teacher(userId) });
