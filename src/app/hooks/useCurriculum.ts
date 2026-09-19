@@ -1,189 +1,41 @@
-import { useState, useCallback, useRef } from "react";
-import {
-  createCurriculum,
-  getCurricula,
-  getCurriculumById,
-  getCurriculumByCourse,
-  updateCurriculum,
-  deleteCurriculum,
-  getCurriculumByCourseAndTerm,
-} from "../services/curriculum.services";
-import { useAuth } from "./useAuth";
+import { useCallback, useState } from "react";
+import { getCurriculumByCourseAndTerm } from "../services/curriculum.services";
 import { getCurrentTerm } from "../services/api.service";
-import { useTeacherOnboarding } from "@/app/context/OnboardingContext";
+import type { Curriculum } from "@/hooks/curriculum/types";
 
-export function useCurriculum() {
-  const { getAccessToken } = useAuth();
-  const { markStepComplete } = useTeacherOnboarding();
-  const [curricula, setCurricula] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [showEditor, setShowEditor] = useState<boolean>(false); // Add this state
+/** What {@link useCurriculum} provides. */
+export interface UseCurriculumResult {
+  /** True while a lookup is in flight. */
+  isLoading: boolean;
+  /**
+   * The curriculum of a course in the school's current term.
+   *
+   * Rejects with an `ApiError` when the term or the curriculum cannot be read.
+   */
+  fetchCurriculumByCourse: (courseId: string) => Promise<Curriculum | null>;
+}
 
-  // Prevent multiple simultaneous requests
-  const isLoadingRef = useRef<boolean>(false);
+/**
+ * One-shot curriculum lookup for callers that decide what to do with the
+ * answer themselves (the subject cards route to "create" or "view").
+ *
+ * The curriculum pages read through the cached hooks in `src/hooks/curriculum`
+ * instead; this hook exists so the subject cards keep working unchanged.
+ *
+ * @returns The loading flag and the lookup function.
+ */
+export function useCurriculum(): UseCurriculumResult {
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch all curricula with optional filters
-  const fetchCurricula = useCallback(
-    async (filters: { course?: string; term?: string; teacherId?: string }) => {
-      // Prevent multiple calls if one is already in progress
-      if (isLoadingRef.current) {
-       
-        return;
-      }
-
-      isLoadingRef.current = true;
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const token = getAccessToken();
-        if (!token) {
-          throw new Error("No authentication token found");
-        }
-
-        const data = await getCurricula(filters, token);
-        setCurricula(data);
-      } catch (error: any) {
-        setError(error.message);
-        console.error("Error fetching curricula:", error);
-      } finally {
-        setIsLoading(false);
-        isLoadingRef.current = false;
-      }
-    },
-    [getAccessToken]
-  );
-
-  // Create a new curriculum
-  const addCurriculum = async (curriculumData: any) => {
+  const fetchCurriculumByCourse = useCallback(async (courseId: string) => {
     setIsLoading(true);
-    setError(null);
     try {
-      const token = getAccessToken();
-      if (!token) {
-        throw new Error("No authentication token found");
-      }
-      const newCurriculum = await createCurriculum(curriculumData, token);
-      setCurricula((prev) => [...prev, newCurriculum]);
-      markStepComplete("create-curriculum");
-      return newCurriculum;
-    } catch (error: any) {
-      setError(error.message);
-      console.error("Error creating curriculum:", error);
-      throw error;
+      const term = await getCurrentTerm();
+      return await getCurriculumByCourseAndTerm({ courseId, termId: term._id });
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  // Fetch a single curriculum by ID
-  const fetchCurriculumById = async (id: string) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const token = getAccessToken();
-      if (!token) {
-        throw new Error("No authentication token found");
-      }
-      const data = await getCurriculumById(id, token);
-      return data;
-    } catch (error: any) {
-      setError(error.message);
-      console.error("Error fetching curriculum by ID:", error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Fetch curriculum by course ID
-  const fetchCurriculumByCourse = async (courseId: string) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const token = getAccessToken();
-      if (!token) {
-        throw new Error("No authentication token found");
-      }
-
-      const term = await getCurrentTerm(token);
-      if (!term) {
-        throw new Error("No current term selected");
-      }
-      const data = await getCurriculumByCourseAndTerm({
-        courseId,
-        termId: term._id,
-        token,
-      });
-      return data;
-    } catch (error: any) {
-      setError(error.message);
-      console.error("Error fetching curriculum by course:", error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Update a curriculum
-  const editCurriculum = async (id: string, updatedData: any) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const token = getAccessToken();
-      if (!token) {
-        throw new Error("No authentication token found");
-      }
-      const updatedCurriculum = await updateCurriculum(id, updatedData, token);
-      setCurricula((prev) =>
-        prev.map((curriculum) =>
-          curriculum._id === id ? updatedCurriculum : curriculum
-        )
-      );
-      return updatedCurriculum;
-    } catch (error: any) {
-      setError(error.message);
-      console.error("Error updating curriculum:", error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Delete a curriculum
-  const removeCurriculum = async (id: string) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const token = getAccessToken();
-      if (!token) {
-        throw new Error("No authentication token found");
-      }
-      await deleteCurriculum(id, token);
-      setCurricula((prev) =>
-        prev.filter((curriculum) => curriculum._id !== id)
-      );
-    } catch (error: any) {
-      setError(error.message);
-      console.error("Error deleting curriculum:", error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return {
-    curricula,
-    isLoading,
-    error,
-    showEditor,
-    setShowEditor,
-    fetchCurricula,
-    addCurriculum,
-    fetchCurriculumById,
-    fetchCurriculumByCourse,
-    editCurriculum,
-    removeCurriculum,
-  };
+  return { isLoading, fetchCurriculumByCourse };
 }

@@ -1,576 +1,154 @@
 "use client";
-import React, { useEffect, useRef, useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import React, { Suspense } from "react";
 import Layout from "@/components/Layout";
 import CurriculumEditor from "@/components/curriculum/CurriculumEditor";
+import CourseCurriculumList from "@/components/curriculum/CourseCurriculumList";
+import CurriculumDetailModal from "@/components/curriculum/CurriculumDetailModal";
+import CurriculumSkeleton from "@/components/curriculum/CurriculumSkeleton";
+import { ConfirmDeleteDialog } from "@/components/curriculum/ConfirmDeleteDialog";
 import EmptyCurriculumPage from "@/components/curriculum/EmptyCurriculumPage";
-import { useCurriculum } from "@/app/hooks/useCurriculum";
-import { useAuth } from "@/app/hooks/useAuth";
-import { useAppContext } from "@/app/context/AppContext";
-import { Edit, Trash2, Download, ArrowLeft, Plus } from "lucide-react";
-import { useRouter } from "next/navigation";
-import {
-  fetchTeacherDetails,
-  getCurrentTerm,
-} from "@/app/services/api.service";
-import html2canvas from "html2canvas";
-import { getCurriculumByCourseAndTerm } from "../services/curriculum.services";
+import { ApiErrorState, EmptyState, LoadingState } from "@/components/states";
+import { courseTitle } from "@/hooks/curriculum/types";
+import { useCurriculumPage } from "@/hooks/curriculum/useCurriculumPage";
 
-interface ModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  curriculum: any;
-}
-
-const SkeletonLoader = () => (
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
-    {[...Array(6)].map((_, index) => (
-      <div
-        key={index}
-        className="bg-white border border-gray-200 rounded-lg p-6"
-      >
-        <div className="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
-        <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-        <div className="space-y-2">
-          <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-          <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-        </div>
-        <div className="mt-4 flex justify-between">
-          <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-        </div>
-      </div>
-    ))}
-  </div>
+/** The page body inside the layout, so every state shares the same frame. */
+const Frame = ({ children }: { children: React.ReactNode }) => (
+  <Layout>
+    <div className="min-h-screen bg-gray-50 p-8">{children}</div>
+  </Layout>
 );
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, curriculum }) => {
-  const modalRef = useRef(null);
-
-  if (!isOpen || !curriculum) return null;
-
-  const handleDownload = async () => {
-    if (modalRef.current) {
-      try {
-        const canvas = await html2canvas(modalRef.current, {
-          backgroundColor: "#ffffff",
-          scale: 2, // Increase resolution for better quality
-        });
-        const imgData = canvas.toDataURL("image/png");
-        const a = document.createElement("a");
-        a.href = imgData;
-        a.download = `${curriculum.course?.name || "curriculum"}.png`;
-        a.click();
-      } catch (error) {
-        console.error("Failed to generate image:", error);
-      }
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div
-        ref={modalRef}
-        className="bg-white rounded-xl p-8 max-w-2xl w-full max-h-[80vh] overflow-y-auto"
-      >
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-[#030E18]">
-            {curriculum.course?.name || "Untitled Course"}
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-[#6F6F6F] hover:text-[#030E18] transition-colors"
-          >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
-        <div className="space-y-4 text-[#6F6F6F]">
-          <p>
-            <span className="font-medium">Term:</span>{" "}
-            {curriculum.term?.name || "N/A"}
-          </p>
-          <p>
-            <span className="font-medium">Teacher:</span>{" "}
-            {curriculum.teacherId?.name || "Unknown"}
-          </p>
-          <p>
-            <span className="font-medium">School:</span>{" "}
-            {curriculum.schoolId || "Unknown"}
-          </p>
-          <p>
-            <span className="font-medium">Created:</span>{" "}
-            {new Date(curriculum.createdAt).toLocaleDateString()}
-          </p>
-          <p>
-            <span className="font-medium">Updated:</span>{" "}
-            {new Date(curriculum.updatedAt).toLocaleDateString()}
-          </p>
-          <div className="mt-4">
-            <p className="font-medium mb-2">Content:</p>
-            <div
-              className="prose max-w-none break-words text-[#6F6F6F]"
-              dangerouslySetInnerHTML={{ __html: curriculum.content }}
-            />
-          </div>
-          {curriculum.attachments && curriculum.attachments.length > 0 && (
-            <div className="mt-4">
-              <p className="font-medium mb-2">Attachments:</p>
-              <ul className="list-disc list-inside space-y-1">
-                {curriculum.attachments.map((url: string, index: number) => (
-                  <li key={index}>
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[#003366] hover:underline"
-                    >
-                      {url.split("/").pop() || `Attachment ${index + 1}`}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-        <div className="mt-6 flex justify-end gap-4">
-          <button
-            onClick={handleDownload}
-            className="bg-[#003366] text-white px-6 py-2 rounded-lg hover:bg-[#002244] transition-colors duration-200 shadow-none flex items-center gap-2"
-          >
-            <Download size={16} />
-            Download Image
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
+/**
+ * `/curriculum`: a course's curriculum for the current term, with the editor,
+ * the detail modal and delete. All state lives in `useCurriculumPage`; this
+ * component only decides which screen to draw.
+ *
+ * @returns The page element.
+ */
 const CurriculumContent = () => {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const {
-    curricula,
-    isLoading,
-    error,
-    fetchCurriculumByCourse,
-    showEditor,
-    setShowEditor,
-    editCurriculum,
-    removeCurriculum,
-    fetchCurriculumById,
-  } = useCurriculum();
-  const { isAuthenticated, getAccessToken } = useAuth();
-  const [selectedCurriculum, setSelectedCurriculum] = useState<any>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCurriculumId, setEditingCurriculumId] = useState<string | null>(
-    null
-  );
-  const [courseCurricula, setCourseCurricula] = useState<any[]>([]);
-  const [courseInfo, setCourseInfo] = useState<any>(null);
-  const [teacherCourses, setTeacherCourses] = useState<any[]>([]);
-  const [currentTerm, setCurrentTerm] = useState<any>(null);
+  const page = useCurriculumPage();
+  const { params, course, access, curriculumQuery } = page;
+  const curriculum = curriculumQuery.data ?? null;
 
-  // Get query parameters
-  const courseId = searchParams.get("courseId");
-  const mode = searchParams.get("mode"); // 'view' or 'create'
-  const courseTitle = searchParams.get("courseTitle");
-  const courseCode = searchParams.get("courseCode");
-  const curriculumId = searchParams.get("curriculumId");
-  const termId = searchParams.get("termId");
-  const token = getAccessToken();
-  if (!token) {
+  if (!page.isAuthenticated) {
     return (
-      <Layout>
-        <div className="min-h-screen bg-gray-50 p-8 flex items-center justify-center">
-          <div className="text-center bg-white p-6 rounded-lg shadow-none border border-[#F0F0F0]">
-            <p className="text-[#6F6F6F] text-lg">
-              Please log in to access curriculum.
-            </p>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    fetchTeacherData();
-
-    if (
-      (mode === "view" || mode === "edit") &&
-      curriculumId &&
-      courseId &&
-      termId
-    ) {
-      (async () => {
-        try {
-          const curriculum = await getCurriculumByCourseAndTerm({
-            courseId,
-            termId,
-            token,
-          });
-          setSelectedCurriculum(curriculum);
-          if (mode === "edit") {
-            setEditingCurriculumId(curriculum?._id || null);
-            setShowEditor(true);
-          }
-        } catch (error) {
-          setSelectedCurriculum(null);
-        }
-      })();
-    } else if (courseId) {
-      if (termId) {
-        setCurrentTerm((prev: any) => prev || { _id: termId, name: "Current Term" });
-      }
-      getCurrentTerm(token).then((term) => {
-        if (term) {
-          setCurrentTerm(term);
-        }
-      });
-      if (courseTitle) {
-        setCourseInfo({
-          _id: courseId,
-          name: decodeURIComponent(courseTitle),
-          courseCode: courseCode ? decodeURIComponent(courseCode) : "",
-        });
-      }
-      fetchCurriculumForCourse(courseId);
-      if (mode === "create") {
-        setShowEditor(true);
-      }
-    } else {
-      setCourseCurricula([]);
-      setCourseInfo(null);
-      setSelectedCurriculum(null);
-    }
-  }, [isAuthenticated, courseId, mode, curriculumId, termId]);
-
-  const fetchTeacherData = async () => {
-    try {
-      const token = getAccessToken();
-      if (!token) return;
-
-      // Get user from context
-      const userData = localStorage.getItem("user");
-      if (!userData) return;
-
-      const user = JSON.parse(userData);
-      if (!user?.userId) return;
-
-      // Fetch teacher details to get assigned courses
-      const teacherDetails = await fetchTeacherDetails(user.userId, token);
-      if (teacherDetails?.assignedCourses) {
-        setTeacherCourses(teacherDetails.assignedCourses);
-      }
-
-      // Fetch current term
-      const term = await getCurrentTerm(token);
-      if (term) {
-        setCurrentTerm(term);
-      }
-    } catch (error) {
-      console.error("Failed to fetch teacher data:", error);
-    }
-  };
-
-  const fetchCurriculumForCourse = async (courseId: string) => {
-    try {
-      const curriculaForCourse = await fetchCurriculumByCourse(courseId);
-      setCourseCurricula(
-        Array.isArray(curriculaForCourse)
-          ? curriculaForCourse
-          : curriculaForCourse
-          ? [curriculaForCourse]
-          : []
-      );
-    } catch (error) {
-      console.error("Failed to fetch course curricula:", error);
-      setCourseCurricula([]);
-    }
-  };
-
-  const handleEdit = async (id: string) => {
-    try {
-      const curriculum = await fetchCurriculumById(id);
-      setEditingCurriculumId(id);
-      setShowEditor(true);
-    } catch (error) {
-      console.error("Failed to fetch curriculum for editing:", error);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this curriculum?")) {
-      try {
-        await removeCurriculum(id);
-      } catch (error) {
-        console.error("Failed to delete curriculum:", error);
-      }
-    }
-  };
-
-  const handleEditorClose = () => {
-    setShowEditor(false);
-    const previousEditingId = editingCurriculumId;
-    setEditingCurriculumId(null);
-
-    // If we're in edit or create mode and have curriculum details, redirect to view page
-    if ((mode === "edit" || mode === "create") && courseId && termId) {
-      // For edit mode, use existing curriculum ID; for create mode, we'll redirect to the view page
-      // and let it fetch the newly created curriculum
-      router.push(
-        `/curriculum/view?courseId=${courseId}&termId=${termId}&curriculumId=${
-          curriculumId || previousEditingId || ""
-        }`
-      );
-      return;
-    }
-
-    // If we came from a specific course, refresh course curricula
-    if (courseId) {
-      fetchCurriculumForCourse(courseId);
-    } else {
-      router.push("/subjects");
-    }
-  };
-
-  const handleBackToSubjects = () => {
-    router.push("/dashboard"); // or wherever your subjects are displayed
-  };
-
-  const handleCurriculumClick = (curriculum: any) => {
-    setSelectedCurriculum(curriculum);
-    setIsModalOpen(true);
-  };
-
-  if (!isAuthenticated) {
-    return (
-      <Layout>
-        <div className="min-h-screen bg-gray-50 p-8 flex items-center justify-center">
-          <div className="text-center bg-white p-6 rounded-lg shadow-none border border-[#F0F0F0]">
-            <p className="text-[#6F6F6F] text-lg">
-              Please log in to access curriculum.
-            </p>
-          </div>
-        </div>
-      </Layout>
+      <Frame>
+        <EmptyState title="Sign in required" message="Please log in to access curriculum." />
+      </Frame>
     );
   }
 
-  if (isLoading && curricula.length === 0) {
+  if (!params.courseId) {
     return (
       <Layout>
         <div className="min-h-screen bg-gray-50 p-8">
-          <SkeletonLoader />
-        </div>
-      </Layout>
-    );
-  }
-
-  if (error && courseId) {
-    return (
-      <Layout>
-        <div className="min-h-screen bg-gray-50 p-8 flex items-center justify-center">
-          <div className="text-center bg-white p-6 rounded-lg shadow-none border border-[#F0F0F0]">
-            <p className="text-[#878787] text-lg mb-4">Error: {error}</p>
-            <button
-              onClick={() =>
-                courseId ? fetchCurriculumForCourse(courseId) : router.push("/subjects")
-              }
-              className="px-4 py-2 bg-[#003366] text-white rounded-lg hover:bg-[#002244] transition-colors duration-200"
-            >
-              {courseId ? "Retry" : "Choose Course"}
-            </button>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
-  if (showEditor) {
-    return (
-      <Layout>
-        <CurriculumEditor
-          onClose={handleEditorClose}
-          initialCourseId={courseId}
-          courseInfo={courseInfo}
-          editingCurriculumId={editingCurriculumId}
-          teacherCourses={teacherCourses}
-          currentTerm={currentTerm}
-        />
-      </Layout>
-    );
-  }
-
-  // Determine which curricula to display
-  const displayCurricula = courseId ? courseCurricula : curricula;
-  const isCoursePage = !!courseId;
-
-  // If in view mode and selectedCurriculum is set, show the modal directly
-  if (mode === "view" && selectedCurriculum) {
-    return (
-      <Layout>
-        <Modal
-          isOpen={true}
-          onClose={() => router.back()}
-          curriculum={selectedCurriculum}
-        />
-      </Layout>
-    );
-  }
-
-  return (
-    <Layout>
-      <div className="min-h-screen bg-gray-50 p-8">
-        <Modal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          curriculum={selectedCurriculum}
-        />
-        {displayCurricula.length === 0 && !isCoursePage ? (
           <EmptyCurriculumPage
             title="Select a Course First"
             description="Choose one of your assigned courses before creating or editing a curriculum."
             actionLabel="Choose Course"
-            onCreateClick={() => router.push("/subjects")}
+            onCreateClick={page.goToSubjects}
           />
-        ) : (
-          <div className="max-w-7xl mx-auto">
-            <div className="flex justify-between items-center mb-8" data-guide="curriculum-header">
-              <div className="flex items-center gap-4">
-                {isCoursePage && (
-                  <button
-                    onClick={handleBackToSubjects}
-                    className="flex items-center gap-2 text-[#6F6F6F] hover:text-[#030E18] transition-colors"
-                  >
-                    <ArrowLeft className="w-5 h-5" />
-                  </button>
-                )}
-                <h1 className="text-3xl font-bold text-[#030E18]">
-                  {isCoursePage
-                    ? `${courseInfo?.name || "Course"} Curriculum`
-                    : "Curriculum Management"}
-                </h1>
-              </div>
-              <button
-                onClick={() =>
-                  isCoursePage ? setShowEditor(true) : router.push("/subjects")
-                }
-                className="bg-[#003366] text-white px-6 py-2 rounded-lg hover:bg-[#002244] transition-colors duration-200 shadow-none flex items-center gap-2"
-                data-guide="curriculum-primary-action"
-              >
-                <Plus className="w-5 h-5" />
-                {isCoursePage ? "Create Curriculum" : "Select Course"}
-              </button>
-            </div>
-            {displayCurricula.length === 0 && isCoursePage ? (
-              <div className="bg-white rounded-xl p-8 text-center shadow-none border border-[#F0F0F0]" data-guide="curriculum-list">
-                <div className="max-w-md mx-auto">
-                  <h3 className="text-xl font-semibold text-[#030E18] mb-2">
-                    No Curriculum Found
-                  </h3>
-                  <p className="text-[#6F6F6F] mb-6">
-                    This course doesn't have any curriculum yet. Create one to
-                    get started.
-                  </p>
-                  <button
-                    onClick={() => setShowEditor(true)}
-                    className="bg-[#003366] text-white px-6 py-3 rounded-lg hover:bg-[#002244] transition-colors duration-200 shadow-none flex items-center gap-2 mx-auto"
-                  >
-                    <Plus className="w-5 h-5" />
-                    Create First Curriculum
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-guide="curriculum-list">
-                {displayCurricula.map((curriculum) => (
-                  <div
-                    key={curriculum._id}
-                    className="bg-white border border-[#F0F0F0] rounded-xl p-6 shadow-none hover:shadow-none transition-colors duration-200 cursor-pointer"
-                    onClick={() => handleCurriculumClick(curriculum)}
-                  >
-                    <h3 className="text-xl font-semibold text-gray-900 mb-3">
-                      {curriculum.course?.name ||
-                        courseInfo?.name ||
-                        "Untitled Course"}
-                    </h3>
-                    <p className="text-sm text-gray-500 mb-4">
-                      Term: {curriculum.term?.name || "N/A"}
-                    </p>
-                    <div className="space-y-3 text-sm text-gray-600">
-                      <p>
-                        <span className="font-medium">Teacher:</span>{" "}
-                        {curriculum.teacherId?.name || "Unknown"}
-                      </p>
-                      <p>
-                        <span className="font-medium">School:</span>{" "}
-                        {curriculum.schoolId?.name || "Unknown"}
-                      </p>
-                      <p>
-                        <span className="font-medium">Created:</span>{" "}
-                        {new Date(curriculum.createdAt).toLocaleDateString()}
-                      </p>
-                      <p>
-                        <span className="font-medium">Updated:</span>{" "}
-                        {new Date(curriculum.updatedAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="mt-6 flex justify-between items-center">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEdit(curriculum._id);
-                          }}
-                          className="text-[#003366] hover:text-[#002244] text-sm flex items-center gap-2 font-medium"
-                        >
-                          <Edit size={16} />
-                          Edit
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(curriculum._id);
-                          }}
-                          className="text-[#878787] hover:text-[#6F6F6F] text-sm flex items-center gap-2 font-medium"
-                        >
-                          <Trash2 size={16} />
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </Layout>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (page.isLoading) {
+    return (
+      <Frame>
+        <CurriculumSkeleton />
+      </Frame>
+    );
+  }
+
+  if (page.error) {
+    return (
+      <Frame>
+        <ApiErrorState error={page.error} fallback="We couldn't load this curriculum." onRetry={page.retry} />
+      </Frame>
+    );
+  }
+
+  if (page.editorTarget) {
+    if (!access.isReady) {
+      return (
+        <Frame>
+          <LoadingState message="Checking your access…" />
+        </Frame>
+      );
+    }
+    if (!access.canCreate) {
+      return (
+        <Frame>
+          <EmptyState
+            title="You can't edit this curriculum"
+            message="Only the teacher of this course can write its curriculum."
+            actionText="Back to subjects"
+            onAction={page.goToSubjects}
+          />
+        </Frame>
+      );
+    }
+    return (
+      <Layout>
+        <CurriculumEditor
+          key={page.editorTarget.curriculum?._id ?? "new"}
+          onClose={page.closeEditor}
+          initialCourseId={params.courseId}
+          courseInfo={course}
+          curriculum={page.editorTarget.curriculum}
+          teacherCourses={page.teacherCourses}
+          currentTerm={page.currentTerm}
+          termLoading={page.termLoading}
+        />
+      </Layout>
+    );
+  }
+
+  // `?mode=view` shows the curriculum straight away, over an empty page.
+  if (params.mode === "view" && curriculum) {
+    return (
+      <Layout>
+        <CurriculumDetailModal curriculum={curriculum} onClose={page.goBack} />
+      </Layout>
+    );
+  }
+
+  return (
+    <Frame>
+      <CurriculumDetailModal curriculum={page.detail} onClose={page.closeDetail} />
+      <CourseCurriculumList
+        courseName={course?.title || course?.name || (curriculum ? courseTitle(curriculum, "Course") : "Course")}
+        curriculum={curriculum}
+        canCreate={access.canCreate}
+        canModify={access.canModify}
+        onBack={page.goToSubjects}
+        onCreate={page.openCreate}
+        onOpen={page.openDetail}
+        onEdit={page.openEdit}
+        onDelete={page.requestDelete}
+      />
+      <ConfirmDeleteDialog
+        open={Boolean(page.pendingDelete)}
+        title="Delete curriculum?"
+        subject={page.pendingDelete ? courseTitle(page.pendingDelete, "this curriculum") : ""}
+        busy={page.isDeleting}
+        onConfirm={page.confirmDelete}
+        onCancel={page.cancelDelete}
+      />
+    </Frame>
   );
 };
 
-const CurriculumPage = () => {
-  return (
-    <Suspense fallback={<SkeletonLoader />}>
-      <CurriculumContent />
-    </Suspense>
-  );
-};
+/**
+ * The route entry: `useSearchParams` needs a Suspense boundary.
+ *
+ * @returns The page element.
+ */
+const CurriculumPage = () => (
+  <Suspense fallback={<CurriculumSkeleton />}>
+    <CurriculumContent />
+  </Suspense>
+);
 
 export default CurriculumPage;

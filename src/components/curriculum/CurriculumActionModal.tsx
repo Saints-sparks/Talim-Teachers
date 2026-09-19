@@ -1,16 +1,31 @@
 "use client";
 import React from "react";
 import { Dialog } from "@headlessui/react";
+import type { Curriculum } from "@/hooks/curriculum/types";
 
+/** Props for {@link CurriculumActionModal}. */
 interface CurriculumActionModalProps {
   open: boolean;
   onClose: () => void;
   onView: () => void;
   onEdit: () => void;
-  curriculum?: any;
+  /** Accepted for the subject cards' call site; the actions do not depend on it. */
+  curriculum?: Curriculum | null;
 }
 
-const CurriculumActionModal: React.FC<CurriculumActionModalProps> = ({ open, onClose, onView, onEdit, curriculum }) => {
+/**
+ * The "what would you like to do?" choice the subject cards show for a course
+ * that already has a curriculum: view it or edit it. The headless dialog locks
+ * page scroll and closes on Escape.
+ *
+ * @param props - See {@link CurriculumActionModalProps}.
+ * @param props.open - Whether the dialog is showing.
+ * @param props.onClose - Closes the dialog.
+ * @param props.onView - Opens the curriculum for reading.
+ * @param props.onEdit - Opens the curriculum in the editor.
+ * @returns The dialog element.
+ */
+const CurriculumActionModal: React.FC<CurriculumActionModalProps> = ({ open, onClose, onView, onEdit }) => {
   return (
     <Dialog open={open} onClose={onClose} className="fixed z-50 inset-0 flex items-center justify-center">
       {/* Overlay */}

@@ -1,225 +1,111 @@
-// Fetch curriculum by course and term
+/**
+ * Curriculum REST calls. Every request goes through the one typed client
+ * (`api`), which attaches the bearer token, refreshes it once on 401 and
+ * raises `ApiError`.
+ *
+ * Pages read curricula through the TanStack hooks in `src/hooks/curriculum`,
+ * which cache and invalidate; these functions are the transport under them.
+ * The `token` argument some functions still accept is ignored: it is kept only
+ * so call sites written before the single client (subject cards, onboarding
+ * sync) compile unchanged.
+ */
+import { api } from "@/lib/apiClient";
+import { ApiError } from "@/lib/apiError";
+import type {
+  CreateCurriculumPayload,
+  Curriculum,
+  CurriculumFilters,
+  UpdateCurriculumPayload,
+} from "@/hooks/curriculum/types";
 
-import { API_BASE_URL } from "../lib/api/config";
-import { apiClient } from "../lib/api/apiClient";
+/**
+ * Creates a curriculum.
+ *
+ * @param curriculumData - Exactly what `CreateCurriculumDto` declares.
+ * @param _token - Ignored; the client holds the session token.
+ * @returns The created curriculum.
+ * @throws ApiError when the server rejects the payload (400) or the teacher may not write it (403).
+ */
+export const createCurriculum = async (
+  curriculumData: CreateCurriculumPayload,
+  _token?: string,
+): Promise<Curriculum> => api.post<Curriculum>("/curriculum", curriculumData);
 
-// Cache for curricula to prevent excessive API calls
-let curriculaCache: {
-  data: any[];
-  timestamp: number;
-  filters: string;
-} | null = null;
-
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
-let currentRequest: Promise<any> | null = null; // Prevent duplicate requests
-
-// Create a new curriculum
-export const createCurriculum = async (curriculumData: any, token: string) => {
-  try {
-    const response = await apiClient.post(
-      `${API_BASE_URL}/curriculum`,
-      curriculumData,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-
-    // Clear cache after creating new curriculum
-    curriculaCache = null;
-
-    return response.data;
-  } catch (error: any) {
-    throw new Error(
-      `Error creating curriculum: ${
-        error.response?.data?.message || error.message
-      }`
-    );
-  }
+/**
+ * Lists the school's curricula, optionally filtered by course, term or teacher.
+ *
+ * @param filters - `course`, `term` and/or `teacherId`.
+ * @param _token - Ignored; the client holds the session token.
+ * @returns The curricula, newest first.
+ * @throws ApiError when the request fails.
+ */
+export const getCurricula = async (filters: CurriculumFilters = {}, _token?: string): Promise<Curriculum[]> => {
+  const body = await api.get<Curriculum[]>("/curriculum", { params: { ...filters } });
+  return Array.isArray(body) ? body : [];
 };
 
-// Fetch all curricula for a school (optional filters for course, term, teacherId)
-export const getCurricula = async (
-  filters: { course?: string; term?: string; teacherId?: string },
-  token: string
-) => {
-  try {
-    const filterKey = JSON.stringify(filters);
+/**
+ * Reads one curriculum.
+ *
+ * @param id - The curriculum id.
+ * @param _token - Ignored; the client holds the session token.
+ * @returns The curriculum.
+ * @throws ApiError with code `NOT_FOUND` when it is not in the caller's school.
+ */
+export const getCurriculumById = async (id: string, _token?: string): Promise<Curriculum> =>
+  api.get<Curriculum>(`/curriculum/${id}`);
 
-    // Check if we have cached data that's still valid
-    if (
-      curriculaCache &&
-      Date.now() - curriculaCache.timestamp < CACHE_DURATION &&
-      curriculaCache.filters === filterKey
-    ) {
-     
-      return curriculaCache.data;
-    }
-
-    // If there's already a request in progress, wait for it
-    if (currentRequest) {
-     
-      return await currentRequest;
-    }
-
-    // Make the request and cache it
-    currentRequest = apiClient
-      .get(`${API_BASE_URL}/curriculum`, {
-        params: filters,
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((response) => {
-        // Cache the response
-        curriculaCache = {
-          data: response.data,
-          timestamp: Date.now(),
-          filters: filterKey,
-        };
-
-        // Clear the current request
-        currentRequest = null;
-
-        return response.data;
-      })
-      .catch((error) => {
-        // Clear the current request on error
-        currentRequest = null;
-        throw error;
-      });
-
-    return await currentRequest;
-  } catch (error: any) {
-    throw new Error(
-      `Error fetching curricula: ${
-        error.response?.data?.message || error.message
-      }`
-    );
-  }
-};
-
-// Clear curricula cache (useful when data changes)
-export const clearCurriculaCache = () => {
-  curriculaCache = null;
-  currentRequest = null;
-};
-
-// Fetch a curriculum by its ID
-export const getCurriculumById = async (id: string, token: string) => {
-  try {
-    const response = await apiClient.get(`${API_BASE_URL}/curriculum/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return response.data;
-  } catch (error: any) {
-    throw new Error(
-      `Error fetching curriculum: ${
-        error.response?.data?.message || error.message
-      }`
-    );
-  }
-};
-
-// Update a curriculum by its ID
+/**
+ * Updates a curriculum.
+ *
+ * @param id - The curriculum id.
+ * @param updatedData - The fields to change (`UpdateCurriculumDto`).
+ * @param _token - Ignored; the client holds the session token.
+ * @returns The updated curriculum.
+ * @throws ApiError with code `FORBIDDEN` when a teacher does not own it.
+ */
 export const updateCurriculum = async (
   id: string,
-  updatedData: any,
-  token: string
-) => {
-  try {
-    const response = await apiClient.patch(
-      `${API_BASE_URL}/curriculum/${id}`,
-      updatedData,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
+  updatedData: UpdateCurriculumPayload,
+  _token?: string,
+): Promise<Curriculum> => api.patch<Curriculum>(`/curriculum/${id}`, updatedData);
 
-    // Clear cache after updating curriculum
-    clearCurriculaCache();
+/**
+ * Deletes a curriculum.
+ *
+ * @param id - The curriculum id.
+ * @param _token - Ignored; the client holds the session token.
+ * @returns The server's confirmation message.
+ * @throws ApiError with code `FORBIDDEN` when a teacher does not own it.
+ */
+export const deleteCurriculum = async (id: string, _token?: string): Promise<{ message: string }> =>
+  api.delete<{ message: string }>(`/curriculum/${id}`);
 
-    return response.data;
-  } catch (error: any) {
-    throw new Error(
-      `Error updating curriculum: ${
-        error.response?.data?.message || error.message
-      }`
-    );
-  }
-};
-
-// Fetch curriculum by course ID
-export const getCurriculumByCourse = async (
-  courseId: string,
-  token: string
-) => {
-  try {
-    const response = await apiClient.get(
-      `${API_BASE_URL}/curriculum/course/${courseId}`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-    return response.data;
-  } catch (error: any) {
-    if (error.response?.status === 404) {
-      return []; // Return empty array if no curriculum found for this course
-    }
-    throw new Error(
-      `Error fetching curriculum by course: ${
-        error.response?.data?.message || error.message
-      }`
-    );
-  }
-};
-
-// Delete a curriculum by its ID
-export const deleteCurriculum = async (id: string, token: string) => {
-  try {
-    const response = await apiClient.delete(`${API_BASE_URL}/curriculum/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    // Clear cache after deleting curriculum
-    clearCurriculaCache();
-
-    return response.data;
-  } catch (error: any) {
-    throw new Error(
-      `Error deleting curriculum: ${
-        error.response?.data?.message || error.message
-      }`
-    );
-  }
-};
-
-export const getCurriculumByCourseAndTerm = async ({
-  courseId,
-  termId,
-  token,
-}: {
+/** Arguments of {@link getCurriculumByCourseAndTerm}. */
+export interface CourseTermQuery {
   courseId: string;
   termId: string;
-  token: string;
-}) => {
+  /** Ignored; the client holds the session token. */
+  token?: string;
+}
+
+/**
+ * The curriculum of one course in one term. A course has at most one per term
+ * (the collection has a unique index on course + term + school).
+ *
+ * @param query - The course and term.
+ * @param query.courseId - The course id.
+ * @param query.termId - The term id.
+ * @returns The curriculum, or `null` when none has been written yet (empty list or 404).
+ * @throws ApiError on any other failure.
+ */
+export const getCurriculumByCourseAndTerm = async ({ courseId, termId }: CourseTermQuery): Promise<Curriculum | null> => {
   try {
-    const response = await apiClient.post(
-      `${API_BASE_URL}/curriculum/by-course-term`,
-      { courseId, termId },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    // Return the first curriculum object if array is returned, or the object directly
-    const data = response.data;
-    if (Array.isArray(data)) {
-      return data.length > 0 ? data[0] : null;
-    }
-    return data;
-  } catch (error: any) {
-    if (error.response?.status === 404) {
-      return null;
-    }
-    throw new Error(
-      `Error fetching curriculum by course and term: ${
-        error.response?.data?.message || error.message
-      }`
-    );
+    const body = await api.post<Curriculum | Curriculum[] | null>("/curriculum/by-course-term", { courseId, termId });
+    if (Array.isArray(body)) return body[0] ?? null;
+    return body ?? null;
+  } catch (error) {
+    if (error instanceof ApiError && error.code === "NOT_FOUND") return null;
+    throw error;
   }
 };
