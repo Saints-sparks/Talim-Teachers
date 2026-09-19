@@ -28,6 +28,19 @@ test.describe("teacher sign-in", () => {
     ).toEqual([]);
   });
 
+  test("/signin and a signed-out /set-password both land on the one sign-in page", async ({ browser, baseURL }) => {
+    // A fresh, signed-out context: the project default carries the teacher's session.
+    const context = await browser.newContext({ baseURL });
+    const page = await context.newPage();
+    await page.route((url) => !["localhost", "127.0.0.1"].includes(url.hostname), (route) => route.abort());
+    for (const path of ["/signin", "/set-password"]) {
+      await page.goto(path);
+      await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
+      await expect(page).toHaveURL(/\/$/);
+    }
+    await context.close();
+  });
+
   test("the right password leaves the sign-in page and the dashboard opens", async ({ page }) => {
     await signInThroughUi(page, ACCOUNTS.teacher);
     await page.goto("/dashboard");
@@ -61,12 +74,6 @@ test.describe.serial("temporary password", () => {
   test.afterAll(() => seed("--rearm"));
 
   test("a teacher on a temporary password is forced to /set-password, then can use the app", async ({ page, monitor }) => {
-    // KNOWN BACKEND BUG (open): POST /auth/change-password returns an access token with no
-    // sub/email/role (it spreads a Mongoose document). The app adopts it, as it should, and
-    // then every request fails: the dashboard says "We couldn't load your dashboard".
-    // Remove this line when the backend is fixed; Playwright then reports an unexpected pass.
-    test.fail(true, "backend: change-password returns an unusable token");
-
     await page.goto("/");
     await page.locator("#identifier").fill(temp.email);
     await page.locator("#password").fill(temp.password);
