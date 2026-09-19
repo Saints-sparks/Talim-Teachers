@@ -1,270 +1,43 @@
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+"use client";
+import React from "react";
+import { AlertCircle, CheckCircle2, FileText, Loader2, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  getAssignedClasses,
-  getCurrentTerm,
-  createResource,
-  getTeacherCourses,
-} from "../../app/services/api.service";
-import { useEffect, useState } from "react";
-import { useAuth } from "@/app/hooks/useAuth";
-import { CLOUDINARY_UPLOAD_PRESET, cloudinaryUploadUrl } from "@/app/lib/cloudinary";
-import {
-  Upload,
-  FileText,
-  X,
-  CheckCircle2,
-  Loader2,
-  GraduationCap,
-} from "lucide-react";
-import { Resource } from "@/types/student";
-import { useAppContext } from "@/app/context/AppContext";
-import { useTeacherOnboarding } from "@/app/context/OnboardingContext";
-import { toast } from "@/components/CustomToast";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { MAX_UPLOAD_BYTES } from "@/hooks/resources/cloudinaryUpload";
+import { useResourceUpload } from "@/hooks/resources/useResourceUpload";
+import { UploadFormFields } from "./UploadFormFields";
 
-interface UploadModalProps {
+/** Props for {@link UploadModal}. */
+export interface UploadModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onNewResourceUpload: (newResource: Resource) => void;
 }
 
-export function UploadModal({
-  isOpen,
-  onClose,
-  onNewResourceUpload,
-}: UploadModalProps) {
-  const { user, classes, isLoading: contextLoading } = useAppContext(); // Get loading state from context
-  const { getAccessToken } = useAuth();
-  const { markStepComplete } = useTeacherOnboarding();
-  const [localClasses, setLocalClasses] = useState<any[]>([]); // Fallback local classes
-  const [courses, setCourses] = useState<any[]>([]);
-  const [selectedClass, setSelectedClass] = useState<string | null>(null);
-  const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
-  const [resourceName, setResourceName] = useState("");
-  const [currentTerm, setCurrentTerm] = useState<any>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadSuccess, setUploadSuccess] = useState(false);
-  const [termLoading, setTermLoading] = useState(false);
-  const [classesLoading, setClassesLoading] = useState(false);
-  const [coursesLoading, setCoursesLoading] = useState(false);
-  const [termFetched, setTermFetched] = useState(false); // Track if term has been fetched
-  const [coursesFetched, setCoursesFetched] = useState(false); // Track if courses have been fetched
-
-  // Use classes from context, fallback to local classes
-  const availableClasses = classes.length > 0 ? classes : localClasses;
-
-  const getId = (value: any) => {
-    if (!value) return null;
-    return typeof value === "string" ? value : value._id || value.id || null;
-  };
-
-  const getName = (value: any, fallback = "Untitled") => {
-    if (!value) return fallback;
-    return typeof value === "string"
-      ? value
-      : value.name || value.title || value.className || fallback;
-  };
-
-  const selectedCourseData = courses.find((course) => course._id === selectedCourse);
-  const selectedCourseClassId = getId(selectedCourseData?.classId);
-  const classesForSelect =
-    selectedCourseData?.classId &&
-    selectedCourseClassId &&
-    !availableClasses.some((cls) => getId(cls) === selectedCourseClassId)
-      ? [
-          ...availableClasses,
-          {
-            _id: selectedCourseClassId,
-            name: getName(selectedCourseData.classId, "Course class"),
-          },
-        ]
-      : availableClasses;
-
-  const UPLOAD_PRESET = CLOUDINARY_UPLOAD_PRESET;
-
-  useEffect(() => {
-    if (!user || !isOpen) return;
-
-  
-    const fetchData = async () => {
-      const token = getAccessToken();
-      if (!token) return;
-
-      try {
-        // Fetch current term only once per modal session
-        if (!currentTerm && !termFetched) {
-          setTermLoading(true);
-          const term = await getCurrentTerm(token);
-          setCurrentTerm(term);
-          setTermFetched(true);
-         
-          setTermLoading(false);
-        }
-
-        // If no classes from context and not loading, fetch them directly
-        if (
-          classes.length === 0 &&
-          !contextLoading &&
-          localClasses.length === 0
-        ) {
-         
-          setClassesLoading(true);
-          try {
-            const teacherId = user?.teacherId || user?.userId;
-            const classDetails = await getAssignedClasses(teacherId, token);
-         
-            setLocalClasses(classDetails);
-          } catch (error) {
-            console.error("Error fetching classes:", error);
-          } finally {
-            setClassesLoading(false);
-          }
-        }
-
-        // Fetch teacher courses only once per modal session
-        if (!coursesFetched && courses.length === 0) {
-         
-          setCoursesLoading(true);
-          try {
-            const teacherId = user?.teacherId || user?.userId;
-            const teacherCourses = await getTeacherCourses(teacherId, token);
-           
-            setCourses(teacherCourses);
-            setCoursesFetched(true);
-          } catch (error) {
-            console.error("Error fetching courses:", error);
-          } finally {
-            setCoursesLoading(false);
-          }
-        }
-      } catch (error) {
-        console.error("Error in upload modal fetchData:", error);
-        setTermLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [user?.userId, isOpen]); // Simplified dependencies
-
-  // Reset form when modal opens/closes
-  useEffect(() => {
-    if (!isOpen) {
-      setResourceName("");
-      setSelectedClass(null);
-      setSelectedCourse(null);
-      setSelectedFile(null);
-      setUploadSuccess(false);
-      setTermFetched(false); // Reset term fetched flag when modal closes
-      setCoursesFetched(false); // Reset courses fetched flag when modal closes
-      setCurrentTerm(null); // Reset current term when modal closes
-      setCourses([]); // Reset courses when modal closes
-    }
-  }, [isOpen]);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
-    }
-  };
-
-  const handleUpload = async () => {
-    if (!resourceName || !selectedFile || (!selectedClass && !selectedCourse)) {
-      toast.error("Please add a resource name, select a class or course, and choose a file.");
-      return;
-    }
-
-    setUploading(true);
-    const token = getAccessToken();
-    if (!token) {
-      toast.error("Authentication token is missing.");
-      setUploading(false);
-      return;
-    }
-
-    try {
-      // Step 1. Upload the file to Cloudinary
-      const formData = new FormData();
-      formData.append("file", selectedFile);
-      formData.append("upload_preset", UPLOAD_PRESET);
-
-      const cloudinaryResponse = await fetch(
-        cloudinaryUploadUrl("auto"),
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-
-      if (!cloudinaryResponse.ok) {
-        throw new Error("Cloudinary upload failed");
-      }
-
-      const cloudinaryData = await cloudinaryResponse.json();
-      const fileUrl = cloudinaryData.secure_url;
-
-      // Step 2. Prepare your resource object with the Cloudinary file URL
-      const teacherId = user?.teacherId || user?.userId;
-      const resourceData = {
-        name: resourceName,
-        ...(selectedClass ? { classId: selectedClass } : {}),
-        ...(selectedCourse ? { courseId: selectedCourse } : {}),
-        uploadedBy: teacherId, // Use teacher ID from context
-        termId: currentTerm?._id,
-        uploadDate: new Date().toISOString(),
-        image: fileUrl, // Using Cloudinary file URL here
-        files: [fileUrl],
-      };
-
-    
-
-      // Step 3. Upload the resource data to your backend
-      const uploadedResource = await createResource(resourceData, token);
-
-      setUploadSuccess(true);
-      markStepComplete("upload-resource");
-      // Update the resource list in the parent component
-      onNewResourceUpload(uploadedResource);
-
-      // Close modal after 2 seconds to show success
-      setTimeout(() => {
-        onClose();
-      }, 2000);
-    } catch (error) {
-      console.error("Upload failed:", error);
-      toast.error("Upload failed. Please try again.");
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleCourseChange = (courseId: string) => {
-    setSelectedCourse(courseId);
-    const course = courses.find((item) => item._id === courseId);
-    const classId = getId(course?.classId);
-    if (classId) {
-      setSelectedClass(classId);
-    }
-  };
+/**
+ * The "Upload Resource" dialog: choose a class, a course and a file, and the
+ * file goes to Cloudinary (with a progress bar) before the resource is saved.
+ * The dialog locks page scroll while open, and a failed upload returns the
+ * form to an editable state with the reason shown.
+ *
+ * The list on the page refreshes itself when the upload succeeds.
+ *
+ * @param props - See {@link UploadModalProps}.
+ * @param props.isOpen - Whether the dialog is showing.
+ * @param props.onClose - Closes the dialog.
+ * @returns The dialog element.
+ */
+export function UploadModal({ isOpen, onClose }: UploadModalProps) {
+  const upload = useResourceUpload({ isOpen, onClose });
+  const busy = upload.phase === "uploading" || upload.phase === "saving";
+  const percent = Math.round(upload.progress * 100);
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px] text-black p-0 overflow-hidden shadow-none border border-[#F0F0F0]" data-guide="resources-upload-modal">
-        {/* Header */}
+    <Dialog open={isOpen} onOpenChange={(open) => !open && upload.cancel()}>
+      <DialogContent
+        className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto text-[#030E18] p-0 shadow-none border border-[#F0F0F0] [&>button:last-child]:hidden"
+        data-guide="resources-upload-modal"
+      >
         <div className="bg-[#003366] p-6 text-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -272,243 +45,107 @@ export function UploadModal({
                 <Upload className="w-5 h-5" />
               </div>
               <div>
-                <DialogTitle className="text-xl font-semibold text-white">
-                  Upload Resource
-                </DialogTitle>
-                <p className="text-white/80 text-sm">
-                  Share educational materials with your students
-                </p>
+                <DialogTitle className="text-xl font-semibold text-white">Upload Resource</DialogTitle>
+                <DialogDescription className="text-white/80 text-sm">Share educational materials with your students</DialogDescription>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="text-white hover:bg-white/10 h-8 w-8"
-            >
+            <Button variant="ghost" size="icon" onClick={upload.cancel} aria-label="Close" className="text-white hover:bg-white/10 h-8 w-8">
               <X className="h-4 w-4" />
             </Button>
           </div>
         </div>
 
-        {/* Content */}
         <div className="p-6 space-y-6">
-          {uploadSuccess ? (
+          {upload.phase === "done" ? (
             <div className="text-center py-8">
               <div className="w-16 h-16 bg-[#F0F0F0] rounded-full flex items-center justify-center mx-auto mb-4">
                 <CheckCircle2 className="w-8 h-8 text-[#003366]" />
               </div>
-              <h3 className="text-lg font-semibold text-[#030E18] mb-2">
-                Upload Successful!
-              </h3>
-              <p className="text-[#6F6F6F]">
-                Your resource has been uploaded and is now available to
-                students.
-              </p>
+              <h3 className="text-lg font-semibold text-[#030E18] mb-2">Upload Successful!</h3>
+              <p className="text-[#6F6F6F]">Your resource has been uploaded and is now available to students.</p>
             </div>
           ) : (
             <>
-              {/* Resource Name */}
-              <div className="space-y-2" data-guide="resources-upload-name">
-                <Label
-                  htmlFor="resource-name"
-                  className="text-sm font-medium text-[#030E18]"
-                >
-                  Resource Name
-                </Label>
-                <Input
-                  id="resource-name"
-                  placeholder="e.g., Mathematics Chapter 5 Notes"
-                  value={resourceName}
-                  onChange={(e) => setResourceName(e.target.value)}
-                  className="border-[#F0F0F0] focus:border-[#003366] focus:ring-[#003366] shadow-none"
-                />
-              </div>
+              <UploadFormFields
+                name={upload.name}
+                onNameChange={upload.setName}
+                classId={upload.classId}
+                onClassChange={upload.setClassId}
+                classes={upload.classes}
+                courseId={upload.courseId}
+                onCourseChange={upload.selectCourse}
+                courses={upload.courses}
+                loading={upload.rosterLoading}
+                disabled={busy}
+              />
 
-              {/* Class Selection */}
-              <div className="space-y-2" data-guide="resources-upload-class">
-                <Label
-                  htmlFor="class"
-                  className="text-sm font-medium text-[#030E18]"
-                >
-                  Class
-                </Label>
-                <Select
-                  value={selectedClass || undefined}
-                  onValueChange={setSelectedClass}
-                  disabled={
-                    contextLoading ||
-                    termLoading ||
-                    classesLoading ||
-                    classesForSelect.length === 0
-                  }
-                >
-                  <SelectTrigger className="border-[#F0F0F0] focus:border-[#003366] focus:ring-[#003366] shadow-none">
-                    <div className="flex items-center space-x-2">
-                      <GraduationCap className="w-4 h-4 text-[#878787]" />
-                      <SelectValue
-                        placeholder={
-                          contextLoading || termLoading || classesLoading
-                            ? "Loading classes..."
-                            : classesForSelect.length === 0
-                            ? "No classes available"
-                            : "Select a class"
-                        }
-                      />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent className="text-[#030E18] bg-white border-[#F0F0F0] shadow-none">
-                    {classesForSelect.length > 0 ? (
-                      classesForSelect.map((cls) => (
-                        <SelectItem key={getId(cls)} value={getId(cls)}>
-                          <div className="flex items-center space-x-2">
-                            <div className="w-2 h-2 bg-[#003366] rounded-full"></div>
-                            <span>{getName(cls, "Class")}</span>
-                          </div>
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="no-classes" disabled>
-                        No classes found
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-                {classesForSelect.length === 0 &&
-                  !contextLoading &&
-                  !termLoading &&
-                  !classesLoading && (
-                    <p className="text-xs text-[#878787]">
-                      No classes assigned. You can still upload by selecting a course.
-                    </p>
-                  )}
-                {classesForSelect.length > 0 && (
-                  <p className="text-xs text-[#6F6F6F]">
-                    {classesForSelect.length} class
-                    {classesForSelect.length !== 1 ? "es" : ""} available
-                  </p>
-                )}
-              </div>
-
-              {/* Course Selection */}
-              <div className="space-y-2" data-guide="resources-upload-course">
-                <Label
-                  htmlFor="course"
-                  className="text-sm font-medium text-[#030E18]"
-                >
-                  Course
-                </Label>
-                <Select
-                  value={selectedCourse || undefined}
-                  onValueChange={handleCourseChange}
-                  disabled={coursesLoading || courses.length === 0}
-                >
-                  <SelectTrigger className="border-[#F0F0F0] focus:border-[#003366] focus:ring-[#003366] shadow-none">
-                    <div className="flex items-center space-x-2">
-                      <FileText className="w-4 h-4 text-[#878787]" />
-                      <SelectValue
-                        placeholder={
-                          coursesLoading
-                            ? "Loading courses..."
-                            : courses.length === 0
-                            ? "No courses available"
-                            : "Select a course"
-                        }
-                      />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent className="text-[#030E18] bg-white border-[#F0F0F0] shadow-none">
-                    {courses.length > 0 ? (
-                      courses.map((course) => (
-                        <SelectItem key={course._id} value={course._id}>
-                          <div className="flex items-center space-x-2">
-                            <div className="w-2 h-2 bg-[#003366] rounded-full"></div>
-                            <span>
-                              {course.courseCode} - {course.title}
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="no-courses" disabled>
-                        No courses found
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-                {courses.length === 0 && !coursesLoading && (
-                  <p className="text-xs text-[#878787]">
-                    No courses assigned. Please contact your administrator.
-                  </p>
-                )}
-                {courses.length > 0 && (
-                  <p className="text-xs text-[#6F6F6F]">
-                    {courses.length} course{courses.length !== 1 ? "s" : ""}{" "}
-                    available
-                  </p>
-                )}
-              </div>
-
-              {/* File Upload */}
               <div className="space-y-2" data-guide="resources-upload-file">
-                <Label className="text-sm font-medium text-[#030E18]">
-                  Upload File
-                </Label>
+                <Label className="text-sm font-medium text-[#030E18]">Upload File</Label>
                 <div className="border-2 border-dashed border-[#F0F0F0] rounded-lg p-6 text-center hover:border-[#003366] transition-colors">
                   <input
                     type="file"
                     id="file-upload"
                     accept="image/*,video/*,.pdf,.doc,.docx,.txt"
                     className="hidden"
-                    onChange={handleFileChange}
+                    disabled={busy}
+                    onChange={(e) => {
+                      const picked = e.target.files?.[0] ?? null;
+                      // Let the same file be chosen again after a failure.
+                      e.target.value = "";
+                      upload.pickFile(picked);
+                    }}
                   />
-                  <label
-                    htmlFor="file-upload"
-                    className="cursor-pointer flex flex-col items-center space-y-3"
-                  >
+                  <label htmlFor="file-upload" className={`flex flex-col items-center space-y-3 ${busy ? "opacity-60" : "cursor-pointer"}`}>
                     <div className="w-12 h-12 bg-[#F0F0F0] rounded-lg flex items-center justify-center">
                       <FileText className="w-6 h-6 text-[#003366]" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-[#030E18]">
-                        {selectedFile ? selectedFile.name : "Choose a file"}
-                      </p>
-                      <p className="text-xs text-[#878787] mt-1">
-                        PDF, DOC, Images, Videos up to 10MB
-                      </p>
+                      <p className="text-sm font-medium text-[#030E18] break-all">{upload.file ? upload.file.name : "Choose a file"}</p>
+                      <p className="text-xs text-[#878787] mt-1">PDF, DOC, Images, Videos up to {MAX_UPLOAD_BYTES / (1024 * 1024)}MB</p>
                     </div>
                   </label>
                 </div>
+                {busy && (
+                  <div className="space-y-1" role="status" aria-live="polite">
+                    <div
+                      role="progressbar"
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={upload.phase === "saving" ? 100 : percent}
+                      className="h-1.5 w-full overflow-hidden rounded-full bg-[#F0F0F0]"
+                    >
+                      <div className="h-full bg-[#003366] transition-all" style={{ width: `${upload.phase === "saving" ? 100 : percent}%` }} />
+                    </div>
+                    <p className="text-xs text-[#6F6F6F]">{upload.phase === "saving" ? "Saving resource…" : `Uploading… ${percent}%`}</p>
+                  </div>
+                )}
               </div>
+
+              {upload.termFailed && (
+                <p className="flex items-center gap-2 text-xs text-red-600">
+                  <AlertCircle className="h-4 w-4" />
+                  The current term could not be loaded, so a resource cannot be filed yet. Close this dialog and try again.
+                </p>
+              )}
+              {upload.termName && <p className="text-xs text-[#878787]">Filed under {upload.termName}.</p>}
             </>
           )}
         </div>
 
-        {/* Footer */}
-        {!uploadSuccess && (
+        {upload.phase !== "done" && (
           <div className="px-6 pb-6 flex justify-end space-x-3">
-            <Button
-              variant="outline"
-              onClick={onClose}
-              disabled={uploading}
-              className="border-[#F0F0F0] hover:bg-[#F0F0F0] text-[#030E18] shadow-none"
-            >
-              Cancel
+            <Button variant="outline" onClick={upload.cancel} className="border-[#F0F0F0] hover:bg-[#F0F0F0] text-[#030E18] shadow-none">
+              {busy ? "Cancel upload" : "Cancel"}
             </Button>
             <Button
-              onClick={handleUpload}
-              disabled={
-                uploading ||
-                (!selectedClass && !selectedCourse) ||
-                !resourceName ||
-                !selectedFile
-              }
+              onClick={upload.submit}
+              disabled={!upload.canSubmit}
               className="bg-[#003366] hover:bg-[#002244] text-white shadow-none transition-all duration-300"
             >
-              {uploading ? (
+              {busy ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Uploading...
+                  {upload.phase === "saving" ? "Saving..." : "Uploading..."}
                 </>
               ) : (
                 <>

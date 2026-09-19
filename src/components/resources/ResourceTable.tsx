@@ -1,160 +1,95 @@
 "use client";
+import React, { useState } from "react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ConfirmDeleteDialog } from "@/components/curriculum/ConfirmDeleteDialog";
+import { toast } from "@/components/CustomToast";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  FileText,
-  Image,
-  Video,
-  AlignLeft,
-  Download,
-  MoreVertical,
-  Trash2,
-  Info,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { useEffect, useState } from "react";
-import { useAuth } from "@/app/hooks/useAuth";
-import { deleteResource } from "@/app/services/api.service";
-import { Resource } from "@/types/student";
+  formatUploadDate,
+  resourceClassName,
+  resourceCourseName,
+  resourceUrl,
+  type ClassLike,
+  type CourseLike,
+} from "@/hooks/resources/display";
+import type { Resource } from "@/hooks/resources/types";
+import { useDeleteResource } from "@/hooks/resources/useResources";
+import { getErrorMessage } from "@/lib/apiError";
+import { logger } from "@/lib/logger";
+import { ResourceRowActions } from "./ResourceRowActions";
 import { UpdateModal } from "./UpdateModal";
 
-// const getFileIcon = (type: Resource["type"]) => {
-//   switch (type) {
-//     case "pdf":
-//       return <FileText className="h-4 w-4" />;
-//     case "img":
-//       return <Image className="h-4 w-4" />;
-//     case "vid":
-//       return <Video className="h-4 w-4" />;
-//     case "txt":
-//       return <AlignLeft className="h-4 w-4" />;
-//   }
-// };
-
-interface ResourcesTableProps {
+/** Props for {@link ResourcesTable}. */
+export interface ResourcesTableProps {
   resources: Resource[];
-  classes: any[];
-  onResourceDelete: (resourceId: string) => void;
+  /** The teacher's classes, to name a resource's class when the API sends only an id. */
+  classes: ClassLike[];
+  /** The teacher's courses; the API populates only a course's description, so titles come from here. */
+  courses: CourseLike[];
+  /** Whether the signed-in teacher may edit or delete this resource. */
+  canModify: (resource: Resource) => boolean;
 }
 
-export function ResourcesTable({
-  resources,
-  classes,
-  onResourceDelete,
-}: ResourcesTableProps) {
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [selectedResource, setSelectedResource] = useState<Resource | null>(
-    null
-  );
-  const [resourceList, setResourceList] = useState(resources);
-  const [confirmOpen, setConfirmOpen] = useState(false);
+/** One labelled value of a mobile card. */
+const CardField = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <div>
+    <p className="text-[12px] text-black font-medium dark:text-slate-200">{label}</p>
+    <p className="break-words text-[14px] text-[#676767] dark:text-slate-300">{children}</p>
+  </div>
+);
+
+/**
+ * The teacher's resources: a table from `md` up, cards below it. Editing and
+ * deleting live here; the list itself is refreshed by cache invalidation, so
+ * there is no local copy to keep in step.
+ *
+ * @param props - See {@link ResourcesTableProps}.
+ * @param props.resources - The resources to show.
+ * @param props.classes - The teacher's classes.
+ * @param props.courses - The teacher's courses.
+ * @param props.canModify - Whether a resource may be edited or deleted.
+ * @returns The list element.
+ */
+export function ResourcesTable({ resources, classes, courses, canModify }: ResourcesTableProps) {
+  const [editing, setEditing] = useState<Resource | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Resource | null>(null);
+  const deleteMutation = useDeleteResource();
+  const deletingId = deleteMutation.isPending ? pendingDelete?._id : undefined;
 
-  const [loading, setLoading] = useState<string | null>(null);
-
-  useEffect(() => {
-    setResourceList(resources);
-  }, [resources]);
-  const getClassName = (classId: Resource["classId"]) => {
-    if (!classId) return "Unassigned Class";
-
-    if (typeof classId === "object") {
-      if ("name" in classId && classId.name) return classId.name;
-      const id = classId._id || (classId as any).id;
-      const cls = classes.find((c) => c._id === id || c.id === id);
-      return cls?.name || "Unassigned Class";
-    }
-
-    const cls = classes.find((c) => c._id === classId || c.id === classId);
-    return cls?.name || "Unassigned Class";
-  };
-
-  const getCourseName = (courseId: Resource["courseId"]) => {
-    if (!courseId) return "No course";
-    if (typeof courseId === "object") {
-      const title = "title" in courseId ? courseId.title : undefined;
-      const code = "courseCode" in courseId ? courseId.courseCode : undefined;
-      return [code, title].filter(Boolean).join(" - ") || "No course";
-    }
-    return "Course selected";
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat("en-US", {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    }).format(date);
-  };
-  const { getAccessToken } = useAuth(); // Get logged-in teacher's info
-  const getResourceUrl = (resource: Resource) => {
-    if (resource.files && resource.files.length > 0) return resource.files[0];
-    if (resource.image) return resource.image;
-    return "";
-  };
-
-  const handleView = (resource: Resource) => {
-    const url = getResourceUrl(resource);
+  const view = (resource: Resource) => {
+    const url = resourceUrl(resource);
     if (!url) {
-      window.alert("No file available for this resource.");
+      toast.error("No file available for this resource.");
       return;
     }
     window.open(url, "_blank", "noopener,noreferrer");
   };
-  const handleDelete = async (id: string) => {
-    if (!getAccessToken()) {
-      window.alert("Authentication required.");
-      return;
+
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
+    try {
+      await deleteMutation.mutateAsync(pendingDelete._id);
+      toast.success("Resource deleted");
+      setPendingDelete(null);
+    } catch (error) {
+      logger.error("resources", "delete failed", error);
+      toast.error(getErrorMessage(error, "Could not delete the resource. Please try again."));
     }
-
-    const token = getAccessToken();
-
-    if (!token) return;
-
-    setLoading(id);
-    const success = await deleteResource(id, token);
-    if (success) {
-      onResourceDelete(id);
-    }
-    setLoading(null);
   };
 
-  const openDeleteConfirm = (resource: Resource) => {
-    setPendingDelete(resource);
-    setConfirmOpen(true);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!pendingDelete?._id) return;
-    await handleDelete(pendingDelete._id);
-    setConfirmOpen(false);
-    setPendingDelete(null);
-  };
+  const actions = (resource: Resource, variant: "desktop" | "mobile") => (
+    <ResourceRowActions
+      variant={variant}
+      canModify={canModify(resource)}
+      deleting={deletingId === resource._id}
+      onView={() => view(resource)}
+      onEdit={() => setEditing(resource)}
+      onDelete={() => setPendingDelete(resource)}
+    />
+  );
 
   return (
     <div>
-      <div className="bg-white rounded-lg hidden md:block">
+      <div className="bg-white rounded-lg hidden md:block overflow-x-auto">
         <Table className="text-[#030303] bg-white">
           <TableHeader className="text-[#030E18]">
             <TableRow>
@@ -166,168 +101,54 @@ export function ResourcesTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {resourceList.map((resource) => (
+            {resources.map((resource) => (
               <TableRow key={resource._id}>
                 <TableCell>
                   <div className="flex items-center gap-2 p-5">
-                    {/* {getFileIcon(resource.type)} */}{" "}
                     <span className="text-[#030303]">{resource.name}</span>
                   </div>
                 </TableCell>
-                <TableCell>{getClassName(resource.classId)}</TableCell>
-                <TableCell>{getCourseName(resource.courseId)}</TableCell>
-                <TableCell className="text-[#616161]">
-                  {formatDate(resource.uploadDate)}
-                </TableCell>
+                <TableCell>{resourceClassName(resource, classes)}</TableCell>
+                <TableCell>{resourceCourseName(resource, courses)}</TableCell>
+                <TableCell className="text-[#616161]">{formatUploadDate(resource.uploadDate)}</TableCell>
                 <TableCell className="flex justify-center items-center">
-                  <div className="flex items-center gap-2">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <Info />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-white text-[#030E18] border border-[#D7E6F6] shadow-lg">
-                        <DropdownMenuItem className="cursor-pointer text-[#030E18] focus:bg-[#EAF2FB] focus:text-[#030E18]" onClick={() => handleView(resource)}>
-                          View
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="cursor-pointer text-[#030E18] focus:bg-[#EAF2FB] focus:text-[#030E18]"
-                          onClick={() => {
-                            setSelectedResource(resource);
-                            setEditModalOpen(true);
-                          }}
-                        >
-                          Edit
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="border-none shadow-none"
-                    onClick={() => openDeleteConfirm(resource)}
-                    disabled={loading === resource._id}
-                  >
-                    <Trash2 className="text-[#D92D20]" />
-                  </Button>
+                  <div className="flex items-center gap-2">{actions(resource, "desktop")}</div>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
-        {/* Mobile View - Cards */}
-
-        {selectedResource && (
-          <UpdateModal
-            isOpen={editModalOpen}
-            onClose={() => setEditModalOpen(false)}
-            resource={{ ...selectedResource, classes }}
-            onResourceUpdate={(updated) => {
-              // Update UI state
-              const updatedList = resourceList.map((res) =>
-                res._id === selectedResource._id ? { ...res, ...updated } : res
-              );
-              setResourceList(updatedList);
-              setEditModalOpen(false);
-            }}
-          />
-        )}
       </div>
+
       <div className="block md:hidden space-y-4 mt-4">
-        {resourceList.map((resource) => (
+        {resources.map((resource) => (
           <div key={resource._id} className="rounded-lg border border-[#F0F0F0] bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
             <p className="text-[12px] text-black font-medium mb-1 dark:text-slate-200">Name</p>
             <p className="break-words text-[14px] text-[#676767] dark:text-slate-300">{resource.name}</p>
             <div className="mt-3 grid grid-cols-1 gap-3 text-sm min-[420px]:grid-cols-2">
-              <div>
-                <p className="text-[12px] text-black font-medium dark:text-slate-200">Class</p>
-                <p className="break-words text-[14px] text-[#676767] dark:text-slate-300">
-                  {getClassName(resource.classId)}
-                </p>
-              </div>
-              <div>
-                <p className="text-[12px] text-black font-medium dark:text-slate-200">Course</p>
-                <p className="break-words text-[14px] text-[#676767] dark:text-slate-300">
-                  {getCourseName(resource.courseId)}
-                </p>
-              </div>
-              <div>
-                <p className="text-[12px] text-black font-medium dark:text-slate-200">
-                  Upload Date
-                </p>
-                <p className="text-[14px] text-[#676767] dark:text-slate-300">
-                  {formatDate(resource.uploadDate)}
-                </p>
-              </div>
+              <CardField label="Class">{resourceClassName(resource, classes)}</CardField>
+              <CardField label="Course">{resourceCourseName(resource, courses)}</CardField>
+              <CardField label="Upload Date">{formatUploadDate(resource.uploadDate)}</CardField>
             </div>
-            <div className="mt-4 flex items-center gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-9 px-3 text-[#003366] dark:text-blue-300">
-                    <Info size={16} />
-                    <span className="ml-1">Actions</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-white text-[#030E18] border border-[#D7E6F6] shadow-lg">
-                  <DropdownMenuItem className="cursor-pointer text-[#030E18] focus:bg-[#EAF2FB] focus:text-[#030E18]" onClick={() => handleView(resource)}>
-                    View
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="cursor-pointer text-[#030E18] focus:bg-[#EAF2FB] focus:text-[#030E18]"
-                    onClick={() => {
-                      setSelectedResource(resource);
-                      setEditModalOpen(true);
-                    }}
-                  >
-                    Edit
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="p-1 text-red-500 hover:bg-red-100"
-                onClick={() => openDeleteConfirm(resource)}
-                disabled={loading === resource._id}
-              >
-                <Trash2 size={16} />
-              </Button>
-            </div>
+            <div className="mt-4 flex items-center gap-2">{actions(resource, "mobile")}</div>
           </div>
         ))}
       </div>
-      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogContent className="sm:max-w-[420px]">
-          <DialogHeader>
-            <DialogTitle>Delete resource?</DialogTitle>
-            <DialogDescription>
-              This will permanently remove{" "}
-              <span className="font-medium text-[#030E18]">
-                {pendingDelete?.name || "this resource"}
-              </span>
-              . You can’t undo this action.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setConfirmOpen(false)}
-              className="border-[#F0F0F0] hover:bg-[#F0F0F0]"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleConfirmDelete}
-              className="bg-[#D92D20] hover:bg-[#B42318] text-white"
-              disabled={loading === pendingDelete?._id}
-            >
-              {loading === pendingDelete?._id ? "Deleting..." : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
+      <UpdateModal
+        resource={editing}
+        classes={classes}
+        courses={courses}
+        onClose={() => setEditing(null)}
+      />
+      <ConfirmDeleteDialog
+        open={Boolean(pendingDelete)}
+        title="Delete resource?"
+        subject={pendingDelete?.name || "this resource"}
+        busy={deleteMutation.isPending}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }
