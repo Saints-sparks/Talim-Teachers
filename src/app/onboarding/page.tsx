@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
@@ -22,6 +21,21 @@ import { API_BASE_URL } from "@/app/lib/api/config";
 import { CLOUDINARY_UPLOAD_PRESET, cloudinaryUploadUrl } from "../lib/cloudinary";
 import { useTeacherOnboarding } from "@/app/context/OnboardingContext";
 
+/** The parts of the teacher record the onboarding summary reads. */
+interface TeacherRecord {
+  userId?: { firstName?: string; lastName?: string; email?: string; phoneNumber?: string };
+  employmentRole?: string;
+  employmentType?: string;
+  highestAcademicQualification?: string;
+  yearsOfExperience?: number;
+  specialization?: string;
+  availabilityDays?: string[];
+  classTeacherClasses?: Array<{ _id?: string; name?: string }>;
+  assignedClasses?: Array<{ _id?: string; name?: string }>;
+  assignedCourses?: Array<{ _id?: string; title?: string; courseCode?: string }>;
+  classTeacherCourses?: Array<{ _id?: string; title?: string; courseCode?: string }>;
+}
+
 export default function TeacherOnboardingPhase1() {
   const router = useRouter();
   const { user, updateUser } = useAppContext();
@@ -29,7 +43,7 @@ export default function TeacherOnboardingPhase1() {
   const { isHydrated, phase1Completed, completePhase1 } =
     useTeacherOnboarding();
 
-  const [teacher, setTeacher] = useState<any>(null);
+  const [teacher, setTeacher] = useState<TeacherRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);

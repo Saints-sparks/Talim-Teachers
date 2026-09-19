@@ -11,6 +11,7 @@ import {
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useAppContext } from "@/app/context/AppContext";
+import { logger } from "@/lib/logger";
 import { findGuideConfig, GuideConfig, guideConfigs, GuideStep } from "./guideSteps";
 
 type TargetRect = {
@@ -44,7 +45,7 @@ function getVisibleSteps(config: GuideConfig) {
   return visibleSteps.length > 0 ? visibleSteps : config.steps;
 }
 
-function getUserId(user: any) {
+function getUserId(user: { userId?: string; _id?: string; teacherId?: string } | null | undefined) {
   return user?.userId || user?._id || user?.teacherId || "guest";
 }
 
@@ -305,7 +306,7 @@ export default function AppGuide() {
       frame = window.requestAnimationFrame(() => {
         const nextRect = getTargetRect(currentStep.target);
         if (!nextRect && process.env.NODE_ENV === "development") {
-          console.warn(`Guide target not found: ${currentStep.target}`);
+          logger.debug("guide", `Target not found: ${currentStep.target}`);
         }
         setRect(nextRect);
       });

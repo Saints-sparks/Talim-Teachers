@@ -1,6 +1,5 @@
 import React from "react";
 import { useRouter } from "next/navigation"; // Import useRouter hook
-import { FaCalendarAlt } from "react-icons/fa";
 
 // Define ClassCardProps
 type ClassCardProps = {

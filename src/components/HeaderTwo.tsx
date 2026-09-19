@@ -22,7 +22,7 @@ export function Header({
     (typeof user?.schoolId === "object" ? user.schoolId?.name : "") ||
     "School Name";
   const schoolLogo =
-    (user as any)?.schoolLogo ||
+    (user as { schoolLogo?: string } | null)?.schoolLogo ||
     (typeof user?.schoolId === "object" ? user.schoolId?.logo : "");
 
   // Generate initials from first and last names

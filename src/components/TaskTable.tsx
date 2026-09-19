@@ -1,8 +1,7 @@
 "use client";
 
 import React from "react";
-import Image from "next/image";
-import TaskRow, { TaskStatus, TaskRowProps } from "./TaskRow";
+import TaskRow, { TaskRowProps } from "./TaskRow";
 import bg from "../../public/image/dash/picstude.png";
 
 const TaskTable: React.FC = () => {

@@ -2,9 +2,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import {
-  User2,
   Users,
-  UsersRound,
   GraduationCap,
   ChevronRight,
 } from "lucide-react";

@@ -23,6 +23,7 @@ import { fetchTeacherDetails } from "../services/api.service";
 import { Teacher } from "@/types/student";
 import { useAppContext } from "../context/AppContext";
 import { API_BASE_URL } from "../lib/api/config";
+import { getErrorMessage } from "@/lib/apiError";
 import { CLOUDINARY_UPLOAD_PRESET, cloudinaryUploadUrl } from "../lib/cloudinary";
 
 const tabs = [
@@ -89,8 +90,8 @@ export default function Profile() {
       });
       if (!apiRes.ok) throw new Error("Failed to update avatar");
       updateUser({ userAvatar: avatarUrl });
-    } catch (err: any) {
-      setErrorMsg(err.message || "Upload failed");
+    } catch (err) {
+      setErrorMsg(getErrorMessage(err, "Upload failed"));
     } finally {
       setUploading(false);
       if (fileInputRef.current) {
@@ -107,9 +108,9 @@ export default function Profile() {
         if (!token) throw new Error("Unauthorized");
         const teacherDetails = await fetchTeacherDetails(user.userId, token);
         setTeacher(teacherDetails);
-      } catch (err: any) {
+      } catch (err) {
         setError(
-          err.message || "Please check your internet connection and try again"
+          getErrorMessage(err, "Please check your internet connection and try again")
         );
       } finally {
         setLoading(false);
