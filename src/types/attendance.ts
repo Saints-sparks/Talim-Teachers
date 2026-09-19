@@ -4,29 +4,23 @@
  * field these types declare.
  */
 
-/** Every status the API accepts on `CreateAttendanceDto.status`. */
-export const ATTENDANCE_STATUSES = ["Present", "Absent", "Late", "Excused"] as const;
+import type { MarkAttendancePayload } from "./apiPayloads";
 
-/** One attendance status, exactly as the API spells it. */
-export type AttendanceStatus = (typeof ATTENDANCE_STATUSES)[number];
+/** One attendance status, exactly as the contract's `CreateAttendanceDto.status` spells it. */
+export type AttendanceStatus = MarkAttendancePayload["status"];
+
+/** Every status the API accepts on `CreateAttendanceDto.status`. */
+export const ATTENDANCE_STATUSES = ["Present", "Absent", "Late", "Excused"] as const satisfies readonly AttendanceStatus[];
 
 /** The two statuses a teacher can choose on the marking screen. */
 export type MarkableStatus = Extract<AttendanceStatus, "Present" | "Absent">;
 
-/** Body of `POST /attendance` (`CreateAttendanceDto`). */
-export interface CreateAttendancePayload {
-  /** Student document id (Mongo id). */
-  studentId: string;
-  /** Class document id (Mongo id). */
-  classId: string;
-  /** ISO timestamp; the server buckets it to the start of the day. */
-  date: string;
-  status: AttendanceStatus;
-  /** The current term's id (Mongo id). */
-  termId: string;
-  /** Required by the server when `status` is `Absent`. */
-  absenceReason?: string;
-}
+/**
+ * Body of `POST /attendance` (`CreateAttendanceDto`), taken from the generated
+ * contract. `date` is an ISO timestamp the server buckets to the start of the
+ * day; `absenceReason` is required by the server when `status` is `Absent`.
+ */
+export type CreateAttendancePayload = MarkAttendancePayload;
 
 /** The record `POST /attendance` returns once stored. */
 export interface MarkedAttendance {

@@ -16,6 +16,7 @@ import { api } from "@/lib/apiClient";
 import { logger } from "@/lib/logger";
 import { getErrorMessage } from "@/lib/apiError";
 import { Student } from "@/types/student";
+import type { CreateResourceBody, MarkAttendancePayload, UpdateResourceBody } from "@/types/apiPayloads";
 
 /**
  * The response shape of an endpoint whose consumers have not been typed yet.
@@ -135,25 +136,18 @@ export interface TeacherTimetable {
   [key: string]: unknown;
 }
 
-/** Body accepted by `POST /attendance`. Mirrors `CreateAttendanceDto`. */
-export interface AttendancePayload {
-  studentId: string;
-  classId: string;
-  date: string;
-  status: string;
-  termId: string;
-  absenceReason?: string;
-}
+/** Body accepted by `POST /attendance` (`CreateAttendanceDto`), from the generated contract. */
+export type AttendancePayload = MarkAttendancePayload;
 
-/** Body accepted by `POST /resources` and `PUT /resources/:id`. */
-export interface ResourcePayload {
-  title?: string;
-  description?: string;
-  fileUrl?: string;
-  courseId?: string;
-  classId?: string;
-  [key: string]: unknown;
-}
+/**
+ * Body accepted by `POST /resources` (`CreateResourceDto`), from the generated
+ * contract. It used to declare `title`/`description`/`fileUrl`, none of which
+ * the DTO has, so every call built from it was a 400.
+ */
+export type ResourcePayload = CreateResourceBody;
+
+/** Body accepted by `PUT /resources/:id` (`UpdateResourceDto`), from the generated contract. */
+export type ResourceUpdatePayload = UpdateResourceBody;
 
 /**
  * The classes a teacher is assigned to, each loaded in full.
@@ -364,7 +358,7 @@ export const createResource = async (resourceData: ResourcePayload, _token?: str
  */
 export const updateResource = async (
   resourceId: string,
-  data: ResourcePayload,
+  data: ResourceUpdatePayload,
   _token?: string,
 ): Promise<Untyped> => api.put<ResourceRecord>(`/resources/${resourceId}`, data);
 
