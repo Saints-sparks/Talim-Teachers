@@ -17,7 +17,7 @@ import {
 } from "@/lib/session";
 import { authService } from "@/app/services/auth.service";
 import { resolvePostLoginRoute } from "@/app/lib/postLoginRoute";
-import { unsubscribeWebPushOnLogout } from "@/app/hooks/usePushNotifications";
+import { startWebPushSync, unsubscribeBrowserPush, unsubscribeWebPushOnLogout } from "@/lib/webPushSync";
 import type { AuthResponse, LoginCredentials, User } from "@/types/auth";
 
 /**
@@ -141,6 +141,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearSession = useCallback(
     (redirectToSignIn = false) => {
+      // A forced sign-out (expiry, refresh failure) never went through `logout`,
+      // so this browser's push subscription is still live. Capture what is
+      // needed to remove it before the session is wiped: after a normal
+      // logout both are already gone and this is a no-op.
+      const staleToken = sessionStore.getToken();
+      const staleUserId = sessionStore.getUserId();
+      const pushCleanup =
+        redirectToSignIn && (staleToken || staleUserId)
+          ? unsubscribeBrowserPush(staleUserId, staleToken)
+          : null;
+
       setAccessTokenState(null);
       setUser(null);
       apiClient.setAccessToken(null);
@@ -148,7 +159,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       persistUser(null);
       sessionStore.clear();
       if (redirectToSignIn && typeof window !== "undefined" && window.location.pathname !== "/") {
-        window.location.assign("/");
+        // Give the local unsubscribe a moment before the page unloads.
+        const redirect = () => window.location.assign("/");
+        if (pushCleanup) {
+          Promise.race([pushCleanup, new Promise((resolve) => setTimeout(resolve, 1500))]).then(redirect, redirect);
+        } else {
+          redirect();
+        }
       }
     },
     [],
@@ -309,6 +326,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     window.addEventListener("auth-changed", handleAuthChanged);
     return () => window.removeEventListener("auth-changed", handleAuthChanged);
   }, [clearSession]);
+
+  // Keep the backend's push subscription in step with the browser (heals a
+  // lost row, follows a rotated endpoint, clears a revoked permission).
+  const syncUserId = user?.userId ?? user?._id ?? null;
+  useEffect(() => {
+    if (!syncUserId) return undefined;
+    return startWebPushSync(syncUserId);
+  }, [syncUserId]);
 
   // Restore the stored session on load.
   useEffect(() => {

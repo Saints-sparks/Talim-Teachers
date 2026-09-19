@@ -20,8 +20,10 @@ jest.mock("@/components/CustomToast", () => ({
   toast: { success: jest.fn(), error: jest.fn(), info: jest.fn() },
 }));
 
-jest.mock("@/app/hooks/usePushNotifications", () => ({
+jest.mock("@/lib/webPushSync", () => ({
   unsubscribeWebPushOnLogout: jest.fn().mockResolvedValue(undefined),
+  unsubscribeBrowserPush: jest.fn().mockResolvedValue(undefined),
+  startWebPushSync: jest.fn(() => () => undefined),
 }));
 
 const SCHOOL_ID = "68c0a1b2c3d4e5f6000000aa";
