@@ -6,6 +6,7 @@ import { toast } from "@/components/CustomToast";
 import { authService } from "@/app/services/auth.service";
 import { isPasswordValid } from "@/app/lib/passwordPolicy";
 import { logger } from "@/lib/logger";
+import { SIGN_IN_ROUTE } from "@/lib/routes";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { describeResetFailure, type ResetStage } from "./passwordResetErrors";
 
@@ -44,7 +45,7 @@ export function useForgotPassword() {
   // Send the teacher on to sign in once they have read the confirmation.
   useEffect(() => {
     if (!succeeded) return;
-    const timer = setTimeout(() => router.push("/signin"), REDIRECT_DELAY_MS);
+    const timer = setTimeout(() => router.push(SIGN_IN_ROUTE), REDIRECT_DELAY_MS);
     return () => clearTimeout(timer);
   }, [succeeded, router]);
 
@@ -137,7 +138,7 @@ export function useForgotPassword() {
   );
 
   const goBack = useCallback(() => {
-    if (step === "email") router.push("/");
+    if (step === "email") router.push(SIGN_IN_ROUTE);
     else if (step === "otp") setStep("email");
     else setStep("otp");
   }, [router, step]);

@@ -12,6 +12,7 @@ import { authService } from "../services/auth.service";
 import { getApiError } from "../lib/apiError";
 import { isPasswordValid } from "../lib/passwordPolicy";
 import { resolvePostLoginRoute } from "../lib/postLoginRoute";
+import { SIGN_IN_ROUTE } from "@/lib/routes";
 import type { User } from "../../types/auth";
 
 type FieldErrors = Partial<Record<"currentPassword" | "newPassword" | "confirmPassword", string>>;
@@ -37,7 +38,7 @@ export default function SetPasswordPage() {
     try {
       const stored = JSON.parse(localStorage.getItem("user") ?? "null") as User | null;
       if (!stored) {
-        router.replace("/signin");
+        router.replace(SIGN_IN_ROUTE);
         return;
       }
       if (!stored.mustChangePassword) {
@@ -46,7 +47,7 @@ export default function SetPasswordPage() {
       }
       setUser(stored);
     } catch {
-      router.replace("/signin");
+      router.replace(SIGN_IN_ROUTE);
     }
   }, [router]);
 

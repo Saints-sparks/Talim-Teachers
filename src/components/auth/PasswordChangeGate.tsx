@@ -2,9 +2,10 @@
 
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { SIGN_IN_ROUTE } from "@/lib/routes";
 
 /** Routes a teacher with a temporary password may still visit. */
-const OPEN_ROUTES = new Set(["/", "/signin", "/forgot-password", "/set-password"]);
+const OPEN_ROUTES = new Set([SIGN_IN_ROUTE, "/forgot-password", "/set-password"]);
 
 /**
  * Keeps a teacher who must replace a temporary password on the set-password

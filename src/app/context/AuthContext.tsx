@@ -6,6 +6,7 @@ import { toast } from "@/components/CustomToast";
 import { apiClient } from "@/lib/apiClient";
 import { ApiError, getErrorMessage } from "@/lib/apiError";
 import { logger } from "@/lib/logger";
+import { SIGN_IN_ROUTE } from "@/lib/routes";
 import {
   ACCESS_TOKEN_KEY,
   KEEP_SIGNED_IN_KEY,
@@ -158,9 +159,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       persistAccessToken(null);
       persistUser(null);
       sessionStore.clear();
-      if (redirectToSignIn && typeof window !== "undefined" && window.location.pathname !== "/") {
+      if (redirectToSignIn && typeof window !== "undefined" && window.location.pathname !== SIGN_IN_ROUTE) {
         // Give the local unsubscribe a moment before the page unloads.
-        const redirect = () => window.location.assign("/");
+        const redirect = () => window.location.assign(SIGN_IN_ROUTE);
         if (pushCleanup) {
           Promise.race([pushCleanup, new Promise((resolve) => setTimeout(resolve, 1500))]).then(redirect, redirect);
         } else {
@@ -294,7 +295,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     clearSession();
     setIsLoading(false);
     window.dispatchEvent(new CustomEvent("auth-changed", { detail: { type: "logout" } }));
-    router.push("/");
+    router.push(SIGN_IN_ROUTE);
   }, [clearSession, router]);
 
   const changePassword = useCallback(

@@ -146,7 +146,7 @@ describe("useForgotPassword", () => {
       expect(push).not.toHaveBeenCalled();
 
       act(() => jest.advanceTimersByTime(REDIRECT_DELAY_MS));
-      expect(push).toHaveBeenCalledWith("/signin");
+      expect(push).toHaveBeenCalledWith("/");
     } finally {
       jest.useRealTimers();
     }
