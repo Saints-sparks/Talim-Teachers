@@ -6,7 +6,6 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { 
   Search, 
   ChevronDown, 
-  CheckCheck, 
   Loader2, 
   Users, 
   MessageCircle, 
@@ -21,7 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import CreateGroupModal from "./CreateGroupModal";
 import { useChat } from "@/app/context/ChatContext";
 import { RealtimeChatRoom } from "@/app/hooks/useRealtimeChat";
@@ -38,7 +37,6 @@ export default function ChatSidebar({ onSelectChat, className = "" }: ChatSideba
   const [filterType, setFilterType] = useState<"all" | "teachers" | "groups">("all");
   
   const { 
-    chatRooms, 
     isLoading, 
     isConnected, 
     error, 

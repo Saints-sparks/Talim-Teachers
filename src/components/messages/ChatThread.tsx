@@ -14,6 +14,7 @@ import { ChatParticipant } from "@/app/hooks/useWebSocket";
 import { ChatMessageView } from "@/app/lib/chat/normalizeMessage";
 import { readersOf, receiptState } from "@/app/lib/chat/readModel";
 import { generateColorFromString } from "@/lib/colorUtils";
+import type { ClassRecord, CourseRecord, ReplyTarget } from "./helpers";
 
 const NEAR_BOTTOM_PX = 120;
 const LOAD_OLDER_AT_PX = 40;
@@ -23,8 +24,8 @@ export interface ChatThreadProps {
   roomId: string;
   /** The room as listed in the sidebar, kept live by chat-rooms-update. */
   room?: RealtimeChatRoom | null;
-  replyingMessage: { sender: string; text: string } | null;
-  setReplyingMessage: (msg: any) => void;
+  replyingMessage: ReplyTarget | null;
+  setReplyingMessage: (msg: ReplyTarget | null) => void;
   openSubMenu: { index: number; type: string } | null;
   toggleSubMenu: (index: number, type: string) => void;
   onBack?: () => void;
@@ -169,10 +170,10 @@ export default function ChatThread({
 
     let name = roomData?.name || "";
     if (!name && roomData?.type === "class_group" && roomData.classId) {
-      name = classes?.find((c: any) => (c._id || c.id) === roomData.classId)?.name || "Class Group";
+      name = (classes as ClassRecord[] | undefined)?.find((c) => (c._id || c.id) === roomData.classId)?.name || "Class Group";
     }
     if (!name && roomData?.type === "course_group" && roomData.courseId) {
-      const course = courses?.find((c: any) => (c._id || c.id) === roomData.courseId);
+      const course = (courses as CourseRecord[] | undefined)?.find((c) => (c._id || c.id) === roomData.courseId);
       name = course?.title || course?.name || "Course Group";
     }
 

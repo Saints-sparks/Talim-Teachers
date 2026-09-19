@@ -6,6 +6,7 @@ import MessageReceipt from "./MessageReceipt";
 import { generateColorFromString, getUserInitials } from "@/lib/colorUtils";
 import { ChatMessageView } from "@/app/lib/chat/normalizeMessage";
 import type { ReceiptState } from "@/app/lib/chat/readModel";
+import type { ReplyTarget } from "./helpers";
 
 export interface MessageBubbleProps {
   msg: {
@@ -13,7 +14,7 @@ export interface MessageBubbleProps {
     avatar: string;
     sender: string;
     color: string;
-    text?: string;
+    text: string;
     time: string;
   };
   /** The message itself; its body is rendered by MessageContent. */
@@ -25,7 +26,7 @@ export interface MessageBubbleProps {
   index: number;
   openSubMenu: { index: number; type: string } | null;
   toggleSubMenu: (index: number, type: string) => void;
-  setReplyingMessage: (msg: any) => void;
+  setReplyingMessage: (msg: ReplyTarget | null) => void;
   onRetry?: () => void;
   onDelete?: () => void;
 }

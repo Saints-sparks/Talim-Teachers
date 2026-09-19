@@ -10,13 +10,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage } from "../ui/avatar";
+import type { ReplyTarget } from "./helpers";
 
 interface MessageOptionsDropdownProps {
   index: number;
-  msg: any;
+  msg: ReplyTarget;
   openSubMenu: { index: number; type: string } | null;
   toggleSubMenu: (index: number, type: string) => void;
-  setReplyingMessage: (msg: any) => void;
+  setReplyingMessage: (msg: ReplyTarget | null) => void;
 }
 
 export default function MessageOptionsDropdown({

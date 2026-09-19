@@ -11,6 +11,8 @@ import { roleLabel } from "@/app/lib/chat/groupPermissions";
 import { getAllStudentsByClass } from "@/app/services/api.service";
 import { addChatParticipants, removeChatParticipant } from "@/app/services/chat.service";
 import { generateColorFromString, getUserInitials } from "@/lib/colorUtils";
+import { errorMessage, idOf, type ClassRecord, type CourseRecord } from "./helpers";
+import type { Student } from "@/types/student";
 
 interface GroupMembersProps {
   roomId: string;
@@ -19,12 +21,6 @@ interface GroupMembersProps {
   currentUserId: string | null;
   canManage: boolean;
 }
-
-const idOf = (value: any): string => {
-  if (!value) return "";
-  if (typeof value === "string") return value;
-  return idOf(value._id ?? value.id);
-};
 
 const participantId = (p: ChatParticipant) => p.userId ?? p._id;
 const fullName = (p: { firstName?: string; lastName?: string }) =>
@@ -100,8 +96,8 @@ export default function GroupMembers({
     try {
       await removeChatParticipant(roomId, userId);
       toast.success(`Removed ${name}`);
-    } catch (error: any) {
-      toast.error(error?.message || "Couldn't remove this member");
+    } catch (error) {
+      toast.error(errorMessage(error) || "Couldn't remove this member");
     } finally {
       setRemovingId(null);
     }
@@ -206,8 +202,8 @@ function AddStudents({ roomId, room, memberIds, onDone }: AddStudentsProps) {
 
   const classOptions = useMemo(
     () =>
-      (classes || [])
-        .map((c: any) => ({ id: idOf(c), name: c?.name || "Class" }))
+      ((classes || []) as ClassRecord[])
+        .map((c) => ({ id: idOf(c), name: c?.name || "Class" }))
         .filter((c: { id: string }) => c.id),
     [classes],
   );
@@ -216,14 +212,14 @@ function AddStudents({ roomId, room, memberIds, onDone }: AddStudentsProps) {
   const initialClassId = useMemo(() => {
     if (room?.classId) return room.classId;
     if (room?.courseId) {
-      const course = (courses || []).find((c: any) => idOf(c) === room.courseId);
+      const course = ((courses || []) as CourseRecord[]).find((c) => idOf(c) === room.courseId);
       if (course?.classId) return idOf(course.classId);
     }
     return classOptions[0]?.id || "";
   }, [room, courses, classOptions]);
 
   const [classId, setClassId] = useState(initialClassId);
-  const [students, setStudents] = useState<any[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -263,11 +259,14 @@ function AddStudents({ roomId, room, memberIds, onDone }: AddStudentsProps) {
     const term = query.trim().toLowerCase();
     return students
       .map((student) => {
-        const user = student?.userId && typeof student.userId === "object" ? student.userId : {};
+        // The API populates `userId`, but tolerate a bare id string.
+        const raw: unknown = student?.userId;
+        const user: { firstName?: string; lastName?: string; userAvatar?: string } =
+          raw && typeof raw === "object" ? raw : {};
         return {
-          id: idOf(student?.userId),
+          id: idOf(raw),
           name: fullName(user),
-          avatar: user.userAvatar as string | undefined,
+          avatar: user.userAvatar,
         };
       })
       .filter((s) => s.id && !memberIds.has(s.id))
@@ -295,8 +294,8 @@ function AddStudents({ roomId, room, memberIds, onDone }: AddStudentsProps) {
         selectedIds.length === 1 ? "Added 1 student" : `Added ${selectedIds.length} students`,
       );
       onDone();
-    } catch (error: any) {
-      toast.error(error?.message || "Couldn't add members");
+    } catch (error) {
+      toast.error(errorMessage(error) || "Couldn't add members");
     } finally {
       setSaving(false);
     }
