@@ -1,5 +1,13 @@
 import { api, apiClient } from "@/lib/apiClient";
 import { persistAccessToken } from "@/lib/session";
+import type {
+  ChangePasswordPayload,
+  ForgotPasswordPayload,
+  IntrospectPayload,
+  LoginPayload,
+  ResetPasswordPayload,
+  VerifyResetCodePayload,
+} from "@/types/apiPayloads";
 import { AuthResponse, LoginCredentials, User } from "../../types/auth";
 
 /** `POST /auth/introspect` response. */
@@ -26,7 +34,8 @@ class AuthService {
    * @returns The access token (the refresh token is set as an httpOnly cookie).
    */
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    return api.post<AuthResponse>("/auth/login", credentials, { skipAuth: true });
+    const body: LoginPayload = credentials;
+    return api.post<AuthResponse>("/auth/login", body, { skipAuth: true });
   }
 
   /**
@@ -36,7 +45,8 @@ class AuthService {
    * @returns Whether the token is active and, if so, its user.
    */
   async introspect(token: string): Promise<IntrospectResponse> {
-    return api.post<IntrospectResponse>("/auth/introspect", { token }, {
+    const body: IntrospectPayload = { token };
+    return api.post<IntrospectResponse>("/auth/introspect", body, {
       skipAuth: true,
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -81,7 +91,8 @@ class AuthService {
    * @returns The server's confirmation message.
    */
   async forgotPassword(email: string): Promise<{ message: string }> {
-    return api.post<{ message: string }>("/auth/forgot-password", { email: email.trim() }, { skipAuth: true });
+    const body: ForgotPasswordPayload = { email: email.trim() };
+    return api.post<{ message: string }>("/auth/forgot-password", body, { skipAuth: true });
   }
 
   /**
@@ -94,7 +105,8 @@ class AuthService {
    * @throws ApiError with `VALIDATION_FAILED` (field `token`) for a wrong or expired code.
    */
   async verifyResetCode(email: string, token: string): Promise<{ valid: true }> {
-    return api.post<{ valid: true }>("/auth/verify-reset-code", { email: email.trim(), token }, { skipAuth: true });
+    const body: VerifyResetCodePayload = { email: email.trim(), token };
+    return api.post<{ valid: true }>("/auth/verify-reset-code", body, { skipAuth: true });
   }
 
   /**
@@ -106,11 +118,8 @@ class AuthService {
    * @returns The server's confirmation message.
    */
   async resetPassword(email: string, token: string, newPassword: string): Promise<{ message: string }> {
-    return api.post<{ message: string }>(
-      "/auth/reset-password",
-      { email: email.trim(), token, newPassword },
-      { skipAuth: true },
-    );
+    const body: ResetPasswordPayload = { email: email.trim(), token, newPassword };
+    return api.post<{ message: string }>("/auth/reset-password", body, { skipAuth: true });
   }
 
   /**
@@ -128,11 +137,8 @@ class AuthService {
     newPassword: string,
     confirmPassword: string,
   ): Promise<{ access_token: string; message: string }> {
-    const result = await api.post<{ access_token: string; message: string }>("/auth/change-password", {
-      currentPassword,
-      newPassword,
-      confirmPassword,
-    });
+    const body: ChangePasswordPayload = { currentPassword, newPassword, confirmPassword };
+    const result = await api.post<{ access_token: string; message: string }>("/auth/change-password", body);
     // The server rotated the session; adopt the new token immediately so the
     // next request does not 401, whether or not the caller went through
     // `AuthContext.changePassword`.

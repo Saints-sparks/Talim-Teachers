@@ -9,6 +9,7 @@
  */
 import { api } from "@/lib/apiClient";
 import { ApiError } from "@/lib/apiError";
+import type { AvatarUrlPayload } from "@/types/apiPayloads";
 import { CLOUDINARY_UPLOAD_PRESET, cloudinaryUploadUrl } from "./cloudinary";
 
 /** The part of Cloudinary's upload response this reads. */
@@ -42,6 +43,7 @@ export async function uploadProfileAvatar(file: File): Promise<string> {
     throw new Error(uploaded.error?.message ?? "The image could not be uploaded. Try a smaller image.");
   }
 
-  await api.put("/auth/profile/avatar", { avatarUrl: uploaded.secure_url });
+  const body: AvatarUrlPayload = { avatarUrl: uploaded.secure_url };
+  await api.put("/auth/profile/avatar", body);
   return uploaded.secure_url;
 }
