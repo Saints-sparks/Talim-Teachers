@@ -1,99 +1,68 @@
-import { API_BASE_URL } from "../lib/api/config";
+/**
+ * Chat REST calls (`/chat/*` and `/upload/chat-attachment`). Live messaging
+ * goes over the socket (see `useRealtimeChat`); these are the calls that
+ * create and manage rooms. Every function goes through the one typed client
+ * and throws `ApiError`, which carries the server's user-safe message — show
+ * it with `getErrorMessage()`.
+ *
+ * Contract: `talimBE-V2/src/modules/chat/controllers/chat.controller.ts` and
+ * `dto/create-group-chat.dto.ts`, `dto/room-details.dto.ts`.
+ */
 import { ChatRoom } from "@/types/chat";
-import { apiClient } from "../lib/api/apiClient";
-import { apiClient as client } from "@/lib/apiClient";
+import { api, apiClient } from "@/lib/apiClient";
 
-// Types for chat service
+/** `CreateGroupChatDto` — the server rejects any other field. */
 export interface CreateGroupChatPayload {
   type: "class_group" | "course_group";
   classId?: string;
   courseId?: string;
   termId?: string;
-  participants: string[]; // This is required by the API
+  participants: string[];
 }
 
+/** A chat room as `POST /chat/groups` returns it. */
+export type CreatedChatRoom = ChatRoom & {
+  /** The server reuses an existing class or course group and says so here. */
+  reused?: boolean;
+  roomId?: string;
+};
+
+/** What {@link createGroupChat} resolves with. */
 export interface CreateGroupChatResponse {
   success: boolean;
-  data: ChatRoom;
+  data: CreatedChatRoom;
   message: string;
 }
 
 /**
- * Create a new group chat room
- * @param payload - The group chat data
- * @param token - Authentication token
- * @returns Promise<CreateGroupChatResponse>
+ * Creates a class or course group chat, or returns the existing one.
+ *
+ * @param payload - The group to create.
+ * @param _token - Ignored; the client holds the session token.
+ * @returns The room the server created or reused.
+ * @throws ApiError when the server rejects the payload or the caller may not create groups.
  */
 export const createGroupChat = async (
   payload: CreateGroupChatPayload,
-  token: string
+  _token?: string | null,
 ): Promise<CreateGroupChatResponse> => {
-  try {
-    if (!token) {
-      throw new Error("Authentication token is required");
-    }
-
-    const response = await apiClient.post(
-      `${API_BASE_URL}/chat/groups`,
-      payload,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-
-    return {
-      success: true,
-      data: response.data,
-      message: "Group chat created successfully",
-    };
-  } catch (error: any) {
-    console.error("Error creating group chat:", error);
-    
-    const errorMessage = error.response?.data?.message || 
-                        error.message || 
-                        "Failed to create group chat";
-    
-    throw new Error(errorMessage);
-  }
+  const room = await api.post<CreatedChatRoom>("/chat/groups", payload);
+  return { success: true, data: room, message: "Group chat created successfully" };
 };
 
 /**
- * Get all chat rooms for a user
- * @param token - Authentication token
- * @returns Promise<ChatRoom[]>
+ * Lists the signed-in user's chat rooms.
+ *
+ * @param _token - Ignored; the client holds the session token.
+ * @returns The rooms, newest activity first.
+ * @throws ApiError when the request fails.
  */
-export const getChatRooms = async (token: string): Promise<ChatRoom[]> => {
-  try {
-    if (!token) {
-      throw new Error("Authentication token is required");
-    }
-
-    const response = await apiClient.get(
-      `${API_BASE_URL}/chat/rooms`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    return response.data || [];
-  } catch (error: any) {
-    console.error("Error fetching chat rooms:", error);
-    throw new Error(error.response?.data?.message || "Failed to fetch chat rooms");
-  }
+export const getChatRooms = async (_token?: string | null): Promise<ChatRoom[]> => {
+  const rooms = await api.get<ChatRoom[]>("/chat/rooms");
+  return Array.isArray(rooms) ? rooms : [];
 };
 
-/** The server's user-safe message for a failed request (403s included). */
-export const chatApiErrorMessage = (error: any, fallback: string): string =>
-  error?.response?.data?.error?.message ||
-  error?.response?.data?.message ||
-  (error?.response ? fallback : error?.message) ||
-  fallback;
-
+/** A file stored by `POST /upload/chat-attachment`. */
 export interface ChatAttachmentUpload {
   url: string;
   type: "image" | "audio" | "video" | "document" | "file";
@@ -106,24 +75,32 @@ export interface ChatAttachmentUpload {
   playbackUrl?: string;
 }
 
-/** Uploads one file with POST /upload/chat-attachment, reporting progress (0–1) when asked. */
+/**
+ * Uploads one file to `POST /upload/chat-attachment`, reporting progress when asked.
+ *
+ * @param file - The file to store.
+ * @param onProgress - Called with a 0-1 fraction as bytes are sent.
+ * @returns The stored file's URL and metadata.
+ * @throws ApiError when the upload fails; Error when the response carries no URL.
+ */
 export const uploadChatAttachment = async (
   file: File,
   onProgress?: (fraction: number) => void,
 ): Promise<ChatAttachmentUpload> => {
   const form = new FormData();
   form.append("file", file);
-  try {
-    // No Content-Type: the browser adds the multipart boundary.
-    const body: any = await client.upload<unknown>("/upload/chat-attachment", form, onProgress);
-    const result = body?.url ? body : body?.data;
-    if (!result?.url) throw new Error("The upload didn't return a file URL");
-    return result as ChatAttachmentUpload;
-  } catch (error: any) {
-    throw new Error(chatApiErrorMessage(error, "Couldn't upload the file"));
-  }
+  // No Content-Type: the browser adds the multipart boundary.
+  const body = await apiClient.upload<ChatAttachmentUpload | { data?: ChatAttachmentUpload }>(
+    "/upload/chat-attachment",
+    form,
+    onProgress,
+  );
+  const result = body && "url" in body ? body : body?.data;
+  if (!result?.url) throw new Error("The upload didn't return a file URL");
+  return result;
 };
 
+/** `UpdateChatRoomDto` — any subset of a group's details. */
 export interface UpdateChatRoomPayload {
   name?: string;
   /** `null` or `''` clears it. */
@@ -132,40 +109,35 @@ export interface UpdateChatRoomPayload {
   avatarUrl?: string | null;
 }
 
-/** PATCH /chat/rooms/:roomId: a group's name, description or picture. */
-export const updateChatRoom = async (roomId: string, payload: UpdateChatRoomPayload) => {
-  try {
-    const response = await apiClient.patch(
-      `${API_BASE_URL}/chat/rooms/${encodeURIComponent(roomId)}`,
-      payload,
-    );
-    return response.data;
-  } catch (error: any) {
-    throw new Error(chatApiErrorMessage(error, "Couldn't update the group"));
-  }
-};
+/**
+ * Updates a group's name, description or picture.
+ *
+ * @param roomId - The group's room id.
+ * @param payload - The fields to change.
+ * @returns The updated room.
+ * @throws ApiError with `FORBIDDEN` when the caller may not manage the group.
+ */
+export const updateChatRoom = async (roomId: string, payload: UpdateChatRoomPayload): Promise<ChatRoom> =>
+  api.patch<ChatRoom>(`/chat/rooms/${encodeURIComponent(roomId)}`, payload);
 
-/** Adds users to a group. */
-export const addChatParticipants = async (roomId: string, participantIds: string[]) => {
-  try {
-    const response = await apiClient.post(
-      `${API_BASE_URL}/chat/rooms/${encodeURIComponent(roomId)}/participants/batch`,
-      { participantIds },
-    );
-    return response.data;
-  } catch (error: any) {
-    throw new Error(chatApiErrorMessage(error, "Couldn't add members"));
-  }
-};
+/**
+ * Adds users to a group.
+ *
+ * @param roomId - The group's room id.
+ * @param participantIds - Ids of the users to add.
+ * @returns The updated room.
+ * @throws ApiError when the list is empty or the caller may not manage the group.
+ */
+export const addChatParticipants = async (roomId: string, participantIds: string[]): Promise<ChatRoom> =>
+  api.post<ChatRoom>(`/chat/rooms/${encodeURIComponent(roomId)}/participants/batch`, { participantIds });
 
-/** Removes a member from a group; removing yourself leaves it. */
-export const removeChatParticipant = async (roomId: string, userId: string) => {
-  try {
-    const response = await apiClient.patch(
-      `${API_BASE_URL}/chat/rooms/${encodeURIComponent(roomId)}/participants/${encodeURIComponent(userId)}/remove`,
-    );
-    return response.data;
-  } catch (error: any) {
-    throw new Error(chatApiErrorMessage(error, "Couldn't remove this member"));
-  }
-};
+/**
+ * Removes a member from a group; removing yourself leaves it.
+ *
+ * @param roomId - The group's room id.
+ * @param userId - The member to remove.
+ * @returns The updated room.
+ * @throws ApiError with `FORBIDDEN` when the caller may not remove that member.
+ */
+export const removeChatParticipant = async (roomId: string, userId: string): Promise<ChatRoom> =>
+  api.patch<ChatRoom>(`/chat/rooms/${encodeURIComponent(roomId)}/participants/${encodeURIComponent(userId)}/remove`);
