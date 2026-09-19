@@ -69,6 +69,15 @@ export const queryKeys = {
       ["grades", schoolId, "cumulative", studentId, termId] as const,
     classCumulative: (schoolId: string, classId: string, termId: string) =>
       ["grades", schoolId, "class-cumulative", classId, termId] as const,
+    /** A class's courses with their assessment completion — `assessment-overview`. */
+    assessmentOverview: (schoolId: string, classId: string, termId: string) =>
+      ["grades", schoolId, "assessment-overview", classId, termId] as const,
+    /** Every course grade one student has for a term. */
+    studentCourseGrades: (schoolId: string, studentId: string, termId: string) =>
+      ["grades", schoolId, "student-courses", studentId, termId] as const,
+    /** One student's assessment scores in one course and term. */
+    studentAssessmentHistory: (schoolId: string, studentId: string, courseId: string, termId: string) =>
+      ["grades", schoolId, "student-assessments", studentId, courseId, termId] as const,
     publication: (schoolId: string, courseId: string, termId: string) =>
       ["grades", schoolId, "publication", courseId, termId] as const,
     analytics: (schoolId: string, params?: Record<string, unknown>) => ["grades", schoolId, "analytics", params ?? {}] as const,
