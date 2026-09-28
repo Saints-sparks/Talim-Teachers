@@ -66,6 +66,36 @@ function draftText(draft: DraftState): string {
 }
 
 /**
+ * Why a register could not be shown: a class the teacher does not teach
+ * (403) or one that does not exist (404) is final, anything else can be
+ * retried.
+ *
+ * @param props - The query's error and a retry.
+ * @returns The alert card.
+ */
+function RegisterLoadError({ error, onRetry }: { error: unknown; onRetry: () => void }) {
+  const status = error instanceof ApiError ? error.status : 0;
+  const title = status === 403 ? "Not one of your classes" : status === 404 ? "Class not found" : "We could not load this register";
+  const text =
+    status === 403
+      ? "You don't teach this class, so its register is not available to you. Pick one of your classes above."
+      : status === 404
+        ? "There is no class with this link in your school. Pick one of your classes above."
+        : getErrorMessage(error, "Check your connection and try again.");
+  return (
+    <div className={card} role="alert">
+      <h2 className={cardTitle}>{title}</h2>
+      <p className="mt-1.5 text-sm text-tl-muted">{text}</p>
+      {status !== 403 && status !== 404 ? (
+        <button type="button" className={`${primaryButton} mt-4`} onClick={onRetry}>
+          Try again
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+/**
  * Grey blocks while the register loads.
  *
  * @returns The skeleton.
@@ -171,6 +201,8 @@ export function AttendanceScreen({ initialClassId, initialDate }: AttendanceScre
     activeClassId && shown && !options.some((c) => c.id === activeClassId)
       ? [...options, { id: shown.class.id, name: shown.class.name, role: "subject_teacher" as const, studentCount: shown.students.length, capacity: null, courses: [] }]
       : options;
+  // A link to a class the teacher cannot open: say so in the picker instead of showing another class's name.
+  const unknownClass = Boolean(activeClassId) && !pickerOptions.some((c) => c.id === activeClassId);
 
   const header = (
     <div>
@@ -241,6 +273,11 @@ export function AttendanceScreen({ initialClassId, initialDate }: AttendanceScre
               title="Choose a class register"
               className={`min-h-[46px] w-full cursor-pointer appearance-none rounded-[13px] border border-tl-control bg-tl-surface py-0 pl-3.5 pr-10 text-[15px] font-bold text-tl-ink ${focusRing}`}
             >
+              {unknownClass ? (
+                <option value={activeClassId} disabled>
+                  Choose a class
+                </option>
+              ) : null}
               {pickerOptions.map((c) => (
                 <option key={c.id} value={c.id}>
                   {classOptionLabel(c)}
@@ -283,17 +320,7 @@ export function AttendanceScreen({ initialClassId, initialDate }: AttendanceScre
       {register.isPending || (register.isPlaceholderData && !shown) ? (
         <RegisterSkeleton />
       ) : register.isError && !shown ? (
-        <div className={card} role="alert">
-          <h2 className={cardTitle}>We could not load this register</h2>
-          <p className="mt-1.5 text-sm text-tl-muted">
-            {register.error instanceof ApiError && register.error.status === 403
-              ? "You don't teach this class, so its register is not available to you."
-              : getErrorMessage(register.error, "Check your connection and try again.")}
-          </p>
-          <button type="button" className={`${primaryButton} mt-4`} onClick={() => void register.refetch()}>
-            Try again
-          </button>
-        </div>
+        <RegisterLoadError error={register.error} onRetry={() => void register.refetch()} />
       ) : shown ? (
         <div className={`flex flex-col gap-[18px] ${register.isPlaceholderData ? "opacity-60" : ""}`} aria-busy={register.isPlaceholderData || undefined}>
           {banner ? (

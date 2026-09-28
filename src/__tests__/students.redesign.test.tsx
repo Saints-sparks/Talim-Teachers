@@ -161,6 +161,14 @@ describe("Students list", () => {
     expect(screen.getByRole("button", { name: "Export CSV" })).toBeDisabled();
   });
 
+  it("says a class the teacher does not teach is not theirs, without a pointless retry", async () => {
+    service.getRoster.mockRejectedValue(ApiError.fromResponse({ status: 403 }, { message: "You do not teach this class" }));
+    render(<StudentsScreen initialClassId="other-class" />);
+    expect(await screen.findByRole("heading", { name: "Not one of your classes" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Export CSV" })).toBeDisabled();
+  });
+
   it("says so when the teacher has no classes", async () => {
     service.getMyClasses.mockResolvedValue([]);
     render(<StudentsScreen />);

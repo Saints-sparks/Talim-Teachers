@@ -237,6 +237,15 @@ describe("Attendance, other states", () => {
     expect(await screen.findByRole("heading", { name: "No classes yet" })).toBeInTheDocument();
   });
 
+  it("says a linked class the teacher does not teach is not theirs, and the picker does not pretend otherwise", async () => {
+    service.getRegister.mockRejectedValue(ApiError.fromResponse({ status: 403 }, { message: "You do not teach this class" }));
+    render(<AttendanceScreen initialClassId="other-class" />);
+    expect(await screen.findByRole("heading", { name: "Not one of your classes" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
+    expect((screen.getByLabelText("Class") as HTMLSelectElement).selectedOptions[0].textContent).toBe("Choose a class");
+    expect(screen.queryByRole("button", { name: /Submit register/ })).not.toBeInTheDocument();
+  });
+
   it("says so for a class with no students", async () => {
     service.getRegister.mockImplementation(async (classId, date) => ({ ...makeRegisterFixture(classId, date), students: [] }));
     await open();

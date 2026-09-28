@@ -12,7 +12,7 @@ import { downloadCsv } from "@/app/services/grading-workspace/grade-csv";
 import { useMyClasses } from "@/hooks/attendance/useRegister";
 import { filterRoster, rosterCsv, rosterTiles } from "@/hooks/students/students.logic";
 import { useClassRoster } from "@/hooks/students/useClassroomStudents";
-import { getErrorMessage } from "@/lib/apiError";
+import { ApiError, getErrorMessage } from "@/lib/apiError";
 
 /** Props for {@link StudentsScreen}. */
 export interface StudentsScreenProps {
@@ -28,6 +28,36 @@ export interface StudentsScreenProps {
  */
 export function studentHref(id: string): string {
   return `/students/${encodeURIComponent(id)}`;
+}
+
+/**
+ * Why a class list could not be shown: a class the teacher does not teach
+ * (403) or one that does not exist (404) is final, anything else can be
+ * retried.
+ *
+ * @param props - The query's error and a retry.
+ * @returns The alert card.
+ */
+function RosterLoadError({ error, onRetry }: { error: unknown; onRetry: () => void }) {
+  const status = error instanceof ApiError ? error.status : 0;
+  const title = status === 403 ? "Not one of your classes" : status === 404 ? "Class not found" : "We could not load this class";
+  const text =
+    status === 403
+      ? "You don't teach this class, so its students are not available to you. Pick one of your classes above."
+      : status === 404
+        ? "There is no class with this link in your school. Pick one of your classes above."
+        : getErrorMessage(error, "Check your connection and try again.");
+  return (
+    <div className={card} role="alert">
+      <h2 className={cardTitle}>{title}</h2>
+      <p className="mt-1.5 text-sm text-tl-muted">{text}</p>
+      {status !== 403 && status !== 404 ? (
+        <button type="button" className={`${primaryButton} mt-4`} onClick={onRetry}>
+          Try again
+        </button>
+      ) : null}
+    </div>
+  );
 }
 
 /**
@@ -167,13 +197,7 @@ export function StudentsScreen({ initialClassId }: StudentsScreenProps) {
           <div className="h-[360px] animate-pulse rounded-[22px] bg-tl-line/70" />
         </div>
       ) : !data ? (
-        <div className={card} role="alert">
-          <h2 className={cardTitle}>We could not load this class</h2>
-          <p className="mt-1.5 text-sm text-tl-muted">{getErrorMessage(roster.error, "Check your connection and try again.")}</p>
-          <button type="button" className={`${primaryButton} mt-4`} onClick={() => void roster.refetch()}>
-            Try again
-          </button>
-        </div>
+        <RosterLoadError error={roster.error} onRetry={() => void roster.refetch()} />
       ) : (
         <>
           <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr))]" data-guide="students-stats">
