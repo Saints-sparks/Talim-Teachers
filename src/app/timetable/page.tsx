@@ -1,12 +1,17 @@
-import Layout from "@/components/Layout";
-import Timetable from "@/components/Timetable";
+"use client";
 
+import Layout from "@/components/Layout";
+import { TimetableScreen } from "@/components/timetable/TimetableScreen";
+
+/**
+ * The teacher's timetable, week by week (`GET /timetable/me`).
+ *
+ * @returns The page.
+ */
 const TimetablePage: React.FC = () => {
   return (
     <Layout>
-      <div className="h-full">
-        <Timetable />
-      </div>
+      <TimetableScreen />
     </Layout>
   );
 };
