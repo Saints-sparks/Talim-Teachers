@@ -18,6 +18,20 @@ export const queryKeys = {
     /** `GET /teachers/today` — the redesign's Today aggregate (lessons, registers, attention, classes, setup, counts). */
     today: (schoolId: string, teacherId: string) => ["teacher", schoolId, teacherId, "today"] as const,
   },
+  /** The redesign's Attendance and Students screens (`src/types/classroom.ts`). */
+  classroom: {
+    all: ["classroom"] as const,
+    /** `GET /teachers/me/classes`. */
+    myClasses: (schoolId: string, teacherId: string) => ["classroom", schoolId, teacherId, "classes"] as const,
+    /** `GET /registers/:classId?date=`; `"today"` when no date is sent. */
+    register: (schoolId: string, classId: string, date: string) => ["classroom", schoolId, "register", classId, date] as const,
+    /** Prefix of every loaded register of a class. */
+    registers: (schoolId: string, classId: string) => ["classroom", schoolId, "register", classId] as const,
+    /** `GET /teachers/me/classes/:classId/students`. */
+    roster: (schoolId: string, classId: string) => ["classroom", schoolId, "roster", classId] as const,
+    /** `GET /teachers/me/students/:studentId`. */
+    student: (schoolId: string, studentId: string) => ["classroom", schoolId, "student", studentId] as const,
+  },
   academic: {
     all: ["academic"] as const,
     years: (schoolId: string) => ["academic", schoolId, "years"] as const,
