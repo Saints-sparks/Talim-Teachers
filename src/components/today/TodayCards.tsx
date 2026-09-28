@@ -3,21 +3,34 @@
 import React from "react";
 import Link from "next/link";
 import { card, cardTitle, pill, rowButton, textLink, focusRing } from "@/components/tl/styles";
-import { clockTime } from "@/hooks/today/today.logic";
+import { attentionText, clockTime } from "@/hooks/today/today.logic";
 import { TONE_DOT, attentionHref, setupStepHref } from "@/hooks/today/today.routes";
-import type { AttentionItem, SetupStep, TodayClass } from "@/types/today";
+import type { AttentionItem, RegisterStatus, SetupStep, TodayClass } from "@/types/today";
+
+/** Props for {@link AttentionCard}. */
+export interface AttentionCardProps {
+  /** `attention[]` from Today. */
+  items: AttentionItem[];
+  /** Today's registers, so a register item can turn overdue on the live clock. */
+  registers?: readonly RegisterStatus[];
+  /** The current instant (server-offset). */
+  nowMs?: number;
+  /** The school's timezone. */
+  timezone?: string;
+}
 
 /**
  * "Needs your attention": what is outstanding, most urgent first, each with
- * one action. "You are all caught up for today." when nothing is.
+ * one action. "You are all caught up for today." when nothing is. A register
+ * still open after its close time reads "Register overdue · closed at 11:00"
+ * in the danger tone.
  *
- * @param props - The items.
- * @param props.items - `attention[]` from Today.
+ * @param props - See {@link AttentionCardProps}.
  * @returns The card.
  */
-export function AttentionCard({ items }: { items: AttentionItem[] }) {
+export function AttentionCard({ items, registers = [], nowMs = Date.now(), timezone = "UTC" }: AttentionCardProps) {
   return (
-    <section aria-labelledby="attention-title" className={card}>
+    <section aria-labelledby="attention-title" className={card} data-guide="today-attention">
       <div className="mb-1 flex items-baseline justify-between gap-2.5">
         <h2 id="attention-title" className={cardTitle}>
           Needs your attention
@@ -28,18 +41,21 @@ export function AttentionCard({ items }: { items: AttentionItem[] }) {
         <p className="pb-1 pt-[18px] text-sm text-tl-muted">You are all caught up for today.</p>
       ) : (
         <ul>
-          {items.map((item) => (
-            <li key={item.id} className="flex flex-wrap items-center gap-3.5 border-t border-tl-line-soft py-3.5">
-              <span aria-hidden className={`h-2.5 w-2.5 shrink-0 rounded-full ${TONE_DOT[item.tone] ?? "tl-dot-neutral"}`} />
-              <div className="min-w-[200px] flex-1">
-                <div className="text-[15px] font-bold text-tl-ink">{item.title}</div>
-                <div className="mt-[3px] text-[13px] leading-normal text-tl-muted">{item.description}</div>
-              </div>
-              <Link href={attentionHref(item.action.target)} className={rowButton}>
-                {item.action.label}
-              </Link>
-            </li>
-          ))}
+          {items.map((item) => {
+            const text = attentionText(item, registers, nowMs, timezone);
+            return (
+              <li key={item.id} className="flex flex-wrap items-center gap-3.5 border-t border-tl-line-soft py-3.5">
+                <span aria-hidden className={`h-2.5 w-2.5 shrink-0 rounded-full ${text.overdue ? "tl-dot-danger" : (TONE_DOT[item.tone] ?? "tl-dot-neutral")}`} />
+                <div className="min-w-[200px] flex-1">
+                  <div className="text-[15px] font-bold text-tl-ink">{item.title}</div>
+                  <div className={`mt-[3px] text-[13px] leading-normal ${text.overdue ? "font-bold text-tl-danger" : "text-tl-muted"}`}>{text.description}</div>
+                </div>
+                <Link href={attentionHref(item.action.target)} className={rowButton}>
+                  {item.action.label}
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>
@@ -68,7 +84,7 @@ export function SetupCard({ percent, steps, onTour, onUpload }: SetupCardProps) 
   const pct = Math.max(0, Math.min(100, Math.round(percent)));
   const stepClass = `flex min-h-[44px] items-center gap-[7px] rounded-xl px-[13px] py-[9px] text-[13px] font-bold`;
   return (
-    <section aria-labelledby="setup-title" className={card}>
+    <section aria-labelledby="setup-title" className={card} data-guide="today-setup">
       <div className="flex items-start justify-between gap-2.5">
         <div>
           <h2 id="setup-title" className={cardTitle}>
@@ -144,7 +160,8 @@ export function SetupCard({ percent, steps, onTour, onUpload }: SetupCardProps) 
 
 /**
  * One card per class: role, roster against capacity, term attendance and,
- * for the class-teacher class, today's register.
+ * for the class-teacher class, today's register ("No students yet" for a
+ * class with nobody in it, which has no register to take).
  *
  * @param props - The class and the school's timezone.
  * @param props.cls - The class.
@@ -170,7 +187,7 @@ export function ClassCard({ cls, timezone }: { cls: TodayClass; timezone: string
           <dt className="text-tl-muted">Attendance this term</dt>
           <dd className="font-extrabold text-tl-ink">{cls.attendanceRateTerm === null ? "No records yet" : `${Math.round(cls.attendanceRateTerm)}%`}</dd>
         </div>
-        {cls.register ? (
+        {cls.register && cls.studentCount > 0 ? (
           <div className="mt-2.5 flex justify-between gap-2.5 border-t border-tl-line-soft pt-2.5 text-sm">
             <dt className="text-tl-muted">Today&apos;s register</dt>
             <dd className={`font-extrabold ${submitted ? "text-tl-success" : "text-tl-warning"}`}>
@@ -179,7 +196,10 @@ export function ClassCard({ cls, timezone }: { cls: TodayClass; timezone: string
           </div>
         ) : null}
       </dl>
-      <Link href="/students" className={textLink} title="Roster, guardians and each student's record">
+      {cls.register && cls.studentCount === 0 ? (
+        <p className="border-t border-tl-line-soft pt-2.5 text-sm font-bold text-tl-muted">No students yet</p>
+      ) : null}
+      <Link href={`/students?classId=${encodeURIComponent(cls.id)}`} className={textLink} title="Roster, guardians and each student's record">
         Open class →
       </Link>
     </section>

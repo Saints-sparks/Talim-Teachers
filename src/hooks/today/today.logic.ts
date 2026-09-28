@@ -4,7 +4,7 @@
  * state, minutes left, the greeting, and date/time labels. No React.
  */
 import { parseTimeToMinutes } from "@/hooks/timetable/timetable.logic";
-import type { Greeting, Lesson, LessonState, Period, TeacherToday, TodayLesson } from "@/types/today";
+import type { AttentionItem, Greeting, Lesson, LessonState, Period, RegisterStatus, TeacherToday, TodayLesson } from "@/types/today";
 
 /** The school's wall clock at one instant. */
 export interface SchoolClock {
@@ -346,4 +346,82 @@ export function periodOf(lesson: Pick<Lesson, "periodKey" | "startTime">, period
  */
 export function lessonTitle(lesson: Pick<Lesson, "course" | "class">): string {
   return `${lesson.course.title} · ${lesson.class.name}`;
+}
+
+/** Where a register stands against its morning deadline. */
+export interface RegisterDeadline {
+  /** True once `closesAt` has passed and the register is still not submitted. */
+  overdue: boolean;
+  /** The close time on the school clock, as the design writes it (`"11:00"`). */
+  time: string;
+}
+
+/**
+ * Reads a register's deadline on the school clock. An unsubmitted register
+ * becomes overdue at `closesAt`; a submitted one never is.
+ *
+ * @param register - The register's `submittedAt` and `closesAt` (ISO).
+ * @param register.submittedAt - When it was submitted, or null.
+ * @param register.closesAt - When registers close today (ISO).
+ * @param nowMs - The current instant (server-offset).
+ * @param timezone - The school's timezone.
+ * @returns The deadline, or null when `closesAt` cannot be read.
+ */
+export function registerDeadline(
+  register: { submittedAt: string | null; closesAt: string },
+  nowMs: number,
+  timezone: string,
+): RegisterDeadline | null {
+  const closes = Date.parse(register.closesAt);
+  if (!Number.isFinite(closes)) return null;
+  const { minutes } = schoolClock(closes, timezone);
+  const time = displayTime(`${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(Math.floor(minutes % 60)).padStart(2, "0")}`);
+  return { overdue: !register.submittedAt && nowMs >= closes, time };
+}
+
+/**
+ * The Take register button's tip: `"Open today's register for JSS1 A · closes
+ * at 11:00"`, or `"Register overdue for JSS1 A · closed at 11:00"` once the
+ * close time has passed.
+ *
+ * @param register - The register the button opens.
+ * @param nowMs - The current instant.
+ * @param timezone - The school's timezone.
+ * @returns The tip.
+ */
+export function registerButtonTip(
+  register: { className: string; submittedAt: string | null; closesAt: string },
+  nowMs: number,
+  timezone: string,
+): string {
+  const deadline = registerDeadline(register, nowMs, timezone);
+  if (!deadline) return `Open today's register for ${register.className}`;
+  return deadline.overdue
+    ? `Register overdue for ${register.className} · closed at ${deadline.time}`
+    : `Open today's register for ${register.className} · closes at ${deadline.time}`;
+}
+
+/**
+ * The live text of a "Needs your attention" item. A `register` item turns
+ * into "Register overdue · closed at 11:00" in the danger tone once its
+ * class's register has passed `closesAt` unsubmitted; every other item keeps
+ * the server's text and tone.
+ *
+ * @param item - The attention item.
+ * @param registers - Today's register statuses.
+ * @param nowMs - The current instant.
+ * @param timezone - The school's timezone.
+ * @returns The description, and whether it is overdue.
+ */
+export function attentionText(
+  item: Pick<AttentionItem, "kind" | "description" | "action">,
+  registers: readonly RegisterStatus[],
+  nowMs: number,
+  timezone: string,
+): { description: string; overdue: boolean } {
+  if (item.kind !== "register") return { description: item.description, overdue: false };
+  const register = registers.find((r) => r.classId === item.action.target.classId);
+  const deadline = register ? registerDeadline(register, nowMs, timezone) : null;
+  if (!deadline?.overdue) return { description: item.description, overdue: false };
+  return { description: `Register overdue · closed at ${deadline.time}`, overdue: true };
 }

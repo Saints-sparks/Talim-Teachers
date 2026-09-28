@@ -511,9 +511,11 @@ html.dark .tl-tone-5 { --tone-bg: 46 20 17;  --tone-fg: 252 165 165; --tone-bd: 
 .tl-dot-success { background-color: #1B7A55; }
 .tl-dot-info    { background-color: #2C5FE0; }
 .tl-dot-accent  { background-color: #6B4FB8; }
+.tl-dot-danger  { background-color: #D1573F; }
 html.dark .tl-dot-success { background-color: #4ADE80; }
 html.dark .tl-dot-info    { background-color: #7AA7FF; }
 html.dark .tl-dot-accent  { background-color: #C4B5FD; }
+html.dark .tl-dot-danger  { background-color: #F87171; }
 
 /* Printing the timetable: only the week grid, on white, without the shell. */
 @media print {

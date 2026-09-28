@@ -68,7 +68,7 @@ describe("Today, 10:25 on Friday 25 September", () => {
 
   it("opens today's register for the class-teacher class", () => {
     renderToday();
-    expect(screen.getByTitle("Open today's register for JSS1 A")).toHaveAttribute("href", "/attendance/class/c1?date=2026-09-25");
+    expect(screen.getByTitle("Open today's register for JSS1 A · closes at 11:00")).toHaveAttribute("href", "/attendance/class/c1?date=2026-09-25");
   });
 
   it("says the register is submitted once it is, and hides it for a subject teacher", () => {

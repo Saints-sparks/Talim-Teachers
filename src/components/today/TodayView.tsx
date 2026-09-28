@@ -7,7 +7,7 @@ import { DayList } from "@/components/lesson/DayList";
 import { LessonSheet } from "@/components/lesson/LessonSheet";
 import { NowCard } from "@/components/today/NowCard";
 import { AttentionCard, ClassCard, SetupCard } from "@/components/today/TodayCards";
-import { computeLiveToday, displayTime, longDate, type LiveToday } from "@/hooks/today/today.logic";
+import { computeLiveToday, displayTime, longDate, registerButtonTip, registerDeadline, type LiveToday } from "@/hooks/today/today.logic";
 import { pickRegisterAction } from "@/hooks/today/today.routes";
 import { buildDayRows, type LessonGroup } from "@/hooks/timetable/timetableWeek.logic";
 import type { TeacherToday } from "@/types/today";
@@ -81,6 +81,7 @@ export function TodayView({ today, nowMs, firstName, onUpload, onTour }: TodayVi
   const openGroup: LessonGroup | null = groups.find((g) => g.key === openKey) ?? null;
 
   const register = pickRegisterAction(today.registers, today.date, today.schoolDay.isSchoolDay);
+  const registerOverdue = register.kind === "take" && Boolean(registerDeadline(register.register, nowMs, today.timezone)?.overdue);
   const emptyMessage = emptyDayMessage(today);
   const termLine = today.term ? `${today.term.name}${today.weekNumber ? `, week ${today.weekNumber}` : ""}` : "";
   const showSetup = today.setup.percent < 100 && today.setup.steps.some((s) => !s.done);
@@ -99,7 +100,12 @@ export function TodayView({ today, nowMs, firstName, onUpload, onTour }: TodayVi
             Upload resource
           </button>
           {register.kind === "take" ? (
-            <Link href={register.href} className={primaryButton} title={`Open today's register for ${register.register.className}`}>
+            <Link
+              href={register.href}
+              className={primaryButton}
+              title={registerButtonTip(register.register, nowMs, today.timezone)}
+              data-overdue={registerOverdue || undefined}
+            >
               Take register
             </Link>
           ) : register.kind === "submitted" ? (
@@ -124,7 +130,7 @@ export function TodayView({ today, nowMs, firstName, onUpload, onTour }: TodayVi
 
       <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-[18px] min-[1180px]:grid-cols-2">
         {live.phase.kind !== "none" ? (
-          <div className="order-1 min-[1180px]:col-start-2">
+          <div className="order-1 min-[1180px]:col-start-2" data-guide="today-now">
             <NowCard
               phase={live.phase}
               clock={live.clock}
@@ -136,6 +142,7 @@ export function TodayView({ today, nowMs, firstName, onUpload, onTour }: TodayVi
 
         <section
           aria-labelledby="day-title"
+          data-guide="today-day"
           className={`${card} order-2 min-[1180px]:col-start-1 min-[1180px]:row-span-2 min-[1180px]:row-start-1`}
         >
           <div className="mb-3 flex items-start justify-between gap-2.5">
@@ -157,7 +164,7 @@ export function TodayView({ today, nowMs, firstName, onUpload, onTour }: TodayVi
         </section>
 
         <div className="order-3 min-[1180px]:col-start-2">
-          <AttentionCard items={today.attention} />
+          <AttentionCard items={today.attention} registers={today.registers} nowMs={nowMs} timezone={today.timezone} />
         </div>
       </div>
 
