@@ -36,15 +36,27 @@ export function getVisibleSteps(config: GuideConfig) {
   return visibleSteps.length > 0 ? visibleSteps : config.steps;
 }
 
+/** Where a page stands for its guide: how many targets have rendered, and whether it is still loading. */
+export interface GuideReadiness {
+  present: number;
+  total: number;
+  /** A skeleton (`.animate-pulse`) or `aria-busy` region is still on screen. */
+  loading: boolean;
+}
+
 /**
- * Whether any of a guide's targets is on the page yet.
+ * How ready the page is for its guide. A page renders its header and
+ * controls before its data, so "any target" is too early: the guide would
+ * skip every step whose target arrives with the data.
  *
  * @param config - The guide.
- * @returns True once at least one `[data-guide]` target has rendered.
+ * @returns The counts and whether the page is still loading.
  */
-export function hasAnyTarget(config: GuideConfig): boolean {
-  if (typeof document === "undefined") return false;
-  return config.steps.some((step) => document.querySelector(`[data-guide="${step.target}"]`));
+export function guideReadiness(config: GuideConfig): GuideReadiness {
+  if (typeof document === "undefined") return { present: 0, total: config.steps.length, loading: true };
+  const present = config.steps.filter((step) => document.querySelector(`[data-guide="${step.target}"]`)).length;
+  const loading = Boolean(document.querySelector('.animate-pulse, [aria-busy="true"]'));
+  return { present, total: config.steps.length, loading };
 }
 
 export function getUserId(user: { userId?: string; _id?: string; teacherId?: string } | null | undefined) {

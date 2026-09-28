@@ -21,12 +21,14 @@ import {
   getTargetRect,
   getUserId,
   getVisibleSteps,
-  hasAnyTarget,
+  guideReadiness,
   type TargetRect,
 } from "./guideHelpers";
 
 /** How long a page may take to render its guide targets before the guide gives up opening itself. */
-const TARGET_WAIT_MS = 6_000;
+const TARGET_WAIT_MS = 10_000;
+/** How long the page's targets must hold steady, after loading, before the guide opens with what is there. */
+const TARGET_SETTLE_MS = 1_000;
 const TARGET_POLL_MS = 250;
 
 function TooltipArrow({ side }: { side: string }) {
@@ -203,18 +205,27 @@ export default function AppGuide() {
       return;
     }
 
-    // Pages render their targets once their data arrives: wait for them, so
-    // the guide spotlights real elements instead of opening over a skeleton.
+    // Pages render their controls first and the rest once their data
+    // arrives. Open when every target is there, or when the page has stopped
+    // loading and its targets have held steady (some are conditional, like
+    // Submit on a read-only register); give up waiting after TARGET_WAIT_MS.
     let waited = 0;
+    let settled = 0;
+    let lastPresent = -1;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const tryOpen = () => {
-      if (hasAnyTarget(config)) {
+      const { present, total, loading } = guideReadiness(config);
+      if (present === lastPresent && !loading) settled += TARGET_POLL_MS;
+      else settled = 0;
+      lastPresent = present;
+      const ready = present > 0 && (present === total || settled >= TARGET_SETTLE_MS || waited >= TARGET_WAIT_MS);
+      if (ready) {
         setSteps(getVisibleSteps(config));
         setIsOpen(true);
         return;
       }
       waited += TARGET_POLL_MS;
-      if (waited < TARGET_WAIT_MS) timer = setTimeout(tryOpen, TARGET_POLL_MS);
+      if (waited < TARGET_WAIT_MS + TARGET_POLL_MS) timer = setTimeout(tryOpen, TARGET_POLL_MS);
     };
     timer = setTimeout(tryOpen, 0);
     return () => {
@@ -312,6 +323,8 @@ export default function AppGuide() {
 
           {rect && (
             <div
+              data-testid="guide-highlight"
+              data-guide-for={currentStep.target}
               className="pointer-events-none fixed z-[1000] rounded-[22px] border-2 border-[#F4B740] shadow-[0_0_0_9999px_rgba(3,14,24,0.28),0_0_34px_rgba(244,183,64,0.66)] transition-all duration-200"
               style={{
                 top: Math.max(rect.top - 8, 8),

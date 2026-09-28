@@ -188,6 +188,28 @@ describe("AppGuide", () => {
     expect(screen.getByRole("dialog", { name: "One tab per class" })).toBeInTheDocument();
   });
 
+  it("waits for the data before opening, so steps whose targets come with it are not skipped", async () => {
+    pathname = "/attendance";
+    let release: () => void = () => undefined;
+    (classroomService.getRegister as jest.Mock).mockImplementation(
+      (classId: string, date?: string) => new Promise((resolve) => (release = () => resolve(makeRegisterFixture(classId, date)))),
+    );
+    render(
+      <>
+        <AttendanceScreen />
+        <AppGuide />
+      </>,
+    );
+    // The class picker is up but the register is still loading: no guide yet.
+    await screen.findByLabelText("Class");
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 600));
+    });
+    expect(screen.queryByText(/^Step 1 of/)).not.toBeInTheDocument();
+    await act(async () => release());
+    expect(await screen.findByText("Step 1 of 5", undefined, { timeout: 3_000 })).toBeInTheDocument();
+  });
+
   it("stays closed once the guide has been seen on this device", async () => {
     localStorage.setItem("talim_teacher_guide:teacher-1:students:seen", "done");
     await mountStudentsWithGuide();
