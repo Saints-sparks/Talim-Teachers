@@ -5,12 +5,10 @@ import {
   BarChart3,
   BellRing,
   BookOpen,
-  Calculator,
   CalendarDays,
   ClipboardCheck,
   Download,
   FileUp,
-  GraduationCap,
   LayoutGrid,
   Lightbulb,
   ListChecks,
@@ -37,6 +35,8 @@ export type GuideConfig = {
   id: string;
   pathMatchers: string[];
   exactOnly?: boolean;
+  /** Only for this `?mode=` of the page (the Grading class report); such a guide is found by {@link guideConfigFor}. */
+  mode?: string;
   steps: GuideStep[];
 };
 
@@ -377,161 +377,121 @@ export const guideConfigs: GuideConfig[] = [
     exactOnly: true,
     steps: [
       {
-        target: "grading-header",
-        eyebrow: "Academic results",
-        title: "Grading Flow",
+        target: "grading-mode-switch",
+        eyebrow: "Grading",
+        title: "Subject scores or class report",
         description:
-          "Talim grading moves from assessment scores to course grades, then class term results after course grades are ready.",
-        icon: GraduationCap,
-      },
-      {
-        target: "grading-kpis",
-        title: "Track Grading Progress",
-        description:
-          "Use the summary cards to see grading activity, average performance, and work still waiting for review.",
-        icon: BarChart3,
-      },
-      {
-        target: "grading-role-switch",
-        title: "Choose Your Responsibility",
-        description:
-          "Course Teachers enter assessment scores and generate course grades. Class Teachers combine course grades into term summaries.",
+          "Subject scores is where you enter the scores for the subjects you teach. As a class teacher you also have Class report, to follow your colleagues and compile the report.",
         icon: UsersRound,
       },
       {
-        target: "course-grading-shell",
-        eyebrow: "Course teacher",
-        title: "Course Teacher Workflow",
-        description:
-          "Start by choosing a course and term, then grade assessments for the students assigned to that course.",
+        target: "grading-course-chips",
+        title: "Pick a subject",
+        description: "One chip per subject and class you teach. A dot means there are scores you have not saved yet.",
         icon: BookOpen,
       },
       {
-        target: "course-grading-course-selector",
-        title: "Select the Course",
+        target: "grading-assessment-tabs",
+        title: "One assessment at a time",
         description:
-          "Pick the exact course you teach. The selected course determines which students and course grades are loaded.",
-        icon: BookOpen,
-      },
-      {
-        target: "course-grading-term-selector",
-        title: "Select the Term",
-        description:
-          "Grades are term-based, so assessment scores and generated course grades belong to the selected academic term.",
+          "Each assessment the school set this term, with its maximum, its due date and how far you are: Not started, Draft, Published or Unlocked. Term total shows them all side by side.",
         icon: ClipboardCheck,
       },
       {
-        target: "course-grading-tabs",
-        title: "Move Between Assessments and Course Grades",
+        target: "grading-score-sheet",
+        title: "Type scores straight in",
         description:
-          "Use Assessments to enter scores, then Course Grades to review cumulative course results for the term.",
-        icon: Lightbulb,
-      },
-      {
-        target: "course-grading-assessment-list",
-        title: "Open an Assessment",
-        description:
-          "Choose an active assessment and enter scores for each student in that assessment.",
+          "Enter moves down the column. Anything above the maximum turns red, and the percentage, grade and running total update as you type. Save a draft as often as you like; only you can see it.",
         icon: PencilRuler,
       },
       {
-        target: "assessment-grading-header",
-        title: "Assessment Grade Entry",
+        target: "grading-publish",
+        title: "Publish when everyone has a score",
         description:
-          "This is where the course teacher records student scores and sets the max score for the assessment.",
-        icon: PencilRuler,
-      },
-      {
-        target: "assessment-max-score",
-        title: "Set Max Score",
-        description:
-          "The max score can be set by the teacher for the assessment, then reused across students while grading.",
-        icon: Calculator,
-      },
-      {
-        target: "assessment-progress",
-        title: "Check Who Is Still Pending",
-        description:
-          "The progress panel shows how many students have been graded and who still needs a score.",
-        icon: BarChart3,
-      },
-      {
-        target: "assessment-student-list",
-        title: "Select a Student",
-        description:
-          "Pick a student to view their assessment history, enter the current score, and manage their course grade record.",
-        icon: UsersRound,
-      },
-      {
-        target: "assessment-current-grade",
-        title: "Enter the Assessment Score",
-        description:
-          "Record the actual score and max score, then save the assessment grade for that student.",
-        icon: PencilRuler,
-      },
-      {
-        target: "assessment-course-grade-record",
-        title: "Generate Course Grade",
-        description:
-          "After assessment scores exist, generate the student's cumulative course grade for the term.",
-        icon: Calculator,
-      },
-      {
-        target: "assessment-generate-course-grades",
-        title: "Generate in Bulk",
-        description:
-          "When multiple students are ready, generate course grade records for everyone eligible at once.",
+          "Publish shows the scores to students and parents and notifies them, then the scores lock. If you spot a mistake, Unlock to correct, fix it and publish again: only the families whose scores changed are told.",
         icon: Send,
       },
       {
-        target: "course-grades-overview",
-        title: "Review Course Grades",
-        description:
-          "Course Grades shows the cumulative course result each student has for the selected term.",
-        icon: Award,
+        target: "grading-term",
+        title: "Earlier terms",
+        description: "Switch term to look back at, or finish, the scores of an earlier term.",
+        icon: CalendarDays,
       },
+    ],
+  },
+  {
+    id: "grading-class",
+    pathMatchers: ["/grading"],
+    exactOnly: true,
+    mode: "class",
+    steps: [
       {
-        target: "class-grading-shell",
-        eyebrow: "Class teacher",
-        title: "Class Teacher Workflow",
-        description:
-          "Class Teachers use generated course grades to create class-level term summaries.",
+        target: "grading-mode-switch",
+        eyebrow: "Class report",
+        title: "Your class, as class teacher",
+        description: "Class report brings every subject of your class together. Switch back to Subject scores for the subjects you teach yourself.",
         icon: UsersRound,
       },
       {
-        target: "class-grading-selectors",
-        title: "Choose Class and Term",
+        target: "grading-readiness",
+        title: "Who has published",
         description:
-          "Pick the class and term whose results you want to compile.",
-        icon: ClipboardCheck,
+          "Each subject's status for each assessment. Open takes you to your own scores; Send reminder nudges a colleague about the first assessment they have not published, once a day.",
+        icon: BellRing,
       },
       {
-        target: "class-grading-generate",
-        title: "Generate Class Summary",
+        target: "grading-tab-summary",
+        title: "The summary broadsheet",
         description:
-          "This combines available course grade records into student cumulative term records and a class term summary.",
-        icon: Calculator,
-      },
-      {
-        target: "class-grading-summary",
-        title: "Review Term Summary",
-        description:
-          "After generation, the summary shows class average, total students, top performers, and students needing attention.",
+          "Every student's published scores in every subject, with average, position and grade, for one assessment or the term total. Print it, and generate the summary for the school office once every subject has published.",
         icon: BarChart3,
       },
       {
-        target: "class-grading-student-list",
-        title: "Review Student Results",
+        target: "grading-tab-remarks",
+        title: "Remarks for each report card",
         description:
-          "Student rows show generated grade, percentage, position, or Pending when course grades are not ready yet.",
-        icon: UsersRound,
+          "Write a short remark for each student; it saves as you type. Remarks lock while the results are with the school office, and the principal's remark shows under yours.",
+        icon: MessageSquareText,
+      },
+    ],
+  },
+  {
+    id: "subjects",
+    pathMatchers: ["/subjects"],
+    exactOnly: true,
+    steps: [
+      {
+        target: "subjects-cards",
+        eyebrow: "Subjects",
+        title: "One card per subject",
+        description: "Every subject and class you teach, with how many lessons a week and how many weeks of the term you have taught. Select one to open it.",
+        icon: BookOpen,
       },
       {
-        target: "student-grade-summary",
-        title: "Student Grade Summary",
+        target: "subjects-plan",
+        title: "The term, week by week",
         description:
-          "Open a student to inspect their course grades and generate or recalculate their cumulative term report.",
-        icon: Award,
+          "Each week's topic and objectives. This week is highlighted, and weeks without objectives say so. Edit a week to write its topic and objectives.",
+        icon: CalendarDays,
+      },
+      {
+        target: "subjects-mark-taught",
+        title: "Mark a week taught",
+        description: "Record each week once you have covered it; Undo if you marked the wrong one. Today and the timetable show the same progress.",
+        icon: ListChecks,
+      },
+      {
+        target: "subjects-tab-resources",
+        title: "Resources for the class",
+        description: "Everything you have shared for this subject, with the week it belongs to, who can see it and how many have opened it.",
+        icon: FileUp,
+      },
+      {
+        target: "subjects-upload",
+        title: "Share a resource",
+        description:
+          "Upload a worksheet, slides or a video, file it under a week, and choose whether parents can see it too. Students see it in their portal straight away.",
+        icon: Send,
       },
     ],
   },
@@ -582,6 +542,7 @@ export const guideConfigs: GuideConfig[] = [
 
 export function findGuideConfig(pathname: string) {
   return guideConfigs
+    .filter((config) => !config.mode)
     .filter((config) =>
       config.pathMatchers.some(
         (matcher) =>
@@ -594,4 +555,25 @@ export function findGuideConfig(pathname: string) {
       const longestB = Math.max(...b.pathMatchers.map((matcher) => matcher.length));
       return longestB - longestA;
     })[0];
+}
+
+/**
+ * The guide for a page and its query: the curriculum editor while
+ * `/curriculum?mode=create|edit` is open, a guide declared for the page's
+ * `?mode=` (Grading's class report), else the page's own guide.
+ *
+ * @param pathname - The path.
+ * @param params - The query string.
+ * @returns The guide, if the page has one.
+ */
+export function guideConfigFor(pathname: string, params: Pick<URLSearchParams, "get"> | null | undefined): GuideConfig | undefined {
+  const mode = params?.get("mode") ?? null;
+  if (pathname === "/curriculum" && (mode === "create" || mode === "edit")) {
+    return guideConfigs.find((guide) => guide.id === "curriculum-editor");
+  }
+  if (mode) {
+    const moded = guideConfigs.find((config) => config.mode === mode && config.pathMatchers.some((matcher) => pathname === matcher || (!config.exactOnly && pathname.startsWith(matcher))));
+    if (moded) return moded;
+  }
+  return findGuideConfig(pathname);
 }

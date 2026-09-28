@@ -13,7 +13,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAppContext } from "@/app/context/AppContext";
 import { useTeacherPreferences } from "@/hooks/settings/useTeacherSettings";
 import { logger } from "@/lib/logger";
-import { findGuideConfig, guideConfigs, GuideStep } from "./guideSteps";
+import { guideConfigFor, GuideStep } from "./guideSteps";
 import {
   getCardPosition,
   getSeenKey,
@@ -169,13 +169,7 @@ export default function AppGuide() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { user } = useAppContext();
-  const config = useMemo(() => {
-    const mode = searchParams.get("mode");
-    if (pathname === "/curriculum" && (mode === "create" || mode === "edit")) {
-      return guideConfigs.find((guide) => guide.id === "curriculum-editor");
-    }
-    return findGuideConfig(pathname);
-  }, [pathname, searchParams]);
+  const config = useMemo(() => guideConfigFor(pathname, searchParams), [pathname, searchParams]);
   const [isOpen, setIsOpen] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [rect, setRect] = useState<TargetRect | null>(null);
@@ -306,6 +300,7 @@ export default function AppGuide() {
     <>
       <button
         type="button"
+        data-print-hide
         onClick={() => {
           setSteps(getVisibleSteps(config));
           setStepIndex(0);

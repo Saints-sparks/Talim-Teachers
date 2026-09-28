@@ -8,7 +8,7 @@
  */
 import React from "react";
 import { act, render, screen } from "@/test-utils/render";
-import { findGuideConfig, guideConfigs } from "@/components/onboarding/guideSteps";
+import { findGuideConfig, guideConfigFor, guideConfigs } from "@/components/onboarding/guideSteps";
 import AppGuide from "@/components/onboarding/AppGuide";
 import { TOUR_STEPS } from "@/components/tour/TourProvider";
 import { TodayView } from "@/components/today/TodayView";
@@ -16,7 +16,13 @@ import { TimetableView } from "@/components/timetable/TimetableView";
 import { AttendanceScreen } from "@/components/attendance/AttendanceScreen";
 import { StudentsScreen } from "@/components/students/StudentsScreen";
 import { StudentRecordScreen } from "@/components/students/StudentRecordScreen";
+import { GradingScreen } from "@/components/grading/GradingScreen";
+import { SubjectsScreen } from "@/components/subjects/SubjectsScreen";
 import { classroomService } from "@/app/services/classroom/classroom.service";
+import { gradingService } from "@/app/services/grading/grading.service";
+import { subjectsService } from "@/app/services/subjects/subjects.service";
+import * as gradingFixture from "@/lib/fixtures/grading.fixture";
+import * as subjectsFixture from "@/lib/fixtures/subjects.fixture";
 import { todayService } from "@/app/services/today/today.service";
 import { FIXTURE_NOW, makeTimetableWeekFixture, makeTodayFixture } from "@/lib/fixtures/today.fixture";
 import {
@@ -29,10 +35,11 @@ import {
 import { useTeacherPreferences } from "@/hooks/settings/useTeacherSettings";
 
 let pathname = "/dashboard";
+let search = "";
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
   usePathname: () => pathname,
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => new URLSearchParams(search),
 }));
 jest.mock("@/components/CustomToast", () => ({ toast: { success: jest.fn(), error: jest.fn(), info: jest.fn() } }));
 jest.mock("@/components/resources/uploadmodal", () => ({ UploadModal: () => null }));
@@ -42,12 +49,28 @@ jest.mock("@/app/services/classroom/classroom.service", () => ({
 jest.mock("@/app/services/today/today.service", () => ({
   todayService: { getToday: jest.fn(), getMyWeek: jest.fn(), setTaught: jest.fn(), completeTour: jest.fn() },
 }));
+jest.mock("@/app/services/grading/grading.service", () => ({
+  gradingService: {
+    getSheet: jest.fn(),
+    getReadiness: jest.fn(),
+    getTermResults: jest.fn(),
+    getBroadsheet: jest.fn(),
+    getRemarks: jest.fn(),
+  },
+}));
+jest.mock("@/app/services/subjects/subjects.service", () => ({
+  shouldRecordResourceView: () => false,
+  subjectsService: { getMySubjects: jest.fn(), getScheme: jest.fn(), getCourseResources: jest.fn(), getLegacyCurriculum: jest.fn() },
+}));
+jest.mock("@/hooks/academic/useSchoolTerms", () => ({ useSchoolTerms: () => ({ data: [] }) }));
 jest.mock("@/app/context/AppContext", () => ({ useAppContext: () => ({ user: { userId: "teacher-1" } }) }));
 jest.mock("@/hooks/settings/useTeacherSettings", () => ({ useTeacherPreferences: jest.fn() }));
 
 const classroom = classroomService as jest.Mocked<typeof classroomService>;
 const today = todayService as jest.Mocked<typeof todayService>;
 const preferences = useTeacherPreferences as jest.Mock;
+const grading = gradingService as jest.Mocked<typeof gradingService>;
+const subjects = subjectsService as jest.Mocked<typeof subjectsService>;
 
 beforeAll(() => {
   // jsdom has no layout; the guide scrolls its target into view.
@@ -64,10 +87,20 @@ beforeEach(() => {
   classroom.getStudentRecord.mockImplementation(async (id) => makeStudentRecordFixture(id)!);
   today.getToday.mockResolvedValue(makeTodayFixture());
   preferences.mockReturnValue({ preferences: { guides: { showAppTips: true } }, isLoading: false });
+  gradingFixture.resetGradingFixtureStore();
+  subjectsFixture.resetSubjectsFixtureStore();
+  grading.getSheet.mockImplementation(async (courseId, termId) => gradingFixture.makeCourseSheetFixture(courseId, termId));
+  grading.getReadiness.mockImplementation(async (classId) => gradingFixture.makeReadinessFixture(classId));
+  grading.getTermResults.mockImplementation(async (classId) => gradingFixture.makeTermResultsFixture(classId));
+  grading.getBroadsheet.mockImplementation(async (classId, basis) => gradingFixture.makeBroadsheetFixture(classId, basis));
+  grading.getRemarks.mockImplementation(async (classId) => gradingFixture.makeRemarksFixture(classId));
+  subjects.getMySubjects.mockImplementation(async (termId) => subjectsFixture.makeSubjectCardsFixture(termId));
+  subjects.getScheme.mockImplementation(async (courseId, termId) => subjectsFixture.makeSchemeFixture(courseId, termId)!);
+  subjects.getCourseResources.mockImplementation(async (courseId) => subjectsFixture.makeCourseResourcesFixture(courseId));
 });
 
-/** Each redesigned page: its path, the guide expected there, and how to render it ready. */
-const PAGES: { path: string; guide: string; mount: () => Promise<void> }[] = [
+/** Each redesigned page: its path (and query), the guide expected there, and how to render it ready. */
+const PAGES: { path: string; query?: string; guide: string; mount: () => Promise<void> }[] = [
   {
     path: "/dashboard",
     guide: "today",
@@ -125,11 +158,36 @@ const PAGES: { path: string; guide: string; mount: () => Promise<void> }[] = [
       await screen.findByRole("heading", { level: 1, name: "Musa Adele" });
     },
   },
+  {
+    path: "/grading",
+    guide: "grading",
+    mount: async () => {
+      render(<GradingScreen link={{}} />);
+      await screen.findByRole("heading", { name: "1st CA · Mathematics · JSS1 A · out of 20" });
+    },
+  },
+  {
+    path: "/grading",
+    query: "mode=class&classId=c1",
+    guide: "grading-class",
+    mount: async () => {
+      render(<GradingScreen link={{ mode: "class", classId: "c1" }} />);
+      await screen.findByRole("heading", { name: "JSS1 A · report readiness" });
+    },
+  },
+  {
+    path: "/subjects",
+    guide: "subjects",
+    mount: async () => {
+      render(<SubjectsScreen />);
+      await screen.findByRole("list", { name: /Weeks of the scheme of work/ });
+    },
+  },
 ];
 
-describe.each(PAGES)("guide on $path", ({ path, guide, mount }) => {
+describe.each(PAGES)("the $guide guide on $path", ({ path, query, guide, mount }) => {
   it(`is the '${guide}' guide and every target is on the page`, async () => {
-    const config = findGuideConfig(path);
+    const config = guideConfigFor(path, new URLSearchParams(query ?? ""));
     expect(config?.id).toBe(guide);
     await mount();
     const missing = config!.steps.map((s) => s.target).filter((t) => !document.querySelector(`[data-guide="${t}"]`));
@@ -146,11 +204,18 @@ describe("guide configs", () => {
 });
 
 describe("portal tour", () => {
-  it("covers Attendance and Students, and every step links to a page with a guide or its own screen", () => {
+  it("covers the redesigned pages, and every step links to a page with a guide or its own screen", () => {
     const hrefs = TOUR_STEPS.map((s) => s.href);
-    expect(hrefs).toEqual(expect.arrayContaining(["/dashboard", "/attendance", "/students", "/timetable"]));
-    for (const href of ["/dashboard", "/attendance", "/students", "/timetable"]) expect(findGuideConfig(href)).toBeDefined();
+    expect(hrefs).toEqual(expect.arrayContaining(["/dashboard", "/attendance", "/students", "/timetable", "/grading", "/grading?mode=class", "/subjects"]));
+    for (const href of hrefs) {
+      const url = new URL(href, "http://talim.test");
+      expect(guideConfigFor(url.pathname, url.searchParams)).toBeDefined();
+    }
+    expect(guideConfigFor("/grading", new URLSearchParams("mode=class"))?.id).toBe("grading-class");
+    expect(findGuideConfig("/grading")?.id).toBe("grading");
     expect(TOUR_STEPS.find((s) => s.href === "/students")?.linkLabel).toBe("Open Students");
+    expect(TOUR_STEPS.find((s) => s.href === "/grading?mode=class")?.title).toBe("Class report, as class teacher");
+    expect(TOUR_STEPS.find((s) => s.href === "/subjects")?.body).toMatch(/week-by-week scheme of work/);
   });
 });
 

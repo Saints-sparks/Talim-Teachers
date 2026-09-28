@@ -31,9 +31,15 @@ export const TOUR_STEPS: readonly TourStep[] = [
   },
   {
     title: "Scores save as drafts",
-    body: "Grading shows one assessment for one class. Type scores straight into the sheet; anything above the maximum turns red. Save a draft as often as you like. Publish only when every score is in, and the scores lock.",
+    body: "Grading shows one assessment for one class. Type scores straight into the sheet; anything above the maximum turns red. Save a draft as often as you like. Publish only when every score is in, and the scores lock; Unlock to correct reopens them if you spot a mistake.",
     href: "/grading",
     linkLabel: "Open Grading",
+  },
+  {
+    title: "Class report, as class teacher",
+    body: "Switch Grading to ‘Class report’ to see which colleagues have published, send them a reminder, and write the remark that prints on each report card. The summary can be sent to the school office once every subject is published.",
+    href: "/grading?mode=class",
+    linkLabel: "Open Class report",
   },
   {
     title: "Your students and their records",
@@ -43,7 +49,7 @@ export const TOUR_STEPS: readonly TourStep[] = [
   },
   {
     title: "Plan the term by week",
-    body: "Subjects holds the scheme of work for each class you teach. Write objectives, mark a week taught, and attach resources to the week they belong to. Students see resources in their own portal.",
+    body: "Subjects holds a week-by-week scheme of work for each class you teach, for the whole term. Write objectives, mark a week taught, and attach resources to the week they belong to. Students see resources in their own portal, and parents too if you allow it.",
     href: "/subjects",
     linkLabel: "Open Subjects",
   },
