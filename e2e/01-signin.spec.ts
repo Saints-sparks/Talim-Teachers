@@ -41,10 +41,14 @@ test.describe("teacher sign-in", () => {
     await context.close();
   });
 
-  test("the right password leaves the sign-in page and the dashboard opens", async ({ page }) => {
+  test("the right password leaves the sign-in page and Today opens", async ({ page }) => {
     await signInThroughUi(page, ACCOUNTS.teacher);
+    const today = page.waitForResponse((r) => r.url().endsWith("/teachers/today"));
     await page.goto("/dashboard");
-    await expect(page.getByText(/Good (morning|afternoon|evening), Tolu/)).toBeVisible();
+    expect((await today).status()).toBe(200);
+    await expect(page.getByRole("heading", { level: 1, name: /Good (morning|afternoon|evening), Tolu/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Your day" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /^Today/ })).toHaveAttribute("aria-current", "page");
   });
 
   test("a student account is refused by the teachers portal with an explanation", async ({ page }) => {

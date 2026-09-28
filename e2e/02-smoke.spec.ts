@@ -27,10 +27,22 @@ export const ALLOW: readonly Allowed[] = [
 
 test.use({ storageState: authFile("teacher") });
 
+test("the sidebar groups the pages under Teach, Classes and Inbox", async ({ page }) => {
+  await page.goto("/dashboard");
+  const nav = page.getByRole("navigation", { name: "Teacher portal" });
+  for (const group of ["Teach", "Classes", "Inbox"]) await expect(nav.getByRole("heading", { name: group })).toBeVisible();
+  for (const spec of TEACHER_PAGES.filter((p) => p.path !== "/settings")) {
+    await expect(nav.locator(`a[href="${spec.path}"]`)).toContainText(spec.label);
+  }
+  await expect(nav.getByRole("link", { name: /^Today/ })).toHaveAttribute("aria-current", "page");
+});
+
 for (const spec of TEACHER_PAGES) {
   test(`teacher can open ${spec.path}`, async ({ page, monitor }) => {
     monitor.clear();
+    const fed = spec.feed ? page.waitForResponse((r) => spec.feed!.test(new URL(r.url()).pathname + new URL(r.url()).search)) : null;
     await page.goto(spec.path);
+    if (fed) expect((await fed).status(), `${spec.path} reads its data`).toBe(200);
 
     // Loading -> content: no skeleton may outlive the data.
     await expect(page.locator(".animate-pulse:visible")).toHaveCount(0, { timeout: 30_000 });

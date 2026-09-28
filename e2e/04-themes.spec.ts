@@ -34,7 +34,9 @@ for (const theme of ["light", "dark"] as const) {
 
       const results: PageContrast[] = [];
       for (const spec of TEACHER_PAGES) {
+        const fed = spec.feed ? page.waitForResponse((r) => spec.feed!.test(new URL(r.url()).pathname + new URL(r.url()).search)) : null;
         await page.goto(spec.path);
+        if (fed) expect((await fed).status(), `${spec.path} reads its data`).toBe(200);
         await expect(page.locator(".animate-pulse:visible")).toHaveCount(0, { timeout: 30_000 });
         await expect(page.getByText(spec.content).filter({ visible: true }).first()).toBeVisible();
         await dismissGuide(page, 2_000); // the first-visit tour dims the page and would skew every contrast reading
