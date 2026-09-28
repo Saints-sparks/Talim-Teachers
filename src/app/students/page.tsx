@@ -1,19 +1,33 @@
 "use client";
+
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Layout from "@/components/Layout";
-import StudentGrid from "@/components/students/StudentGrid";
+import { StudentsScreen } from "@/components/students/StudentsScreen";
 
 /**
- * The students page: class chooser, then the chosen class's roster.
+ * Reads `?classId=` for the tab to open.
+ *
+ * @returns The screen.
+ */
+function StudentsFromQuery() {
+  const params = useSearchParams();
+  return <StudentsScreen initialClassId={params.get("classId") || undefined} />;
+}
+
+/**
+ * Students (`/students?classId=`): the classes the teacher teaches and their
+ * rosters. Data: `GET /teachers/me/classes` and
+ * `GET /teachers/me/classes/:classId/students`.
  *
  * @returns The page.
  */
-const StudentPage: React.FC = () => {
+export default function StudentsPage() {
   return (
     <Layout>
-      <div className="bg-[#F8F8F8] min-h-screen dark:bg-[#0F1629]">
-        <StudentGrid />
-      </div>
+      <Suspense fallback={null}>
+        <StudentsFromQuery />
+      </Suspense>
     </Layout>
   );
-};
-export default StudentPage;
+}

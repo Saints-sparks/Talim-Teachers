@@ -95,6 +95,8 @@ export type CurriculumByCourseTermBody = RequestBody<"/curriculum/by-course-term
 
 // ─── Chat ───────────────────────────────────────────────────────────────────
 
+/** `POST /chat/rooms` (a direct message is `type: "one_to_one"` with both user ids). */
+export type CreateChatRoomBody = RequestBody<"/chat/rooms">;
 /** `POST /chat/groups`. */
 export type CreateGroupChatBody = RequestBody<"/chat/groups">;
 /** `PATCH /chat/rooms/:roomId`. */

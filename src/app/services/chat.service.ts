@@ -10,7 +10,8 @@
  */
 import { ChatRoom } from "@/types/chat";
 import { api, apiClient } from "@/lib/apiClient";
-import type { AddChatParticipantsBody, CreateGroupChatBody, UpdateChatRoomBody } from "@/types/apiPayloads";
+import type { AddChatParticipantsBody, CreateChatRoomBody, CreateGroupChatBody, UpdateChatRoomBody } from "@/types/apiPayloads";
+import { fixturesEnabled } from "@/lib/fixtures/flag";
 
 /**
  * `CreateGroupChatDto` from the generated contract — the server rejects any
@@ -153,4 +154,24 @@ export const removeChatParticipant = async (roomId: string, userId: string): Pro
  */
 export const deleteChatMessage = async (messageId: string): Promise<void> => {
   await api.delete(`/chat/messages/${encodeURIComponent(messageId)}`);
+};
+
+/**
+ * Opens a direct conversation with another member of the school:
+ * `POST /chat/rooms` with `type: "one_to_one"` and both user ids. The server
+ * returns the existing room when the two already have one, so this is safe to
+ * call every time "Message" is pressed.
+ *
+ * @param otherUserId - The person to message (e.g. a guardian's `userId`).
+ * @param myUserId - The signed-in user's id (the server requires it among the participants).
+ * @returns The room's id, for `/messages?room=`.
+ * @throws ApiError when the other person is not in the caller's school or the room cannot be created.
+ */
+export const startDirectChat = async (otherUserId: string, myUserId: string): Promise<string> => {
+  if (fixturesEnabled()) return `dm-${otherUserId}`;
+  const body: CreateChatRoomBody = { type: "one_to_one", participants: [myUserId, otherUserId] };
+  const room = await api.post<CreatedChatRoom>("/chat/rooms", body);
+  const id = room?._id || room?.roomId;
+  if (!id) throw new Error("The conversation could not be opened.");
+  return String(id);
 };
