@@ -83,7 +83,7 @@ export function rosterCsv(roster: ClassRoster): { filename: string; csv: string 
     roster.class.name,
     typeof s.attendanceRateTerm === "number" ? `${s.attendanceRateTerm}%` : "",
     s.guardian?.name,
-    s.guardian?.relationship,
+    relationshipLabel(s.guardian?.relationship),
     s.guardian?.phone,
     s.guardian?.email,
   ]);
@@ -124,6 +124,18 @@ export function studentDetails(record: StudentRecord): { label: string; value: s
 }
 
 /**
+ * A relationship as people write it: the stored contact says `FATHER`,
+ * the page says "Father".
+ *
+ * @param relationship - As stored, or null.
+ * @returns Sentence case, or "" when there is none.
+ */
+export function relationshipLabel(relationship: string | null | undefined): string {
+  const r = (relationship ?? "").trim().replace(/_/g, " ");
+  return r ? r.charAt(0).toUpperCase() + r.slice(1).toLowerCase() : "";
+}
+
+/**
  * The guardian card's fields.
  *
  * @param guardian - The guardian.
@@ -134,7 +146,7 @@ export function guardianDetails(guardian: StudentGuardian): { label: string; val
   // null), so their rows only appear when there is something to show.
   return [
     { label: "Full name", value: guardian.name },
-    { label: "Relationship", value: guardian.relationship || NOT_RECORDED },
+    { label: "Relationship", value: relationshipLabel(guardian.relationship) || NOT_RECORDED },
     ...(guardian.occupation ? [{ label: "Occupation", value: guardian.occupation }] : []),
     { label: "Email", value: guardian.email || NOT_RECORDED },
     { label: "Phone", value: guardian.phone || NOT_RECORDED },
@@ -225,8 +237,12 @@ export function courseSummary(c: StudentCourseScores): { total: string; grade: s
     n === 0
       ? "No assessments have been set for this course yet."
       : c.complete
-        ? `Total out of ${maxTotal} across all ${n === 3 ? "three" : n} assessments.`
-        : `${entered} of ${n} assessments entered. Grade and position appear once all ${n === 3 ? "three" : n} are in.`;
+        ? n === 1
+          ? `Total out of ${maxTotal} from the one assessment.`
+          : `Total out of ${maxTotal} across all ${n === 3 ? "three" : n} assessments.`
+        : n === 1
+          ? "The assessment is not entered yet. Grade and position appear once it is in."
+          : `${entered} of ${n} assessments entered. Grade and position appear once all ${n === 3 ? "three" : n} are in.`;
   return {
     total: c.total === null ? DASH : String(c.total),
     grade: c.complete && c.grade ? c.grade : DASH,

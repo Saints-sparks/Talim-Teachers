@@ -10,7 +10,7 @@ import { StatTile } from "@/components/tl/StatTile";
 import { card, cardTitle, focusRing, ghostButton, pagePad, pageTitle, primaryButton } from "@/components/tl/styles";
 import { downloadCsv } from "@/app/services/grading-workspace/grade-csv";
 import { useMyClasses } from "@/hooks/attendance/useRegister";
-import { filterRoster, rosterCsv, rosterTiles } from "@/hooks/students/students.logic";
+import { filterRoster, relationshipLabel, rosterCsv, rosterTiles } from "@/hooks/students/students.logic";
 import { useClassRoster } from "@/hooks/students/useClassroomStudents";
 import { ApiError, getErrorMessage } from "@/lib/apiError";
 
@@ -181,7 +181,7 @@ export function StudentsScreen({ initialClassId }: StudentsScreenProps) {
               }`}
             >
               <span>{c.name}</span>
-              <span className="text-xs font-bold opacity-90">{c.role === "class_teacher" ? "Class teacher" : "Subject teacher"}</span>
+              <span className="text-xs font-bold">{c.role === "class_teacher" ? "Class teacher" : "Subject teacher"}</span>
             </button>
           );
         })}
@@ -261,7 +261,7 @@ export function StudentsScreen({ initialClassId }: StudentsScreenProps) {
                               {s.guardian ? (
                                 <>
                                   <div className="text-sm font-bold text-tl-ink">{s.guardian.name}</div>
-                                  <div className="mt-0.5 text-xs text-tl-faint">{s.guardian.relationship ?? "Guardian"}</div>
+                                  <div className="mt-0.5 text-xs text-tl-faint">{relationshipLabel(s.guardian.relationship) || "Guardian"}</div>
                                 </>
                               ) : (
                                 <span className="text-sm text-tl-muted">No guardian on record</span>
@@ -287,7 +287,7 @@ export function StudentsScreen({ initialClassId }: StudentsScreenProps) {
                             <span className="block text-[15px] font-bold text-tl-ink">{s.name}</span>
                             <span className="mt-0.5 block text-[13px] text-tl-muted">{s.admissionNumber ?? "No admission number"}</span>
                             <span className="mt-0.5 block truncate text-[13px] text-tl-faint">
-                              {s.guardian ? `${s.guardian.name}${s.guardian.relationship ? ` · ${s.guardian.relationship}` : ""}` : "No guardian on record"}
+                              {s.guardian ? `${s.guardian.name}${s.guardian.relationship ? ` · ${relationshipLabel(s.guardian.relationship)}` : ""}` : "No guardian on record"}
                             </span>
                           </span>
                           <ChevronRight aria-hidden className="h-4 w-4 shrink-0 text-tl-muted" />

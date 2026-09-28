@@ -16,7 +16,7 @@ import {
   makeStudentRecordFixture,
   resetClassroomFixtureStore,
 } from "@/lib/fixtures/classroom.fixture";
-import { courseSummary, filterRoster, formatDob, guardianDetails, ordinal, rosterCsv, rosterTiles, scoreBar, telHref } from "@/hooks/students/students.logic";
+import { courseSummary, filterRoster, formatDob, guardianDetails, ordinal, relationshipLabel, rosterCsv, rosterTiles, scoreBar, telHref } from "@/hooks/students/students.logic";
 import type { StudentCourseScores } from "@/types/classroom";
 
 const push = jest.fn();
@@ -108,6 +108,26 @@ describe("students logic", () => {
     expect(guardianDetails(base).map((r) => r.label)).toEqual(["Full name", "Relationship", "Email", "Phone"]);
     const full = guardianDetails({ ...base, occupation: "Nurse", address: "7 Allen Avenue" }).map((r) => r.label);
     expect(full).toEqual(["Full name", "Relationship", "Occupation", "Email", "Phone", "Home address"]);
+  });
+
+  it("writes a stored relationship the way people do", () => {
+    expect(relationshipLabel("FATHER")).toBe("Father");
+    expect(relationshipLabel("LEGAL_GUARDIAN")).toBe("Legal guardian");
+    expect(relationshipLabel(null)).toBe("");
+  });
+
+  it("words the course note for a single assessment", () => {
+    const one = (score: number | null): StudentCourseScores => ({
+      course: { id: "c", code: "M", title: "Maths" },
+      className: "5A",
+      assessments: [{ id: "a", name: "CA 1", maxScore: 100, score, classAverage: null, status: score === null ? "not_entered" : "published" }],
+      total: score,
+      grade: score === null ? null : "A",
+      position: score === null ? null : { rank: 1, of: 2 },
+      complete: score !== null,
+    });
+    expect(courseSummary(one(82)).note).toBe("Total out of 100 from the one assessment.");
+    expect(courseSummary(one(null)).note).toBe("The assessment is not entered yet. Grade and position appear once it is in.");
   });
 
   it("formats ordinals, dates of birth and phone links", () => {
