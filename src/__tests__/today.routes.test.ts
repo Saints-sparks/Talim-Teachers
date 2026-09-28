@@ -43,6 +43,12 @@ describe("Take register", () => {
     expect(action).toMatchObject({ kind: "take", href: "/attendance/class/b?date=2026-09-25" });
   });
 
+  it("skips a class with no students", () => {
+    const action = pickRegisterAction([reg({ classId: "empty", studentCount: 0 }), reg({ classId: "b" })], "2026-09-25", true);
+    expect(action).toMatchObject({ kind: "take", href: "/attendance/class/b?date=2026-09-25" });
+    expect(pickRegisterAction([reg({ studentCount: 0 })], "2026-09-25", true).kind).toBe("hidden");
+  });
+
   it("reports 'submitted' once every register is in", () => {
     expect(pickRegisterAction([reg({ submittedAt: "2026-09-25T07:44:00Z" })], "2026-09-25", true).kind).toBe("submitted");
   });

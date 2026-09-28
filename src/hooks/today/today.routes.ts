@@ -132,7 +132,8 @@ export type RegisterAction =
  */
 export function pickRegisterAction(registers: readonly RegisterStatus[], date: string, isSchoolDay: boolean): RegisterAction {
   if (!isSchoolDay) return { kind: "hidden" };
-  const mine = registers.filter((r) => r.isClassTeacher);
+  // A class with no students has no register to take (the server does not count it as pending either).
+  const mine = registers.filter((r) => r.isClassTeacher && r.studentCount > 0);
   if (mine.length === 0) return { kind: "hidden" };
   const open = mine.find((r) => !r.submittedAt);
   if (open) return { kind: "take", register: open, href: registerRoute(open.classId, date) };
