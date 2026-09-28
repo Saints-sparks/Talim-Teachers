@@ -152,7 +152,8 @@ export function AttendanceScreen({ initialClassId, initialDate }: AttendanceScre
     setSearch("");
   };
 
-  const students = editor.students;
+  // While the next class or day loads, the previous register stays on screen (dimmed, read-only).
+  const students = view ? editor.students : (shown?.students ?? []);
   const editable = view ? canEditRegister(view, editor.editing) : false;
   const counts = useMemo(() => countRegister(students), [students]);
   const progress = registerProgress(students);
