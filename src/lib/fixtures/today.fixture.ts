@@ -326,7 +326,7 @@ export function makeTimetableWeekFixture(): TimetableWeek {
     now: FIXTURE_NOW,
     today: FIXTURE_TODAY,
     term: { id: "term-1", name: "First term", startDate: "2026-09-07", endDate: "2026-12-11", totalWeeks: 14 },
-    week: { number: 3, start: "2026-09-21", end: "2026-09-25", isCurrent: true, prevStart: "2026-09-14", nextStart: "2026-09-28", inTerm: true },
+    week: { number: 3, start: "2026-09-21", end: "2026-09-27", isCurrent: true, prevStart: "2026-09-14", nextStart: "2026-09-28", inTerm: true },
     days,
     periods: FIXTURE_PERIODS.map((p) => ({ ...p })),
     periodsSource: "school",

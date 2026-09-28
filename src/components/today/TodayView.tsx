@@ -122,7 +122,7 @@ export function TodayView({ today, nowMs, firstName, onUpload, onTour }: TodayVi
         </p>
       ) : null}
 
-      <div className="grid items-start gap-[18px] min-[1180px]:grid-cols-2">
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-[18px] min-[1180px]:grid-cols-2">
         {live.phase.kind !== "none" ? (
           <div className="order-1 min-[1180px]:col-start-2">
             <NowCard

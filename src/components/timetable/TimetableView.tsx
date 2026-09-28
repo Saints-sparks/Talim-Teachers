@@ -38,7 +38,9 @@ export function timetableLine(week: TimetableWeek): string {
   const n = week.lessons.length;
   const subjects = subjectCount(week.lessons);
   const counts = n ? ` · ${n} ${n === 1 ? "lesson" : "lessons"} across ${subjects} ${subjects === 1 ? "subject" : "subjects"}` : "";
-  return `${weekLabel(week.week)}${counts}`;
+  // `week.end` is the Sunday; the heading spans the school days shown (Monday to Friday).
+  const lastDay = week.days[week.days.length - 1]?.date ?? week.week.end;
+  return `${weekLabel({ ...week.week, end: lastDay })}${counts}`;
 }
 
 /**
