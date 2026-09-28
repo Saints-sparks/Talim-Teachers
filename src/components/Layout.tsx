@@ -99,9 +99,9 @@ function Layout({ children }: LayoutProps) {
             dateLine={topBarDate(nowMs, today.data?.timezone)}
             unreadNotifications={counts.unreadNotifications}
           />
-          <div data-print-root className="min-w-0 flex-1 overflow-y-auto print:overflow-visible">
+          <main data-print-root className="min-w-0 flex-1 overflow-y-auto print:overflow-visible">
             {children}
-          </div>
+          </main>
         </div>
         <Suspense fallback={null}>
           <AppGuide />

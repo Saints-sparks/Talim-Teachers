@@ -154,7 +154,7 @@ export default function SettingsPage() {
           </div>
         </aside>
 
-        <main className="min-h-0 flex-1 overflow-y-auto bg-gray-50 dark:bg-slate-950">
+        <div className="min-h-0 flex-1 overflow-y-auto bg-gray-50 dark:bg-slate-950">
           <div className="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6 lg:px-10 lg:py-8">
             <div className="mb-6 hidden items-center justify-end md:flex">
               <Link
@@ -167,7 +167,7 @@ export default function SettingsPage() {
             </div>
             <ActiveSection />
           </div>
-        </main>
+        </div>
       </div>
     </Layout>
   );
