@@ -7,7 +7,7 @@
  * - `GET /teachers/me/classes/:classId/students`
  * - `GET /teachers/me/students/:studentId`
  *
- * Shapes are the hand-written contract types in `src/types/classroom.ts`.
+ * Shapes are the generated-contract aliases in `src/types/classroom.ts`.
  * Every call goes through the typed client, which unwraps the success
  * envelope either way. With `NEXT_PUBLIC_USE_FIXTURES=true` in a dev build
  * the calls answer from `src/lib/fixtures/classroom.fixture.ts`.
@@ -15,7 +15,7 @@
 import { api } from "@/lib/apiClient";
 import { ApiError, type ApiErrorBody } from "@/lib/apiError";
 import { fixturesEnabled } from "@/lib/fixtures/flag";
-import type { ClassRoster, MyClass, RegisterMissingBody, RegisterView, SaveRegisterBody, StudentRecord } from "@/types/classroom";
+import type { ClassRoster, MyClass, RegisterMissingBody, RegisterSaved, RegisterView, SaveRegisterBody, StudentRecord } from "@/types/classroom";
 
 /**
  * The fixture's 404 for an unknown id, shaped like the API's.
@@ -69,7 +69,7 @@ export const classroomService = {
    * @returns The register after the save (same shape as the GET).
    * @throws ApiError: 409 with a top-level `missing` count when a submit leaves students unmarked (read it with `missingFromError`); 403 when the caller may only view.
    */
-  saveRegister: async (classId: string, date: string | undefined, body: SaveRegisterBody): Promise<RegisterView> => {
+  saveRegister: async (classId: string, date: string | undefined, body: SaveRegisterBody): Promise<RegisterSaved> => {
     if (fixturesEnabled()) {
       const { saveRegisterFixture, FixtureRegisterIncomplete } = await import("@/lib/fixtures/classroom.fixture");
       try {
@@ -88,7 +88,7 @@ export const classroomService = {
         throw error;
       }
     }
-    return api.put<RegisterView>(`/registers/${encodeURIComponent(classId)}`, body, { params: { date } });
+    return api.put<RegisterSaved>(`/registers/${encodeURIComponent(classId)}`, body, { params: { date } });
   },
 
   /**

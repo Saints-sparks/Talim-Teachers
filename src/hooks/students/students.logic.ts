@@ -130,13 +130,15 @@ export function studentDetails(record: StudentRecord): { label: string; value: s
  * @returns Label and value pairs.
  */
 export function guardianDetails(guardian: StudentGuardian): { label: string; value: string }[] {
+  // Occupation and address are not stored anywhere yet (the API answers
+  // null), so their rows only appear when there is something to show.
   return [
     { label: "Full name", value: guardian.name },
     { label: "Relationship", value: guardian.relationship || NOT_RECORDED },
-    { label: "Occupation", value: guardian.occupation || NOT_RECORDED },
+    ...(guardian.occupation ? [{ label: "Occupation", value: guardian.occupation }] : []),
     { label: "Email", value: guardian.email || NOT_RECORDED },
     { label: "Phone", value: guardian.phone || NOT_RECORDED },
-    { label: "Home address", value: guardian.address || NOT_RECORDED },
+    ...(guardian.address ? [{ label: "Home address", value: guardian.address }] : []),
   ];
 }
 

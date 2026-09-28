@@ -262,17 +262,16 @@ export function pruneSaved(overlay: MarkOverlay, server: readonly RegisterStuden
 }
 
 /**
- * How many parents a submit notifies: the server's `notified` when it sends
- * one, else every absent student on a first submit and only the newly absent
- * on a resubmit (the contract's rule).
+ * How many parents a submit would notify, for the footer before it is sent:
+ * every absent student on a first submit, only the newly absent on a
+ * resubmit (the contract's rule). After a submit the toast uses the
+ * response's `notified` instead.
  *
  * @param students - The merged students being submitted.
  * @param absentAtLastSubmit - Ids absent when the register was last submitted (empty on a first submit).
- * @param serverCount - The response's `notified`, if present.
  * @returns The count.
  */
-export function parentsToNotify(students: readonly RegisterStudent[], absentAtLastSubmit: readonly string[], serverCount?: number): number {
-  if (typeof serverCount === "number") return serverCount;
+export function parentsToNotify(students: readonly RegisterStudent[], absentAtLastSubmit: readonly string[]): number {
   return students.filter((s) => s.status === "absent" && !absentAtLastSubmit.includes(s.id)).length;
 }
 

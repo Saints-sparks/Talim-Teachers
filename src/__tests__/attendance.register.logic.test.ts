@@ -138,6 +138,14 @@ describe("banner", () => {
     expect(noTerm.readOnlyReason).toBe("not_school_day");
     expect(registerBanner(noTerm, false, NOW, TZ)?.text).toBe("This day is outside the term, so there is no register.");
   });
+
+  it("uses the API's precedence: a course teacher on a past day sees 'past', at a weekend 'not_school_day'", () => {
+    expect(makeRegisterFixture("c2", "2026-09-24").readOnlyReason).toBe("past");
+    expect(makeRegisterFixture("c2", "2026-09-19").readOnlyReason).toBe("not_school_day");
+    expect(makeRegisterFixture("c2", "2026-09-28").readOnlyReason).toBe("future");
+    expect(makeRegisterFixture("c2").readOnlyReason).toBe("not_class_teacher");
+    expect(makeRegisterFixture("c1").today).toBe(makeRegisterFixture("c1").date);
+  });
 });
 
 describe("saving", () => {
@@ -171,7 +179,6 @@ describe("saving", () => {
     });
     expect(parentsToNotify(merged, [])).toBe(2);
     expect(parentsToNotify(merged, ["s1"])).toBe(1);
-    expect(parentsToNotify(merged, [], 5)).toBe(5);
     expect(submittedMessage("JSS1 A", 2)).toBe("Register for JSS1 A submitted. 2 absent parents have been notified.");
     expect(submittedMessage("JSS1 A", 1)).toBe("Register for JSS1 A submitted. 1 absent parent has been notified.");
   });

@@ -223,7 +223,7 @@ export function useRegisterEditor(view: RegisterView | undefined, dateParam: str
       setOverlay({});
       setEditing(false);
       setDraft({ kind: "idle" });
-      toast.success(submittedMessage(view.class.name, parentsToNotify(students, absentAtLastSubmit, saved.notified)));
+      toast.success(submittedMessage(view.class.name, saved.notified));
       // Today's badges, attention list and class cards, and the Students stats, all read the register.
       void queryClient.invalidateQueries({ queryKey: queryKeys.teacher.today(schoolId, userId) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.classroom.roster(schoolId, view.class.id) });
@@ -241,7 +241,7 @@ export function useRegisterEditor(view: RegisterView | undefined, dateParam: str
     } finally {
       setSubmitting(false);
     }
-  }, [view, students, absentAtLastSubmit, queryClient, key, schoolId, userId]);
+  }, [view, students, queryClient, key, schoolId, userId]);
 
   return {
     students,

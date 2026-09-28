@@ -3,169 +3,103 @@
  * screens: "Round 2" sections 11–14 of
  * `talimBE-V2/docs/redesign-teachers-today-timetable.md`.
  *
- * HAND-WRITTEN FROM THE CONTRACT. The backend for these routes was being
- * built in parallel, so they are not in the generated `./api.d.ts` yet. Once
- * `npm run types:api` picks them up, replace each type below with an alias of
- * the generated schema (as `./today.ts` does) and delete the hand-written
- * body; `tsc` then shows any drift.
+ * These are ALIASES of the generated contract (`./api.d.ts`, refreshed with
+ * `npm run types:api`), as `./today.ts` does, so a backend shape change fails
+ * `tsc` instead of rendering `undefined`. Where the contract's sections and
+ * its "Round 2 as built" list disagree, the as-built list (and so these
+ * types) wins:
+ *
+ * - the roster's `class.role` can be `'staff'` for a school admin or sub-admin;
+ * - `leave.requestedBy` is the name of the student's parent;
+ * - the guardian's `occupation` and `address` are always null (nothing stores
+ *   them), so the record hides those rows when null;
+ * - the register carries `today` (the school's current date) and a save
+ *   answers `notified` (parents told by that call);
+ * - `readOnlyReason` is the most specific reason, in this order:
+ *   `not_school_day` > `future` > `past` (never for staff) >
+ *   `not_class_teacher` > `after_edit_window`.
  *
  * Conventions: dates are `YYYY-MM-DD` school-calendar days; `closesAt`,
  * `editableUntil`, `submittedAt` and `lastEditedAt` are ISO instants; every
  * list is already sorted by the server (classes: class-teacher classes first,
  * then by name; students: by name).
  *
- * Fields marked PROPOSED are not in the contract; the UI works without them.
+ * Hand-written on purpose: `RegisterMissingBody`, because the 409 error
+ * envelope is not in the generated responses (only `missing` is typed).
  */
+import type { components } from "./api";
 
-/** The caller's role in a class. */
-export type ClassRole = "class_teacher" | "subject_teacher";
+type S = components["schemas"];
+
+/** The caller's role in a class; `staff` only for school admins on the roster. */
+export type ClassRole = S["RosterClassDto"]["role"];
 
 /** A course as the class and roster routes summarise it. */
-export interface CourseSummary {
-  id: string;
-  code: string;
-  title: string;
-}
+export type CourseSummary = S["ClassCourseDto"];
 
 /**
  * `GET /teachers/me/classes` (section 11): one class the teacher teaches or
  * is class teacher of. `courses` are the ones the caller teaches in it.
  */
-export interface MyClass {
-  id: string;
-  name: string;
-  role: ClassRole;
-  studentCount: number;
-  capacity: number | null;
-  courses: CourseSummary[];
-}
+export type MyClass = S["MyClassDto"];
 
 /** A mark the teacher can set. `on_leave` comes from the office, never the teacher. */
-export type MarkStatus = "present" | "late" | "absent";
-
-/** A student's status on a register; null while unmarked. */
-export type RegisterStudentStatus = MarkStatus | "on_leave" | null;
-
-/** Why a register is read-only for the caller (section 12). */
-export type RegisterReadOnlyReason = "past" | "future" | "not_class_teacher" | "after_edit_window" | "not_school_day";
-
-/** Approved leave covering the register's date. */
-export interface RegisterLeave {
-  id: string;
-  type: string;
-  /** Who asked for it (usually the guardian's name), or null. */
-  requestedBy: string | null;
-}
+export type MarkStatus = S["RegisterMarkDto"]["status"];
 
 /** One student on a register. */
-export interface RegisterStudent {
-  id: string;
-  name: string;
-  firstName: string;
-  admissionNumber: string | null;
-  avatarUrl: string | null;
-  status: RegisterStudentStatus;
-  absenceReason: string | null;
-  /** A note for the school office (new optional field on Attendance). */
-  note: string | null;
-  leave: RegisterLeave | null;
-}
+export type RegisterStudent = S["RegisterStudentDto"];
+
+/** A student's status on a register; null while unmarked. */
+export type RegisterStudentStatus = RegisterStudent["status"];
+
+/** Approved leave covering the register's date; `requestedBy` is the parent's name. */
+export type RegisterLeave = S["RegisterLeaveDto"];
 
 /** The counts shown in the five stat tiles. */
-export interface RegisterCounts {
-  present: number;
-  late: number;
-  absent: number;
-  onLeave: number;
-  unmarked: number;
-}
+export type RegisterCounts = S["RegisterCountsDto"];
 
 /**
- * `GET /registers/:classId?date=` and the response of
- * `PUT /registers/:classId?date=` (section 12).
+ * `GET /registers/:classId?date=` (section 12).
  *
  * `access` is `edit` only for the class teacher (or staff), on today, on a
  * school day, before `editableUntil`; staff may also edit past days.
- * Otherwise `readOnlyReason` says why. Future dates answer 200 with
- * `access: 'view'` and `readOnlyReason: 'future'`.
+ * Otherwise `readOnlyReason` says why (precedence in the header comment).
+ * `today` is the school's current date.
  */
-export interface RegisterView {
-  class: { id: string; name: string };
-  date: string;
-  isToday: boolean;
-  term: { id: string; name: string; startDate: string; endDate: string } | null;
-  schoolDay: {
-    isSchoolDay: boolean;
-    reason: null | "weekend" | "holiday" | "no_term";
-    holidayTitle: string | null;
-  };
-  closesAt: string;
-  editableUntil: string;
-  submittedAt: string | null;
-  submittedBy: { id: string; name: string } | null;
-  lastEditedAt: string | null;
-  /** True for a legacy day before register tracking, counted submitted because everyone had a row. */
-  inferred: boolean;
-  access: "edit" | "view";
-  readOnlyReason: RegisterReadOnlyReason | null;
-  counts: RegisterCounts;
-  students: RegisterStudent[];
-  /**
-   * PROPOSED, not in the contract: how many parents the last submit notified.
-   * Without it the client counts them itself (every absent student on the
-   * first submit; only newly absent ones on a resubmit).
-   */
-  notified?: number;
-}
+export type RegisterView = S["RegisterSheetDto"];
+
+/** Why a register is read-only for the caller. */
+export type RegisterReadOnlyReason = NonNullable<RegisterView["readOnlyReason"]>;
+
+/** `PUT /registers/:classId?date=`: the register after the save, plus the parents this call `notified`. */
+export type RegisterSaved = S["RegisterSaveDto"];
 
 /** One mark in a `PUT /registers/:classId` body. */
-export interface RegisterMark {
-  studentId: string;
-  status: MarkStatus;
-  absenceReason?: string;
-  note?: string;
-}
+export type RegisterMark = S["RegisterMarkDto"];
 
 /**
  * Body of `PUT /registers/:classId?date=`. `submit: false` saves a draft;
- * `submit: true` needs every student not on leave marked, else 409.
+ * `submit: true` needs every student not on leave marked, else 409 (the
+ * marks sent are still saved).
  */
-export interface SaveRegisterBody {
-  marks: RegisterMark[];
-  submit: boolean;
-}
+export type SaveRegisterBody = S["SaveRegisterDto"];
 
 /**
  * The 409 body of an incomplete submit: `missing` sits at the top level of
  * the standard error envelope.
  */
-export interface RegisterMissingBody {
+export type RegisterMissingBody = S["RegisterIncompleteDto"] & {
   success?: false;
   statusCode?: 409;
   message?: string;
   error?: { code?: string; message?: string };
-  missing: number;
-}
+};
 
 /** A guardian as the roster shows it. */
-export interface RosterGuardian {
-  name: string;
-  relationship: string | null;
-  phone: string | null;
-  email: string | null;
-}
+export type RosterGuardian = S["RosterGuardianDto"];
 
 /** One student on a class roster. */
-export interface RosterStudent {
-  id: string;
-  name: string;
-  firstName: string;
-  admissionNumber: string | null;
-  email: string | null;
-  avatarUrl: string | null;
-  attendanceRateTerm: number | null;
-  guardian: RosterGuardian | null;
-}
+export type RosterStudent = S["RosterStudentDto"];
 
 /**
  * `GET /teachers/me/classes/:classId/students` (section 13). Attendance rates
@@ -173,63 +107,22 @@ export interface RosterStudent {
  * leave and Excused are left out. `absentToday` is null until today's
  * register is submitted.
  */
-export interface ClassRoster {
-  class: { id: string; name: string; role: ClassRole; capacity: number | null; studentCount: number };
-  stats: { attendanceRateTerm: number | null; absentToday: number | null; registerSubmitted: boolean };
-  courses: CourseSummary[];
-  students: RosterStudent[];
-}
+export type ClassRoster = S["ClassRosterDto"];
 
 /** One assessment's score for one student in one course. */
-export interface StudentAssessmentScore {
-  id: string;
-  name: string;
-  maxScore: number | null;
-  score: number | null;
-  classAverage: number | null;
-  status: "published" | "draft" | "not_entered";
-}
+export type StudentAssessmentScore = S["StudentAssessmentScoreDto"];
 
 /** A course's scores for one student. `position` is only given when `complete`. */
-export interface StudentCourseScores {
-  course: CourseSummary;
-  className: string;
-  assessments: StudentAssessmentScore[];
-  total: number | null;
-  grade: string | null;
-  position: { rank: number; of: number } | null;
-  complete: boolean;
-}
+export type StudentCourseScores = S["StudentCourseScoresDto"];
 
-/** The student's guardian on the record; `userId` is null when they have no Talim account. */
-export interface StudentGuardian {
-  userId: string | null;
-  name: string;
-  relationship: string | null;
-  occupation: string | null;
-  email: string | null;
-  phone: string | null;
-  address: string | null;
-}
+/**
+ * The student's guardian on the record; `userId` is null when they have no
+ * Talim account. `occupation` and `address` are always null today.
+ */
+export type StudentGuardian = S["StudentRecordGuardianDto"];
 
 /**
  * `GET /teachers/me/students/:studentId` (section 14). `scores` covers only
  * the courses the caller teaches (staff: all of the student's courses).
  */
-export interface StudentRecord {
-  student: {
-    id: string;
-    name: string;
-    firstName: string;
-    admissionNumber: string | null;
-    class: { id: string; name: string };
-    dateOfBirth: string | null;
-    gender: string | null;
-    email: string | null;
-    avatarUrl: string | null;
-  };
-  school: { name: string };
-  guardian: StudentGuardian | null;
-  attendance: { rate: number | null; schoolDays: number; present: number; late: number; absent: number; onLeave: number };
-  scores: StudentCourseScores[];
-}
+export type StudentRecord = S["StudentRecordDto"];

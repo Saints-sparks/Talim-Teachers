@@ -16,7 +16,7 @@ import {
   makeStudentRecordFixture,
   resetClassroomFixtureStore,
 } from "@/lib/fixtures/classroom.fixture";
-import { courseSummary, filterRoster, formatDob, ordinal, rosterCsv, rosterTiles, scoreBar, telHref } from "@/hooks/students/students.logic";
+import { courseSummary, filterRoster, formatDob, guardianDetails, ordinal, rosterCsv, rosterTiles, scoreBar, telHref } from "@/hooks/students/students.logic";
 import type { StudentCourseScores } from "@/types/classroom";
 
 const push = jest.fn();
@@ -101,6 +101,13 @@ describe("students logic", () => {
     expect(summary.note).toBe("Total out of 100 across all three assessments.");
     const none: StudentCourseScores = { ...partial, assessments: [], total: null, complete: false };
     expect(courseSummary(none).note).toBe("No assessments have been set for this course yet.");
+  });
+
+  it("hides the guardian's occupation and address rows while the API answers null", () => {
+    const base = { userId: "u1", name: "Kemi Femi", relationship: "Mother", email: null, phone: null, occupation: null, address: null };
+    expect(guardianDetails(base).map((r) => r.label)).toEqual(["Full name", "Relationship", "Email", "Phone"]);
+    const full = guardianDetails({ ...base, occupation: "Nurse", address: "7 Allen Avenue" }).map((r) => r.label);
+    expect(full).toEqual(["Full name", "Relationship", "Occupation", "Email", "Phone", "Home address"]);
   });
 
   it("formats ordinals, dates of birth and phone links", () => {

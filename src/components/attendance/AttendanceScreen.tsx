@@ -132,7 +132,8 @@ export function AttendanceScreen({ initialClassId, initialDate }: AttendanceScre
     if (`${window.location.pathname}${window.location.search}` !== target) router.replace(target, { scroll: false });
   }, [activeClassId, date, pathname, router, classId, initialClassId, initialDate]);
 
-  const todayDate = today.data?.date ?? (shown?.isToday ? shown.date : undefined);
+  // The register says what day it is at the school; Today's cache may be older.
+  const todayDate = shown?.today ?? today.data?.date;
   const bounds = { min: shown?.term?.startDate, max: todayDate };
   const current = shown?.date ?? date ?? todayDate;
   const prev = current ? stepSchoolDay(current, -1, bounds) : null;

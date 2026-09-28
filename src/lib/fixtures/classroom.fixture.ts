@@ -24,6 +24,7 @@ import type {
   MyClass,
   RegisterCounts,
   RegisterStudent,
+  RegisterSaved,
   RegisterView,
   RosterStudent,
   SaveRegisterBody,
@@ -51,8 +52,6 @@ interface SeedStudent {
   dob: string;
   relationship: "Mother" | "Father";
   guardianEmail: string;
-  occupation: string;
-  address: string;
 }
 
 const S1: [string, string, string][] = [
@@ -87,11 +86,6 @@ const ATT: [number, number, number, number][] = [
   [13, 1, 0, 0], [12, 0, 2, 0], [14, 0, 0, 0], [10, 3, 1, 0], [13, 0, 0, 1], [12, 1, 1, 0],
 ];
 const FEMALE = ["Jaye", "Chiamaka", "Ifeoma", "Aisha", "Zainab", "Funmi", "Halima", "Precious", "Grace", "Ngozi", "Blessing"];
-const JOBS = ["Civil engineer", "Nurse", "Trader", "Accountant", "Teacher", "Banker", "Pharmacist", "Architect", "Lawyer", "Civil servant", "Caterer"];
-const STREETS = [
-  "14 Adeniyi Jones Avenue, Ikeja", "7 Allen Avenue, Ikeja", "22 Opebi Road, Ikeja", "3 Toyin Street, Ikeja",
-  "9 Obafemi Awolowo Way, Ikeja", "31 Oba Akran Avenue, Ikeja", "5 Kodesoh Street, Ikeja",
-];
 
 /** The 22 seed students, built the way the design builds them. */
 export const FIXTURE_STUDENTS: readonly SeedStudent[] = [...S1, ...S2].map(([name, guardian, phone], i) => {
@@ -115,8 +109,6 @@ export const FIXTURE_STUDENTS: readonly SeedStudent[] = [...S1, ...S2].map(([nam
     dob: `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
     relationship: /^Mrs/.test(guardian) ? "Mother" : "Father",
     guardianEmail: `${guardianName.toLowerCase().replace(" ", ".")}@gmail.com`,
-    occupation: JOBS[i % JOBS.length],
-    address: `${STREETS[i % STREETS.length]}, Lagos`,
   };
 });
 
@@ -297,11 +289,12 @@ export function makeRegisterFixture(classId: string, date: string = FIXTURE_TODA
   const isFuture = date > FIXTURE_TODAY;
   const reg = schoolDay.isSchoolDay && !isFuture ? storedRegister(cls.id, date) : { marks: {}, submittedAt: null, lastEditedAt: null, notifiedAbsent: [] };
 
+  // The API's precedence: not_school_day > future > past (never staff) > not_class_teacher.
   let readOnlyReason: RegisterView["readOnlyReason"] = null;
-  if (cls.role !== "class_teacher" && !options.staff) readOnlyReason = "not_class_teacher";
+  if (!schoolDay.isSchoolDay) readOnlyReason = "not_school_day";
   else if (isFuture) readOnlyReason = "future";
-  else if (!schoolDay.isSchoolDay) readOnlyReason = "not_school_day";
   else if (!isToday && !options.staff) readOnlyReason = "past";
+  else if (cls.role !== "class_teacher" && !options.staff) readOnlyReason = "not_class_teacher";
 
   const students: RegisterStudent[] = studentsOf(cls.id).map((s) => {
     const leave = isToday && schoolDay.isSchoolDay ? (LEAVE_TODAY[s.id] ?? null) : null;
@@ -322,6 +315,7 @@ export function makeRegisterFixture(classId: string, date: string = FIXTURE_TODA
   return {
     class: { id: cls.id, name: cls.name },
     date,
+    today: FIXTURE_TODAY,
     isToday,
     term: inTerm ? { ...FIXTURE_TERM } : null,
     schoolDay,
@@ -374,7 +368,7 @@ export class FixtureRegisterIncomplete extends Error {
  * @returns The updated register view, with `notified` on a submit.
  * @throws FixtureRegisterIncomplete when a submit leaves students unmarked.
  */
-export function saveRegisterFixture(classId: string, date: string = FIXTURE_TODAY, body: SaveRegisterBody): RegisterView {
+export function saveRegisterFixture(classId: string, date: string = FIXTURE_TODAY, body: SaveRegisterBody): RegisterSaved {
   const reg = storedRegister(classId, date);
   const leave = date === FIXTURE_TODAY ? LEAVE_TODAY : {};
   for (const mark of body.marks) {
@@ -385,7 +379,7 @@ export function saveRegisterFixture(classId: string, date: string = FIXTURE_TODA
       note: mark.note ?? null,
     };
   }
-  if (!body.submit) return makeRegisterFixture(classId, date);
+  if (!body.submit) return { ...makeRegisterFixture(classId, date), notified: 0 };
 
   const missing = studentsOf(classId).filter((s) => !leave[s.id] && !reg.marks[s.id]).length;
   if (missing > 0) throw new FixtureRegisterIncomplete(missing);
@@ -418,7 +412,7 @@ export function makeRosterFixture(classId: string): ClassRoster {
     email: s.email,
     avatarUrl: null,
     attendanceRateTerm: rateOf(s.att),
-    guardian: NO_GUARDIAN.has(s.id) ? null : { name: s.guardian, relationship: s.relationship, phone: s.phone, email: s.guardianEmail },
+    guardian: NO_GUARDIAN.has(s.id) ? null : { userId: NO_ACCOUNT.has(s.id) ? null : `u-guardian-${s.id}`, name: s.guardian, relationship: s.relationship, phone: s.phone, email: s.guardianEmail },
   }));
   return {
     class: { id: cls.id, name: cls.name, role: cls.role, capacity: cls.capacity, studentCount: students.length },
@@ -563,10 +557,11 @@ export function makeStudentRecordFixture(studentId: string): StudentRecord | nul
           userId: NO_ACCOUNT.has(s.id) ? null : `u-guardian-${s.id}`,
           name: s.guardian,
           relationship: s.relationship,
-          occupation: s.occupation,
+          // Nothing stores these on the API; it always answers null.
+          occupation: null,
           email: s.guardianEmail,
           phone: s.phone,
-          address: s.address,
+          address: null,
         },
     attendance: { rate: rateOf(s.att), schoolDays: present + late + absent + onLeave, present, late, absent, onLeave },
     scores: courseIds.map((k) => courseScores(k, s)),
