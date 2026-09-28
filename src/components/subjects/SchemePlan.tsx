@@ -87,7 +87,7 @@ export function SchemePlan({ card, scheme, flashWeek, pendingWeek, onToggleTaugh
                     }`}
                   >
                     {taught ? "Undo" : "Mark taught"}
-                    <span className="sr-only">{taught ? ` taught for week ${w.week}` : `, week ${w.week}`}</span>
+                    <span className="sr-only">{taught ? ` taught for week ${w.week}` : ` for week ${w.week}`}</span>
                   </button>
                 ) : null}
                 <button type="button" onClick={() => onEdit(w)} title="Edit the topic and objectives for this week" className={rowButton}>
