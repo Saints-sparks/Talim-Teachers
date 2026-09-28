@@ -36,6 +36,17 @@ export function getVisibleSteps(config: GuideConfig) {
   return visibleSteps.length > 0 ? visibleSteps : config.steps;
 }
 
+/**
+ * Whether any of a guide's targets is on the page yet.
+ *
+ * @param config - The guide.
+ * @returns True once at least one `[data-guide]` target has rendered.
+ */
+export function hasAnyTarget(config: GuideConfig): boolean {
+  if (typeof document === "undefined") return false;
+  return config.steps.some((step) => document.querySelector(`[data-guide="${step.target}"]`));
+}
+
 export function getUserId(user: { userId?: string; _id?: string; teacherId?: string } | null | undefined) {
   return user?.userId || user?._id || user?.teacherId || "guest";
 }

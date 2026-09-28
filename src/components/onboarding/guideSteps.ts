@@ -3,16 +3,24 @@
 import {
   Award,
   BarChart3,
+  BellRing,
   BookOpen,
   Calculator,
+  CalendarDays,
   ClipboardCheck,
+  Download,
   FileUp,
   GraduationCap,
+  LayoutGrid,
   Lightbulb,
+  ListChecks,
   MessageSquareText,
   PencilRuler,
+  Phone,
+  Printer,
   Search,
   Send,
+  Sunrise,
   UsersRound,
 } from "lucide-react";
 import type { ComponentType } from "react";
@@ -33,6 +41,74 @@ export type GuideConfig = {
 };
 
 export const guideConfigs: GuideConfig[] = [
+  {
+    id: "today",
+    pathMatchers: ["/dashboard"],
+    exactOnly: true,
+    steps: [
+      {
+        target: "today-now",
+        eyebrow: "Today",
+        title: "The lesson you are in",
+        description:
+          "The navy card shows the lesson on now, or the next one, with this week's topic and the time left. Open it for quick actions: the register, the week's plan, a resource or the class group.",
+        icon: Sunrise,
+      },
+      {
+        target: "today-day",
+        title: "Your day",
+        description:
+          "Every lesson today, period by period, with rooms and breaks. The lesson on now and the next one are tagged; select any lesson for its quick actions.",
+        icon: CalendarDays,
+      },
+      {
+        target: "today-attention",
+        title: "Needs your attention",
+        description:
+          "Only what is outstanding, most urgent first: an open register (it turns red once it is overdue), scores to enter or publish, a parent waiting for a reply. Each item has one button that takes you there.",
+        icon: BellRing,
+      },
+      {
+        target: "today-setup",
+        title: "Finish setting up",
+        description: "A few short steps for your first weeks. Each one opens where you do it, and the card goes away once they are all done.",
+        icon: ListChecks,
+      },
+    ],
+  },
+  {
+    id: "timetable",
+    pathMatchers: ["/timetable"],
+    exactOnly: true,
+    steps: [
+      {
+        target: "timetable-week-nav",
+        eyebrow: "Timetable",
+        title: "Move between weeks",
+        description: "Step back or forward a week, or jump back to this week. The heading shows the week of term and how many lessons you have.",
+        icon: CalendarDays,
+      },
+      {
+        target: "timetable-lessons",
+        title: "Open any lesson",
+        description:
+          "Every lesson opens quick actions: take the register, open the week's plan, share a resource or message the class group. A double period shows as one block.",
+        icon: LayoutGrid,
+      },
+      {
+        target: "timetable-view-toggle",
+        title: "Week or today",
+        description: "Show Monday to Friday, or only one day's periods. On a phone the timetable shows one day at a time.",
+        icon: Lightbulb,
+      },
+      {
+        target: "timetable-print",
+        title: "Print or save",
+        description: "Print the week, or save it as a PDF, on a clean light page. CSV downloads it as a spreadsheet.",
+        icon: Printer,
+      },
+    ],
+  },
   {
     id: "resources",
     pathMatchers: ["/resources"],
@@ -75,26 +151,40 @@ export const guideConfigs: GuideConfig[] = [
     exactOnly: true,
     steps: [
       {
-        target: "attendance-header",
-        eyebrow: "Daily records",
-        title: "Take Attendance",
+        target: "attendance-controls",
+        eyebrow: "Morning register",
+        title: "Pick the class and the day",
         description:
-          "Choose the class you are teaching, then mark each learner as present or absent for the day.",
-        icon: ClipboardCheck,
+          "Choose one of your classes and a school day. Past days are read-only, a weekend snaps back to Friday, and Back to today returns to this morning's register.",
+        icon: CalendarDays,
       },
       {
-        target: "attendance-search",
-        title: "Find a Class Quickly",
+        target: "attendance-stats",
+        title: "Counts as you go",
         description:
-          "Use search when your class list grows, especially if you teach multiple sections or subjects.",
-        icon: Search,
+          "Present, Late, Absent, On leave and Not marked update with every tap. Everyone has to be marked before the register can be submitted.",
+        icon: BarChart3,
       },
       {
-        target: "attendance-class-grid",
-        title: "Open the Class Register",
+        target: "attendance-mark-all",
+        title: "Mark the rest present",
         description:
-          "Each class card opens the attendance register where you can record, review, and refresh today's attendance.",
+          "Mark the few who are late or absent first, then mark everyone else present in one go. You can still change anyone afterwards.",
+        icon: ListChecks,
+      },
+      {
+        target: "attendance-rows",
+        title: "Present, Late or Absent",
+        description:
+          "Tap a status for each student, or use the arrow keys. Students on leave approved by the office are already marked. An absence asks for a reason and an optional note for the office.",
         icon: UsersRound,
+      },
+      {
+        target: "attendance-submit",
+        title: "Submit the register",
+        description:
+          "Your marks save as a draft as you go. Submit once everyone is marked: that is when parents of absent students are told. You can reopen it with Edit register until the afternoon.",
+        icon: Send,
       },
     ],
   },
@@ -103,33 +193,38 @@ export const guideConfigs: GuideConfig[] = [
     pathMatchers: ["/attendance/class"],
     steps: [
       {
-        target: "attendance-register-header",
-        eyebrow: "Class register",
-        title: "Mark Today’s Attendance",
+        target: "attendance-register",
+        eyebrow: "Today's register",
+        title: "The register you opened",
         description:
-          "Use Mark for daily recording and View when you need to review the attendance status already submitted.",
+          "This is the class register you opened from Today. Everyone who needs a mark is listed, and students on approved leave are already filled in.",
         icon: ClipboardCheck,
       },
       {
-        target: "attendance-mode-controls",
-        title: "Switch Between Mark and View",
+        target: "attendance-rows",
+        title: "One tap per student",
         description:
-          "Mark records attendance for students; View summarizes what has already been recorded for the class.",
-        icon: Lightbulb,
+          "Choose Present, Late or Absent for each student (arrow keys work too). An absence asks for a reason, and you can leave a note for the school office.",
+        icon: UsersRound,
       },
       {
-        target: "attendance-overview",
-        title: "Watch the Summary",
-        description:
-          "The overview updates as students are marked, helping you catch missing records before leaving the page.",
-        icon: Search,
+        target: "attendance-mark-all",
+        title: "Mark the rest present",
+        description: "Once the few exceptions are marked, mark everyone else present in one go.",
+        icon: ListChecks,
       },
       {
-        target: "attendance-student-cards",
-        title: "Submit Each Student",
+        target: "attendance-submit",
+        title: "Submit before it closes",
         description:
-          "Pick Present or Absent for each learner. Absences require a reason before submission.",
+          "Marks save as a draft as you go. Submit when everyone is marked; parents of absent students are notified then, and Today stops showing the register.",
         icon: Send,
+      },
+      {
+        target: "attendance-controls",
+        title: "Another class or day",
+        description: "Switch class or look back at an earlier school day here. Past registers are read-only.",
+        icon: CalendarDays,
       },
     ],
   },
@@ -210,40 +305,37 @@ export const guideConfigs: GuideConfig[] = [
     exactOnly: true,
     steps: [
       {
-        target: "students-classes-header",
-        eyebrow: "Learner records",
-        title: "View Students",
-        description:
-          "Start by selecting one of your assigned classes to see the learners connected to it.",
+        target: "students-tabs",
+        eyebrow: "Your classes",
+        title: "One tab per class",
+        description: "Every class you teach, with your role in it. Classes you are class teacher of come first.",
         icon: UsersRound,
       },
       {
-        target: "students-class-grid",
-        title: "Choose a Class",
+        target: "students-stats",
+        title: "The class at a glance",
         description:
-          "Each class card opens a student roster with profile links, filters, and export options.",
+          "Students against capacity, attendance this term, who is absent today once the register is in, and what you teach here.",
+        icon: BarChart3,
+      },
+      {
+        target: "students-search",
+        title: "Find a student",
+        description: "Search by name, admission number, email or guardian.",
+        icon: Search,
+      },
+      {
+        target: "students-table",
+        title: "Open a student's record",
+        description:
+          "Select a student for their details, guardian contacts, attendance this term and scores in the subjects you teach them.",
         icon: BookOpen,
       },
       {
-        target: "students-list-header",
-        title: "Student Roster",
-        description:
-          "Once a class is selected, this area shows attendance-ready learner details and quick access to profiles.",
-        icon: Search,
-      },
-      {
-        target: "students-search-filter",
-        title: "Filter the Roster",
-        description:
-          "Search by name, email, or admission number, then filter by active or inactive status.",
-        icon: Search,
-      },
-      {
-        target: "students-roster",
-        title: "Open Student Profiles",
-        description:
-          "Use View profile to inspect a learner’s personal, parent, academic, and class information.",
-        icon: UsersRound,
+        target: "students-export",
+        title: "Export the class list",
+        description: "Download the class with admission numbers, attendance rates and guardian contacts as a spreadsheet.",
+        icon: Download,
       },
     ],
   },
@@ -252,12 +344,30 @@ export const guideConfigs: GuideConfig[] = [
     pathMatchers: ["/students/"],
     steps: [
       {
-        target: "student-profile-shell",
-        eyebrow: "Learner profile",
-        title: "Student Profile",
-        description:
-          "This profile brings together the student’s identity, guardian contact, class details, and academic context.",
+        target: "student-header",
+        eyebrow: "Student record",
+        title: "Details from the school office",
+        description: "Name, class, admission number, date of birth and email, as the school office holds them.",
         icon: UsersRound,
+      },
+      {
+        target: "student-guardian",
+        title: "Reach the guardian",
+        description: "Call from your phone, or Message to open a direct conversation with the guardian in Messages.",
+        icon: Phone,
+      },
+      {
+        target: "student-attendance",
+        title: "Attendance this term",
+        description: "The attendance rate and the days present, late, absent and on leave so far. Approved leave does not count against the rate.",
+        icon: CalendarDays,
+      },
+      {
+        target: "student-scores",
+        title: "Scores in your subjects",
+        description:
+          "Each assessment in the subjects you teach this student, with the class average marked on the bar. Grade and position appear once every assessment is in.",
+        icon: Award,
       },
     ],
   },

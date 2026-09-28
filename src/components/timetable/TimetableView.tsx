@@ -104,7 +104,7 @@ export function TimetableView({ week, nowMs, mode, onMode, onWeek, loadingWeek, 
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2.5" data-print-hide>
-          <div className="flex items-center gap-1.5" role="group" aria-label="Week">
+          <div className="flex items-center gap-1.5" role="group" aria-label="Week" data-guide="timetable-week-nav">
             <button type="button" className={navButton} onClick={() => onWeek(week.week.prevStart)} aria-label="Previous week" title="Previous week">
               <ChevronLeft className="h-4 w-4" aria-hidden />
             </button>
@@ -121,11 +121,11 @@ export function TimetableView({ week, nowMs, mode, onMode, onWeek, loadingWeek, 
               <ChevronRight className="h-4 w-4" aria-hidden />
             </button>
           </div>
-          <div role="group" aria-label="Show" title="Choose how much of the timetable to show" className="hidden gap-0.5 rounded-[13px] bg-tl-track p-1 min-[960px]:flex">
+          <div role="group" aria-label="Show" title="Choose how much of the timetable to show" data-guide="timetable-view-toggle" className="hidden gap-0.5 rounded-[13px] bg-tl-track p-1 min-[960px]:flex">
             {segment("week", "Week", "Monday to Friday")}
             {segment("today", todayLabel, week.week.isCurrent ? "Only today's periods" : "One day at a time")}
           </div>
-          <button type="button" className={ghostButton} onClick={onPrint} title="Print or save the week as a PDF" disabled={noTimetable}>
+          <button type="button" className={ghostButton} onClick={onPrint} title="Print or save the week as a PDF" disabled={noTimetable} data-guide="timetable-print">
             <Printer className="h-4 w-4" aria-hidden />
             <span>Print</span>
           </button>
@@ -153,7 +153,7 @@ export function TimetableView({ week, nowMs, mode, onMode, onWeek, loadingWeek, 
           </p>
         </section>
       ) : (
-        <>
+        <div data-guide="timetable-lessons" className="flex flex-col gap-[18px]">
           <div className={mode === "week" ? "hidden min-[960px]:block print:block" : "hidden print:block"}>
             <WeekGrid days={week.days} grid={grid} clock={clock} onOpen={setOpenKey} />
           </div>
@@ -226,7 +226,7 @@ export function TimetableView({ week, nowMs, mode, onMode, onWeek, loadingWeek, 
               ))}
             </ul>
           ) : null}
-        </>
+        </div>
       )}
 
       <LessonSheet

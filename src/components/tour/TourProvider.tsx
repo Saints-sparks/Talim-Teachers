@@ -25,7 +25,7 @@ export const TOUR_STEPS: readonly TourStep[] = [
   },
   {
     title: "Registers in one pass",
-    body: "Pick the class, tap Present, Late or Absent for each student, or use ‘Mark the rest present’ and change the few who are not. Students on leave approved by the office are already marked. Absences ask for a reason, and parents are notified when you submit.",
+    body: "Pick the class and the day, then tap Present, Late or Absent for each student, or use ‘Mark the rest present’ and change the few who are not. Students on leave approved by the office are already marked. Absences ask for a reason, your marks save as a draft as you go, and parents are notified when you submit.",
     href: "/attendance",
     linkLabel: "Open Attendance",
   },
@@ -34,6 +34,12 @@ export const TOUR_STEPS: readonly TourStep[] = [
     body: "Grading shows one assessment for one class. Type scores straight into the sheet; anything above the maximum turns red. Save a draft as often as you like. Publish only when every score is in, and the scores lock.",
     href: "/grading",
     linkLabel: "Open Grading",
+  },
+  {
+    title: "Your students and their records",
+    body: "Students lists everyone in the classes you teach, one tab per class, with guardians and attendance. Open a student for their record: call or message the guardian, see attendance this term, and their scores in your subjects against the class average.",
+    href: "/students",
+    linkLabel: "Open Students",
   },
   {
     title: "Plan the term by week",
@@ -49,7 +55,7 @@ export const TOUR_STEPS: readonly TourStep[] = [
   },
   {
     title: "Messages and alerts",
-    body: "Parents, colleagues and class groups are in Messages. Deadlines and announcements are in Notifications. Choose what reaches you in Settings → Notifications.",
+    body: "Parents, colleagues and class groups are in Messages. Deadlines and announcements are in Notifications. Choose what reaches you in Settings → Notifications. Each page also has a Guide button in the corner that walks you through it.",
     href: "/messages",
     linkLabel: "Open Messages",
   },

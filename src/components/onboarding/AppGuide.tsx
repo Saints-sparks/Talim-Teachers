@@ -11,6 +11,7 @@ import {
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useAppContext } from "@/app/context/AppContext";
+import { useTeacherPreferences } from "@/hooks/settings/useTeacherSettings";
 import { logger } from "@/lib/logger";
 import { findGuideConfig, guideConfigs, GuideStep } from "./guideSteps";
 import {
@@ -20,8 +21,13 @@ import {
   getTargetRect,
   getUserId,
   getVisibleSteps,
+  hasAnyTarget,
   type TargetRect,
 } from "./guideHelpers";
+
+/** How long a page may take to render its guide targets before the guide gives up opening itself. */
+const TARGET_WAIT_MS = 6_000;
+const TARGET_POLL_MS = 250;
 
 function TooltipArrow({ side }: { side: string }) {
   const base =
@@ -172,6 +178,10 @@ export default function AppGuide() {
   const [stepIndex, setStepIndex] = useState(0);
   const [rect, setRect] = useState<TargetRect | null>(null);
   const [steps, setSteps] = useState<GuideStep[]>([]);
+  // Settings → Onboarding & Guides → "Show app guide tips". Off: guides never
+  // open by themselves; the Guide button still opens them on request.
+  const { preferences, isLoading: preferencesLoading } = useTeacherPreferences();
+  const showAppTips = preferences.guides.showAppTips;
 
   const userId = getUserId(user);
   const currentStep = steps[stepIndex];
@@ -188,12 +198,31 @@ export default function AppGuide() {
 
     const completed = localStorage.getItem(getStorageKey(config.id, userId)) === "done";
     const seen = localStorage.getItem(getSeenKey(config.id, userId)) === "done";
+    if (completed || seen || preferencesLoading || !showAppTips) {
+      setIsOpen(false);
+      return;
+    }
 
-    window.requestAnimationFrame(() => {
-      setSteps(getVisibleSteps(config));
-      setIsOpen(!completed && !seen);
-    });
-  }, [config?.id, userId, user, config]);
+    // Pages render their targets once their data arrives: wait for them, so
+    // the guide spotlights real elements instead of opening over a skeleton.
+    let waited = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const tryOpen = () => {
+      if (hasAnyTarget(config)) {
+        setSteps(getVisibleSteps(config));
+        setIsOpen(true);
+        return;
+      }
+      waited += TARGET_POLL_MS;
+      if (waited < TARGET_WAIT_MS) timer = setTimeout(tryOpen, TARGET_POLL_MS);
+    };
+    timer = setTimeout(tryOpen, 0);
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+    // Keyed on ids, not objects, so a re-render with an equal user or config does not close a guide the teacher opened.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config?.id, userId, Boolean(user), showAppTips, preferencesLoading]);
 
   useEffect(() => {
     if (!isOpen || !currentStep) return;
