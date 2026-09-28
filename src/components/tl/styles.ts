@@ -89,3 +89,7 @@ export const dangerGhostButton = `inline-flex min-h-[44px] items-center justify-
 
 /** The red filled button (the confirm in a destructive sheet). */
 export const dangerButton = `inline-flex min-h-[44px] items-center justify-center gap-2 whitespace-nowrap rounded-[14px] bg-tl-danger px-[18px] py-3 text-sm font-bold text-tl-surface transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 ${focusRing}`;
+
+/** The white card's frame without padding, for cards whose rows run edge to edge (tables). */
+export const cardFrame =
+  "rounded-[22px] border border-tl-line bg-tl-surface shadow-[0_1px_2px_rgba(15,27,46,0.04),0_14px_30px_-22px_rgba(15,27,46,0.18)] dark:shadow-none";

@@ -44,7 +44,8 @@ export function termOptionLabel(term: Pick<SchoolTerm, "_id" | "name" | "academi
 export function TermPicker({ value, currentTermId, currentTermName, onChange, id, guide }: TermPickerProps) {
   const terms = useSchoolTerms();
   const list = terms.data ?? [];
-  const selected = value ?? currentTermId ?? "";
+  const current = currentTermId ?? list.find((t) => t.isActive)?._id;
+  const selected = value ?? current ?? "";
   const hasSelected = list.some((t) => t._id === selected);
 
   return (
@@ -56,7 +57,7 @@ export function TermPicker({ value, currentTermId, currentTermName, onChange, id
         <select
           id={id}
           value={selected}
-          onChange={(event) => onChange(event.target.value && event.target.value !== currentTermId ? event.target.value : undefined)}
+          onChange={(event) => onChange(event.target.value && event.target.value !== current ? event.target.value : undefined)}
           title="Choose a term"
           className={`min-h-[44px] w-full cursor-pointer appearance-none rounded-[13px] border border-tl-control bg-tl-surface py-0 pl-3.5 pr-10 text-sm font-bold text-tl-ink ${focusRing}`}
         >
@@ -65,7 +66,7 @@ export function TermPicker({ value, currentTermId, currentTermName, onChange, id
           ) : null}
           {list.map((t) => (
             <option key={t._id} value={t._id}>
-              {termOptionLabel(t, currentTermId)}
+              {termOptionLabel(t, current)}
             </option>
           ))}
         </select>
