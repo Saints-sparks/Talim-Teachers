@@ -17,7 +17,6 @@ import type { BulkCourseGradesBody } from "@/types/apiPayloads";
 import { api } from "@/lib/apiClient";
 import { ApiError } from "@/lib/apiError";
 import { logger } from "@/lib/logger";
-import type { GradeRow, RowStatus } from "@/components/grading/workspace/types";
 import { parseBulkRowFailures } from "./grade-csv";
 import type {
   Assessment,
@@ -26,6 +25,8 @@ import type {
   AssessmentOverviewRow,
   AssessmentScorePayload,
   CourseGradeRowPayload,
+  GradeRow,
+  RowStatus,
   BatchUploadCapability,
   ClassCumulativeRecord,
   ClassGradingSummary,

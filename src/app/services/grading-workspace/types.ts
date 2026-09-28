@@ -316,3 +316,29 @@ export interface ClassCumulativeRecord {
 export interface MessageResponse {
   message: string;
 }
+
+/** Where one student's legacy assessment row stands (the old grading workspace's table). */
+export type RowStatus =
+  | "not_graded"
+  | "graded"
+  | "ready_to_generate"
+  | "generated"
+  | "needs_review"
+  | "failed"
+  | "skipped"
+  | "unavailable";
+
+/** One student's row of a legacy assessment grade table. */
+export interface GradeRow {
+  studentId: string;
+  studentName: string;
+  /** The saved score record's id, when one exists; absent means "not graded yet". */
+  gradeId?: string;
+  score: number | null;
+  maxScore: number;
+  status: RowStatus;
+  lastUpdated?: string;
+  generated?: boolean;
+  gradePreview?: string;
+  position?: number;
+}
