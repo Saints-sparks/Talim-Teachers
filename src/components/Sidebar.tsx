@@ -1,224 +1,195 @@
 "use client";
+
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import {
-  ChevronLeft,
-  ChevronRight,
-  LayoutDashboard,
-  BookMarked,
-  Users,
-  FolderOpen,
-  Calendar,
-  ClipboardList,
-  BarChart2,
-  MessageSquare,
-  Bell,
-  BookOpen,
-  Settings,
-  LogOut,
-} from "lucide-react";
-import { useAuth } from "@/app/hooks/useAuth";
-import { useAppContext } from "@/app/context/AppContext";
-import { useChat } from "@/app/context/ChatContext";
-import useNotifications from "@/app/hooks/useNotifications";
-import { Tooltip } from "@/components/ui/Tooltip";
+import { useAuth } from "@/app/context/AuthContext";
+import { focusRing } from "@/components/tl/styles";
 
-type MenuItem = {
+/** One destination in the sidebar. */
+export interface NavItem {
   label: string;
-  icon: React.ElementType;
-  link: string;
-  badge?: "messages" | "notifications";
-};
-
-const menuItems: MenuItem[] = [
-  { label: "Dashboard",     icon: LayoutDashboard, link: "/dashboard" },
-  { label: "Students",      icon: Users,           link: "/students" },
-  { label: "Subjects",      icon: BookMarked,      link: "/subjects" },
-  { label: "Resources",     icon: FolderOpen,      link: "/resources" },
-  { label: "Timetable",     icon: Calendar,        link: "/timetable" },
-  { label: "Attendance",    icon: ClipboardList,   link: "/attendance" },
-  { label: "Grading",       icon: BarChart2,       link: "/grading" },
-  { label: "Curriculum",    icon: BookOpen,        link: "/curriculum" },
-  { label: "Messages",      icon: MessageSquare,   link: "/messages",       badge: "messages" },
-  { label: "Notifications", icon: Bell,            link: "/notifications",  badge: "notifications" },
-  { label: "Settings",      icon: Settings,        link: "/settings" },
-];
-
-interface SidebarProps {
-  isOpen: boolean;
-  onClose: () => void;
-  collapsed?: boolean;
-  onToggleCollapse?: () => void;
+  href: string;
+  /** Hover text (the design's `title` tips). */
+  tip: string;
+  badge?: number;
+  /** Indented, smaller: pages kept reachable that the redesign has not reached yet. */
+  secondary?: boolean;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({
-  onClose,
-  collapsed = false,
-  onToggleCollapse,
-}) => {
+/** A titled group of destinations. */
+export interface NavGroup {
+  title: string;
+  items: NavItem[];
+}
+
+/** Badge counts shown beside Attendance, Messages and Notifications. */
+export interface NavCounts {
+  pendingRegisters: number;
+  unreadMessages: number;
+  unreadNotifications: number;
+}
+
+/**
+ * The sidebar's groups. Today is the `/dashboard` route. Curriculum and
+ * Resources are not redesigned yet and stay reachable as secondary items
+ * under Subjects.
+ *
+ * @param counts - Badge counts.
+ * @returns The groups, in order.
+ */
+export function navGroups(counts: NavCounts): NavGroup[] {
+  return [
+    {
+      title: "Teach",
+      items: [
+        { label: "Today", href: "/dashboard", tip: "Your lessons now and what needs you" },
+        { label: "Timetable", href: "/timetable", tip: "The week period by period" },
+        { label: "Attendance", href: "/attendance", tip: "Morning registers", badge: counts.pendingRegisters },
+        { label: "Grading", href: "/grading", tip: "Scores and class reports" },
+      ],
+    },
+    {
+      title: "Classes",
+      items: [
+        { label: "Students", href: "/students", tip: "Rosters, guardians and student records" },
+        { label: "Subjects", href: "/subjects", tip: "Scheme of work and resources" },
+        { label: "Curriculum", href: "/curriculum", tip: "Write and share each course's curriculum", secondary: true },
+        { label: "Resources", href: "/resources", tip: "Worksheets, slides and videos you have shared", secondary: true },
+      ],
+    },
+    {
+      title: "Inbox",
+      items: [
+        { label: "Messages", href: "/messages", tip: "Parents, colleagues and class groups", badge: counts.unreadMessages },
+        { label: "Notifications", href: "/notifications", tip: "Announcements and deadlines", badge: counts.unreadNotifications },
+      ],
+    },
+  ];
+}
+
+/**
+ * Whether a nav link is the current page (or a page beneath it).
+ *
+ * @param pathname - The current path.
+ * @param href - The link.
+ * @returns True when active.
+ */
+export function isActivePath(pathname: string, href: string): boolean {
+  if (pathname === href) return true;
+  if (href === "/dashboard") return false;
+  return pathname.startsWith(`${href}/`);
+}
+
+/** Props for {@link Sidebar}. */
+interface SidebarProps {
+  /** The drawer is open (below 960px). */
+  open: boolean;
+  /** Called after a link is followed, to close the drawer. */
+  onNavigate: () => void;
+  counts: NavCounts;
+  schoolName: string;
+}
+
+/**
+ * The redesign's sidebar: brand and school, the Teach / Classes / Inbox
+ * groups with badges, and Settings and Log out at the bottom. At 960px and
+ * wider it sits beside the page; below, it is a drawer opened from the top
+ * bar's menu button.
+ *
+ * @param props - See {@link SidebarProps}.
+ * @returns The sidebar.
+ */
+const Sidebar: React.FC<SidebarProps> = ({ open, onNavigate, counts, schoolName }) => {
+  const pathname = usePathname() ?? "";
   const { logout } = useAuth();
-  const pathname = usePathname();
-  const { user } = useAppContext();
-  // Server total from unread-messages-update, kept live by the chat provider.
-  const { totalUnread } = useChat();
-  const { counts: notifCounts } = useNotifications();
 
-  if (!user) return null;
-
-  const getBadge = (item: MenuItem): number => {
-    if (item.badge === "messages") return totalUnread;
-    if (item.badge === "notifications") return notifCounts?.unread ?? 0;
-    return 0;
+  const link = (item: NavItem) => {
+    const active = isActivePath(pathname, item.href);
+    const badge = item.badge && item.badge > 0 ? item.badge : 0;
+    return (
+      <li key={item.href}>
+        <Link
+          href={item.href}
+          title={item.tip}
+          onClick={onNavigate}
+          aria-current={active ? "page" : undefined}
+          className={`flex min-h-[44px] items-center gap-3 rounded-[14px] transition-colors ${focusRing} ${
+            item.secondary ? "py-2 pl-[33px] pr-3.5 text-sm" : "px-3.5 py-[11px] text-[15px]"
+          } ${active ? "bg-tl-select font-extrabold text-tl-brand" : "font-semibold text-tl-muted hover:bg-tl-bg hover:text-tl-ink"}`}
+        >
+          {item.secondary ? null : (
+            <span aria-hidden className={`h-[7px] w-[7px] shrink-0 rounded-full ${active ? "bg-tl-brand" : "bg-tl-control"}`} />
+          )}
+          <span className="flex-1 truncate">{item.label}</span>
+          {badge ? (
+            <span
+              aria-label={`${badge} ${item.label === "Attendance" ? "pending" : "unread"}`}
+              className={`flex h-[22px] min-w-[22px] items-center justify-center rounded-full px-[7px] text-xs font-extrabold ${
+                active ? "bg-tl-brand-fill text-tl-on-brand" : "bg-tl-select text-tl-brand"
+              }`}
+            >
+              {badge > 99 ? "99+" : badge}
+            </span>
+          ) : null}
+        </Link>
+      </li>
+    );
   };
+
+  const settingsActive = isActivePath(pathname, "/settings");
 
   return (
     <aside
-      className={`${collapsed ? "md:w-[90px]" : "md:w-[266px]"} w-[280px] font-manrope h-full bg-white dark:bg-slate-900 flex flex-col border-r border-[#E8EEF5] dark:border-slate-800 shadow-sm transition-all duration-300`}
+      id="app-sidebar"
+      aria-label="Main"
+      data-print-hide
+      className={`fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col overflow-y-auto border-r border-tl-line bg-tl-surface px-3.5 pb-4 pt-[22px] transition-transform duration-[250ms] ease-out min-[960px]:static min-[960px]:z-auto min-[960px]:h-full min-[960px]:w-[264px] min-[960px]:shrink-0 min-[960px]:translate-x-0 ${
+        open ? "translate-x-0" : "-translate-x-[105%] invisible min-[960px]:visible"
+      }`}
     >
-      <div
-        className={`border-b border-[#F0F0F0] dark:border-slate-800 ${
-          collapsed
-            ? "px-6 py-6 md:flex md:flex-col md:items-center md:gap-2 md:px-3 md:py-4"
-            : "px-6 py-6"
-        }`}
-      >
-        <div
-          className={`flex items-center ${
-            collapsed ? "justify-between md:flex-col md:justify-start md:gap-2" : "justify-between"
-          }`}
-        >
-          <div className="flex items-center gap-4">
-            <Image
-              src="/icons/talim.svg"
-              alt="Talim"
-              width={56}
-              height={54}
-              className="h-14 w-14 shrink-0 rounded-xl"
-              priority
-            />
-            <span
-              className={`${collapsed ? "md:hidden" : ""} text-[22px] font-semibold leading-none text-[#030E18] dark:text-slate-100`}
-            >
-              Talim
-            </span>
+      <div className="flex items-center gap-2.5 px-3 pb-2 pt-1">
+        <Image src="/icons/talim.svg" alt="" width={32} height={32} className="h-8 w-8 shrink-0 rounded-[10px]" priority />
+        <div className="min-w-0">
+          <div className="text-[19px] font-extrabold leading-tight tracking-[-0.2px] text-tl-ink">Talim</div>
+          <div className="truncate text-xs font-semibold text-tl-muted" title={schoolName}>
+            {schoolName}
           </div>
-
-          <button
-            type="button"
-            className={`hidden h-9 w-9 items-center justify-center rounded-lg text-[#98A2B3] transition-colors hover:bg-[#F3F6FA] hover:text-[#003366] dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-blue-400 md:flex ${
-              collapsed ? "md:mt-1" : ""
-            }`}
-            onClick={onToggleCollapse}
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            {collapsed ? <ChevronRight size={22} /> : <ChevronLeft size={22} />}
-          </button>
-
-          <button
-            type="button"
-            className="ml-auto flex h-9 w-9 items-center justify-center rounded-lg text-[#003366] hover:bg-[#EAF2FB] dark:text-blue-400 dark:hover:bg-slate-800 md:hidden"
-            onClick={onClose}
-            aria-label="Close sidebar"
-          >
-            <ChevronLeft size={22} />
-          </button>
         </div>
       </div>
 
-      <nav className={`px-4 ${collapsed ? "md:px-3" : ""} flex-1 overflow-y-auto scrollbar-hide py-5`}>
-        <ul className="space-y-2">
-          {menuItems.map((item) => {
-            const isActive =
-              pathname === item.link ||
-              (item.link !== "/dashboard" && pathname.startsWith(item.link + "/"));
-            const Icon = item.icon;
-            const badge = getBadge(item);
-            const navItem = (
-              <Link href={item.link} onClick={onClose}>
-                <div
-                  className={`relative flex h-12 items-center rounded-lg cursor-pointer transition-all duration-200 ${
-                    collapsed
-                      ? "gap-4 px-4 md:w-12 md:justify-center md:gap-0 md:px-0"
-                      : "gap-4 px-4"
-                  } ${
-                    isActive
-                      ? "border border-[#003366] bg-[#DCE5EF] text-[#003366] dark:border-blue-500 dark:bg-blue-900/30 dark:text-blue-300"
-                      : "border border-transparent text-[#667085] hover:bg-[#F3F6FA] hover:text-[#003366] dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
-                  }`}
-                >
-                  <Icon
-                    size={24}
-                    strokeWidth={1.8}
-                    className={`shrink-0 ${
-                      isActive
-                        ? "text-[#003366] dark:text-blue-300"
-                        : "text-[#98A2B3] dark:text-slate-500"
-                    }`}
-                  />
-                  <span
-                    className={`${collapsed ? "md:hidden" : ""} truncate text-[18px] font-medium leading-none`}
-                  >
-                    {item.label}
-                  </span>
-                  {badge > 0 && (
-                    <span
-                      className={`absolute flex h-5 min-w-5 items-center justify-center rounded-full bg-[#003366] px-1 text-[11px] font-semibold leading-none text-white dark:bg-blue-600 ${
-                        collapsed
-                          ? "right-3 top-1/2 -translate-y-1/2 md:-right-1 md:top-0 md:translate-y-0"
-                          : "right-3 top-1/2 -translate-y-1/2"
-                      }`}
-                    >
-                      {badge > 99 ? "99+" : badge}
-                    </span>
-                  )}
-                </div>
-              </Link>
-            );
-
-            return (
-              <li
-                key={item.label}
-                className={`${collapsed ? "md:flex md:justify-center" : ""}`}
-              >
-                {collapsed ? (
-                  <Tooltip content={item.label} side="right">
-                    {navItem}
-                  </Tooltip>
-                ) : (
-                  navItem
-                )}
-              </li>
-            );
-          })}
-        </ul>
+      <nav aria-label="Teacher portal" className="flex-1">
+        {navGroups(counts).map((group, i) => (
+          <div key={group.title} className={i === 0 ? "mt-5" : "mt-[18px]"}>
+            <h2 className="px-3 pb-2 text-[11px] font-extrabold uppercase tracking-[0.08em] text-tl-faint">{group.title}</h2>
+            <ul className="flex flex-col gap-0.5">{group.items.map(link)}</ul>
+          </div>
+        ))}
       </nav>
 
-      <div className={`px-4 ${collapsed ? "md:px-3" : ""} border-t border-[#F0F0F0] dark:border-slate-800 py-4`}>
-        {collapsed ? (
-          <Tooltip content="Logout Account" side="right">
-            <button
-              type="button"
-              className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg text-[#98A2B3] transition-colors hover:bg-red-50 hover:text-red-600 dark:text-slate-500 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-              onClick={logout}
-              aria-label="Logout Account"
-            >
-              <LogOut size={24} strokeWidth={1.8} />
-            </button>
-          </Tooltip>
-        ) : (
-          <button
-            type="button"
-            className="flex h-12 w-full items-center gap-4 rounded-lg px-4 text-left text-[#667085] transition-colors hover:bg-red-50 hover:text-red-600 dark:text-slate-400 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-            onClick={logout}
-          >
-            <LogOut size={24} strokeWidth={1.8} className="shrink-0" />
-            <span className="truncate text-[18px] font-medium leading-none">
-              Logout Account
-            </span>
-          </button>
-        )}
+      <div className="mt-auto flex flex-col gap-0.5 border-t border-tl-line-soft pt-3.5">
+        <Link
+          href="/settings"
+          title="Your profile, alerts, preferences and security"
+          onClick={onNavigate}
+          aria-current={settingsActive ? "page" : undefined}
+          className={`flex min-h-[44px] items-center gap-3 rounded-[14px] px-3.5 py-3 text-[15px] ${focusRing} ${
+            settingsActive ? "bg-tl-select font-extrabold text-tl-brand" : "font-semibold text-tl-muted hover:bg-tl-bg hover:text-tl-ink"
+          }`}
+        >
+          <span aria-hidden className={`h-[7px] w-[7px] rounded-full ${settingsActive ? "bg-tl-brand" : "bg-tl-control"}`} />
+          <span>Settings</span>
+        </Link>
+        <button
+          type="button"
+          title="Sign out of the teacher portal"
+          onClick={() => void logout()}
+          className={`flex min-h-[44px] items-center gap-3 rounded-[14px] px-3.5 py-3 text-left text-[15px] font-semibold text-tl-muted hover:bg-tl-danger-bg hover:text-tl-danger ${focusRing}`}
+        >
+          <span aria-hidden className="h-[7px] w-[7px] rounded-full bg-tl-line" />
+          <span>Log out</span>
+        </button>
       </div>
     </aside>
   );

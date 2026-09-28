@@ -1,115 +1,100 @@
 "use client";
+
 import Link from "next/link";
-import { Bell, Menu, CalendarRange, GraduationCap } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "./ui/button";
-import { format } from "date-fns";
-import { WebSocketStatus } from "./WebSocketStatus";
-import { useAuth } from "@/app/hooks/useAuth";
-import useNotifications from "@/app/hooks/useNotifications";
-import { ThemeToggle } from "./theme-toggle";
+import { Bell } from "lucide-react";
+import { useAuth } from "@/app/context/AuthContext";
+import { focusRing } from "@/components/tl/styles";
 
-export function Header({
-  onMenuClick,
-}: {
+/** Props for {@link Header}. */
+export interface HeaderProps {
   onMenuClick: () => void;
-}) {
+  menuOpen: boolean;
+  schoolName: string;
+  /** The school's logo URL, when it has one. */
+  schoolLogo?: string;
+  /** "Fri, 25 Sep 2026" on the school's calendar. */
+  dateLine: string;
+  unreadNotifications: number;
+}
+
+/**
+ * Initials for the avatar: first letters of the first and last names.
+ *
+ * @param first - First name.
+ * @param last - Last name.
+ * @returns One or two capitals, or "T".
+ */
+export function initialsOf(first?: string, last?: string): string {
+  return `${first?.trim()[0] ?? ""}${last?.trim()[0] ?? ""}`.toUpperCase() || "T";
+}
+
+/**
+ * The redesign's top bar: the menu button (below 960px), the school, today's
+ * date, notifications with an unread badge, and the teacher's initials
+ * linking to their account settings.
+ *
+ * @param props - See {@link HeaderProps}.
+ * @returns The header.
+ */
+export function Header({ onMenuClick, menuOpen, schoolName, schoolLogo, dateLine, unreadNotifications }: HeaderProps) {
   const { user } = useAuth();
-  const { counts } = useNotifications();
-  const unreadNotifications = counts.unread || 0;
-  const schoolName =
-    user?.schoolName ||
-    (typeof user?.schoolId === "object" ? user.schoolId?.name : "") ||
-    "School Name";
-  const schoolLogo =
-    (user as { schoolLogo?: string } | null)?.schoolLogo ||
-    (typeof user?.schoolId === "object" ? user.schoolId?.logo : "");
+  const initials = initialsOf(user?.firstName, user?.lastName);
+  const unread = unreadNotifications > 0 ? unreadNotifications : 0;
 
-  // Generate initials from first and last names
-  const getInitials = () => {
-    if (!user) return "US"; // Default if no user
-
-    const firstNameInitial = user.firstName?.[0]?.toUpperCase() || "";
-    const lastNameInitial = user.lastName?.[0]?.toUpperCase() || "";
-
-    // Handle cases where only one name exists
-    return `${firstNameInitial}${lastNameInitial}` || "US";
-  };
   return (
-    <header className="font-manrope border-b border-b-[#F0F0F0] bg-white px-3 py-2 dark:border-b-slate-800 dark:bg-slate-900 sm:border-b-2 sm:px-5">
-      <div className="flex w-full flex-col gap-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:py-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <button
-            type="button"
-            className="shrink-0 rounded-md p-2 text-[#003366] hover:bg-[#EAF2FB] dark:text-blue-300 dark:hover:bg-slate-800 md:hidden"
-            onClick={onMenuClick}
-            aria-label="Open sidebar"
-          >
-            <Menu size={24} />
-          </button>
+    <header
+      data-print-hide
+      className="sticky top-0 z-20 flex flex-wrap items-center gap-3 border-b border-tl-line bg-tl-surface px-[clamp(14px,3vw,26px)] py-3.5"
+    >
+      <button
+        type="button"
+        onClick={onMenuClick}
+        aria-label={menuOpen ? "Close the menu" : "Open the menu"}
+        aria-expanded={menuOpen}
+        aria-controls="app-sidebar"
+        className={`flex h-11 w-11 shrink-0 flex-col items-center justify-center gap-1 rounded-xl border border-tl-line min-[960px]:hidden ${focusRing}`}
+      >
+        <span aria-hidden className="h-0.5 w-[18px] rounded bg-tl-brand" />
+        <span aria-hidden className="h-0.5 w-[18px] rounded bg-tl-brand" />
+        <span aria-hidden className="h-0.5 w-[18px] rounded bg-tl-brand" />
+      </button>
 
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#003366] text-white dark:bg-blue-700">
-              {schoolLogo ? (
-                <img
-                  src={schoolLogo}
-                  alt={schoolName}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <GraduationCap className="h-5 w-5" />
-              )}
-            </div>
-            <div className="min-w-0">
-              <h1 className="truncate text-lg font-semibold tracking-tight text-gray-900 dark:text-slate-100 sm:text-xl">
-                {schoolName}
-              </h1>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex min-w-0 items-center justify-between gap-2 sm:justify-end sm:gap-4">
-          <div className="flex shrink-0 items-center gap-1.5 rounded-lg border border-[#F0F0F0] bg-white p-2 text-sm text-[#6F6F6F] cursor-pointer hover:bg-gray-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700">
-            <p className="hidden text-[14px] font-medium leading-6 min-[390px]:inline sm:text-[16px]">
-              {format(new Date(), "dd MMM, yyyy")}
-            </p>
-            <CalendarRange className="h-5 w-5 sm:h-6 sm:w-6" />
-          </div>
-          <div className="hidden items-center min-[390px]:flex">
-            <WebSocketStatus />
-          </div>
-          <ThemeToggle />
-          <Link href="/notifications">
-            <Button className="relative h-10 w-10 rounded-lg border border-[#F0F0F0] bg-white p-0 shadow-none hover:bg-gray-200 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700">
-              <Bell className="h-5 w-5 text-gray-600 dark:text-slate-400" />
-              {unreadNotifications > 0 ? (
-                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#003366] px-1 text-[11px] font-semibold leading-none text-white">
-                  {unreadNotifications > 99 ? "99+" : unreadNotifications}
-                </span>
-              ) : null}
-            </Button>
-          </Link>
-          <Link href="/profile">
-            <Avatar className="h-10 w-10">
-              <AvatarImage
-                src={user?.userAvatar || "/placeholder.svg"}
-                alt="User avatar"
-              />
-              <AvatarFallback className="bg-green-700 text-white">
-                {getInitials()}
-              </AvatarFallback>
-            </Avatar>
-          </Link>
-        </div>
-        {/* <div className="relative w-full sm:w-[40%] max-w-md sm:order-first">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-          <Input
-            type="search"
-            placeholder="Search"
-            className="pl-10 py-5 rounded-lg bg-white"
-          />
-        </div> */}
+      <div className="flex min-w-[120px] flex-1 items-center gap-2.5">
+        {schoolLogo ? (
+          <img src={schoolLogo} alt="" className="h-7 w-7 shrink-0 rounded-[9px] object-cover" />
+        ) : (
+          <span aria-hidden className="h-7 w-7 shrink-0 rounded-[9px] bg-tl-success-bg" />
+        )}
+        <div className="truncate text-[15px] font-bold text-tl-ink">{schoolName}</div>
       </div>
+
+      <div className="hidden whitespace-nowrap text-sm text-tl-muted min-[420px]:block">{dateLine}</div>
+
+      <Link
+        href="/notifications"
+        title="School announcements and reminders"
+        aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"}
+        className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-tl-line hover:bg-tl-bg ${focusRing}`}
+      >
+        <Bell className="h-[19px] w-[19px] text-tl-brand" aria-hidden />
+        {unread ? (
+          <span
+            aria-hidden
+            className="absolute -right-1 -top-1 flex h-[19px] min-w-[19px] items-center justify-center rounded-full border-2 border-tl-surface bg-tl-danger px-[5px] text-[11px] font-extrabold text-white dark:text-tl-bg"
+          >
+            {unread > 99 ? "99+" : unread}
+          </span>
+        ) : null}
+      </Link>
+
+      <Link
+        href="/settings?tab=account"
+        title="Your account and settings"
+        aria-label="Your account and settings"
+        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-tl-select text-[13px] font-extrabold text-tl-brand ${focusRing}`}
+      >
+        {initials}
+      </Link>
     </header>
   );
 }

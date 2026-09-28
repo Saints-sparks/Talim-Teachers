@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { Info, MessageSquare, Play } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
+import { useTour } from "@/components/tour/TourProvider";
 import { ActionCard, Card, CardHeader, SectionHeader } from "./primitives";
 
 /**
@@ -12,6 +13,7 @@ import { ActionCard, Card, CardHeader, SectionHeader } from "./primitives";
  * @returns The Help section element.
  */
 export function HelpSection() {
+  const tour = useTour();
   return (
     <div className="space-y-6">
       <SectionHeader title="Help" desc="Get support and learn more about Talim Teachers." />
@@ -49,6 +51,16 @@ export function HelpSection() {
       <Card>
         <CardHeader title="Common Actions" />
         <div className="flex flex-wrap gap-3 p-5">
+          {tour ? (
+            <button
+              type="button"
+              onClick={tour.openTour}
+              className="flex items-center gap-2 rounded-lg bg-[#003366] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#002244] dark:bg-blue-600 dark:hover:bg-blue-700"
+            >
+              <Play size={14} />
+              Take the tour
+            </button>
+          ) : null}
           <Link
             href="/onboarding/setup"
             className="flex items-center gap-2 rounded-lg bg-[#003366] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#002244] dark:bg-blue-600 dark:hover:bg-blue-700"

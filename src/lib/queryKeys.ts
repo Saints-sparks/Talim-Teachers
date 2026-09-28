@@ -15,6 +15,8 @@ export const queryKeys = {
     progress: (schoolId: string, teacherId: string) => ["teacher", schoolId, teacherId, "progress"] as const,
     /** `GET /teachers/dashboard/me` — KPIs, schedule, grading/attendance/resources summaries, activity and setup progress in one payload. */
     dashboard: (schoolId: string, teacherId: string) => ["teacher", schoolId, teacherId, "dashboard"] as const,
+    /** `GET /teachers/today` — the redesign's Today aggregate (lessons, registers, attention, classes, setup, counts). */
+    today: (schoolId: string, teacherId: string) => ["teacher", schoolId, teacherId, "today"] as const,
   },
   academic: {
     all: ["academic"] as const,
@@ -97,6 +99,10 @@ export const queryKeys = {
     all: ["timetable"] as const,
     byClass: (schoolId: string, classId: string) => ["timetable", schoolId, "class", classId] as const,
     byTeacher: (schoolId: string, teacherId: string) => ["timetable", schoolId, "teacher", teacherId] as const,
+    /** `GET /timetable/me?weekStart=` — one week of the signed-in teacher's lessons; `"current"` for the default week. */
+    myWeek: (schoolId: string, teacherId: string, weekStart: string) => ["timetable", schoolId, "me", teacherId, weekStart] as const,
+    /** Prefix of every `myWeek` key, for invalidating all loaded weeks. */
+    myWeeks: (schoolId: string, teacherId: string) => ["timetable", schoolId, "me", teacherId] as const,
   },
   notifications: {
     all: ["notifications"] as const,
