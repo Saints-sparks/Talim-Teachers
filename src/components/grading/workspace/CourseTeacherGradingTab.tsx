@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { resolveId } from "@/app/services/grading-workspace/grading-workspace.service";
-import { useCourseGradingWorkspace, type CourseGradingActions } from "@/hooks/grading/useCourseGradingWorkspace";
+import { useCourseGradingWorkspace, type CourseGradingActions, type GradingPreselect } from "@/hooks/grading/useCourseGradingWorkspace";
 import { GradeEntryTable } from "./GradeEntryTable";
 import { ScopedKpiCards } from "./ScopedKpiCards";
 import { DetailsDrawer } from "./DetailsDrawer";
@@ -13,6 +13,8 @@ import { ValidationResultModal } from "./ValidationResultModal";
 interface Props {
   onScopeChange: (scope: { termLabel: string; scopeLabel: string }) => void;
   registerActions: (actions: CourseGradingActions) => void;
+  /** Course and assessment to open on arrival (`?courseId=&assessmentId=`). */
+  preselect?: GradingPreselect;
 }
 
 /**
@@ -23,10 +25,11 @@ interface Props {
  * @param props - See {@link Props}.
  * @param props.onScopeChange - Reports the current term/scope label to the page shell.
  * @param props.registerActions - Wires the shell's header buttons to this tab.
+ * @param props.preselect - Course and assessment to open on arrival.
  * @returns The tab element.
  */
-export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, registerActions }) => {
-  const w = useCourseGradingWorkspace(onScopeChange, registerActions);
+export const CourseTeacherGradingTab: React.FC<Props> = ({ onScopeChange, registerActions, preselect }) => {
+  const w = useCourseGradingWorkspace(onScopeChange, registerActions, preselect);
   const showStep = (step: 1 | 2 | 3 | 4) =>
     typeof window !== "undefined" && window.innerWidth < 768 ? w.mobileStep === step : true;
 

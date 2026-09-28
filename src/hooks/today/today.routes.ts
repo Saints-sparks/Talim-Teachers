@@ -5,8 +5,10 @@
  *
  * Query parameters the destination does not read yet are still passed (they
  * are harmless and let those pages preselect later); the ones that work today
- * are `?room=` on Messages, `?courseId=` on Curriculum and
- * `?upload=1&courseId=` on Resources.
+ * are `?room=` on Messages, `?courseId=` on Curriculum, `?upload=1&courseId=`
+ * on Resources, `?date=` on the register (`/attendance/class/:id`, also
+ * `/attendance?classId=&date=`), `?classId=` on Students and
+ * `?courseId=&assessmentId=` on Grading.
  */
 import type { AttentionTarget, AttentionTone, RegisterStatus, SetupStepKey } from "@/types/today";
 
@@ -76,7 +78,7 @@ export function uploadResourceRoute(courseId?: string, week?: number | null): st
  * Maps an attention action's target to a route in this app.
  *
  * - `attendance` → the class's register (`/attendance/class/:id`), or the class list.
- * - `grading` → `/grading` (course and assessment passed along for preselection).
+ * - `grading` → `/grading?courseId=&assessmentId=`, which opens that course and assessment.
  * - `messages` → `/messages?room=` (Messages opens that room), or the inbox.
  * - `resources` → `/resources?upload=1&courseId=&week=` (opens the upload dialog).
  * - `subjects` → the course's scheme of work, or `/subjects`.

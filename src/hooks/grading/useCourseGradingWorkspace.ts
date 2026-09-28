@@ -25,12 +25,22 @@ export interface CourseGradingActions {
   batch?: () => void;
 }
 
+/** A course and assessment to open on arrival (`/grading?courseId=&assessmentId=`). */
+export interface GradingPreselect {
+  courseId?: string;
+  assessmentId?: string;
+}
+
 /** Everything {@link CourseTeacherGradingTab} needs to render. */
 export function useCourseGradingWorkspace(
   onScopeChange: (scope: { termLabel: string; scopeLabel: string }) => void,
   registerActions: (actions: CourseGradingActions) => void,
+  initial: GradingPreselect = {},
 ) {
   const { courses, classes, isLoading: rosterLoading } = useAppContext();
+  // `?courseId=&assessmentId=` from a deep link (Today's attention items): applied once, when they exist.
+  const pendingCourse = useRef(initial.courseId);
+  const pendingAssessment = useRef(initial.assessmentId ? { courseId: initial.courseId, assessmentId: initial.assessmentId } : null);
   const machine = useGradingStateMachine();
 
   const [terms, setTerms] = useState<Term[]>([]);
@@ -201,8 +211,25 @@ export function useCourseGradingWorkspace(
     if (!q) return assessments;
     return assessments.filter((a) => (a.name || a.title || "").toLowerCase().includes(q));
   }, [assessments, assessmentSearch]);
+  // Deep link: select the linked course once the teacher's courses are known.
+  useEffect(() => {
+    const wanted = pendingCourse.current;
+    if (!wanted || !(courses as TeacherCourse[]).length) return;
+    pendingCourse.current = undefined;
+    if ((courses as TeacherCourse[]).some((c) => resolveId(c._id) === wanted)) setSelectedCourse(wanted);
+    else pendingAssessment.current = null;
+  }, [courses]);
   useEffect(() => {
     if (!selectedCourse || !filteredAssessments.length) return;
+    // Deep link: the linked assessment wins over "the first one", once, for the linked course.
+    const wanted = pendingAssessment.current;
+    if (wanted && (!wanted.courseId || wanted.courseId === selectedCourse)) {
+      if (filteredAssessments.some((a) => resolveId(a._id) === wanted.assessmentId)) {
+        pendingAssessment.current = null;
+        setSelectedAssessment(wanted.assessmentId);
+        return;
+      }
+    }
     if (!selectedAssessment) {
       setSelectedAssessment(resolveId(filteredAssessments[0]._id));
     }

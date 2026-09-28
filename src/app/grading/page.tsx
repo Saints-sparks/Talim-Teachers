@@ -1,13 +1,25 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { Suspense, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Layout from "@/components/Layout";
 import { ContextHeader } from "@/components/grading/workspace/ContextHeader";
 import { CourseTeacherGradingTab } from "@/components/grading/workspace/CourseTeacherGradingTab";
 import { ClassTeacherGradingTab } from "@/components/grading/workspace/ClassTeacherGradingTab";
 import { RoleMode } from "@/components/grading/workspace/types";
 
-const GradingPage: React.FC = () => {
+/**
+ * The grading workspace. `?courseId=&assessmentId=` (Today's attention links)
+ * opens that course and assessment on the course-teacher tab.
+ *
+ * @returns The workspace.
+ */
+const GradingWorkspace: React.FC = () => {
+  const params = useSearchParams();
+  const [preselect] = useState(() => ({
+    courseId: params.get("courseId") || undefined,
+    assessmentId: params.get("assessmentId") || undefined,
+  }));
   const [role, setRole] = useState<RoleMode>("course");
   const [termLabel, setTermLabel] = useState("");
   const [scopeLabel, setScopeLabel] = useState("");
@@ -27,7 +39,6 @@ const GradingPage: React.FC = () => {
     : "Class";
 
   return (
-    <Layout>
       <div className="min-h-screen bg-[#EBF0F7] p-3 sm:p-6 dark:bg-slate-900">
         <div className="mx-auto max-w-[1600px] space-y-4">
           <ContextHeader
@@ -67,6 +78,7 @@ const GradingPage: React.FC = () => {
                   setScopeLabel(s);
                 }}
                 registerActions={setActions}
+                preselect={preselect}
               />
             ) : (
               <ClassTeacherGradingTab
@@ -81,8 +93,20 @@ const GradingPage: React.FC = () => {
 
         </div>
       </div>
-    </Layout>
   );
 };
+
+/**
+ * Grading (`/grading?courseId=&assessmentId=`).
+ *
+ * @returns The page.
+ */
+const GradingPage: React.FC = () => (
+  <Layout>
+    <Suspense fallback={null}>
+      <GradingWorkspace />
+    </Suspense>
+  </Layout>
+);
 
 export default GradingPage;
