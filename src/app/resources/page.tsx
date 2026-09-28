@@ -1,5 +1,6 @@
 "use client";
-import { useMemo, useState, type ReactNode } from "react";
+import { Suspense, useMemo, useState, type ReactNode } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { BookOpen } from "lucide-react";
 import Layout from "@/components/Layout";
 import LoadingCard from "@/components/LoadingCard";
@@ -29,11 +30,21 @@ const Panel = ({ children, guide }: { children: ReactNode; guide?: string }) => 
  * Data comes from one cached query (`useMyResources`); uploads, edits and
  * deletes invalidate it, so the page holds no copy of the list of its own.
  *
+ * `?upload=1&courseId=` (from Today's "Share a resource" and the setup
+ * card) opens the upload dialog with that course preselected.
+ *
  * @returns The page element.
  */
-export default function ResourcePage() {
+function ResourcePageContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
-  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(() => searchParams?.get("upload") === "1");
+  const initialCourseId = searchParams?.get("courseId") ?? undefined;
+  const closeUpload = () => {
+    setIsUploadModalOpen(false);
+    if (searchParams?.get("upload")) router.replace("/resources");
+  };
 
   const query = useMyResources();
   const roster = useTeacherRoster();
@@ -96,8 +107,21 @@ export default function ResourcePage() {
           )}
         </Panel>
 
-        <UploadModal isOpen={isUploadModalOpen} onClose={() => setIsUploadModalOpen(false)} />
+        <UploadModal isOpen={isUploadModalOpen} onClose={closeUpload} initialCourseId={initialCourseId} />
       </div>
     </Layout>
+  );
+}
+
+/**
+ * `/resources`. `useSearchParams` needs a Suspense boundary.
+ *
+ * @returns The page element.
+ */
+export default function ResourcePage() {
+  return (
+    <Suspense fallback={null}>
+      <ResourcePageContent />
+    </Suspense>
   );
 }

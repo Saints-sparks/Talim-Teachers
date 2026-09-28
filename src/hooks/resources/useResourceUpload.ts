@@ -23,6 +23,8 @@ export interface ResourceUploadInput {
   isOpen: boolean;
   /** Closes the modal. */
   onClose: () => void;
+  /** Preselects this course (and its class) when the modal opens, e.g. from a lesson. */
+  initialCourseId?: string;
 }
 
 /** What {@link useResourceUpload} hands the modal. */
@@ -64,7 +66,7 @@ export interface ResourceUpload {
  * @param input - See {@link ResourceUploadInput}.
  * @returns See {@link ResourceUpload}.
  */
-export function useResourceUpload({ isOpen, onClose }: ResourceUploadInput): ResourceUpload {
+export function useResourceUpload({ isOpen, onClose, initialCourseId }: ResourceUploadInput): ResourceUpload {
   const roster = useTeacherRoster();
   const term = useCurrentTerm();
   const createMutation = useCreateResource();
@@ -114,6 +116,19 @@ export function useResourceUpload({ isOpen, onClose }: ResourceUploadInput): Res
     },
     [roster.courses],
   );
+
+  // Opening with a course (from a lesson or Today) preselects it once the roster is in.
+  const prefilledRef = useRef(false);
+  useEffect(() => {
+    if (!isOpen) {
+      prefilledRef.current = false;
+      return;
+    }
+    if (prefilledRef.current || !initialCourseId) return;
+    if (!roster.courses.some((course) => recordId(course) === initialCourseId)) return;
+    prefilledRef.current = true;
+    selectCourse(initialCourseId);
+  }, [isOpen, initialCourseId, roster.courses, selectCourse]);
 
   const pickFile = useCallback((next: File | null) => {
     if (!next) return;

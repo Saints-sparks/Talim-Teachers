@@ -12,6 +12,8 @@ import { UploadFormFields } from "./UploadFormFields";
 export interface UploadModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Preselects this course (and its class) when the dialog opens. */
+  initialCourseId?: string;
 }
 
 /**
@@ -25,10 +27,11 @@ export interface UploadModalProps {
  * @param props - See {@link UploadModalProps}.
  * @param props.isOpen - Whether the dialog is showing.
  * @param props.onClose - Closes the dialog.
+ * @param props.initialCourseId - Course to preselect, if any.
  * @returns The dialog element.
  */
-export function UploadModal({ isOpen, onClose }: UploadModalProps) {
-  const upload = useResourceUpload({ isOpen, onClose });
+export function UploadModal({ isOpen, onClose, initialCourseId }: UploadModalProps) {
+  const upload = useResourceUpload({ isOpen, onClose, initialCourseId });
   const busy = upload.phase === "uploading" || upload.phase === "saving";
   const percent = Math.round(upload.progress * 100);
 
