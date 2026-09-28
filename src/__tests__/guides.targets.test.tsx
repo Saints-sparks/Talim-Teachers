@@ -79,6 +79,7 @@ beforeAll(() => {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  search = "";
   resetClassroomFixtureStore();
   localStorage.clear();
   classroom.getMyClasses.mockResolvedValue(makeMyClassesFixture());
@@ -273,6 +274,20 @@ describe("AppGuide", () => {
     expect(screen.queryByText(/^Step 1 of/)).not.toBeInTheDocument();
     await act(async () => release());
     expect(await screen.findByText("Step 1 of 5", undefined, { timeout: 3_000 })).toBeInTheDocument();
+  });
+
+  it("opens the class report's own guide on /grading?mode=class", async () => {
+    pathname = "/grading";
+    search = "mode=class&classId=c1";
+    render(
+      <>
+        <GradingScreen link={{ mode: "class", classId: "c1" }} />
+        <AppGuide />
+      </>,
+    );
+    await screen.findByRole("heading", { name: "JSS1 A · report readiness" });
+    expect(await screen.findByRole("dialog", { name: "Your class, as class teacher" }, { timeout: 3_000 })).toBeInTheDocument();
+    expect(screen.getByText("Step 1 of 4")).toBeInTheDocument();
   });
 
   it("stays closed once the guide has been seen on this device", async () => {
