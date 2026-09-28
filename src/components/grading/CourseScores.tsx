@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "@/components/CustomToast";
 import { ConfirmSheet } from "@/components/tl/ConfirmSheet";
 import { StatTile } from "@/components/tl/StatTile";
@@ -120,6 +120,22 @@ function SheetLoadError({ error, onRetry }: { error: unknown; onRetry: () => voi
 }
 
 /**
+ * A file's text (`File.text()`, else a FileReader for older browsers).
+ *
+ * @param file - The file the teacher picked.
+ * @returns Its contents.
+ */
+function readFileText(file: File): Promise<string> {
+  if (typeof file.text === "function") return file.text();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ""));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(file);
+  });
+}
+
+/**
  * Grey blocks while a sheet loads.
  *
  * @returns The skeleton.
@@ -191,6 +207,11 @@ export function CourseScores({ courses, courseId, onCourse, view, onView, termId
   const [reason, setReason] = useState("");
   const [problems, setProblems] = useState<string[]>([]);
   const fileInput = useRef<HTMLInputElement>(null);
+
+  // Pin the assessment the page opened on, so publishing it does not jump to the next one.
+  useEffect(() => {
+    if (sheet && view === undefined && sheet.assessments.length) onView(resolveView(sheet, undefined));
+  }, [sheet, view, onView]);
 
   const termOf = sheet?.term.id ?? termId ?? "current";
   const draftsById = useMemo(() => {
@@ -375,7 +396,7 @@ export function CourseScores({ courses, courseId, onCourse, view, onView, termId
 
   const importCsv = async (file: File | undefined) => {
     if (!file || !assessment) return;
-    const text = await file.text();
+    const text = await readFileText(file);
     const result = importScoresCsv(text, sheet, assessment);
     setProblems(result.problems);
     if (result.filled) {

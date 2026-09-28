@@ -379,7 +379,7 @@ function reportSubjects(): ReportSubject[] {
       const i = FIXTURE_STUDENTS.findIndex((x) => x.id === s);
       const idx = oi + 1;
       const ai = ASSESSMENTS.findIndex((x) => x.id === a);
-      return a === "a3" ? 28 + ((i * 11 + idx * 7) % 31) : 9 + ((i * 7 + idx * 5 + ai * 3) % 11);
+      return a === "a3" ? 22 + ((i * 11 + idx * 7) % 37) : 5 + ((i * 5 + idx * 3 + ai * 7) % 15);
     },
   }));
   return [mine, ...others];
