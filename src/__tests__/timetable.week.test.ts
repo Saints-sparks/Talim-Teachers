@@ -35,6 +35,8 @@ describe("double periods", () => {
     const [a, b] = on("Thursday").filter((l) => l.course.id === "k1");
     expect(groupDoublePeriods([a, { ...b, class: { id: "c2", name: "JSS2 B" } }], FIXTURE_PERIODS).some((g) => g.merged)).toBe(false);
     expect(groupDoublePeriods([a, { ...b, cancelled: { reason: "Staff training" } }], FIXTURE_PERIODS).some((g) => g.merged)).toBe(false);
+    // One card shows one room: a lab lesson followed by a classroom lesson is two lessons.
+    expect(groupDoublePeriods([{ ...a, room: "Lab 2" }, { ...b, room: "Room 12" }], FIXTURE_PERIODS).some((g) => g.merged)).toBe(false);
   });
 
   it("never merges into a period that holds a clash", () => {

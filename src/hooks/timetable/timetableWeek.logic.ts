@@ -21,8 +21,9 @@ export interface LessonGroup<L extends Lesson = Lesson> {
 }
 
 /**
- * Whether two lessons are the same class being taught the same course, with
- * the same cancellation, so they read as one double period.
+ * Whether two lessons are the same class being taught the same course, in the
+ * same room, with the same cancellation, so they read as one double period.
+ * (A card shows one room, so lessons in different rooms stay apart.)
  *
  * @param a - The earlier lesson.
  * @param b - The later lesson.
@@ -33,6 +34,7 @@ function sameTeaching(a: Lesson, b: Lesson): boolean {
     a.date === b.date &&
     a.course.id === b.course.id &&
     a.class.id === b.class.id &&
+    (a.room ?? null) === (b.room ?? null) &&
     (a.cancelled?.reason ?? null) === (b.cancelled?.reason ?? null)
   );
 }
