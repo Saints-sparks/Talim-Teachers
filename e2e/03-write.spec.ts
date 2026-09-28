@@ -1,13 +1,14 @@
-import type { Page } from "@playwright/test";
 import { test, expect, type Allowed } from "./support/fixtures";
 import { authFile } from "./support/creds";
 import { seed } from "./support/backend";
 import { dismissGuide } from "./support/ui";
 
 /**
- * A real write flow through the UI, against the real API: the teacher marks a
- * student present, the mark survives a reload, and a second mark for the same
- * student shows the recorded state rather than an error.
+ * A real write flow through the UI, against the real API: the class teacher
+ * marks the one student not on leave on the morning register (a radiogroup
+ * per student), the draft is saved with `PUT /registers/:classId`, and the
+ * footer's Submit sends `{ submit: true }`. The mark and the submission
+ * survive a reload.
  */
 const ALLOW: readonly Allowed[] = [
   { kind: "external", match: /fonts\.googleapis\.com|fonts\.gstatic\.com/, reason: "Google Fonts; blocked by the harness" },
@@ -16,69 +17,47 @@ const ALLOW: readonly Allowed[] = [
 
 test.use({ storageState: authFile("teacher") });
 test.describe.configure({ mode: "serial" });
-test.beforeAll(() => seed("--reset")); // no attendance marks: today's register is empty
+test.beforeAll(() => seed("--reset")); // no attendance marks and no register today
 
-const card = (page: Page, student: string) =>
-  page.locator('[data-guide="attendance-student-cards"] > *').filter({ hasText: student });
-
-async function openGrade5A(page: Page): Promise<void> {
+test("marking and submitting the register is stored and survives a reload", async ({ page, monitor }) => {
+  const loaded = page.waitForResponse((r) => /\/registers\/[a-f0-9]{24}(\?|$)/.test(r.url()) && r.request().method() === "GET" && r.ok());
   await page.goto("/attendance");
+  await loaded;
   await dismissGuide(page);
-  await page.locator("[data-guide='attendance-class-grid'] > *").filter({ hasText: "Grade 5A" }).getByText(/View Students/).click();
-  await expect(page).toHaveURL(/\/attendance\/class\//);
-  await dismissGuide(page);
-  await expect(page.getByText("Ada Student").first()).toBeVisible();
-}
-
-test("marking a student present is stored, survives a reload, and the duplicate shows the record", async ({ page, monitor }) => {
-  await openGrade5A(page);
+  await expect(page.getByRole("heading", { level: 2, name: /^Grade 5A · .* · today$/ })).toBeVisible();
   monitor.clear();
 
-  // 1. Mark Ada present.
-  const ada = card(page, "Ada Student");
-  await ada.getByRole("button", { name: "Present" }).click();
-  const posted = page.waitForResponse((r) => r.url().endsWith("/attendance") && r.request().method() === "POST");
-  await ada.getByRole("button", { name: /Submit Attendance/ }).click();
-  const res = await posted;
-  expect(res.status()).toBe(201);
-  const body = res.request().postDataJSON() as Record<string, unknown>;
-  expect(body).toMatchObject({ status: "Present" });
-  expect(Object.keys(body).sort()).toEqual(["classId", "date", "status", "studentId", "termId"]);
-  await expect(ada.getByText("Present").first()).toBeVisible();
-  await expect(ada.getByText(/Marked at/)).toBeVisible();
+  // Ben is on approved leave: locked, no radios.
+  await expect(page.getByRole("radiogroup", { name: "Attendance for Ben Student" })).toHaveCount(0);
+  const ada = page.getByRole("radiogroup", { name: "Attendance for Ada Student" });
+  const submit = page.getByRole("button", { name: "Submit register" });
+  await expect(submit).toBeDisabled();
 
-  // 2. Reload: the mark is still there, the other student is still open.
+  // 1. Mark Ada present: the draft is saved with submit: false.
+  const draft = page.waitForResponse((r) => r.request().method() === "PUT" && r.url().includes("/registers/"));
+  await ada.getByRole("radio", { name: "Present" }).click();
+  const draftRes = await draft;
+  expect(draftRes.status()).toBe(200);
+  const draftBody = draftRes.request().postDataJSON() as { marks: { studentId: string; status: string }[]; submit: boolean };
+  expect(draftBody.submit).toBe(false);
+  expect(draftBody.marks).toEqual([expect.objectContaining({ status: "present" })]);
+  await expect(page.getByText("Draft saved")).toBeVisible();
+  await expect(ada.getByRole("radio", { name: "Present" })).toHaveAttribute("aria-checked", "true");
+
+  // 2. Submit from the footer: submit: true, and the banner says it is in.
+  await expect(submit).toBeEnabled();
+  const posted = page.waitForResponse((r) => r.request().method() === "PUT" && r.url().includes("/registers/"));
+  await submit.click();
+  const res = await posted;
+  expect(res.status()).toBe(200);
+  expect((res.request().postDataJSON() as { submit: boolean }).submit).toBe(true);
+  await expect(page.getByRole("status").filter({ hasText: /^Submitted at / })).toBeVisible();
+
+  // 3. Reload: still submitted, Ada still present (read-only until Edit register).
   await page.reload();
   await dismissGuide(page);
-  await expect(card(page, "Ada Student").getByText(/Marked at/)).toBeVisible();
-  await expect(card(page, "Ada Student").getByRole("button", { name: /Submit Attendance/ })).toHaveCount(0);
-  await expect(card(page, "Ben Student").getByRole("button", { name: /Submit Attendance/ })).toBeVisible();
-
-  // 3. A duplicate: someone else already recorded Ben. The server refuses the second mark;
-  //    the teacher must be told the list is up to date, not shown an error.
-  await page.route(
-    (url) => url.pathname.endsWith("/attendance"),
-    async (route) => {
-      if (route.request().method() !== "POST") return route.continue();
-      await route.fetch(); // the first mark lands ...
-      const duplicate = await route.fetch(); // ... so this one is the duplicate
-      return route.fulfill({ response: duplicate });
-    },
-  );
-  const ben = card(page, "Ben Student");
-  await ben.getByRole("button", { name: "Present" }).click();
-  monitor.clear();
-  await ben.getByRole("button", { name: /Submit Attendance/ }).click();
-
-  await expect(page.getByText(/Ben Student was already marked/)).toBeVisible();
-  await expect(ben.getByText(/Marked at/)).toBeVisible();
-  await expect(page.getByText(/marks? didn't send/i)).toHaveCount(0);
-  // The refused duplicate is the only allowed failure on the wire.
-  expect(
-    monitor.unexpected([
-      ...ALLOW,
-      { kind: "http", match: /POST \/attendance -> 409/, reason: "the duplicate mark is refused with 409 CONFLICT by the API, which is the point of the step" },
-      { kind: "console.error", match: /Submitting a mark failed[\s\S]*already recorded/, reason: "the app logs the refused duplicate before it reconciles with the roster" },
-    ]),
-  ).toEqual([]);
+  await expect(page.getByRole("status").filter({ hasText: /^Submitted at / })).toBeVisible();
+  await expect(page.getByRole("radiogroup", { name: "Attendance for Ada Student" })).toHaveCount(0);
+  await expect(page.locator("li", { hasText: "Ada Student" }).getByText("Present", { exact: true })).toBeVisible();
+  expect(monitor.unexpected(ALLOW)).toEqual([]);
 });

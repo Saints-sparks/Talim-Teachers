@@ -19,9 +19,9 @@ export interface PageSpec {
 export const TEACHER_PAGES: readonly PageSpec[] = [
   { path: "/dashboard", label: "Today", content: /Good (morning|afternoon|evening), Tolu/, feed: /\/teachers\/today$/ },
   { path: "/timetable", label: "Timetable", content: /Mathematics 5A · Grade 5A/, feed: /\/timetable\/me(\?|$)/ },
-  { path: "/attendance", label: "Attendance", content: /Select a class to manage attendance/ },
+  { path: "/attendance", label: "Attendance", content: /Grade 5A · \w+ \d+ \w+ · today/, feed: /\/registers\/[a-f0-9]{24}(\?|$)/ },
   { path: "/grading", label: "Grading", content: /Grading Workspace/ },
-  { path: "/students", label: "Students", content: /2 students/ },
+  { path: "/students", label: "Students", content: /2 of 30/, feed: /\/teachers\/me\/classes\/[a-f0-9]{24}\/students$/ },
   { path: "/subjects", label: "Subjects", content: /MTH-5A/ },
   { path: "/curriculum", label: "Curriculum", content: /Select a Course First/ },
   { path: "/resources", label: "Resources", content: /No resources yet/, empty: true },

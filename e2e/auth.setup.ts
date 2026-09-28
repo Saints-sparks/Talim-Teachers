@@ -10,3 +10,10 @@ setup("sign in teacher", async ({ page }) => {
   console.log(`[e2e] teacher landed on ${new URL(page.url()).pathname}`);
   await page.context().storageState({ path: authFile("teacher") });
 });
+
+/** The second teacher (English 6B only), for the no-access checks on Grade 5A. */
+setup("sign in second teacher", async ({ page }) => {
+  await signInThroughUi(page, ACCOUNTS.secondTeacher);
+  await page.waitForLoadState("networkidle", { timeout: 20_000 }).catch(() => undefined);
+  await page.context().storageState({ path: authFile("secondTeacher") });
+});

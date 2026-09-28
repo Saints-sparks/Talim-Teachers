@@ -18,6 +18,8 @@ export const ACCOUNTS = {
   subAdmin: { email: "subadmin@e2e.talim.test", password: PASSWORD, name: "Sam Subadmin" },
   /** Class teacher of Grade 5A (two students, published grades). */
   teacher: { email: "teacher@e2e.talim.test", password: PASSWORD, name: "Tolu Teacher" },
+  /** Teaches English 6B only: no access to Grade 5A (the same-school "no access" checks). */
+  secondTeacher: { email: "second.teacher@e2e.talim.test", password: PASSWORD, name: "Sola Second" },
   /** On a temporary password: `seed.js --rearm` puts it back after a test changes it. */
   tempTeacher: { email: "temp.teacher@e2e.talim.test", password: "Temp#Pass2026x", name: "Temi Temporary" },
   student: { email: "ada.student@e2e.talim.test", password: PASSWORD, name: "Ada Student" },
