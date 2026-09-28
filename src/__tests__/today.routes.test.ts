@@ -1,4 +1,4 @@
-import { attentionHref, pickRegisterAction, registerRoute, schemeOfWorkRoute, setupStepHref, uploadResourceRoute } from "@/hooks/today/today.routes";
+import { attentionHref, classMessagesRoute, pickRegisterAction, registerRoute, schemeOfWorkRoute, setupStepHref, uploadResourceRoute } from "@/hooks/today/today.routes";
 import { makeTodayFixture } from "@/lib/fixtures/today.fixture";
 import type { RegisterStatus } from "@/types/today";
 
@@ -62,5 +62,12 @@ describe("setup steps", () => {
     expect(setupStepHref("plan")).toBe("/curriculum");
     expect(setupStepHref("resource")).toBe("/resources?upload=1");
     expect(setupStepHref("tour")).toBeNull();
+  });
+});
+
+describe("Message the class", () => {
+  it("opens the class-group room when the lesson has one, else the inbox", () => {
+    expect(classMessagesRoute("room 1")).toBe("/messages?room=room+1");
+    expect(classMessagesRoute(null)).toBe("/messages");
   });
 });

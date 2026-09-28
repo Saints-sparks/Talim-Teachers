@@ -100,6 +100,18 @@ describe("useResourceUpload", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it("prefills the scheme-of-work week and sends it as `week`", async () => {
+    uploadToCloudinary.mockResolvedValue("https://cdn.test/notes.pdf");
+    mutateAsync.mockResolvedValue({ _id: "r1" });
+    const { result } = renderHook(() => useResourceUpload({ isOpen: true, onClose, initialCourseId: "co1", initialWeek: 4 }));
+    expect(result.current.week).toBe(4);
+    expect(result.current.courseId).toBe("co1");
+    act(() => result.current.setName("Week 4 notes"));
+    act(() => result.current.pickFile(file));
+    await act(async () => result.current.submit());
+    expect(mutateAsync.mock.calls[0][0]).toMatchObject({ courseId: "co1", week: 4 });
+  });
+
   it("returns to an editable form and says why when the file upload fails", async () => {
     uploadToCloudinary.mockRejectedValue(new UploadError("Network error while uploading."));
     const { result } = renderHook(() => useResourceUpload({ isOpen: true, onClose }));

@@ -27,7 +27,7 @@ export function TimetableScreen() {
   const { preferences } = useTeacherPreferences();
   const [pickedMode, setPickedMode] = useState<TimetableMode | null>(null);
   const mode: TimetableMode = pickedMode ?? (preferences.teaching.timetableDisplay === "today" ? "today" : "week");
-  const [upload, setUpload] = useState<{ courseId?: string } | null>(null);
+  const [upload, setUpload] = useState<{ courseId?: string; week?: number } | null>(null);
 
   if (query.isPending) {
     return (
@@ -82,9 +82,9 @@ export function TimetableScreen() {
         loadingWeek={query.isPlaceholderData}
         onExportCsv={exportCsv}
         onPrint={() => window.print()}
-        onShareResource={(courseId) => setUpload({ courseId })}
+        onShareResource={(courseId, week) => setUpload({ courseId, week })}
       />
-      <UploadModal isOpen={upload !== null} onClose={() => setUpload(null)} initialCourseId={upload?.courseId} />
+      <UploadModal isOpen={upload !== null} onClose={() => setUpload(null)} initialCourseId={upload?.courseId} initialWeek={upload?.week} />
     </>
   );
 }

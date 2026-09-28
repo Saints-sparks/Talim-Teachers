@@ -39,6 +39,17 @@ export function registerRoute(classId: string, date?: string): string {
 }
 
 /**
+ * "Message the class": the class-group chat room when the lesson has one
+ * (`classRoomId`), otherwise the inbox.
+ *
+ * @param classRoomId - The lesson's class-group room, or null.
+ * @returns The href.
+ */
+export function classMessagesRoute(classRoomId: string | null | undefined): string {
+  return withQuery("/messages", { room: classRoomId });
+}
+
+/**
  * The scheme of work for a course. Until the week-by-week Subjects screen
  * lands, that is the course's curriculum page.
  *

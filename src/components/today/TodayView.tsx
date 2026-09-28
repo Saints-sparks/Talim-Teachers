@@ -32,7 +32,9 @@ export interface TodayViewProps {
  */
 export function emptyDayMessage(today: TeacherToday): string | null {
   const { schoolDay } = today;
-  if (!schoolDay.isSchoolDay && schoolDay.reason === "no_term") {
+  // Precedence on the server is weekend > holiday > no_term. Outside a term the
+  // timetable still runs (lessons are listed), so only say so when there are none.
+  if (!schoolDay.isSchoolDay && schoolDay.reason === "no_term" && today.lessons.length === 0) {
     return "There is no current term, so there are no lessons today. Your timetable will show here when the next term starts.";
   }
   if (!schoolDay.isSchoolDay && schoolDay.reason === "holiday") {
@@ -111,6 +113,12 @@ export function TodayView({ today, nowMs, firstName, onUpload, onTour }: TodayVi
       {today.schoolDay.endsEarlyAt ? (
         <p role="status" className="rounded-2xl border border-tl-line bg-tl-warning-bg px-4 py-3 text-sm font-bold text-tl-warning">
           School closes early today at {displayTime(today.schoolDay.endsEarlyAt)}. Lessons after that are cancelled.
+        </p>
+      ) : null}
+
+      {today.schoolDay.reason === "no_term" && today.lessons.length > 0 ? (
+        <p role="status" className="rounded-2xl border border-tl-line bg-tl-subtle px-4 py-3 text-sm font-bold text-tl-body">
+          There is no current term today, so registers are not taken. Your timetable is shown as usual.
         </p>
       ) : null}
 

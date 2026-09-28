@@ -7,7 +7,7 @@ import { ghostButton, rowButton } from "@/components/tl/styles";
 import { toast } from "@/components/CustomToast";
 import { getErrorMessage } from "@/lib/apiError";
 import { displayRange, lessonTitle } from "@/hooks/today/today.logic";
-import { registerRoute, schemeOfWorkRoute } from "@/hooks/today/today.routes";
+import { classMessagesRoute, registerRoute, schemeOfWorkRoute } from "@/hooks/today/today.routes";
 import { groupPeriodLabel, type LessonGroup } from "@/hooks/timetable/timetableWeek.logic";
 import { useMarkTaught } from "@/hooks/today/useTeacherToday";
 
@@ -135,9 +135,9 @@ export function LessonSheet({ group, termId, onClose, onShareResource }: LessonS
           />
           <SheetRow
             label="Message the class"
-            description={`The ${lesson.class.name} class group in Messages`}
+            description={lesson.classRoomId ? `The ${lesson.class.name} class group in Messages` : "Open Messages (this class has no group chat yet)"}
             action={
-              <Link href="/messages" className={rowButton}>
+              <Link href={classMessagesRoute(lesson.classRoomId)} className={rowButton}>
                 Message
               </Link>
             }

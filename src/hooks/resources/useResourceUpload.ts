@@ -25,6 +25,8 @@ export interface ResourceUploadInput {
   onClose: () => void;
   /** Preselects this course (and its class) when the modal opens, e.g. from a lesson. */
   initialCourseId?: string;
+  /** Prefills the scheme-of-work week (1..30), e.g. from a lesson's topic or an attention item. */
+  initialWeek?: number;
 }
 
 /** What {@link useResourceUpload} hands the modal. */
@@ -34,6 +36,9 @@ export interface ResourceUpload {
   classId: string;
   setClassId: (classId: string) => void;
   courseId: string;
+  /** Scheme-of-work week the resource is filed under (sent as `week`); undefined for none. */
+  week: number | undefined;
+  setWeek: (week: number | undefined) => void;
   /** Picks a course and, when the course has one, its class. */
   selectCourse: (courseId: string) => void;
   file: File | null;
@@ -66,7 +71,7 @@ export interface ResourceUpload {
  * @param input - See {@link ResourceUploadInput}.
  * @returns See {@link ResourceUpload}.
  */
-export function useResourceUpload({ isOpen, onClose, initialCourseId }: ResourceUploadInput): ResourceUpload {
+export function useResourceUpload({ isOpen, onClose, initialCourseId, initialWeek }: ResourceUploadInput): ResourceUpload {
   const roster = useTeacherRoster();
   const term = useCurrentTerm();
   const createMutation = useCreateResource();
@@ -74,6 +79,7 @@ export function useResourceUpload({ isOpen, onClose, initialCourseId }: Resource
   const [name, setName] = useState("");
   const [classId, setClassId] = useState("");
   const [courseId, setCourseId] = useState("");
+  const [week, setWeek] = useState<number | undefined>(undefined);
   const [file, setFile] = useState<File | null>(null);
   const [phase, setPhase] = useState<UploadPhase>("idle");
   const [progress, setProgress] = useState(0);
@@ -94,6 +100,7 @@ export function useResourceUpload({ isOpen, onClose, initialCourseId }: Resource
     setName("");
     setClassId("");
     setCourseId("");
+    setWeek(undefined);
     setFile(null);
     setPhase("idle");
     setProgress(0);
@@ -116,6 +123,11 @@ export function useResourceUpload({ isOpen, onClose, initialCourseId }: Resource
     },
     [roster.courses],
   );
+
+  // Opening from a lesson or an attention item prefills the scheme-of-work week.
+  useEffect(() => {
+    if (isOpen && initialWeek && initialWeek >= 1 && initialWeek <= 30) setWeek(initialWeek);
+  }, [isOpen, initialWeek]);
 
   // Opening with a course (from a lesson or Today) preselects it once the roster is in.
   const prefilledRef = useRef(false);
@@ -171,6 +183,7 @@ export function useResourceUpload({ isOpen, onClose, initialCourseId }: Resource
         uploadDate: new Date().toISOString(),
         image: url,
         files: [url],
+        ...(week ? { week } : {}),
       };
       await createMutation.mutateAsync(payload);
 
@@ -192,6 +205,8 @@ export function useResourceUpload({ isOpen, onClose, initialCourseId }: Resource
     classId,
     setClassId,
     courseId,
+    week,
+    setWeek,
     selectCourse,
     file,
     pickFile,

@@ -28,8 +28,13 @@ export type TeacherMessagePrefs = FullSection<"messages">;
 /** Workspace defaults (`TeacherTeachingPreferencesDto`). */
 export type TeacherTeachingPrefs = FullSection<"teaching">;
 
-/** In-app guide preferences (`TeacherGuidePreferencesDto`). */
-export type TeacherGuidePrefs = FullSection<"guides">;
+/**
+ * In-app guide preferences (`TeacherGuidePreferencesDto`). `tourCompleted` is
+ * left out: it is a one-shot command (true stamps `tourCompletedAt`, false
+ * clears it), sent only by `todayService.completeTour`, never echoed back by a
+ * settings save.
+ */
+export type TeacherGuidePrefs = Required<Omit<NonNullable<TeacherPreferencesPayload["guides"]>, "tourCompleted">>;
 
 /**
  * Everything `UpdateTeacherPreferencesDto` accepts, with nothing optional.

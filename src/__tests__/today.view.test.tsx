@@ -158,6 +158,16 @@ describe("Today without lessons", () => {
     expect(screen.queryByRole("region", { name: /lesson on now|next lesson/ })).not.toBeInTheDocument();
   });
 
+  it("still lists the lessons on a day outside the term, with a note and no register button", () => {
+    const outside = { ...makeTodayFixture(), term: null, weekNumber: null, attention: [] };
+    outside.schoolDay = { isSchoolDay: false, reason: "no_term", holidayTitle: null, endsEarlyAt: null };
+    renderToday(outside);
+    expect(screen.getByText(/There is no current term today, so registers are not taken/)).toBeInTheDocument();
+    expect(screen.queryByText(/There is no current term, so there are no lessons today/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Mathematics · JSS1 A ?, Period 1,/ })).toBeInTheDocument();
+    expect(screen.queryByTitle(/Open today's register/)).not.toBeInTheDocument();
+  });
+
   it("hides Take register at the weekend", () => {
     const weekend = makeWeekendTodayFixture();
     weekend.registers = makeTodayFixture().registers;
@@ -187,6 +197,15 @@ describe("the lesson sheet", () => {
     expect(within(dialog).getByText("Week 3 topic")).toBeInTheDocument();
     expect(within(dialog).getByText(/^Fractions: types and equivalence\. Students should be able/)).toBeInTheDocument();
     expect(within(dialog).getAllByRole("link", { name: "Open" })[0]).toHaveAttribute("href", "/attendance/class/c1?date=2026-09-25");
+    expect(within(dialog).getByRole("link", { name: "Message" })).toHaveAttribute("href", "/messages?room=room-c1");
+  });
+
+  it("sends Message the class to the inbox when the class has no group room", async () => {
+    const today = makeTodayFixture();
+    today.lessons = today.lessons.map((l) => ({ ...l, classRoomId: null }));
+    renderToday(today);
+    fireEvent.click(screen.getByRole("button", { name: /Mathematics · JSS1 A ?, Period 1,/ }));
+    const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByRole("link", { name: "Message" })).toHaveAttribute("href", "/messages");
   });
 

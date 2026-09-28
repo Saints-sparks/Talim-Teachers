@@ -45,7 +45,7 @@ export function TodayScreen() {
   const { user } = useAuth();
   const tour = useTour();
   const nowMs = useSchoolNow(query.data?.now, query.dataUpdatedAt);
-  const [upload, setUpload] = useState<{ courseId?: string } | null>(null);
+  const [upload, setUpload] = useState<{ courseId?: string; week?: number } | null>(null);
 
   const data = query.data;
   const stale = data ? schoolClock(nowMs, data.timezone).date > data.date : false;
@@ -80,10 +80,10 @@ export function TodayScreen() {
         today={data}
         nowMs={nowMs}
         firstName={user?.firstName?.trim() || "there"}
-        onUpload={(courseId) => setUpload({ courseId })}
+        onUpload={(courseId, week) => setUpload({ courseId, week })}
         onTour={tour?.openTour}
       />
-      <UploadModal isOpen={upload !== null} onClose={() => setUpload(null)} initialCourseId={upload?.courseId} />
+      <UploadModal isOpen={upload !== null} onClose={() => setUpload(null)} initialCourseId={upload?.courseId} initialWeek={upload?.week} />
     </>
   );
 }

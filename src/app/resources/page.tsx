@@ -30,8 +30,9 @@ const Panel = ({ children, guide }: { children: ReactNode; guide?: string }) => 
  * Data comes from one cached query (`useMyResources`); uploads, edits and
  * deletes invalidate it, so the page holds no copy of the list of its own.
  *
- * `?upload=1&courseId=` (from Today's "Share a resource" and the setup
- * card) opens the upload dialog with that course preselected.
+ * `?upload=1&courseId=&week=` (from Today's "Share a resource", the
+ * attention list and the setup card) opens the upload dialog with that course
+ * preselected and the scheme-of-work week prefilled.
  *
  * @returns The page element.
  */
@@ -41,6 +42,8 @@ function ResourcePageContent() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(() => searchParams?.get("upload") === "1");
   const initialCourseId = searchParams?.get("courseId") ?? undefined;
+  const weekParam = Number(searchParams?.get("week"));
+  const initialWeek = Number.isInteger(weekParam) && weekParam >= 1 && weekParam <= 30 ? weekParam : undefined;
   const closeUpload = () => {
     setIsUploadModalOpen(false);
     if (searchParams?.get("upload")) router.replace("/resources");
@@ -107,7 +110,7 @@ function ResourcePageContent() {
           )}
         </Panel>
 
-        <UploadModal isOpen={isUploadModalOpen} onClose={closeUpload} initialCourseId={initialCourseId} />
+        <UploadModal isOpen={isUploadModalOpen} onClose={closeUpload} initialCourseId={initialCourseId} initialWeek={initialWeek} />
       </div>
     </Layout>
   );

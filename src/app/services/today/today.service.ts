@@ -1,8 +1,7 @@
 /**
  * The teachers redesign's endpoints: the Today aggregate, the teacher's
  * timetable week and the scheme-of-work "taught" toggle. Shapes are in
- * `src/types/today.ts` (hand-written from the contract until the backend
- * ships and `npm run types:api` can generate them).
+ * `src/types/today.ts`, aliases of the generated contract (`npm run types:api`).
  *
  * Every call goes through the typed client, which unwraps the success
  * envelope whether `API_ENVELOPE_SUCCESS` is on or off. With
@@ -11,6 +10,7 @@
  */
 import { api } from "@/lib/apiClient";
 import { fixturesEnabled } from "@/lib/fixtures/flag";
+import type { TeacherPreferencesPayload } from "@/types/apiPayloads";
 import type { MarkTaughtBody, MarkTaughtResponse, TeacherToday, TimetableWeek } from "@/types/today";
 
 /** Taught weeks toggled while running on fixtures, keyed `courseId:week`. */
@@ -69,7 +69,7 @@ export const todayService = {
    * @param courseId - The course.
    * @param week - The scheme-of-work week.
    * @param body - `{ taught, termId? }`; the term defaults to the current one.
-   * @returns The server's answer (not relied on; callers refetch).
+   * @returns `{ week, taughtAt }` (callers also refetch).
    * @throws ApiError when the toggle is refused.
    */
   setTaught: async (courseId: string, week: number, body: MarkTaughtBody): Promise<MarkTaughtResponse> => {
@@ -87,15 +87,16 @@ export const todayService = {
   /**
    * Stamps the portal tour as finished: `PATCH /teacher/settings/preferences`
    * with `{ guides: { tourCompleted: true } }`, which the backend turns into
-   * `guides.tourCompletedAt`. Sent on its own (not through the preferences
-   * mutation, which rewrites whole sections from the generated DTO that does
-   * not know `tourCompleted` yet).
+   * `guides.tourCompletedAt`; the server merges into `guides`, so
+   * `showAppTips` is kept. Sent on its own, never through the preferences
+   * mutation (which would echo whole sections back).
    *
    * @returns Resolves once stored.
    * @throws ApiError when refused.
    */
   completeTour: async (): Promise<void> => {
     if (fixturesEnabled()) return;
-    await api.patch("/teacher/settings/preferences", { guides: { tourCompleted: true } });
+    const body: TeacherPreferencesPayload = { guides: { tourCompleted: true } };
+    await api.patch("/teacher/settings/preferences", body);
   },
 };

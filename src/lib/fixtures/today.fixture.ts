@@ -92,6 +92,7 @@ function lesson(day: Weekday, date: string, periodKey: string, key: CourseKey): 
     course: { id: key, code: course.code, title: course.title },
     subject: { id: `s-${key}`, name: course.subject },
     class: { id: cls.id, name: cls.name },
+    classRoomId: `room-${cls.id}`,
     room: cls.room,
     isClassTeacher: cls.classTeacher,
     studentCount: cls.students,

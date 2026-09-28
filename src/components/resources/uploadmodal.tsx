@@ -14,6 +14,8 @@ export interface UploadModalProps {
   onClose: () => void;
   /** Preselects this course (and its class) when the dialog opens. */
   initialCourseId?: string;
+  /** Prefills the scheme-of-work week (from a lesson or an attention item). */
+  initialWeek?: number;
 }
 
 /**
@@ -28,10 +30,11 @@ export interface UploadModalProps {
  * @param props.isOpen - Whether the dialog is showing.
  * @param props.onClose - Closes the dialog.
  * @param props.initialCourseId - Course to preselect, if any.
+ * @param props.initialWeek - Scheme-of-work week to prefill, if any.
  * @returns The dialog element.
  */
-export function UploadModal({ isOpen, onClose, initialCourseId }: UploadModalProps) {
-  const upload = useResourceUpload({ isOpen, onClose, initialCourseId });
+export function UploadModal({ isOpen, onClose, initialCourseId, initialWeek }: UploadModalProps) {
+  const upload = useResourceUpload({ isOpen, onClose, initialCourseId, initialWeek });
   const busy = upload.phase === "uploading" || upload.phase === "saving";
   const percent = Math.round(upload.progress * 100);
 
@@ -81,6 +84,26 @@ export function UploadModal({ isOpen, onClose, initialCourseId }: UploadModalPro
                 loading={upload.rosterLoading}
                 disabled={busy}
               />
+
+              <div className="space-y-2">
+                <Label htmlFor="upload-week" className="text-sm font-medium text-[#030E18]">
+                  Scheme-of-work week <span className="font-normal text-[#878787]">(optional)</span>
+                </Label>
+                <select
+                  id="upload-week"
+                  value={upload.week ?? ""}
+                  disabled={busy}
+                  onChange={(e) => upload.setWeek(e.target.value ? Number(e.target.value) : undefined)}
+                  className="h-10 w-full rounded-md border border-[#F0F0F0] bg-white px-3 text-sm text-[#030E18]"
+                >
+                  <option value="">No particular week</option>
+                  {Array.from({ length: 30 }, (_, i) => i + 1).map((n) => (
+                    <option key={n} value={n}>
+                      Week {n}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
               <div className="space-y-2" data-guide="resources-upload-file">
                 <Label className="text-sm font-medium text-[#030E18]">Upload File</Label>
