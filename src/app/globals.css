@@ -525,3 +525,45 @@ html.dark .tl-dot-accent  { background-color: #C4B5FD; }
   .tl-print-grid { break-inside: avoid; }
   .tl-print-grid * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* Printing from the dark theme: paper is white, so the grid prints with the light tokens. */
+@media print {
+  html.dark {
+    --tl-bg: 244 246 250;
+    --tl-surface: 255 255 255;
+    --tl-subtle: 248 250 253;
+    --tl-today: 244 247 252;
+    --tl-ink: 15 27 46;
+    --tl-body: 60 77 99;
+    --tl-muted: 91 107 128;
+    --tl-faint: 98 112 133;
+    --tl-line: 230 234 242;
+    --tl-line-soft: 238 241 247;
+    --tl-control: 215 225 242;
+    --tl-brand: 11 46 94;
+    --tl-brand-fill: 11 46 94;
+    --tl-brand-fill-hover: 18 60 119;
+    --tl-on-brand: 255 255 255;
+    --tl-link: 44 95 224;
+    --tl-select: 238 243 251;
+    --tl-track: 234 238 244;
+    --tl-success: 27 122 85;
+    --tl-success-bg: 228 243 236;
+    --tl-success-soft: 242 248 245;
+    --tl-warning: 138 84 22;
+    --tl-warning-bg: 248 238 225;
+    --tl-danger: 178 67 46;
+    --tl-danger-bg: 251 233 229;
+    --tl-accent: 107 79 184;
+    --tl-accent-bg: 238 234 248;
+    --tl-now: 11 46 94;
+  }
+  html.dark .tl-tone-0 { --tone-bg: 248 238 225; --tone-fg: 138 84 22;  --tone-bd: 234 214 188; }
+  html.dark .tl-tone-1 { --tone-bg: 234 241 255; --tone-fg: 11 46 94;   --tone-bd: 201 216 243; }
+  html.dark .tl-tone-2 { --tone-bg: 228 243 236; --tone-fg: 27 122 85;  --tone-bd: 191 224 207; }
+  html.dark .tl-tone-3 { --tone-bg: 238 234 248; --tone-fg: 107 79 184; --tone-bd: 214 204 240; }
+  html.dark .tl-tone-4 { --tone-bg: 225 243 244; --tone-fg: 22 103 110; --tone-bd: 186 223 226; }
+  html.dark .tl-tone-5 { --tone-bg: 251 233 229; --tone-fg: 178 67 46;  --tone-bd: 240 207 199; }
+  html.dark .tl-print-grid thead { background-color: transparent; }
+  html.dark .tl-print-grid td, html.dark .tl-print-grid thead th { color: inherit; border-color: #EEF1F7; }
+}
