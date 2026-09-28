@@ -53,7 +53,7 @@ describe("Today, 10:25 on Friday 25 September", () => {
     expect(within(now).getByText(/35 min left · ends 11:00/)).toBeInTheDocument();
     expect(within(now).getByRole("progressbar")).toHaveAttribute("aria-valuenow", "13");
     expect(within(now).getByRole("button", { name: "Open lesson" })).toBeInTheDocument();
-    expect(within(now).getByRole("link", { name: "Scheme of work" })).toHaveAttribute("href", "/curriculum?courseId=k2&week=3");
+    expect(within(now).getByRole("link", { name: "Scheme of work" })).toHaveAttribute("href", "/subjects?courseId=k2&tab=plan&week=3");
   });
 
   it("lists the day with rooms, the break, and the now and next tags", () => {

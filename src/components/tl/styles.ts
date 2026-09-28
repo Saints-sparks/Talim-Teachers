@@ -38,3 +38,54 @@ export const pill = "inline-flex items-center whitespace-nowrap rounded-full px-
 
 /** Page padding and width inside the shell. */
 export const pagePad = "w-full max-w-[1460px] px-[clamp(14px,3vw,26px)] pb-16 pt-[clamp(18px,3vw,28px)]";
+
+/**
+ * A selectable chip (the design's `chip(on)`: course chips on Grading, the
+ * class tabs on Students, the Subject and class choice in the upload sheet).
+ *
+ * @param on - Whether it is the selected one.
+ * @returns The class string.
+ */
+export function chip(on: boolean): string {
+  return `inline-flex min-h-[44px] items-center gap-2 whitespace-nowrap rounded-xl border px-[15px] py-2.5 text-sm font-bold transition-colors ${focusRing} ${
+    on ? "border-tl-control bg-tl-select text-tl-brand" : "border-tl-line bg-tl-surface text-tl-muted hover:text-tl-ink"
+  }`;
+}
+
+/**
+ * One option of a segmented control on the grey track (the Timetable's
+ * Week/Today switch, Grading's report tabs and sort order).
+ *
+ * @param on - Whether it is the selected one.
+ * @returns The class string.
+ */
+export function segment(on: boolean): string {
+  return `inline-flex min-h-[44px] items-center whitespace-nowrap rounded-[10px] px-4 py-2 text-sm font-bold ${focusRing} ${
+    on ? "bg-tl-surface text-tl-brand shadow-[0_1px_2px_rgba(15,27,46,0.1),0_1px_1px_rgba(15,27,46,0.04)]" : "text-tl-muted hover:text-tl-ink"
+  }`;
+}
+
+/** The grey track a group of {@link segment}s sits on. */
+export const segmentTrack = "flex max-w-full flex-wrap gap-0.5 rounded-[13px] bg-tl-track p-1";
+
+/** Colour classes for a {@link pill}, by meaning (the design's G, AM, GR, RD, PU pills). */
+export const pillTone = {
+  success: "bg-tl-success-bg text-tl-success",
+  warning: "bg-tl-warning-bg text-tl-warning",
+  muted: "bg-tl-track text-tl-muted",
+  danger: "bg-tl-danger-bg text-tl-danger",
+  accent: "bg-tl-accent-bg text-tl-accent",
+  info: "bg-tl-select text-tl-brand",
+} as const;
+
+/** A labelled form control (select, text input) in a sheet or a toolbar. */
+export const fieldControl = `min-h-[46px] w-full rounded-[13px] border border-tl-control bg-tl-surface px-3.5 text-[15px] font-semibold text-tl-ink placeholder:text-tl-faint disabled:cursor-not-allowed disabled:opacity-60 ${focusRing}`;
+
+/** The label above a {@link fieldControl}. */
+export const fieldLabel = "text-[13px] font-bold text-tl-muted";
+
+/** The red outlined button (Remove on a resource). */
+export const dangerGhostButton = `inline-flex min-h-[44px] items-center justify-center whitespace-nowrap rounded-[11px] border border-tl-danger/30 px-3.5 py-2 text-[13px] font-bold text-tl-danger transition-colors hover:bg-tl-danger-bg disabled:cursor-not-allowed disabled:opacity-40 ${focusRing}`;
+
+/** The red filled button (the confirm in a destructive sheet). */
+export const dangerButton = `inline-flex min-h-[44px] items-center justify-center gap-2 whitespace-nowrap rounded-[14px] bg-tl-danger px-[18px] py-3 text-sm font-bold text-tl-surface transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 ${focusRing}`;

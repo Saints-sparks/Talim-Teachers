@@ -32,6 +32,38 @@ export const queryKeys = {
     /** `GET /teachers/me/students/:studentId`. */
     student: (schoolId: string, studentId: string) => ["classroom", schoolId, "student", studentId] as const,
   },
+  /**
+   * The redesign's Grading page ("Round 3", `src/types/grading.ts`). `termId`
+   * is `"current"` when none is sent (the server's current term).
+   */
+  grading: {
+    all: ["grading"] as const,
+    /** `GET /grading/course/:courseId?termId=`. */
+    sheet: (schoolId: string, courseId: string, termId: string) => ["grading", schoolId, "sheet", courseId, termId] as const,
+    /** `GET /grading/classes/:classId/readiness?termId=`. */
+    readiness: (schoolId: string, classId: string, termId: string) => ["grading", schoolId, "readiness", classId, termId] as const,
+    /** `GET /grading/classes/:classId/broadsheet?termId=&basis=`. */
+    broadsheet: (schoolId: string, classId: string, termId: string, basis: string) =>
+      ["grading", schoolId, "broadsheet", classId, termId, basis] as const,
+    /** `GET /grading/classes/:classId/remarks?termId=`. */
+    remarks: (schoolId: string, classId: string, termId: string) => ["grading", schoolId, "remarks", classId, termId] as const,
+    /** `GET /grading/classes/:classId/term-results?termId=`. */
+    termResults: (schoolId: string, classId: string, termId: string) => ["grading", schoolId, "term-results", classId, termId] as const,
+    /** Prefix of everything loaded for one class (readiness, broadsheets, remarks, submissions). */
+    class: (schoolId: string) => ["grading", schoolId] as const,
+  },
+  /** The redesign's Subjects page (`src/types/subjects.ts`). `termId` is `"current"` when none is sent. */
+  schemeOfWork: {
+    all: ["scheme-of-work"] as const,
+    /** `GET /scheme-of-work/me?termId=`: the subject cards. */
+    mine: (schoolId: string, userId: string, termId: string) => ["scheme-of-work", schoolId, "me", userId, termId] as const,
+    /** `GET /scheme-of-work/course/:courseId?termId=`. */
+    course: (schoolId: string, courseId: string, termId: string) => ["scheme-of-work", schoolId, "course", courseId, termId] as const,
+    /** `GET /resources/course/:courseId`: the Resources tab. */
+    resources: (schoolId: string, courseId: string) => ["scheme-of-work", schoolId, "resources", courseId] as const,
+    /** `GET /curriculum/:id`: the read-only "Earlier notes". */
+    legacy: (schoolId: string, curriculumId: string) => ["scheme-of-work", schoolId, "legacy", curriculumId] as const,
+  },
   academic: {
     all: ["academic"] as const,
     years: (schoolId: string) => ["academic", schoolId, "years"] as const,

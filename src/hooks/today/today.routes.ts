@@ -5,8 +5,8 @@
  *
  * Query parameters the destination does not read yet are still passed (they
  * are harmless and let those pages preselect later); the ones that work today
- * are `?room=` on Messages, `?courseId=` on Curriculum, `?upload=1&courseId=`
- * on Resources, `?date=` on the register (`/attendance/class/:id`, also
+ * are `?room=` on Messages, `?courseId=&tab=plan&week=` on Subjects,
+ * `?upload=1&courseId=` on Resources, `?date=` on the register (`/attendance/class/:id`, also
  * `/attendance?classId=&date=`), `?classId=` on Students and
  * `?courseId=&assessmentId=` on Grading.
  */
@@ -52,15 +52,15 @@ export function classMessagesRoute(classRoomId: string | null | undefined): stri
 }
 
 /**
- * The scheme of work for a course. Until the week-by-week Subjects screen
- * lands, that is the course's curriculum page.
+ * The scheme of work for a course: the Subjects page on that course's Plan
+ * tab, scrolled to the week.
  *
  * @param courseId - The course.
  * @param week - The week to open, when known.
  * @returns The href.
  */
 export function schemeOfWorkRoute(courseId: string, week?: number | null): string {
-  return withQuery("/curriculum", { courseId, week: week ?? undefined });
+  return withQuery("/subjects", { courseId, tab: "plan", week: week ?? undefined });
 }
 
 /**
@@ -158,7 +158,7 @@ export function setupStepHref(key: SetupStepKey): string | null {
     case "publish":
       return "/grading";
     case "plan":
-      return "/curriculum";
+      return "/subjects";
     case "resource":
       return uploadResourceRoute();
     default:
