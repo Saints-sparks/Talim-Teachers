@@ -5,8 +5,9 @@
  *
  * Query parameters the destination does not read yet are still passed (they
  * are harmless and let those pages preselect later); the ones that work today
- * are `?room=` on Messages, `?courseId=&tab=plan&week=` on Subjects,
- * `?upload=1&courseId=` on Resources, `?date=` on the register (`/attendance/class/:id`, also
+ * are `?room=` on Messages, `?courseId=&tab=plan&week=` on Subjects (the
+ * scheme of work), `?courseId=&tab=resources&upload=1&week=` on Subjects (the
+ * upload sheet), `?date=` on the register (`/attendance/class/:id`, also
  * `/attendance?classId=&date=`), `?classId=` on Students and
  * `?courseId=&assessmentId=` on Grading.
  */
@@ -64,14 +65,17 @@ export function schemeOfWorkRoute(courseId: string, week?: number | null): strin
 }
 
 /**
- * The resources page with the upload dialog open for a course (and week).
+ * The Subjects page's upload sheet: that course (else the first subject) on
+ * its Resources tab, with the sheet open on the week (else the current one).
+ * Every "Upload" and "Share a resource" goes here: Today's header, its setup
+ * step and attention items, and the lesson sheet on Today and the Timetable.
  *
  * @param courseId - The course, if known.
  * @param week - The scheme-of-work week, if known.
- * @returns The href.
+ * @returns `/subjects?courseId=&tab=resources&upload=1&week=` (without the parameters not known).
  */
 export function uploadResourceRoute(courseId?: string, week?: number | null): string {
-  return withQuery("/resources", { upload: 1, courseId, week: week ?? undefined });
+  return withQuery("/subjects", { courseId, tab: "resources", upload: 1, week: week ?? undefined });
 }
 
 /**
@@ -80,7 +84,7 @@ export function uploadResourceRoute(courseId?: string, week?: number | null): st
  * - `attendance` → the class's register (`/attendance/class/:id`), or the class list.
  * - `grading` → `/grading?courseId=&assessmentId=`, which opens that course and assessment.
  * - `messages` → `/messages?room=` (Messages opens that room), or the inbox.
- * - `resources` → `/resources?upload=1&courseId=&week=` (opens the upload dialog).
+ * - `resources` → `/subjects?courseId=&tab=resources&upload=1&week=` (opens the Subjects upload sheet).
  * - `subjects` → the course's scheme of work, or `/subjects`.
  * - `leave` → there is no leave screen in the teacher app yet, so the class's
  *   register, where approved leave shows, or `/attendance`.
@@ -143,8 +147,8 @@ export function pickRegisterAction(registers: readonly RegisterStatus[], date: s
 }
 
 /**
- * Where each setup step sends the teacher. `tour` opens the tour sheet and
- * `resource` the upload dialog, so they have no route here.
+ * Where each setup step sends the teacher. `tour` opens the tour sheet, so
+ * it has no route here; `resource` goes to the Subjects upload sheet.
  *
  * @param key - The step.
  * @returns The href, or null for the in-page steps.

@@ -1,7 +1,7 @@
 /**
  * Pure logic for the redesigned Subjects page: the wording and numbers of the
  * subject cards, the scheme-of-work rows and the resources list, and the
- * deep-link parameters (`/subjects?courseId=&tab=plan|resources&week=`).
+ * deep-link parameters (`/subjects?courseId=&tab=plan|resources&upload=1&week=`).
  * No React; the design's copy is quoted from `Talim Teacher Portal.dc.html`
  * ("// SUBJECTS", ~1862–1898).
  */
@@ -352,23 +352,27 @@ export interface SubjectsParams {
   courseId?: string;
   tab?: SubjectTab;
   week?: number;
+  /** `?upload=1`: open the upload sheet (on `week` when given). */
+  upload?: true;
 }
 
 /**
- * Reads `?courseId=&tab=plan|resources&week=`. Anything unrecognised is
- * dropped rather than trusted.
+ * Reads `?courseId=&tab=plan|resources&upload=1&week=`. Anything
+ * unrecognised is dropped rather than trusted.
  *
  * @param params - The raw values (from `useSearchParams`).
  * @param params.courseId - The course to open.
  * @param params.tab - `plan` or `resources`.
  * @param params.week - 1 to {@link MAX_SCHEME_WEEK}.
+ * @param params.upload - `1` (or `true`) opens the upload sheet.
  * @returns The valid parameters.
  */
-export function parseSubjectsParams(params: { courseId?: string | null; tab?: string | null; week?: string | null }): SubjectsParams {
+export function parseSubjectsParams(params: { courseId?: string | null; tab?: string | null; week?: string | null; upload?: string | null }): SubjectsParams {
   const out: SubjectsParams = {};
   const courseId = params.courseId?.trim();
   if (courseId) out.courseId = courseId;
   if (params.tab === "plan" || params.tab === "resources") out.tab = params.tab;
+  if (params.upload === "1" || params.upload === "true") out.upload = true;
   if (params.week && /^\d{1,2}$/.test(params.week.trim())) {
     const week = Number(params.week.trim());
     if (week >= 1 && week <= MAX_SCHEME_WEEK) out.week = week;

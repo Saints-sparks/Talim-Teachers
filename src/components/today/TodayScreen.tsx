@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/AuthContext";
-import { UploadModal } from "@/components/resources/uploadmodal";
 import { useTour } from "@/components/tour/TourProvider";
 import { card, pagePad, primaryButton } from "@/components/tl/styles";
 import { TodayView } from "@/components/today/TodayView";
 import { getErrorMessage } from "@/lib/apiError";
 import { schoolClock } from "@/hooks/today/today.logic";
+import { uploadResourceRoute } from "@/hooks/today/today.routes";
 import { useSchoolNow, useTeacherToday } from "@/hooks/today/useTeacherToday";
 
 /**
@@ -35,8 +36,8 @@ export function TodaySkeleton() {
 /**
  * Today, wired to its data: loading skeleton, an error with Try again, then
  * the view. Refetches on window focus, every five minutes, and as soon as
- * the school's date moves past the loaded day. Hosts the upload dialog the
- * page's actions open.
+ * the school's date moves past the loaded day. "Upload resource" and "Share
+ * a resource" open the Subjects page's upload sheet ({@link uploadResourceRoute}).
  *
  * @returns The screen.
  */
@@ -45,7 +46,7 @@ export function TodayScreen() {
   const { user } = useAuth();
   const tour = useTour();
   const nowMs = useSchoolNow(query.data?.now, query.dataUpdatedAt);
-  const [upload, setUpload] = useState<{ courseId?: string; week?: number } | null>(null);
+  const router = useRouter();
 
   const data = query.data;
   const stale = data ? schoolClock(nowMs, data.timezone).date > data.date : false;
@@ -75,15 +76,12 @@ export function TodayScreen() {
   }
 
   return (
-    <>
-      <TodayView
-        today={data}
-        nowMs={nowMs}
-        firstName={user?.firstName?.trim() || "there"}
-        onUpload={(courseId, week) => setUpload({ courseId, week })}
-        onTour={tour?.openTour}
-      />
-      <UploadModal isOpen={upload !== null} onClose={() => setUpload(null)} initialCourseId={upload?.courseId} initialWeek={upload?.week} />
-    </>
+    <TodayView
+      today={data}
+      nowMs={nowMs}
+      firstName={user?.firstName?.trim() || "there"}
+      onUpload={(courseId, week) => router.push(uploadResourceRoute(courseId, week))}
+      onTour={tour?.openTour}
+    />
   );
 }

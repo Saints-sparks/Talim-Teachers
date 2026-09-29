@@ -10,7 +10,9 @@ describe("attention targets → routes", () => {
     [{ page: "grading" }, "/grading"],
     [{ page: "messages", roomId: "t1" }, "/messages?room=t1"],
     [{ page: "messages" }, "/messages"],
-    [{ page: "resources", courseId: "k1", week: 3 }, "/resources?upload=1&courseId=k1&week=3"],
+    [{ page: "resources", courseId: "k1", week: 3 }, "/subjects?courseId=k1&tab=resources&upload=1&week=3"],
+    [{ page: "resources", courseId: "k1" }, "/subjects?courseId=k1&tab=resources&upload=1"],
+    [{ page: "resources" }, "/subjects?tab=resources&upload=1"],
     [{ page: "subjects", courseId: "k1", week: 3 }, "/subjects?courseId=k1&tab=plan&week=3"],
     [{ page: "subjects" }, "/subjects"],
     [{ page: "leave", classId: "c1" }, "/attendance/class/c1"],
@@ -26,7 +28,9 @@ describe("attention targets → routes", () => {
   it("encodes ids", () => {
     expect(registerRoute("a/b")).toBe("/attendance/class/a%2Fb");
     expect(schemeOfWorkRoute("k1")).toBe("/subjects?courseId=k1&tab=plan");
-    expect(uploadResourceRoute()).toBe("/resources?upload=1");
+    expect(uploadResourceRoute()).toBe("/subjects?tab=resources&upload=1");
+    expect(uploadResourceRoute("a/b", 4)).toBe("/subjects?courseId=a%2Fb&tab=resources&upload=1&week=4");
+    expect(uploadResourceRoute("k1", null)).toBe("/subjects?courseId=k1&tab=resources&upload=1");
   });
 });
 
@@ -66,7 +70,7 @@ describe("setup steps", () => {
     expect(setupStepHref("register")).toBe("/attendance");
     expect(setupStepHref("publish")).toBe("/grading");
     expect(setupStepHref("plan")).toBe("/subjects");
-    expect(setupStepHref("resource")).toBe("/resources?upload=1");
+    expect(setupStepHref("resource")).toBe("/subjects?tab=resources&upload=1");
     expect(setupStepHref("tour")).toBeNull();
   });
 });

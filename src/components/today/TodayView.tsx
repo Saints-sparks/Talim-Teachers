@@ -18,7 +18,7 @@ export interface TodayViewProps {
   /** The current instant (server-offset), from `useSchoolNow`. */
   nowMs: number;
   firstName: string;
-  /** Opens the resource upload, optionally for a course. */
+  /** Opens the Subjects page's upload sheet, optionally for a course and week. */
   onUpload: (courseId?: string, week?: number) => void;
   /** Opens the portal tour. */
   onTour?: () => void;

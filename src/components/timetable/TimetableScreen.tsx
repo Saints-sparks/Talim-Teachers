@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { UploadModal } from "@/components/resources/uploadmodal";
+import { useRouter } from "next/navigation";
 import { card, pagePad, primaryButton } from "@/components/tl/styles";
 import { TimetableView, type TimetableMode } from "@/components/timetable/TimetableView";
 import { toast } from "@/components/CustomToast";
@@ -10,13 +10,14 @@ import { getErrorMessage } from "@/lib/apiError";
 import { logger } from "@/lib/logger";
 import { useTeacherPreferences } from "@/hooks/settings/useTeacherSettings";
 import { weekCsvRows } from "@/hooks/timetable/timetableWeek.logic";
+import { uploadResourceRoute } from "@/hooks/today/today.routes";
 import { useSchoolNow, useTimetableWeek } from "@/hooks/today/useTeacherToday";
 
 /**
  * The timetable wired to `GET /timetable/me`: loading and error states, week
  * navigation, the Week/Today default from the teacher's
- * `teaching.timetableDisplay` preference, print, CSV export and the upload
- * dialog the lesson sheet opens.
+ * `teaching.timetableDisplay` preference, print and CSV export. The lesson
+ * sheet's "Share a resource" opens the Subjects page's upload sheet.
  *
  * @returns The screen.
  */
@@ -27,7 +28,7 @@ export function TimetableScreen() {
   const { preferences } = useTeacherPreferences();
   const [pickedMode, setPickedMode] = useState<TimetableMode | null>(null);
   const mode: TimetableMode = pickedMode ?? (preferences.teaching.timetableDisplay === "today" ? "today" : "week");
-  const [upload, setUpload] = useState<{ courseId?: string; week?: number } | null>(null);
+  const router = useRouter();
 
   if (query.isPending) {
     return (
@@ -82,9 +83,8 @@ export function TimetableScreen() {
         loadingWeek={query.isPlaceholderData}
         onExportCsv={exportCsv}
         onPrint={() => window.print()}
-        onShareResource={(courseId, week) => setUpload({ courseId, week })}
+        onShareResource={(courseId, week) => router.push(uploadResourceRoute(courseId, week))}
       />
-      <UploadModal isOpen={upload !== null} onClose={() => setUpload(null)} initialCourseId={upload?.courseId} initialWeek={upload?.week} />
     </>
   );
 }

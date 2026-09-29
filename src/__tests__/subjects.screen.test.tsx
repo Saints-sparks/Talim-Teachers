@@ -326,6 +326,26 @@ describe("SubjectsScreen", () => {
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/subjects?courseId=k2&tab=resources", { scroll: false }));
   });
 
+  it("opens the upload sheet from the deep link on that subject's Resources tab and week", async () => {
+    render(<SubjectsScreen initialCourseId="k2" initialTab="resources" initialUpload initialWeek={2} />);
+    const dialog = await screen.findByRole("dialog", { name: "Upload a resource" });
+    await waitFor(() => expect(within(dialog).getByLabelText("Week")).toHaveValue("2"));
+    expect(within(dialog).getByRole("button", { name: "Mathematics · JSS2 B" })).toHaveAttribute("aria-pressed", "true");
+    expect(service.getScheme).toHaveBeenCalledWith("k2", undefined);
+    expect(screen.getByRole("tab", { name: /Resources/, hidden: true })).toHaveAttribute("aria-selected", "true");
+    // The address keeps the subject and tab, not the one-off upload.
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/subjects?courseId=k2&tab=resources", { scroll: false }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("opens the upload sheet on the first subject and this week when the link names neither", async () => {
+    render(<SubjectsScreen initialTab="resources" initialUpload />);
+    const dialog = await screen.findByRole("dialog", { name: "Upload a resource" });
+    await waitFor(() => expect(within(dialog).getByLabelText("Week")).toHaveValue("3"));
+    expect(within(dialog).getByRole("button", { name: "Mathematics · JSS1 A" })).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("scrolls to and highlights a deep-linked week", async () => {
     jest.useFakeTimers();
     try {

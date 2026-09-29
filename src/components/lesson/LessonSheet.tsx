@@ -18,7 +18,7 @@ export interface LessonSheetProps {
   /** The current term, for the taught toggle (the server defaults to it anyway). */
   termId?: string;
   onClose: () => void;
-  /** Opens the resource upload for this course and week. */
+  /** Opens the Subjects page's upload sheet for this course and week. */
   onShareResource: (courseId: string, week?: number) => void;
 }
 

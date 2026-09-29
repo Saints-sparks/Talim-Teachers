@@ -193,6 +193,9 @@ describe("deep links", () => {
     expect(parseSubjectsParams({ courseId: "k2", tab: "plan", week: "3" })).toEqual({ courseId: "k2", tab: "plan", week: 3 });
     expect(parseSubjectsParams({ courseId: "k1", tab: "resources" })).toEqual({ courseId: "k1", tab: "resources" });
     expect(parseSubjectsParams({ week: "30" })).toEqual({ week: 30 });
+    // The upload deep link every "Upload" / "Share a resource" uses.
+    expect(parseSubjectsParams({ courseId: "k2", tab: "resources", upload: "1", week: "4" })).toEqual({ courseId: "k2", tab: "resources", upload: true, week: 4 });
+    expect(parseSubjectsParams({ tab: "resources", upload: "true" })).toEqual({ tab: "resources", upload: true });
   });
 
   it("drops anything it does not recognise", () => {
@@ -200,6 +203,8 @@ describe("deep links", () => {
     expect(parseSubjectsParams({ week: "31" })).toEqual({});
     expect(parseSubjectsParams({ week: "2.5" })).toEqual({});
     expect(parseSubjectsParams({ week: "abc", tab: null, courseId: null })).toEqual({});
+    expect(parseSubjectsParams({ upload: "0" })).toEqual({});
+    expect(parseSubjectsParams({ upload: "yes please" })).toEqual({});
   });
 
   it("builds the address the page keeps", () => {

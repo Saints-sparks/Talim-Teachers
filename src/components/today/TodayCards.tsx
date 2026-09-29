@@ -68,7 +68,7 @@ export interface SetupCardProps {
   steps: SetupStep[];
   /** Opens the portal tour; the tour step is hidden without it. */
   onTour?: () => void;
-  /** Opens the resource upload. */
+  /** Opens the Subjects page's upload sheet. */
   onUpload: () => void;
 }
 

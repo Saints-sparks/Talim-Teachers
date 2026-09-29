@@ -30,9 +30,10 @@ const Panel = ({ children, guide }: { children: ReactNode; guide?: string }) => 
  * Data comes from one cached query (`useMyResources`); uploads, edits and
  * deletes invalidate it, so the page holds no copy of the list of its own.
  *
- * `?upload=1&courseId=&week=` (from Today's "Share a resource", the
- * attention list and the setup card) opens the upload dialog with that course
- * preselected and the scheme-of-work week prefilled.
+ * `?upload=1&courseId=&week=` opens the upload dialog with that course
+ * preselected and the scheme-of-work week prefilled. It is kept for old
+ * links: Today, its attention list and setup card, and the lesson sheet now
+ * open the Subjects page's upload sheet instead (`uploadResourceRoute`).
  *
  * @returns The page element.
  */

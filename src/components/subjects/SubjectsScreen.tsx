@@ -23,6 +23,12 @@ export interface SubjectsScreenProps {
   initialTab?: SubjectTab;
   /** `?week=`: scrolled to and highlighted on the plan; the upload sheet's default week. */
   initialWeek?: number;
+  /**
+   * `?upload=1`: open the upload sheet on arrival, on the linked subject (else
+   * the first) and week (else the current one). Every "Upload" and "Share a
+   * resource" elsewhere in the app links here (`uploadResourceRoute`).
+   */
+  initialUpload?: boolean;
 }
 
 /** How long a deep-linked week stays highlighted. */
@@ -86,13 +92,13 @@ function PlanSkeleton() {
  * work (`GET /scheme-of-work/course/:courseId`) and resources
  * (`GET /resources/course/:courseId`). Weeks can be edited and marked taught;
  * resources uploaded (filed under a week) and removed. A term picker shows
- * earlier terms. The address keeps `?courseId=&tab=`, and `?week=` scrolls to
- * and highlights a week.
+ * earlier terms. The address keeps `?courseId=&tab=`, `?week=` scrolls to
+ * and highlights a week, and `?upload=1` opens the upload sheet on that week.
  *
  * @param props - See {@link SubjectsScreenProps}.
  * @returns The screen.
  */
-export function SubjectsScreen({ initialCourseId, initialTab, initialWeek }: SubjectsScreenProps) {
+export function SubjectsScreen({ initialCourseId, initialTab, initialWeek, initialUpload }: SubjectsScreenProps) {
   const router = useRouter();
   const [termId, setTermId] = useState<string | undefined>(undefined);
   const [courseId, setCourseId] = useState<string | undefined>(initialCourseId);
@@ -100,7 +106,7 @@ export function SubjectsScreen({ initialCourseId, initialTab, initialWeek }: Sub
   const [focusWeek, setFocusWeek] = useState<number | undefined>(initialWeek);
   const [flashWeek, setFlashWeek] = useState<number | undefined>(undefined);
   const [editing, setEditing] = useState<SchemeWeek | null>(null);
-  const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(Boolean(initialUpload));
   const [currentTerm, setCurrentTerm] = useState<{ id: string; name: string } | undefined>(undefined);
   // The week a link asked for, for the upload sheet's default (the address drops it once shown).
   const linkRef = useRef<{ courseId?: string; week?: number }>({ courseId: initialCourseId, week: initialWeek });
@@ -113,7 +119,8 @@ export function SubjectsScreen({ initialCourseId, initialTab, initialWeek }: Sub
       setFocusWeek(initialWeek);
       linkRef.current = { courseId: initialCourseId, week: initialWeek };
     }
-  }, [initialCourseId, initialTab, initialWeek]);
+    if (initialUpload) setUploadOpen(true);
+  }, [initialCourseId, initialTab, initialWeek, initialUpload]);
 
   const cards = useSubjectCards(termId);
   const list: readonly SubjectCard[] = cards.data ?? [];
@@ -360,7 +367,7 @@ export function SubjectsScreen({ initialCourseId, initialTab, initialWeek }: Sub
         onClose={() => setUploadOpen(false)}
         cards={list}
         initialCourseId={activeId}
-        initialWeek={linkRef.current.courseId === activeId ? linkRef.current.week : undefined}
+        initialWeek={!linkRef.current.courseId || linkRef.current.courseId === activeId ? linkRef.current.week : undefined}
         termParam={termId}
       />
     </div>

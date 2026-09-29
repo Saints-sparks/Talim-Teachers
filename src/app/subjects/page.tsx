@@ -7,18 +7,24 @@ import { SubjectsScreen } from "@/components/subjects/SubjectsScreen";
 import { parseSubjectsParams } from "@/hooks/subjects/scheme.logic";
 
 /**
- * Reads `?courseId=&tab=plan|resources&week=` for the subject, tab and week to open.
+ * Reads `?courseId=&tab=plan|resources&upload=1&week=` for the subject, tab
+ * and week to open, and whether to open the upload sheet.
  *
  * @returns The screen.
  */
 function SubjectsFromQuery() {
   const params = useSearchParams();
-  const { courseId, tab, week } = parseSubjectsParams({ courseId: params.get("courseId"), tab: params.get("tab"), week: params.get("week") });
-  return <SubjectsScreen initialCourseId={courseId} initialTab={tab} initialWeek={week} />;
+  const { courseId, tab, week, upload } = parseSubjectsParams({
+    courseId: params.get("courseId"),
+    tab: params.get("tab"),
+    week: params.get("week"),
+    upload: params.get("upload"),
+  });
+  return <SubjectsScreen initialCourseId={courseId} initialTab={tab} initialWeek={week} initialUpload={upload} />;
 }
 
 /**
- * Subjects (`/subjects?courseId=&tab=&week=`): the scheme of work and the
+ * Subjects (`/subjects?courseId=&tab=&upload=1&week=`): the scheme of work and the
  * resources of each subject the teacher teaches. Data:
  * `GET /scheme-of-work/me`, `GET /scheme-of-work/course/:courseId` and
  * `GET /resources/course/:courseId`.

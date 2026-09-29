@@ -22,7 +22,12 @@ jest.mock("@/app/services/today/today.service", () => ({
   todayService: { getToday: jest.fn(), getMyWeek: jest.fn(), setTaught: jest.fn(), completeTour: jest.fn() },
 }));
 
-jest.mock("@/components/resources/uploadmodal", () => ({ UploadModal: () => null }));
+const push = jest.fn();
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ push, replace: jest.fn() }),
+  usePathname: () => "/dashboard",
+  useSearchParams: () => new URLSearchParams(),
+}));
 
 const service = todayService as jest.Mocked<typeof todayService>;
 const NOW = Date.parse(FIXTURE_NOW);
@@ -92,7 +97,7 @@ describe("Today, 10:25 on Friday 25 September", () => {
     expect(within(card).getByText("5 open")).toBeInTheDocument();
     expect(within(card).getByRole("link", { name: "Open message" })).toHaveAttribute("href", "/messages?room=t1");
     expect(within(card).getByRole("link", { name: "Continue grading" })).toHaveAttribute("href", "/grading?courseId=k1&assessmentId=a1");
-    expect(within(card).getByRole("link", { name: "Upload" })).toHaveAttribute("href", "/resources?upload=1&courseId=k1&week=3");
+    expect(within(card).getByRole("link", { name: "Upload" })).toHaveAttribute("href", "/subjects?courseId=k1&tab=resources&upload=1&week=3");
   });
 
   it("says 'all caught up' when nothing needs attention", () => {
@@ -246,6 +251,17 @@ describe("TodayScreen", () => {
     expect(screen.getByRole("status", { name: "Loading today" })).toBeInTheDocument();
     expect(await screen.findByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening), Ada$/ })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Needs your attention" })).toBeInTheDocument();
+  });
+
+  it("sends Upload resource and a lesson's Share a resource to the Subjects upload sheet", async () => {
+    push.mockClear();
+    service.getToday.mockResolvedValue(makeTodayFixture());
+    render(<TodayScreen />);
+    fireEvent.click(await screen.findByRole("button", { name: "Upload resource" }));
+    expect(push).toHaveBeenLastCalledWith("/subjects?tab=resources&upload=1");
+    fireEvent.click(screen.getByRole("button", { name: "Open lesson" }));
+    fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Upload" }));
+    expect(push).toHaveBeenLastCalledWith("/subjects?courseId=k2&tab=resources&upload=1&week=3");
   });
 
   it("explains a failure and retries", async () => {
