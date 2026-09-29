@@ -212,4 +212,72 @@ describe("useUnsavedChangesGuard", () => {
     expect(confirm).not.toHaveBeenCalled();
     expect(router).toHaveBeenCalledTimes(1);
   });
+
+  describe("where the browser has the Navigation API", () => {
+    /** A stand-in for `window.navigation`: a plain event target. */
+    let navigation: EventTarget;
+
+    /**
+     * Fires the `navigate` event the browser fires before a Back or Forward.
+     *
+     * @param url - Where the traversal goes.
+     * @param init - The event's type and whether it can be cancelled.
+     * @returns Whether the guard cancelled it.
+     */
+    function traverse(url: string, init: { navigationType?: string; cancelable?: boolean } = {}): boolean {
+      const event = Object.assign(new Event("navigate", { cancelable: init.cancelable ?? true }), {
+        navigationType: init.navigationType ?? "traverse",
+        destination: { url: new URL(url, window.location.href).href },
+      });
+      navigation.dispatchEvent(event);
+      return event.defaultPrevented;
+    }
+
+    beforeEach(() => {
+      navigation = new EventTarget();
+      Object.defineProperty(window, "navigation", { value: navigation, configurable: true });
+    });
+    afterEach(() => {
+      delete (window as Window & { navigation?: unknown }).navigation;
+    });
+
+    it("cancels a Back to another page when the teacher stays, before the router moves", async () => {
+      startOnGrading();
+      renderHook(() => useUnsavedChangesGuard(true, MESSAGE));
+      expect(traverse("/dashboard")).toBe(true);
+      expect(confirm).toHaveBeenCalledWith(MESSAGE);
+      // Not listening to popstate as well, so the teacher is never asked twice.
+      await back();
+      expect(confirm).toHaveBeenCalledTimes(1);
+      expect(router).toHaveBeenCalledTimes(1);
+    });
+
+    it("lets the Back go when the teacher chooses to leave, and does not ask again", () => {
+      startOnGrading();
+      renderHook(() => useUnsavedChangesGuard(true, MESSAGE));
+      confirm.mockReturnValue(true);
+      expect(traverse("/dashboard")).toBe(false);
+      expect(traverse("/students")).toBe(false);
+      expect(confirm).toHaveBeenCalledTimes(1);
+      expect(unload()).toBe(false);
+    });
+
+    it("lets through moves within the page, pushes and replaces, and traversals it may not cancel", () => {
+      startOnGrading();
+      renderHook(() => useUnsavedChangesGuard(true, MESSAGE));
+      expect(traverse("/grading?courseId=k2")).toBe(false);
+      expect(traverse("/students", { navigationType: "push" })).toBe(false);
+      expect(traverse("/students", { navigationType: "replace" })).toBe(false);
+      expect(traverse("/dashboard", { cancelable: false })).toBe(false);
+      expect(confirm).not.toHaveBeenCalled();
+    });
+
+    it("stops listening once the scores are saved", () => {
+      startOnGrading();
+      const { rerender } = renderHook(({ dirty }) => useUnsavedChangesGuard(dirty, MESSAGE), { initialProps: { dirty: true } });
+      rerender({ dirty: false });
+      expect(traverse("/dashboard")).toBe(false);
+      expect(confirm).not.toHaveBeenCalled();
+    });
+  });
 });
