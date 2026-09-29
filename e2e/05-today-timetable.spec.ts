@@ -170,8 +170,20 @@ test("the lesson sheet opens from the timetable grid", async ({ page }) => {
   await expect(sheet.getByRole("heading", { name: titleOf(first) })).toBeVisible();
   await expect(sheet.getByText("Scheme of work", { exact: true })).toBeVisible();
   await expect(taughtButton(page)).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+
+  // The scheme of work now lives on Subjects: the lesson's course, the plan, its week.
+  const scheme = sheet.locator('a[href^="/subjects?"]');
+  await expect(scheme).toHaveText("Open");
+  const href = new URL((await scheme.getAttribute("href"))!, "http://x");
+  expect(href.searchParams.get("courseId")).toBe(first.course.id);
+  expect(href.searchParams.get("tab")).toBe("plan");
+  if (first.topic) expect(href.searchParams.get("week")).toBe(String(first.topic.week));
+  const cards = page.waitForResponse((r) => /\/scheme-of-work\/me(\?|$)/.test(r.url()) && r.ok());
+  await scheme.click();
+  await cards;
+  await expect(page).toHaveURL(new RegExp(`/subjects\\?.*courseId=${first.course.id}`));
+  await expect(page.getByRole("heading", { level: 2, name: titleOf(first) })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Scheme of work" })).toHaveAttribute("aria-selected", "true");
 });
 
 test("the timetable moves to the next and previous week and back to this week", async ({ page }) => {

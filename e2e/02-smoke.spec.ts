@@ -47,8 +47,9 @@ for (const spec of TEACHER_PAGES) {
     // Loading -> content: no skeleton may outlive the data.
     await expect(page.locator(".animate-pulse:visible")).toHaveCount(0, { timeout: 30_000 });
     await expect(page.getByText(spec.content).filter({ visible: true }).first()).toBeVisible();
-    // Attendance and Students keep the chosen class in the query (`?classId=`).
-    await expect(page).toHaveURL(new RegExp(`${spec.path}/?(\\?classId=[a-f0-9]{24})?$`));
+    // Attendance and Students keep the chosen class in the query (`?classId=`), Grading and Subjects
+    // the chosen subject and view (`?courseId=&assessmentId=`, `?courseId=&tab=`).
+    await expect(page).toHaveURL(new RegExp(`${spec.path}/?(\\?(classId|courseId)=[a-f0-9]{24}(&[a-zA-Z]+=[a-zA-Z0-9]+)*)?$`));
     await expect(page.locator(`a[href="${spec.path}"]`).first()).toBeAttached();
 
     // Let trailing requests (websocket handshake, badge counts, onboarding sync) land before judging.

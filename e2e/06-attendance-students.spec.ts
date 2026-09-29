@@ -85,6 +85,25 @@ const GUIDES: { path: () => string; name: string; targets: string[]; ready: RegE
     targets: ["student-header", "student-guardian", "student-attendance", "student-scores"],
     ready: /\/teachers\/me\/students\//,
   },
+  {
+    // English 5A: its first assessment is a draft, so Publish (a step of the guide) is on the page.
+    path: () => `/grading?courseId=${grade5A.courses.find((c) => c.title === "English 5A")!.id}`,
+    name: "Grading (subject scores)",
+    targets: ["grading-mode-switch", "grading-course-chips", "grading-assessment-tabs", "grading-score-sheet", "grading-publish", "grading-term"],
+    ready: /\/grading\/course\/[a-f0-9]{24}/,
+  },
+  {
+    path: () => "/grading?mode=class",
+    name: "Grading (class report)",
+    targets: ["grading-mode-switch", "grading-readiness", "grading-tab-summary", "grading-tab-remarks"],
+    ready: /\/grading\/classes\/[a-f0-9]{24}\/readiness/,
+  },
+  {
+    path: () => "/subjects",
+    name: "Subjects",
+    targets: ["subjects-cards", "subjects-plan", "subjects-mark-taught", "subjects-tab-resources", "subjects-upload"],
+    ready: /\/scheme-of-work\/course\/[a-f0-9]{24}/,
+  },
 ];
 
 for (const guide of GUIDES) {
@@ -358,7 +377,7 @@ test("a second teacher cannot pick or open Grade 5A: pickers leave it out and di
 
 // ─── Share a resource from a lesson ─────────────────────────────────────────
 
-test("Share a resource from a lesson files the upload under the lesson's week", async ({ page, monitor }) => {
+test("Share a resource from a lesson opens the Subjects upload sheet on the lesson's week", async ({ page, monitor }) => {
   interface Lesson {
     id: string;
     course: { id: string; title: string };
@@ -386,20 +405,24 @@ test("Share a resource from a lesson files the upload under the lesson's week", 
   await expect(sheet.getByText(new RegExp(`^For .*, week ${week}$`))).toBeVisible();
   await sheet.getByRole("button", { name: "Upload" }).click();
 
-  const modal = page.getByRole("dialog", { name: "Upload Resource" });
-  await expect(modal.locator("#upload-week")).toHaveValue(String(week));
-  await modal.locator("#resource-name").fill(`E2E week ${week} notes`);
-  await modal.locator('input[type="file"]').setInputFiles({ name: "notes.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4 e2e") });
+  // Subjects, on the lesson's course and its Resources tab, with the upload sheet open on the lesson's week.
+  await expect(page).toHaveURL(new RegExp(`/subjects\\?.*courseId=${lesson!.course.id}`));
+  const upload = page.getByRole("dialog", { name: "Upload a resource" });
+  await expect(upload).toBeVisible();
+  await expect(upload.getByLabel("Week")).toHaveValue(String(week));
+  await expect(upload.getByRole("button", { name: title })).toHaveAttribute("aria-pressed", "true");
+  await upload.getByLabel("Name").fill(`E2E week ${week} notes`);
+  await upload.getByLabel("File to upload").setInputFiles({ name: "notes.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4 e2e") });
   monitor.clear();
   const created = page.waitForResponse((r) => r.request().method() === "POST" && /\/resources\/?(\?|$)/.test(new URL(r.url()).pathname + new URL(r.url()).search));
-  await modal.getByRole("button", { name: "Upload Resource" }).click();
+  await upload.getByRole("button", { name: "Upload", exact: true }).click();
   const res = await created;
   expect(res.ok()).toBe(true);
   expect((res.request().postDataJSON() as { week?: number }).week).toBe(week);
-  await expect(page.getByText("Upload Successful!")).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Uploaded" })).toBeVisible();
 
   const stored = await apiCall<unknown>(token, "GET", `/resources/course/${lesson!.course.id}?week=${week}`);
-  const list = (Array.isArray(stored) ? stored : ((stored as { resources?: unknown[] }).resources ?? [])) as { _id: string; week?: number; fileUrl?: string; url?: string; name?: string }[];
+  const list = (Array.isArray(stored) ? stored : ((stored as { resources?: unknown[] }).resources ?? [])) as { _id: string; week?: number; name?: string }[];
   const mine = list.find((r) => JSON.stringify(r).includes(fakeUrl));
   expect(mine, "the resource is listed for that week").toBeTruthy();
   expect(mine!.week).toBe(week);
@@ -407,7 +430,7 @@ test("Share a resource from a lesson files the upload under the lesson's week", 
   expect(JSON.stringify(other)).not.toContain(fakeUrl);
   console.log(`[upload] stored with week ${mine!.week}`);
 
-  // Leave /resources empty for the smoke suite.
+  // Leave the course's resources as the seed made them.
   await apiCall(token, "DELETE", `/resources/${mine!._id}`);
   expect(monitor.unexpected(ALLOW)).toEqual([]);
 });

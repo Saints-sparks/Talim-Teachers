@@ -84,13 +84,17 @@ test.beforeAll(async () => {
   quiz = created.assessment._id;
 });
 
-test.afterAll(async () => {
+/** Unlocks, clears and deletes the throwaway assessment (published scores cannot simply be deleted). */
+async function removeQuiz(): Promise<void> {
   if (!quiz) return;
   const base = `/grading/course/${mth.course.id}/assessments/${quiz}`;
   await apiCall(token, "POST", `${base}/unlock`, { reason: "e2e cleanup" }).catch(() => undefined);
   await apiCall(token, "PUT", `${base}/scores`, { scores: students.map((s) => ({ studentId: s.id, score: null })) }).catch(() => undefined);
   await apiCall(admin, "DELETE", `/assessments/${quiz}`);
-});
+  quiz = "";
+}
+
+test.afterAll(removeQuiz);
 
 /** Opens the Grading page on a link and waits for the data it needs. */
 async function openGrading(page: Page, query: string, ready: RegExp): Promise<void> {
@@ -243,6 +247,16 @@ test("Term total: a column per assessment, the total, grade and position", async
   await expect(ben).toContainText("2nd");
   await expect(ada.getByRole("cell").filter({ hasText: /^A$/ })).toHaveCount(1);
   await expect(ben.getByRole("cell").filter({ hasText: /^B$/ })).toHaveCount(1);
+});
+
+test("the throwaway assessment goes again, and Mathematics 5A is as the seed left it", async () => {
+  await removeQuiz();
+  const sheet = await apiCall<Sheet>(token, "GET", `/grading/course/${mth.course.id}`);
+  expect(sheet.assessments.map((a) => `${a.name} ${a.maxScore} ${a.status}`)).toEqual([
+    "First Term CA 1 20 published",
+    "First Term CA 2 20 published",
+    "First Term Exam 60 published",
+  ]);
 });
 
 // ─── Class report ──────────────────────────────────────────────────────────

@@ -20,7 +20,7 @@ interface TodayBody {
 interface WeekBody {
   week: { start: string; isCurrent: boolean; number: number | null };
   days: { date: string; isToday: boolean; holiday: { title: string } | null }[];
-  lessons: { date: string; cancelled: { reason: string } | null }[];
+  lessons: { date: string; startTime: string; endTime: string; course: { id: string }; class: { id: string }; cancelled: { reason: string } | null }[];
 }
 
 const WEEKEND = process.env.E2E_WEEKEND === "1";
@@ -71,8 +71,14 @@ test.describe("a holiday today", () => {
     expect(cancelled.every((l) => l.cancelled)).toBe(true);
 
     await expect(page.getByRole("columnheader", { name: /Monday|Tuesday|Wednesday|Thursday|Friday/ }).filter({ hasText: `Holiday: ${title}` })).toBeVisible();
+    // The grid draws back-to-back lessons of the same course and class as one double-period cell.
+    const sorted = [...cancelled].sort((a, b) => a.startTime.localeCompare(b.startTime));
+    const cells = sorted.filter((l, i) => {
+      const prev = sorted[i - 1];
+      return !(prev && prev.endTime === l.startTime && prev.course.id === l.course.id && prev.class.id === l.class.id);
+    }).length;
     const struck = page.getByRole("button", { name: /, cancelled: / });
-    await expect(struck).toHaveCount(cancelled.length);
+    await expect(struck).toHaveCount(cells);
     await expect(struck.first().locator(".line-through")).toBeVisible();
     await expect(struck.first().locator(".line-through")).toHaveCSS("text-decoration-line", "line-through");
   });
