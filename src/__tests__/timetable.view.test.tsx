@@ -98,6 +98,9 @@ describe("Timetable, week 3", () => {
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText("Thursday · Periods 4–5 · 10:20 – 11:40")).toBeInTheDocument();
     expect(within(dialog).getByText(/Room: Block B, Room 4/)).toBeInTheDocument();
+    // The scheme of work opens on Subjects, on the course's plan at this week.
+    const hrefs = within(dialog).getAllByRole("link").map((a) => a.getAttribute("href"));
+    expect(hrefs).toContain("/subjects?courseId=k1&tab=plan&week=3");
   });
 });
 
