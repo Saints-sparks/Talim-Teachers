@@ -292,6 +292,51 @@ describe("Subject scores", () => {
     expect(click.defaultPrevented).toBe(true);
     confirm.mockRestore();
   });
+
+  it("guards the browser's Back while scores are unsaved, and stops asking once they are saved", async () => {
+    const confirm = jest.spyOn(window, "confirm").mockReturnValue(false);
+    const router = jest.fn();
+    window.history.replaceState({ __NA: true, page: "dashboard" }, "", "/dashboard");
+    window.history.pushState({ __NA: true, page: "grading" }, "", "/grading");
+    const length = window.history.length;
+    window.addEventListener("popstate", router);
+    const back = () =>
+      act(async () => {
+        window.history.back();
+        await new Promise((resolve) => setTimeout(resolve, 30));
+      });
+    try {
+      render(
+        <>
+          <GradingScreen link={{}} />
+          <a href="/students" onClick={(event) => event.preventDefault()}>
+            Students
+          </a>
+        </>,
+      );
+      await screen.findByRole("heading", { name: "1st CA · Mathematics · JSS1 A · out of 20" });
+      fireEvent.change(scoreInput("Emeka Nnaji"), { target: { value: "12" } });
+
+      await back();
+      expect(confirm).toHaveBeenCalledWith("You have unsaved scores. Leave this page and lose them?");
+      expect(router).not.toHaveBeenCalled();
+      expect(window.location.pathname).toBe("/grading");
+      expect(window.history.length).toBe(length);
+      expect(scoreInput("Emeka Nnaji").value).toBe("12");
+
+      fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
+      await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith("Draft saved. Students and parents cannot see it yet."));
+      confirm.mockClear();
+      fireEvent.click(screen.getByRole("link", { name: "Students" }));
+      await back();
+      expect(confirm).not.toHaveBeenCalled();
+      expect(router).toHaveBeenCalledTimes(1);
+      expect(window.location.pathname).toBe("/dashboard");
+    } finally {
+      window.removeEventListener("popstate", router);
+      confirm.mockRestore();
+    }
+  });
 });
 
 describe("Grading states", () => {
