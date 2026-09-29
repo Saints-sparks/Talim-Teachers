@@ -16,9 +16,11 @@ import {
   gradeFor,
   isBelowThreshold,
   isLocked,
+  conflictCode,
   isLockedError,
   liveTotals,
   missingScoresFromError,
+  peopleNotified,
   parseScore,
   positionLabel,
   pruneDraft,
@@ -36,6 +38,7 @@ import {
   termTotalTab,
   termTotalTiles,
   tiedRanks,
+  remindedAtFromError,
   waitingOnFromError,
   whenLabel,
 } from "@/hooks/grading/grading.logic";
@@ -51,13 +54,17 @@ const TZ = "Africa/Lagos";
 beforeEach(() => resetGradingFixtureStore());
 
 /**
- * A 409 as the API client raises it.
+ * A 409 as the API sends it (`error.code` is always `CONFLICT`; the
+ * machine-readable fields sit at the top level) and the client raises it.
  *
  * @param body - Extra top-level fields.
  * @returns The error.
  */
 function conflict(body: Record<string, unknown>): ApiError {
-  return ApiError.fromResponse({ status: 409 }, { success: false, statusCode: 409, message: "Conflict", ...body } as ApiErrorBody);
+  return ApiError.fromResponse(
+    { status: 409 },
+    { success: false, statusCode: 409, message: "Conflict", error: { code: "CONFLICT", message: "Conflict" }, ...body } as ApiErrorBody,
+  );
 }
 
 /**
@@ -100,6 +107,9 @@ describe("score cells", () => {
     expect(sanitizeScoreInput("-12,5")).toBe("125");
     expect(sanitizeScoreInput("12.5")).toBe("12.5");
     expect(sanitizeScoreInput("123456789")).toBe("12345678");
+    // The API takes at most 2 decimals.
+    expect(sanitizeScoreInput("12.345")).toBe("12.34");
+    expect(sanitizeScoreInput("12.34")).toBe("12.34");
   });
 
   it.each([
@@ -113,6 +123,8 @@ describe("score cells", () => {
     ["21", 20, { kind: "above", value: 21 }],
     ["1.2.3", 20, { kind: "invalid" }],
     [".", 20, { kind: "invalid" }],
+    ["12.25", 20, { kind: "valid", value: 12.25 }],
+    ["12.255", 20, { kind: "invalid", reason: "decimals" }],
   ] as const)("%j out of %d reads as %j", (raw, max, expected) => {
     expect(parseScore(raw, max)).toEqual(expected);
   });
@@ -120,6 +132,7 @@ describe("score cells", () => {
   it("show Above {max}, Not a number, Entered or Missing", () => {
     expect(rowStatus(parseScore("25", 20), 20)).toEqual({ label: "Above 20", tone: "danger" });
     expect(rowStatus(parseScore("..", 20), 20).label).toBe("Not a number");
+    expect(rowStatus(parseScore("1.125", 20), 20).label).toBe("Too many decimals");
     expect(rowStatus(parseScore("5", 20), 20).label).toBe("Entered");
     expect(rowStatus(parseScore("", 20), 20).label).toBe("Missing");
   });
@@ -169,11 +182,11 @@ describe("numbers and grades", () => {
     expect(gradeFor(10, [])).toBeNull();
   });
 
-  it("colours below the scale's D minimum, else 45", () => {
-    expect(redThreshold(DEFAULT_SCALE)).toBe(45);
-    expect(redThreshold([{ letter: "A", min: 80, remark: null }, { letter: "D", min: 50, remark: null }, { letter: "F", min: 0, remark: null }])).toBe(50);
-    expect(redThreshold([{ letter: "Pass", min: 40, remark: null }])).toBe(45);
-    expect(redThreshold(undefined)).toBe(45);
+  it("colours below the broadsheet scale's D minimum, else below its pass mark", () => {
+    expect(redThreshold(DEFAULT_SCALE, 50)).toBe(45);
+    expect(redThreshold([{ letter: "A", min: 80, remark: null }, { letter: "D", min: 50, remark: null }, { letter: "F", min: 0, remark: null }], 40)).toBe(50);
+    expect(redThreshold([{ letter: "Pass", min: 40, remark: null }, { letter: "Fail", min: 0, remark: null }], 40)).toBe(40);
+    expect(redThreshold([], 55)).toBe(55);
     expect(isBelowThreshold(8, 20, 45)).toBe(true);
     expect(isBelowThreshold(9, 20, 45)).toBe(false);
     expect(isBelowThreshold(44.9, null, 45)).toBe(true);
@@ -289,21 +302,35 @@ describe("publishing", () => {
     expect(isLocked({ status: "draft" })).toBe(false);
   });
 
-  it("reads the 409 bodies: LOCKED (top level or in error), missing and waitingOn", () => {
+  it("reads the 409 bodies: the top-level code, missing (student ids) and waitingOn", () => {
+    expect(conflictCode(conflict({ code: "LOCKED" }))).toBe("LOCKED");
+    expect(conflictCode(conflict({ code: "ALREADY_REMINDED", sentAt: "2026-09-25T08:00:00.000Z" }))).toBe("ALREADY_REMINDED");
+    // `error.code` is always CONFLICT, so without a top-level code there is none.
+    expect(conflictCode(conflict({}))).toBeNull();
+    expect(conflictCode(conflict({ code: "SOMETHING_NEW" }))).toBeNull();
     expect(isLockedError(conflict({ code: "LOCKED" }))).toBe(true);
-    expect(isLockedError(conflict({ error: { code: "LOCKED", message: "Locked" } }))).toBe(true);
-    expect(isLockedError(conflict({ missing: 2 }))).toBe(false);
+    // Read from `error.code` only as a fallback.
+    expect(isLockedError(ApiError.fromResponse({ status: 409 }, { message: "Locked", error: { code: "LOCKED" } } as ApiErrorBody))).toBe(true);
+    expect(isLockedError(conflict({ missing: ["s1", "s2"] }))).toBe(false);
     expect(isLockedError(ApiError.fromResponse({ status: 400 }, { message: "Bad", error: { code: "LOCKED" } } as ApiErrorBody))).toBe(false);
     expect(isLockedError(new Error("x"))).toBe(false);
-    expect(missingScoresFromError(conflict({ missing: 3 }))).toBe(3);
+    expect(missingScoresFromError(conflict({ missing: ["s1", "s2", "s3"] }))).toBe(3);
+    expect(missingScoresFromError(conflict({ missing: [] }))).toBe(0);
     expect(missingScoresFromError(conflict({ code: "LOCKED" }))).toBeNull();
+    expect(missingScoresFromError(new Error("x"))).toBeNull();
     expect(waitingOnFromError(conflict({ waitingOn: [{ courseId: "o1", title: "English" }] }))).toEqual([{ courseId: "o1", title: "English" }]);
     expect(waitingOnFromError(conflict({}))).toBeNull();
+    expect(remindedAtFromError(conflict({ code: "ALREADY_REMINDED", sentAt: "2026-09-25T08:00:00.000Z" }))).toBe("2026-09-25T08:00:00.000Z");
+    expect(remindedAtFromError(conflict({ code: "PUBLISHED" }))).toBeNull();
   });
 
-  it("tells the teacher how many people were notified", () => {
-    expect(publishedMessage("1st CA", { notified: 24, changed: [] }, false)).toBe("1st CA published. Students and parents can see the scores; 24 people have been notified.");
-    expect(publishedMessage("1st CA", { notified: 2, changed: ["s1"] }, true)).toBe("1st CA published again. 1 score changed; 2 people have been notified.");
+  it("tells the teacher how many people (students and parents) were notified", () => {
+    expect(peopleNotified(1)).toBe("1 person notified");
+    expect(peopleNotified(24)).toBe("24 people notified");
+    expect(publishedMessage("1st CA", { notified: 24, changed: ["s1", "s2"] }, false)).toBe("1st CA published. Students and parents can see the scores; 24 people notified.");
+    expect(publishedMessage("1st CA", { notified: 1, changed: ["s1"] }, false)).toBe("1st CA published. Students and parents can see the scores; 1 person notified.");
+    expect(publishedMessage("1st CA", { notified: 0, changed: [] }, false)).toBe("1st CA was already published. Nobody was notified again.");
+    expect(publishedMessage("1st CA", { notified: 2, changed: ["s1"] }, true)).toBe("1st CA published again. 1 score changed; 2 people notified.");
     expect(publishedMessage("1st CA", { notified: 0, changed: [] }, true)).toBe("1st CA published again. No score changed, so nobody was notified.");
   });
 });

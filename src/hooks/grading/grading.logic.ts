@@ -5,7 +5,8 @@
  * allowed, the status lines and pills, the 409 bodies, and the class report's
  * readiness, broadsheet and remarks rules. No React.
  *
- * Shapes are the hand-written Round 3 types in `src/types/grading.ts`.
+ * Shapes are the Round 3 types in `src/types/grading.ts` (aliases of the
+ * generated contract, plus the hand-written 409 body).
  */
 import { ApiError } from "@/lib/apiError";
 import { clockTime, dayMonth, schoolClock } from "@/hooks/today/today.logic";
@@ -17,6 +18,7 @@ import type {
   GradeBand,
   GradingAssessment,
   GradingConflictBody,
+  GradingConflictCode,
   GradingPosition,
   GradingStudent,
   ReadinessCell,
@@ -27,9 +29,6 @@ import type {
 
 /** The dash the design shows for "nothing yet". */
 export const DASH = "—";
-
-/** The red threshold when no scale with a D band is known (the default scale's D). */
-export const DEFAULT_RED_BELOW = 45;
 
 /** The longest remark the API stores (§22). */
 export const REMARK_MAX = 500;
@@ -46,16 +45,22 @@ export const DEFAULT_SCALE: GradeBand[] = [
 
 // ─── Score cells ────────────────────────────────────────────────────────────
 
+/** The most decimals a score may have: the API answers 400 beyond it ("Round 3 as built", §15). */
+export const SCORE_DECIMALS = 2;
+
 /**
  * What the teacher typed, cleaned the way the design does: anything but
- * digits and a decimal point is dropped as they type, and the length is
+ * digits and a decimal point is dropped as they type, a single decimal point
+ * keeps at most {@link SCORE_DECIMALS} digits after it, and the length is
  * capped (the largest `maxScore` is 1000).
  *
  * @param raw - The input's value.
  * @returns The cleaned text.
  */
 export function sanitizeScoreInput(raw: string): string {
-  return raw.replace(/[^0-9.]/g, "").slice(0, 8);
+  const text = raw.replace(/[^0-9.]/g, "").slice(0, 8);
+  const decimal = /^(\d*\.)(\d*)$/.exec(text);
+  return decimal && decimal[2].length > SCORE_DECIMALS ? `${decimal[1]}${decimal[2].slice(0, SCORE_DECIMALS)}` : text;
 }
 
 /** A score cell read against its maximum. */
@@ -63,11 +68,13 @@ export type ParsedScore =
   | { kind: "empty" }
   | { kind: "valid"; value: number }
   | { kind: "above"; value: number }
-  | { kind: "invalid" };
+  | { kind: "invalid"; reason?: "decimals" };
 
 /**
  * Reads a cell. Empty means "no score" (saved as null); a number above the
- * maximum is kept on screen but cannot be saved; "1.2.3" or "." is invalid.
+ * maximum is kept on screen but cannot be saved; "1.2.3" or "." is invalid,
+ * and so is a score with more than {@link SCORE_DECIMALS} decimals (the API
+ * refuses it; one can still arrive from a CSV import).
  *
  * @param raw - The cell's text (already sanitised).
  * @param max - The assessment's `maxScore`.
@@ -77,6 +84,7 @@ export function parseScore(raw: string, max: number): ParsedScore {
   const text = raw.trim();
   if (!text) return { kind: "empty" };
   if (!/^\d*\.?\d*$/.test(text) || !/\d/.test(text)) return { kind: "invalid" };
+  if ((text.split(".")[1] ?? "").length > SCORE_DECIMALS) return { kind: "invalid", reason: "decimals" };
   const value = Number(text);
   if (!Number.isFinite(value) || value < 0) return { kind: "invalid" };
   if (value > max) return { kind: "above", value };
@@ -205,7 +213,7 @@ export interface RowStatus {
 }
 
 /**
- * "Entered", "Missing", "Above 20" or "Not a number".
+ * "Entered", "Missing", "Above 20", "Too many decimals" or "Not a number".
  *
  * @param parsed - The cell's reading.
  * @param max - The assessment's maximum.
@@ -213,7 +221,7 @@ export interface RowStatus {
  */
 export function rowStatus(parsed: ParsedScore, max: number): RowStatus {
   if (parsed.kind === "above") return { label: `Above ${max}`, tone: "danger" };
-  if (parsed.kind === "invalid") return { label: "Not a number", tone: "danger" };
+  if (parsed.kind === "invalid") return { label: parsed.reason === "decimals" ? "Too many decimals" : "Not a number", tone: "danger" };
   if (parsed.kind === "valid") return { label: "Entered", tone: "success" };
   return { label: "Missing", tone: "muted" };
 }
@@ -262,14 +270,17 @@ export function gradeFor(percent: number, scale: readonly GradeBand[]): string |
 
 /**
  * The percent below which the broadsheet shows a score in red: the D band's
- * minimum on the school's scale, else 45 (the default scale's D).
+ * minimum on the school's scale (the design's "below 45%" is the default
+ * scale's D), else the school's pass mark when the scale has no D band. Both
+ * come with the broadsheet.
  *
- * @param scale - The school's bands, when known.
+ * @param scale - The school's bands (`broadsheet.scale`).
+ * @param passMark - The school's pass mark, percent (`broadsheet.passMark`).
  * @returns The threshold, in percent.
  */
-export function redThreshold(scale: readonly GradeBand[] | undefined | null): number {
-  const d = scale?.find((b) => b.letter.trim().toUpperCase() === "D");
-  return d ? d.min : DEFAULT_RED_BELOW;
+export function redThreshold(scale: readonly GradeBand[], passMark: number): number {
+  const d = scale.find((b) => b.letter.trim().toUpperCase() === "D");
+  return d ? d.min : passMark;
 }
 
 /**
@@ -637,7 +648,9 @@ export function termTotalTab(sheet: CourseGradingSheet, rows: readonly LiveTotal
 }
 
 /**
- * Reads the body a failed request carried.
+ * Reads the body a failed request carried. Errors have the same shape
+ * whether or not the API's success envelope is on, and the client keeps the
+ * parsed body on `response.data`.
  *
  * @param error - Whatever was thrown.
  * @returns The 409 body, or null for anything else.
@@ -648,29 +661,55 @@ function conflictBody(error: unknown): GradingConflictBody | null {
   return body && typeof body === "object" ? (body as GradingConflictBody) : {};
 }
 
+const CONFLICT_CODES: ReadonlySet<string> = new Set<GradingConflictCode>([
+  "LOCKED",
+  "NOT_PUBLISHED",
+  "PUBLISHED",
+  "SCORES_ABOVE_MAX",
+  "ALREADY_REMINDED",
+  "NO_TEACHER",
+  "RESULTS_SUBMITTED",
+  "RESULTS_PUBLISHED",
+  "ALREADY_SUBMITTED",
+  "ALREADY_PUBLISHED",
+  "RETURNED",
+]);
+
 /**
- * Whether a save failed because the assessment is published and locked
- * (409 `{ code: 'LOCKED' }`; the code may sit at the top level or in `error`).
+ * The machine-readable reason of a Round 3 409: the top-level `code` of the
+ * error body (`error.code` is always `'CONFLICT'`; it is read only as a
+ * fallback, in case a proxy moves the code there).
+ *
+ * @param error - Whatever the request threw.
+ * @returns The code, or null for anything else (including a 409 without one).
+ */
+export function conflictCode(error: unknown): GradingConflictCode | null {
+  const body = conflictBody(error);
+  if (!body) return null;
+  for (const code of [body.code, body.error?.code]) if (typeof code === "string" && CONFLICT_CODES.has(code)) return code as GradingConflictCode;
+  return null;
+}
+
+/**
+ * Whether a save failed because the assessment is published and locked (409 `LOCKED`).
  *
  * @param error - Whatever the save threw.
  * @returns True for the lock.
  */
 export function isLockedError(error: unknown): boolean {
-  const body = conflictBody(error);
-  if (!body) return false;
-  return body.code === "LOCKED" || body.error?.code === "LOCKED";
+  return conflictCode(error) === "LOCKED";
 }
 
 /**
- * The `missing` count of a publish refused for missing scores (409 `{ missing }`).
+ * The students a publish was refused for (409 `{ missing }`: the ids of the
+ * active students without a valid score).
  *
  * @param error - Whatever the publish threw.
  * @returns How many students still need a score, or null for any other error.
  */
 export function missingScoresFromError(error: unknown): number | null {
   const body = conflictBody(error);
-  const missing = Number(body?.missing);
-  return body && body.missing !== undefined && Number.isFinite(missing) && missing >= 0 ? missing : null;
+  return body && Array.isArray(body.missing) ? body.missing.length : null;
 }
 
 /**
@@ -685,22 +724,48 @@ export function waitingOnFromError(error: unknown): { courseId: string; title: s
 }
 
 /**
+ * When the earlier reminder was sent, from a 409 `ALREADY_REMINDED`.
+ *
+ * @param error - Whatever the reminder threw.
+ * @returns The ISO instant, or null for any other error (or when the body has none).
+ */
+export function remindedAtFromError(error: unknown): string | null {
+  if (conflictCode(error) !== "ALREADY_REMINDED") return null;
+  const sentAt = conflictBody(error)?.sentAt;
+  return typeof sentAt === "string" && sentAt ? sentAt : null;
+}
+
+/**
+ * "1 person notified" / "24 people notified". The publish's `notified` counts
+ * people told in the app: students and parents, a parent of two counted once.
+ *
+ * @param n - How many.
+ * @returns The phrase.
+ */
+export function peopleNotified(n: number): string {
+  return `${n} ${n === 1 ? "person" : "people"} notified`;
+}
+
+/**
  * The toast after a publish: how many people were told, and on a republish
- * how many scores changed.
+ * how many scores changed. Publishing scores that were already published is
+ * a no-op on the server (`changed: []`, `notified: 0`).
  *
  * @param assessmentName - "1st CA".
  * @param result - The publish response.
- * @param result.notified - How many people were notified.
- * @param result.changed - Students whose score changed since the unlock.
+ * @param result.notified - How many people (students and parents) were notified.
+ * @param result.changed - Students whose scores this call published.
  * @param republish - Whether it had been unlocked.
  * @returns The message.
  */
 export function publishedMessage(assessmentName: string, result: { notified: number; changed: string[] }, republish: boolean): string {
-  const people = `${result.notified} ${result.notified === 1 ? "person has" : "people have"} been notified`;
-  if (!republish) return `${assessmentName} published. Students and parents can see the scores; ${people}.`;
+  if (!republish) {
+    if (result.changed.length === 0) return `${assessmentName} was already published. Nobody was notified again.`;
+    return `${assessmentName} published. Students and parents can see the scores; ${peopleNotified(result.notified)}.`;
+  }
   if (result.changed.length === 0) return `${assessmentName} published again. No score changed, so nobody was notified.`;
   const changed = `${result.changed.length} ${result.changed.length === 1 ? "score" : "scores"} changed`;
-  return `${assessmentName} published again. ${changed}; ${people}.`;
+  return `${assessmentName} published again. ${changed}; ${peopleNotified(result.notified)}.`;
 }
 
 // ─── Class report ───────────────────────────────────────────────────────────
@@ -882,6 +947,18 @@ export function submissionView(submission: TermResultSubmission | undefined, bas
     label: `Submit ${basisLabel} summary again`,
     canSubmit: true,
   };
+}
+
+/**
+ * The class's submission for one basis (a submission's `basis` is
+ * `{ key, label }`; `key` is `total` or the assessment id).
+ *
+ * @param submissions - The class's submissions for the term.
+ * @param basisKey - The broadsheet's `basis.key`.
+ * @returns The submission, if there is one.
+ */
+export function submissionFor(submissions: readonly TermResultSubmission[] | undefined, basisKey: string): TermResultSubmission | undefined {
+  return submissions?.find((s) => s.basis.key === basisKey);
 }
 
 /**

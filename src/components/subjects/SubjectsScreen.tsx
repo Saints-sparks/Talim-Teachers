@@ -215,6 +215,21 @@ export function SubjectsScreen({ initialCourseId, initialTab, initialWeek }: Sub
     );
   }
 
+  // §25 as built: without a current term (and no term picked) the cards answer 404.
+  if (cards.isError && !cards.data && !termId && cards.error instanceof ApiError && cards.error.status === 404) {
+    return (
+      <div className={`${pagePad} flex flex-col gap-[18px]`}>
+        {header}
+        <section className={cardClass}>
+          <h2 className={cardTitle}>No term is running</h2>
+          <p className="mt-1.5 text-sm leading-relaxed text-tl-muted">
+            The school office has not set a current term yet, so there is no scheme of work to show. Pick an earlier term above to see its plan and resources.
+          </p>
+        </section>
+      </div>
+    );
+  }
+
   if (cards.isError && !cards.data) {
     return (
       <div className={`${pagePad} flex flex-col gap-[18px]`}>

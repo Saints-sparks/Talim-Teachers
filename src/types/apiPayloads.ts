@@ -82,10 +82,18 @@ export type RetryClassSummaryBody = RequestBody<"/grade-records/grading/classes/
 
 // ─── Resources and curriculum ───────────────────────────────────────────────
 
+/**
+ * `visibility` as the resource DTOs take it: optional. The backend declares it
+ * `@ApiPropertyOptional` / `@IsOptional()` (defaulting to `students`), but the
+ * generator marks a property with a `default` as required, so the generated
+ * body types demand it.
+ */
+type OptionalVisibility<T extends { visibility?: unknown }> = Omit<T, "visibility"> & { visibility?: T["visibility"] };
+
 /** `POST /resources`. The portal never sets `uploadedBy`: the server derives it from the token. */
-export type CreateResourceBody = Omit<RequestBody<"/resources">, "uploadedBy">;
+export type CreateResourceBody = OptionalVisibility<Omit<RequestBody<"/resources">, "uploadedBy">>;
 /** `PUT /resources/:id`. */
-export type UpdateResourceBody = Omit<RequestBody<"/resources/{id}", "put">, "uploadedBy">;
+export type UpdateResourceBody = OptionalVisibility<Omit<RequestBody<"/resources/{id}", "put">, "uploadedBy">>;
 /** `POST /curriculum`. */
 export type CreateCurriculumBody = RequestBody<"/curriculum">;
 /** `PATCH /curriculum/:id`. */

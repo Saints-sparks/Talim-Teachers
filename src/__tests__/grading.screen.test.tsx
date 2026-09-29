@@ -54,13 +54,17 @@ const toastMock = toast as unknown as { success: jest.Mock; error: jest.Mock; in
 const preferences = useTeacherPreferences as jest.Mock;
 
 /**
- * A 409 as the API client raises it.
+ * A 409 as the API sends it (`error.code` is always `CONFLICT`; the
+ * machine-readable fields sit at the top level) and the client raises it.
  *
  * @param body - Extra top-level fields.
  * @returns The error.
  */
 function conflict(body: Record<string, unknown>): ApiError {
-  return ApiError.fromResponse({ status: 409 }, { success: false, statusCode: 409, message: "Conflict", ...body } as ApiErrorBody);
+  return ApiError.fromResponse(
+    { status: 409 },
+    { success: false, statusCode: 409, message: "Conflict", error: { code: "CONFLICT", message: "Conflict" }, ...body } as ApiErrorBody,
+  );
 }
 
 beforeEach(() => {
@@ -199,7 +203,7 @@ describe("Subject scores", () => {
     ).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole("button", { name: "Publish scores" }));
     await waitFor(() =>
-      expect(toastMock.success).toHaveBeenCalledWith("1st CA published. Students and parents can see the scores; 24 people have been notified."),
+      expect(toastMock.success).toHaveBeenCalledWith("1st CA published. Students and parents can see the scores; 24 people notified."),
     );
     expect(grading.saveScores).toHaveBeenCalledTimes(1);
     expect(grading.publish).toHaveBeenCalledWith("k1", "a1");
@@ -207,8 +211,8 @@ describe("Subject scores", () => {
     expect(scoreInput("Aisha Bello")).toBeDisabled();
   });
 
-  it("says how many are missing when the server refuses a publish (409 missing)", async () => {
-    grading.publish.mockRejectedValueOnce(conflict({ missing: 2 }));
+  it("says how many are missing when the server refuses a publish (409 missing: student ids)", async () => {
+    grading.publish.mockRejectedValueOnce(conflict({ missing: ["s3", "s7"] }));
     await openMaths();
     for (const name of ["Emeka Nnaji", "Funmi Adeyemi", "Samuel Ogun", "Zainab Yusuf"]) fireEvent.change(scoreInput(name), { target: { value: "14" } });
     fireEvent.click(screen.getByRole("button", { name: "Publish scores" }));
@@ -386,13 +390,23 @@ describe("Class report", () => {
     expect(await screen.findByRole("heading", { name: "1st CA · Mathematics · JSS1 A · out of 20" })).toBeInTheDocument();
   });
 
-  it("treats a 409 on a reminder as already sent today", async () => {
-    grading.sendReminder.mockRejectedValueOnce(conflict({}));
+  it("treats a 409 ALREADY_REMINDED as already sent today", async () => {
+    grading.sendReminder.mockRejectedValueOnce(conflict({ code: "ALREADY_REMINDED", sentAt: "2026-09-25T08:00:00.000Z" }));
     await openReport();
     const science = await screen.findByRole("row", { name: /Basic Science/ });
     fireEvent.click(within(science).getByRole("button", { name: "Send reminder" }));
     await waitFor(() => expect(within(science).getByText("Reminder sent")).toBeInTheDocument());
     expect(toastMock.info).toHaveBeenCalledWith("A reminder about 2nd CA was already sent to Mr. Tunji Salami today.");
+  });
+
+  it("does not claim a reminder went out when the scores were published meanwhile (409 PUBLISHED)", async () => {
+    grading.sendReminder.mockRejectedValueOnce(conflict({ code: "PUBLISHED" }));
+    await openReport();
+    const science = await screen.findByRole("row", { name: /Basic Science/ });
+    fireEvent.click(within(science).getByRole("button", { name: "Send reminder" }));
+    await waitFor(() => expect(toastMock.info).toHaveBeenCalledWith("2nd CA scores are already published, so no reminder was needed."));
+    expect(within(science).queryByText("Reminder sent")).not.toBeInTheDocument();
+    expect(grading.getReadiness.mock.calls.length).toBeGreaterThan(1);
   });
 
   it("previews the broadsheet until every subject publishes, then generates and shows it is with the office", async () => {

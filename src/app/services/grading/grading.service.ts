@@ -10,9 +10,10 @@
  * - `GET` and `PUT /grading/classes/:classId/remarks`
  * - `GET` and `POST /grading/classes/:classId/term-results`
  *
- * Shapes are the hand-written types in `src/types/grading.ts` (the backend
- * is not in the generated contract yet). Every call goes through the typed
- * client, which unwraps the success envelope either way. With
+ * Shapes are the types in `src/types/grading.ts`, aliases of the generated
+ * contract. Every call goes through the typed client, which unwraps the
+ * success envelope either way (errors look the same in both modes; a 409's
+ * machine-readable fields sit at the top level of the error body). With
  * `NEXT_PUBLIC_USE_FIXTURES=true` in a dev build the calls answer from
  * `src/lib/fixtures/grading.fixture.ts`.
  */
@@ -31,6 +32,7 @@ import type {
   TermRemarks,
   TermResultSubmission,
   UnlockBody,
+  UnlockResult,
 } from "@/types/grading";
 
 /**
@@ -69,7 +71,7 @@ export const gradingService = {
    * @param assessmentId - The assessment.
    * @param body - The scores (and the term).
    * @returns The sheet after the save.
-   * @throws ApiError: 409 `{ code: 'LOCKED' }` while published; 400 for a score out of range.
+   * @throws ApiError: 409 `LOCKED` while published; 400 for a score out of range.
    */
   saveScores: async (courseId: string, assessmentId: string, body: SaveScoresBody): Promise<CourseGradingSheet> => {
     if (fixturesEnabled()) return (await fixture()).saveScoresFixture(courseId, assessmentId, body);
@@ -82,8 +84,8 @@ export const gradingService = {
    *
    * @param courseId - The course.
    * @param assessmentId - The assessment.
-   * @returns When, who changed since an unlock, and how many people were notified.
-   * @throws ApiError: 409 `{ missing }` while a student has no score.
+   * @returns When, whose scores it published, and how many people (students and parents) were notified.
+   * @throws ApiError: 409 `{ missing: studentIds }` while a student has no valid score.
    */
   publish: async (courseId: string, assessmentId: string): Promise<PublishResult> => {
     if (fixturesEnabled()) return (await fixture()).publishFixture(courseId, assessmentId);
@@ -95,13 +97,13 @@ export const gradingService = {
    *
    * @param courseId - The course.
    * @param assessmentId - The assessment.
-   * @param body - An optional reason.
-   * @returns Resolves once unlocked.
-   * @throws ApiError: 409 unless the assessment is published.
+   * @param body - An optional reason (at most 500 characters).
+   * @returns `{ status: 'unlocked', unlockedAt }`.
+   * @throws ApiError: 409 `NOT_PUBLISHED` unless the assessment is published.
    */
-  unlock: async (courseId: string, assessmentId: string, body: UnlockBody = {}): Promise<void> => {
+  unlock: async (courseId: string, assessmentId: string, body: UnlockBody = {}): Promise<UnlockResult> => {
     if (fixturesEnabled()) return (await fixture()).unlockFixture(courseId, assessmentId);
-    await api.post(`/grading/course/${seg(courseId)}/assessments/${seg(assessmentId)}/unlock`, body);
+    return api.post<UnlockResult>(`/grading/course/${seg(courseId)}/assessments/${seg(assessmentId)}/unlock`, body);
   },
 
   /**
@@ -123,7 +125,7 @@ export const gradingService = {
    * @param classId - The class.
    * @param body - The course and assessment.
    * @returns When it was sent.
-   * @throws ApiError: 409 when a reminder was already sent today.
+   * @throws ApiError: 409 `ALREADY_REMINDED` (with the earlier `sentAt`) on the same school day, `PUBLISHED`, or `NO_TEACHER`.
    */
   sendReminder: async (classId: string, body: ReminderBody): Promise<ReminderResult> => {
     if (fixturesEnabled()) return (await fixture()).sendReminderFixture(classId, body);
@@ -163,7 +165,7 @@ export const gradingService = {
    * @param classId - The class.
    * @param body - The remarks (at most 500 characters each).
    * @returns The rows after the save.
-   * @throws ApiError: 409 while the term results are submitted or published.
+   * @throws ApiError: 409 `RESULTS_SUBMITTED` / `RESULTS_PUBLISHED` while the term results are with the office or published.
    */
   saveRemarks: async (classId: string, body: SaveRemarksBody): Promise<TermRemarks> => {
     if (fixturesEnabled()) return (await fixture()).saveRemarksFixture(classId, body);
@@ -190,7 +192,7 @@ export const gradingService = {
    * @param classId - The class.
    * @param body - The basis (and the term).
    * @returns The submission.
-   * @throws ApiError: 409 `{ waitingOn }` until every subject has published the basis.
+   * @throws ApiError: 409 `{ waitingOn }` until every subject has published the basis; `ALREADY_SUBMITTED` / `ALREADY_PUBLISHED`.
    */
   submitTermResults: async (classId: string, body: SubmitTermResultsBody): Promise<TermResultSubmission> => {
     if (fixturesEnabled()) return (await fixture()).submitTermResultsFixture(classId, body.basis);

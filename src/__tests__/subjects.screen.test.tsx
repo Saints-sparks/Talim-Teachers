@@ -389,6 +389,18 @@ describe("SubjectsScreen", () => {
     expect(await screen.findByRole("heading", { level: 2, name: "Mathematics · JSS1 A" })).toBeInTheDocument();
   });
 
+  it("explains a school with no current term (the cards answer 404) and lets the teacher pick an earlier one", async () => {
+    service.getMySubjects.mockImplementation(async (termId) => {
+      if (!termId) throw ApiError.fromResponse({ status: 404 }, { message: "There is no current term; pass termId to choose one", error: { code: "NOT_FOUND" } });
+      return makeSubjectCardsFixture(termId);
+    });
+    render(<SubjectsScreen />);
+    expect(await screen.findByRole("heading", { name: "No term is running" })).toBeInTheDocument();
+    expect(screen.queryByText(/pass termId/)).toBeNull();
+    fireEvent.change(screen.getByLabelText("Term"), { target: { value: "term-0" } });
+    expect(await screen.findByRole("heading", { level: 2, name: "Mathematics · JSS1 A" })).toBeInTheDocument();
+  });
+
   it("shows a skeleton while the subjects load", () => {
     service.getMySubjects.mockReturnValue(new Promise(() => undefined));
     render(<SubjectsScreen />);

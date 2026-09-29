@@ -258,19 +258,21 @@ export function kindFromFile(mimeType: string | null | undefined, name?: string 
 }
 
 /**
- * The chip for a resource: its stored kind, else guessed from its MIME type
- * or first file (resources saved before §24 have neither field).
+ * The chip for a resource: its kind. The server always answers one (a
+ * resource saved before §24 gets one derived from its MIME type or file);
+ * a kind this app does not know shows as "File".
  *
  * @param resource - The resource.
  * @returns Label and tone.
  */
-export function kindChip(resource: Pick<CourseResource, "kind" | "mimeType" | "files" | "name">): KindChip {
-  const kind = resource.kind ?? kindFromFile(resource.mimeType, resource.files?.[0] ?? resource.name);
-  return KIND_CHIPS[kind] ?? KIND_CHIPS.other;
+export function kindChip(resource: Pick<CourseResource, "kind">): KindChip {
+  return KIND_CHIPS[resource.kind] ?? KIND_CHIPS.other;
 }
 
 /**
- * The id of a populated-or-bare reference.
+ * The id of a populated-or-bare reference (`ref._id ?? ref`): resource reads
+ * populate `classId`, `courseId`, `termId` and `uploadedBy`, the create
+ * response does not.
  *
  * @param ref - A bare id, a populated object, or nothing.
  * @returns The id, or an empty string.
@@ -288,7 +290,7 @@ export function refId(ref: ResourceRef): string {
  * @param termId - The page's term, once known.
  * @returns The resources to list.
  */
-export function resourcesForTerm(resources: readonly CourseResource[], termId: string | undefined): CourseResource[] {
+export function resourcesForTerm<T extends Pick<CourseResource, "termId">>(resources: readonly T[], termId: string | undefined): T[] {
   if (!termId) return [...resources];
   return resources.filter((r) => {
     const id = refId(r.termId);

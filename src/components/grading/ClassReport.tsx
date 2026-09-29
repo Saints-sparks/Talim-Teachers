@@ -14,9 +14,12 @@ import {
   positionLabel,
   publishedLine,
   readinessAction,
+  conflictCode,
   redThreshold,
   remarksLock,
+  remindedAtFromError,
   sortReportRows,
+  submissionFor,
   submissionView,
   tiedRanks,
   waitingOnFromError,
@@ -36,7 +39,7 @@ import {
 import { ApiError, getErrorMessage } from "@/lib/apiError";
 import { queryKeys } from "@/lib/queryKeys";
 import { useQueryClient } from "@tanstack/react-query";
-import type { ClassReadiness, GradeBand, TermResultSubmission } from "@/types/grading";
+import type { ClassReadiness, TermResultSubmission } from "@/types/grading";
 
 /** The class report's tabs. */
 export type ReportTab = "subjects" | "summary" | "remarks";
@@ -52,8 +55,6 @@ export interface ClassReportProps {
   onOpenCourse: (courseId: string, assessmentId: string) => void;
   /** Course ids the caller teaches, for "(yours)". */
   myCourseIds: ReadonlySet<string>;
-  /** A scale the page already has (from a course sheet), for the red threshold. */
-  knownScale?: GradeBand[];
   nowMs: number;
   timezone: string;
 }
@@ -146,9 +147,18 @@ function Readiness({ data, classId, onOpenCourse, nowMs, timezone, termId }: { d
       markSent(courseId, assessmentId, result.sentAt);
       toast.success(`Reminder sent to ${teacherName} about ${assessmentName} scores.`);
     } catch (error) {
-      if (error instanceof ApiError && error.status === 409) {
-        markSent(courseId, assessmentId, new Date(nowMs).toISOString());
+      const code = conflictCode(error);
+      if (code === "ALREADY_REMINDED") {
+        markSent(courseId, assessmentId, remindedAtFromError(error) ?? new Date(nowMs).toISOString());
         toast.info(`A reminder about ${assessmentName} was already sent to ${teacherName} today.`);
+      } else if (code === "PUBLISHED" || code === "NO_TEACHER") {
+        // The table was out of date: the scores went out, or the course lost its teacher.
+        void queryClient.invalidateQueries({ queryKey: key });
+        toast.info(
+          code === "PUBLISHED"
+            ? `${assessmentName} scores are already published, so no reminder was needed.`
+            : `No teacher is assigned to this subject, so there is nobody to remind.`,
+        );
       } else {
         toast.error(getErrorMessage(error, "The reminder was not sent. Please try again."));
       }
@@ -279,7 +289,6 @@ function SortSwitch({ sort, onSort }: { sort: ReportSort; onSort: (sort: ReportS
  * @param props.termId - The term.
  * @param props.readiness - For the basis chips.
  * @param props.myCourseIds - For "(yours)".
- * @param props.knownScale - For the red threshold.
  * @param props.submissions - The class's submissions.
  * @param props.nowMs - Now.
  * @param props.timezone - The school's timezone.
@@ -290,7 +299,6 @@ function Summary({
   termId,
   readiness,
   myCourseIds,
-  knownScale,
   submissions,
   nowMs,
   timezone,
@@ -299,7 +307,6 @@ function Summary({
   termId: string | undefined;
   readiness: ClassReadiness;
   myCourseIds: ReadonlySet<string>;
-  knownScale?: GradeBand[];
   submissions: TermResultSubmission[];
   nowMs: number;
   timezone: string;
@@ -314,11 +321,11 @@ function Summary({
   if (query.isPending) return <Block label="Loading the broadsheet" />;
   if (!sheet) return <ReportError error={query.error} onRetry={() => void query.refetch()} what="broadsheet" />;
 
-  const threshold = redThreshold(sheet.scale ?? knownScale);
+  const threshold = redThreshold(sheet.scale, sheet.passMark);
   const rows = sortReportRows(sheet.rows, sort);
   const tied = tiedRanks(sheet.rows.map((r) => r.position));
   const basisLabel = bases.find((b) => b.key === basis)?.label ?? sheet.basis.label;
-  const submission = submissions.find((s) => s.basis === sheet.basis.key);
+  const submission = submissionFor(submissions, sheet.basis.key);
   const view = submissionView(submission, basisLabel, nowMs, timezone);
   const max = sheet.basis.maxPerSubject;
   const enabled = sheet.ready && view.canSubmit && !submit.isPending && !query.isPlaceholderData;
@@ -330,12 +337,20 @@ function Summary({
       toast.success(`${basisLabel} summary for ${sheet.class.name} generated. It is now in the school office's report queue.`);
     } catch (error) {
       const waiting = waitingOnFromError(error);
-      toast.error(
-        waiting
-          ? `Not every subject has published ${basisLabel} yet: waiting on ${waiting.map((w) => w.title).join(", ")}.`
-          : getErrorMessage(error, "The summary was not sent. Please try again."),
-      );
-      if (waiting) void query.refetch();
+      const code = conflictCode(error);
+      if (waiting) {
+        toast.error(`Not every subject has published ${basisLabel} yet: waiting on ${waiting.map((w) => w.title).join(", ")}.`);
+        void query.refetch();
+      } else if (code === "ALREADY_SUBMITTED" || code === "ALREADY_PUBLISHED") {
+        // The submissions are reloaded after every submit, so the footer catches up.
+        toast.info(
+          code === "ALREADY_SUBMITTED"
+            ? `The ${basisLabel} summary is already with the school office.`
+            : `The ${basisLabel} summary is already published to students and parents.`,
+        );
+      } else {
+        toast.error(getErrorMessage(error, "The summary was not sent. Please try again."));
+      }
     }
   };
 
@@ -561,7 +576,7 @@ function Remarks({ classId, termId, submissions }: { classId: string; termId: st
                     <div id={countId} className="mt-0.5 text-right text-xs text-tl-faint">
                       {text.length}/{REMARK_MAX}
                     </div>
-                    {r.principalRemark ? (
+                    {r.principalRemark.trim() ? (
                       <p className="mt-1 text-[13px] text-tl-body">
                         <span className="font-bold">Principal:</span> {r.principalRemark}
                       </p>
@@ -586,7 +601,7 @@ function Remarks({ classId, termId, submissions }: { classId: string; termId: st
  * @param props - See {@link ClassReportProps}.
  * @returns The mode's content.
  */
-export function ClassReport({ classId, className, termId, tab, onTab, onOpenCourse, myCourseIds, knownScale, nowMs, timezone }: ClassReportProps) {
+export function ClassReport({ classId, className, termId, tab, onTab, onOpenCourse, myCourseIds, nowMs, timezone }: ClassReportProps) {
   const readiness = useReadiness(classId, termId);
   const results = useTermResults(classId, termId);
 
@@ -637,7 +652,6 @@ export function ClassReport({ classId, className, termId, tab, onTab, onOpenCour
           termId={termId}
           readiness={readiness.data}
           myCourseIds={myCourseIds}
-          knownScale={knownScale}
           submissions={submissions}
           nowMs={nowMs}
           timezone={timezone}

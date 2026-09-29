@@ -13,6 +13,7 @@ import {
   assessmentTiles,
   badCount,
   canPublish,
+  conflictCode,
   draftChanges,
   draftKey,
   isDirty,
@@ -364,6 +365,7 @@ export function CourseScores({ courses, courseId, onCourse, view, onView, termId
       onDraft(keyOf(assessment), undefined);
       toast.success(publishedMessage(assessment.name, result, republish));
     } catch (error) {
+      // 409 `{ missing }` lists the students still without a valid score.
       const missing = missingScoresFromError(error);
       toast.error(
         missing !== null
@@ -381,7 +383,12 @@ export function CourseScores({ courses, courseId, onCourse, view, onView, termId
       await unlock.mutateAsync({ courseId: sheet.course.id, assessmentId: assessment.id, termId, reason: reason.trim() || undefined });
       toast.success(`${assessment.name} unlocked for editing.`);
     } catch (error) {
-      toast.error(getErrorMessage(error, `${assessment.name} was not unlocked. Please try again.`));
+      if (conflictCode(error) === "NOT_PUBLISHED") {
+        // The sheet was out of date (someone else unlocked it); the mutation reloads it.
+        toast.info(`${assessment.name} is not published, so it is already open for editing.`);
+      } else {
+        toast.error(getErrorMessage(error, `${assessment.name} was not unlocked. Please try again.`));
+      }
     } finally {
       setConfirm(null);
       setReason("");

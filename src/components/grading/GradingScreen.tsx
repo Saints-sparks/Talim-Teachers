@@ -2,17 +2,15 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useQueryClient } from "@tanstack/react-query";
 import { TermPicker } from "@/components/tl/TermPicker";
 import { card, cardTitle, chip, ghostButton, pagePad, pageTitle, primaryButton, segment } from "@/components/tl/styles";
 import { useMyClasses } from "@/hooks/attendance/useRegister";
 import { parseScore, type AssessmentDraft, type ScoreDrafts } from "@/hooks/grading/grading.logic";
-import { useCourseSheet, useGradingSession, useReadiness } from "@/hooks/grading/useGrading";
+import { useCourseSheet, useReadiness } from "@/hooks/grading/useGrading";
 import { useTeacherPreferences } from "@/hooks/settings/useTeacherSettings";
 import { useSchoolNow, useTeacherToday } from "@/hooks/today/useTeacherToday";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { getErrorMessage } from "@/lib/apiError";
-import type { CourseGradingSheet } from "@/types/grading";
 import { ClassReport, type ReportTab } from "./ClassReport";
 import { CourseScores, TERM_TOTAL, type GradingCourseOption } from "./CourseScores";
 
@@ -137,13 +135,6 @@ export function GradingScreen({ link }: { link: GradingLink }) {
   // The sheet (course mode) or the readiness (class mode) says which term "current" is.
   const sheet = useCourseSheet(!resolving && activeMode === "course" ? activeCourseId : undefined, termId);
   const readiness = useReadiness(!resolving && activeMode === "class" && activeClass?.role === "class_teacher" ? activeClassId : undefined, termId);
-  // The broadsheet does not carry the scale: use the one any loaded course sheet has.
-  const queryClient = useQueryClient();
-  const { schoolId } = useGradingSession();
-  const knownScale = queryClient
-    .getQueriesData<CourseGradingSheet>({ queryKey: ["grading", schoolId, "sheet"] })
-    .map(([, data]) => data?.scale)
-    .find((scale) => Boolean(scale?.length));
   const shownTerm = activeMode === "course" ? sheet.data?.term : readiness.data?.term;
   const [currentTerm, setCurrentTerm] = useState<{ id: string; name: string } | undefined>(undefined);
   useEffect(() => {
@@ -274,7 +265,6 @@ export function GradingScreen({ link }: { link: GradingLink }) {
             tab={tab}
             onTab={setTab}
             myCourseIds={myCourseIds}
-            knownScale={knownScale}
             onOpenCourse={(id, assessmentId) => {
               setMode("course");
               setCourseId(id);

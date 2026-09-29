@@ -1,18 +1,31 @@
 /**
  * Request and response types for the redesigned Grading page: "Round 3",
- * sections 15–23 of `talimBE-V2/docs/redesign-teachers-today-timetable.md`.
+ * sections 15–23 of `talimBE-V2/docs/redesign-teachers-today-timetable.md`,
+ * with its "Round 3 as built" list (which wins where the two disagree).
  *
- * HAND-WRITTEN, on purpose and for now: the backend for these routes is being
- * built in parallel and is not in the generated contract (`./api.d.ts`) yet.
- * When it lands, run `npm run types:api` and turn each type below into an
- * alias of its generated DTO, as `./today.ts` and `./classroom.ts` do, so a
- * backend shape change fails `tsc` instead of rendering `undefined`. Each
- * type names the section it comes from.
+ * These are ALIASES of the generated contract (`./api.d.ts`, refreshed with
+ * `npm run types:api` from `talimBE-V2/docs/api-types.d.ts`), as `./today.ts`
+ * and `./classroom.ts` do, so a backend shape change fails `tsc` instead of
+ * rendering `undefined`. Each type names the section it comes from.
  *
- * Where the contract leaves a detail open, the choice made here is marked
- * "ASSUMED"; fields the page would use but the contract does not have are
- * marked "NOT IN THE CONTRACT" and are optional, so the page works without
- * them.
+ * As built (and so as typed here):
+ * - an assessment's `type` is `string | null` (null when the school set none);
+ * - unlock answers `{ status: 'unlocked', unlockedAt }`;
+ * - publish's `notified` counts PEOPLE told in-app (students and parents; a
+ *   parent of two is counted once);
+ * - the broadsheet carries the school's `scale` and `passMark`;
+ * - a remark nobody has written is `''`, never null (class teacher's and
+ *   principal's alike);
+ * - a term-result submission names its `class`, `term` and `basis` as
+ *   objects (`basis: { key, label }`), and every `*By` is `{ id, name } | null`.
+ *
+ * Hand-written on purpose (Swagger is silent there):
+ * - {@link GradingConflictBody} and {@link GradingConflictCode}: the 409 error
+ *   envelope is not in the generated responses (Swagger only describes it in
+ *   prose). The machine-readable fields sit at the TOP LEVEL of the error
+ *   body, beside `error.code: 'CONFLICT'`.
+ * - {@link BroadsheetBasisKey}: the contract types the basis as `string`
+ *   (`'total'` or an assessment id); the alias only names that.
  *
  * Conventions (from the contract): ids are strings; dates are `YYYY-MM-DD`
  * and instants ISO strings; every percent is 0–100 rounded to 1 decimal;
@@ -20,324 +33,190 @@
  * rank is skipped: 1, 1, 3); grades are computed on read from the school's
  * scale.
  */
+import type { components } from "./api";
+
+type S = components["schemas"];
 
 /** A course as the grading routes summarise it. */
-export interface GradingCourseRef {
-  id: string;
-  code: string;
-  title: string;
-}
+export type GradingCourseRef = S["GradingCourseRefDto"];
 
 /** A class as the grading routes summarise it. */
-export interface GradingClassRef {
-  id: string;
-  name: string;
-}
+export type GradingClassRef = S["GradingClassRefDto"];
 
 /** A term as the grading routes summarise it. */
-export interface GradingTermRef {
-  id: string;
-  name: string;
-}
+export type GradingTermRef = S["GradingTermRefDto"];
+
+/** A person the grading routes name (`id` is their login). */
+export type GradingPerson = S["GradingPersonDto"];
 
 /**
  * §16: one band of the school's grade scale. Bands come highest first,
  * `min` strictly descending, and the last band's `min` is 0.
  */
-export interface GradeBand {
-  letter: string;
-  /** Lowest percent that earns this letter. */
-  min: number;
-  remark: string | null;
-}
+export type GradeBand = S["GradingScaleBandDto"];
+
+/** §17: one assessment of the term, as the course sheet lists it. */
+export type GradingAssessment = S["GradingSheetAssessmentDto"];
 
 /**
  * §17 and §19: where one assessment stands for one course. `unlocked` means
  * published once, then reopened to correct a mistake; students and parents
  * still see the last published scores until it is republished.
  */
-export type AssessmentStatus = "not_started" | "draft" | "published" | "unlocked";
+export type AssessmentStatus = GradingAssessment["status"];
 
 /** §17: the server's statistics for one assessment, over the students with a score. Percents. */
-export interface AssessmentStats {
-  entered: number;
-  /** Active students in the class. */
-  total: number;
-  average: number | null;
-  highest: number | null;
-  lowest: number | null;
-  /** Share of scores at or above `passMark`. */
-  passRate: number | null;
-}
-
-/** §17: one assessment of the term, as the course sheet lists it. */
-export interface GradingAssessment {
-  id: string;
-  name: string;
-  /** The assessment's type as the admin set it (e.g. `ca`, `exam`). ASSUMED: free text. */
-  type: string;
-  /** §15: set by the admin on the assessment, 1..1000. */
-  maxScore: number;
-  dueDate: string | null;
-  status: AssessmentStatus;
-  savedAt: string | null;
-  publishedAt: string | null;
-  unlockedAt: string | null;
-  stats: AssessmentStats;
-}
+export type AssessmentStats = S["GradingAssessmentStatsDto"];
 
 /** A competition-ranked position: `rank` of `of` ranked students. */
-export interface GradingPosition {
-  rank: number;
-  of: number;
-}
+export type GradingPosition = S["GradingPositionDto"];
 
 /** §17: one student's row on the course sheet. */
-export interface GradingStudent {
-  id: string;
-  name: string;
-  admissionNumber: string | null;
-  /** Every assessment's saved score by assessment id; null when not entered. */
-  scores: Record<string, number | null>;
-  /** Sum of the entered scores; null when none. */
-  total: number | null;
-  /** `total / totalMax` as a percent. */
-  percent: number | null;
-  /** Only when `complete`. */
-  grade: string | null;
-  /** Only when `complete`. */
-  position: GradingPosition | null;
-  /** Every assessment has a score. */
-  complete: boolean;
-}
+export type GradingStudent = S["GradingSheetStudentDto"];
 
 /**
  * §17 `GET /grading/course/:courseId?termId=` (course teacher and staff; a
  * same-school teacher who does not teach it gets 403, another school's
  * course 404). Also the response of the §18 save.
  */
-export interface CourseGradingSheet {
-  course: GradingCourseRef;
-  class: GradingClassRef;
-  term: GradingTermRef;
-  scale: GradeBand[];
-  /** Percent. */
-  passMark: number;
-  /** Every assessment in the term, ordered by start date then name. */
-  assessments: GradingAssessment[];
-  /** Sum of the assessments' `maxScore`. */
-  totalMax: number;
-  /** By name. */
-  students: GradingStudent[];
-}
+export type CourseGradingSheet = S["GradingSheetDto"];
 
 /** §18: one score to save; `null` deletes it. */
-export interface ScoreInput {
-  studentId: string;
-  score: number | null;
-}
+export type ScoreInput = S["GradingScoreInputDto"];
 
 /**
  * §18 `PUT /grading/course/:courseId/assessments/:assessmentId/scores`.
- * Upserts; answers 400 for a score above the assessment's `maxScore` or below
- * 0, and 409 `{ code: 'LOCKED' }` while the assessment is published (not
+ * Upserts; answers 400 for a score outside 0..`maxScore` or with more than 2
+ * decimals, and 409 `LOCKED` while the assessment is published (not
  * unlocked) for this course. Responds with the §17 sheet.
  */
-export interface SaveScoresBody {
-  termId?: string;
-  scores: ScoreInput[];
-}
-
-/**
- * §18 and §19: the 409 bodies. ASSUMED: `code` and `missing` sit at the top
- * level of the standard error envelope, as `missing` does on the register
- * submit (Round 1, §5); the page also reads `error.code`.
- */
-export interface GradingConflictBody {
-  success?: false;
-  statusCode?: 409;
-  message?: string;
-  error?: { code?: string; message?: string };
-  /** `'LOCKED'` from a save to a published assessment. */
-  code?: string;
-  /** From a publish with students still missing a score. */
-  missing?: number;
-  /** From a term-results submit that is not ready (§23). */
-  waitingOn?: { courseId: string; title: string }[];
-}
+export type SaveScoresBody = S["SaveGradingScoresDto"];
 
 /**
  * §19 `POST /grading/course/:courseId/assessments/:assessmentId/publish`.
  * Needs a valid score for every active student, else 409 `{ missing }`.
+ * `changed` is every student on a first publish, those whose score changed
+ * on a republish, and empty when the scores were already published.
+ * `notified` counts people told in-app (students and parents).
  */
-export interface PublishResult {
-  publishedAt: string;
-  /** Students whose score changed since the unlock (empty on a first publish). */
-  changed: string[];
-  /**
-   * How many people were notified. ASSUMED: students plus parents; the
-   * contract says only `number`, so the toast says "people".
-   */
-  notified: number;
-}
+export type PublishResult = S["GradingPublishResultDto"];
 
-/** §19 `POST /grading/course/:courseId/assessments/:assessmentId/unlock`; 409 unless published. */
-export interface UnlockBody {
-  reason?: string;
-}
+/** §19 `POST /grading/course/:courseId/assessments/:assessmentId/unlock`; 409 `NOT_PUBLISHED` unless published. */
+export type UnlockBody = S["UnlockGradingScoresDto"];
+
+/** §19: the unlock's answer, `{ status: 'unlocked', unlockedAt }`. */
+export type UnlockResult = S["GradingUnlockResultDto"];
 
 /** §20: one assessment column of the readiness table. */
-export interface ReadinessAssessment {
-  id: string;
-  name: string;
-  maxScore: number;
-}
+export type ReadinessAssessment = S["ReadinessAssessmentDto"];
 
 /** §20: one course's status for one assessment. */
-export interface ReadinessCell {
-  assessmentId: string;
-  status: AssessmentStatus;
-  /** When the class teacher last reminded the course teacher about it. */
-  reminderSentAt: string | null;
-}
+export type ReadinessCell = S["ReadinessCellDto"];
 
-/** §20: one course (subject) of the class. */
-export interface ReadinessSubject {
-  course: GradingCourseRef;
-  teacher: { id: string; name: string } | null;
-  /** The caller teaches this course. */
-  isMine: boolean;
-  /** One per assessment, in the order of `assessments`. */
-  cells: ReadinessCell[];
-}
+/** §20: one course (subject) of the class; `teacher.id` is their login. */
+export type ReadinessSubject = S["ReadinessSubjectDto"];
 
 /** §20 `GET /grading/classes/:classId/readiness?termId=` (class teacher and staff). */
-export interface ClassReadiness {
-  class: GradingClassRef;
-  term: GradingTermRef;
-  assessments: ReadinessAssessment[];
-  subjects: ReadinessSubject[];
-}
+export type ClassReadiness = S["ClassReadinessDto"];
 
 /**
  * §20 `POST /grading/classes/:classId/reminders` (class teacher only). Once
- * per (course, assessment) per school day; after that 409.
+ * per (course, assessment) per school day; after that 409 `ALREADY_REMINDED`
+ * with the earlier `sentAt`.
  */
-export interface ReminderBody {
-  courseId: string;
-  assessmentId: string;
-}
+export type ReminderBody = S["SendGradingReminderDto"];
 
 /** §20: the reminder's response. */
-export interface ReminderResult {
-  sentAt: string;
-}
+export type ReminderResult = S["GradingReminderSentDto"];
 
 /** §21: what a broadsheet is built from: one assessment (its id) or `total`. */
-export type BroadsheetBasisKey = string;
+export type BroadsheetBasisKey = S["BroadsheetBasisDto"]["key"];
 
 /** §21: one subject column. `published` is for the chosen basis. */
-export interface BroadsheetSubject {
-  courseId: string;
-  code: string;
-  title: string;
-  published: boolean;
-}
+export type BroadsheetSubject = S["BroadsheetSubjectDto"];
 
 /** §21: one student's row. `cells` line up with `subjects`; null where not published. */
-export interface BroadsheetRow {
-  student: { id: string; name: string; admissionNumber: string | null };
-  cells: (number | null)[];
-  total: number | null;
-  /** Percent over the published subjects. */
-  average: number | null;
-  position: GradingPosition | null;
-  grade: string | null;
-  publishedCount: number;
-}
+export type BroadsheetRow = S["BroadsheetRowDto"];
+
+/** §21: a subject the broadsheet (or a submit) is still waiting on. */
+export type BroadsheetWaiting = S["BroadsheetWaitingDto"];
 
 /**
  * §21 `GET /grading/classes/:classId/broadsheet?termId=&basis=<assessmentId>|total`
  * (class teacher and staff). Published scores only. For `basis=total` each
  * cell is the student's course total as a percent (`maxPerSubject` null).
+ * Carries the school's `scale` and `passMark`.
  */
-export interface Broadsheet {
-  class: GradingClassRef;
-  term: GradingTermRef;
-  basis: { key: BroadsheetBasisKey; label: string; maxPerSubject: number | null };
-  subjects: BroadsheetSubject[];
-  rows: BroadsheetRow[];
-  /** Every subject has published the basis. */
-  ready: boolean;
-  waitingOn: { courseId: string; title: string }[];
-  /**
-   * NOT IN THE CONTRACT (requested): the school's grade scale, so the sheet
-   * can colour scores below the D band's minimum. Without it the page uses a
-   * scale it already has (a course sheet), else 45%.
-   */
-  scale?: GradeBand[];
-}
+export type Broadsheet = S["BroadsheetDto"];
 
-/** §22: one student's row on the Remarks tab. */
-export interface TermRemarkRow {
-  student: { id: string; name: string; admissionNumber: string | null };
-  /** ASSUMED: the same `{ rank, of }` shape as the other routes. */
-  position: GradingPosition | null;
-  /** Percent over the published subjects. */
-  average: number | null;
-  publishedCount: number;
-  subjectCount: number;
-  /** Max 500 characters. */
-  classTeacherRemark: string;
-  /** Written by the office; read-only here. */
-  principalRemark: string | null;
-}
+/** §22: one student's row on the Remarks tab. Remarks are `''` until written. */
+export type TermRemarkRow = S["TermRemarkRowDto"];
 
-/** §22 `GET /grading/classes/:classId/remarks?termId=` (class teacher and staff). */
-export interface TermRemarks {
-  rows: TermRemarkRow[];
-}
+/** §22 `GET /grading/classes/:classId/remarks?termId=` (class teacher and staff); also what the PUT answers. */
+export type TermRemarks = S["TermRemarksDto"];
 
 /**
  * §22 `PUT /grading/classes/:classId/remarks` (class teacher or staff). 409
- * while the class's term results are `submitted` or `published`. ASSUMED: it
- * answers the §22 GET shape.
+ * `RESULTS_SUBMITTED` while the class's term results are with the office and
+ * `RESULTS_PUBLISHED` once they are published.
  */
-export interface SaveRemarksBody {
-  termId?: string;
-  remarks: { studentId: string; classTeacherRemark: string }[];
-}
-
-/** §23: where a class's submitted results stand. */
-export type TermResultStatus = "submitted" | "returned" | "published";
+export type SaveRemarksBody = S["SaveClassTeacherRemarksDto"];
 
 /**
  * §23: one submission of a class's term results, unique on class, term and
- * basis. ASSUMED: `submittedBy`, `returnedBy` and `publishedBy` are
- * `{ id, name }`, as `submittedBy` is on registers.
+ * basis. `basis` is `{ key, label }` (the assessment's name or "Term total").
  */
-export interface TermResultSubmission {
-  id: string;
-  classId: string;
-  termId: string;
-  /** `'total'` or an assessment id. */
-  basis: BroadsheetBasisKey;
-  status: TermResultStatus;
-  submittedAt: string;
-  submittedBy: { id: string; name: string } | null;
-  returnedAt?: string | null;
-  returnedBy?: { id: string; name: string } | null;
-  returnReason?: string | null;
-  publishedAt?: string | null;
-  publishedBy?: { id: string; name: string } | null;
-}
+export type TermResultSubmission = S["TermResultSubmissionDto"];
+
+/** §23: where a class's submitted results stand. */
+export type TermResultStatus = TermResultSubmission["status"];
 
 /**
  * §23 `POST /grading/classes/:classId/term-results` (class teacher or staff).
- * 409 `{ waitingOn }` unless the §21 broadsheet is `ready`. Responds with the
- * submission.
+ * 409 `{ waitingOn }` unless the §21 broadsheet is `ready`, `ALREADY_SUBMITTED`
+ * or `ALREADY_PUBLISHED`. Responds with the submission.
  */
-export interface SubmitTermResultsBody {
-  termId?: string;
-  basis: BroadsheetBasisKey;
+export type SubmitTermResultsBody = S["SubmitTermResultsDto"];
+
+/**
+ * The `code` of a Round 3 409 ("Round 3 as built", Everywhere). It sits at
+ * the top level of the error body; `error.code` is always `'CONFLICT'`.
+ */
+export type GradingConflictCode =
+  | "LOCKED"
+  | "NOT_PUBLISHED"
+  | "PUBLISHED"
+  | "SCORES_ABOVE_MAX"
+  | "ALREADY_REMINDED"
+  | "NO_TEACHER"
+  | "RESULTS_SUBMITTED"
+  | "RESULTS_PUBLISHED"
+  | "ALREADY_SUBMITTED"
+  | "ALREADY_PUBLISHED"
+  | "RETURNED";
+
+/**
+ * The body of a Round 3 409. HAND-WRITTEN: the error envelope is not in the
+ * generated responses. The machine-readable fields sit at the top level of
+ * the standard error envelope (as `missing` does on the register submit),
+ * beside `error.code: 'CONFLICT'`; which ones are present depends on the
+ * route. Errors look the same whether or not the success envelope is on.
+ */
+export interface GradingConflictBody {
+  success?: false;
+  statusCode?: 409;
+  message?: string;
+  /** Always `'CONFLICT'` for these; read the top-level `code` instead. */
+  error?: { code?: string; message?: string };
+  code?: GradingConflictCode;
+  /** §19 publish: the ids of the active students without a valid score. */
+  missing?: string[];
+  /** §23 submit and office publish: the subjects not yet published for the basis. */
+  waitingOn?: BroadsheetWaiting[];
+  /** §20 `ALREADY_REMINDED`: when the earlier reminder was sent (ISO). */
+  sentAt?: string;
+  /** §23 office publish that is not `submitted`: where the submission stands. */
+  status?: TermResultStatus;
+  /** §15 `SCORES_ABOVE_MAX`: the highest recorded draft score. */
+  highestScore?: number;
 }

@@ -137,19 +137,22 @@ describe("resources", () => {
     const [r1, r2] = makeCourseResourcesFixture("k1");
     expect(resourceMeta({ ...r1, uploadDate: "2026-09-08" }, NOW)).toBe("Week 1 · 420 KB · 8 Sep · Students and parents");
     expect(resourceMeta({ ...r2, uploadDate: "2026-09-15" }, NOW)).toBe("Week 2 · 2.1 MB · 15 Sep · Students");
-    // A resource saved before §24: no week, size or visibility.
-    expect(resourceMeta({ week: null, sizeBytes: null, uploadDate: "2026-09-01", visibility: undefined }, NOW)).toBe("1 Sep · Students");
+    // A resource saved before §24: no week or size; the server answers `visibility: 'students'`.
+    expect(resourceMeta({ uploadDate: "2026-09-01", visibility: "students" }, NOW)).toBe("1 Sep · Students");
   });
 
-  it("labels the kind chip, guessing for old resources", () => {
-    expect(kindChip({ kind: "pdf", name: "x" })).toEqual({ label: "PDF", tone: "danger" });
-    expect(kindChip({ kind: "slides", name: "x" }).label).toBe("Slides");
-    expect(kindChip({ kind: "video", name: "x" }).label).toBe("Video");
-    expect(kindChip({ kind: "doc", name: "x" }).label).toBe("Doc");
-    expect(kindChip({ kind: "image", name: "x" }).label).toBe("Image");
-    expect(kindChip({ kind: "other", name: "x" }).label).toBe("File");
-    expect(kindChip({ name: "Old upload", files: ["https://cdn.test/a/notes.docx"] }).label).toBe("Doc");
-    expect(kindChip({ name: "Old upload", mimeType: "video/mp4" }).label).toBe("Video");
+  it("labels the kind chip from the kind the server always answers", () => {
+    expect(kindChip({ kind: "pdf" })).toEqual({ label: "PDF", tone: "danger" });
+    expect(kindChip({ kind: "slides" }).label).toBe("Slides");
+    expect(kindChip({ kind: "video" }).label).toBe("Video");
+    expect(kindChip({ kind: "doc" }).label).toBe("Doc");
+    expect(kindChip({ kind: "image" }).label).toBe("Image");
+    expect(kindChip({ kind: "other" }).label).toBe("File");
+    // A kind added on the server later still gets a chip.
+    expect(kindChip({ kind: "audio" as never }).label).toBe("File");
+    // The upload derives the kind it sends the same way the server does.
+    expect(kindFromFile(null, "https://cdn.test/a/notes.docx")).toBe("doc");
+    expect(kindFromFile("video/mp4", "Old upload")).toBe("video");
     expect(kindFromFile(null, "deck.PPTX")).toBe("slides");
     expect(kindFromFile("application/zip", "bundle.zip")).toBe("other");
   });
@@ -158,7 +161,7 @@ describe("resources", () => {
     const list = [
       { _id: "a", name: "A", termId: "term-1" },
       { _id: "b", name: "B", termId: { _id: "term-0" } },
-      { _id: "c", name: "C" },
+      { _id: "c", name: "C", termId: null },
     ];
     expect(resourcesForTerm(list, "term-1").map((r) => r._id)).toEqual(["a", "c"]);
     expect(resourcesForTerm(list, undefined)).toHaveLength(3);

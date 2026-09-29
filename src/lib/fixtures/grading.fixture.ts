@@ -1,6 +1,8 @@
 /**
  * Dev and test fixtures for the Grading page (Round 3, §15–23), in the
- * hand-written contract shape of `src/types/grading.ts`.
+ * contract shapes of `src/types/grading.ts` and the "Round 3 as built"
+ * behaviour (409 codes at the top level of the error body, unlock's answer,
+ * `''` for an unwritten remark, the submission's `{ key, label }` basis).
  *
  * Mirrors the seed of `TALIM Redesign/Talim Teacher Portal.dc.html` and the
  * classes and students of `classroom.fixture.ts`: Seyi Tinubu is class
@@ -36,6 +38,7 @@ import type {
   TermRemarks,
   TermResultStatus,
   TermResultSubmission,
+  UnlockResult,
 } from "@/types/grading";
 
 /**
@@ -153,16 +156,19 @@ export function resetGradingFixtureStore(): void {
 }
 
 /**
- * The API's error for a fixture failure.
+ * The API's error for a fixture failure, shaped as the backend sends it: the
+ * standard envelope with `error.code` (`CONFLICT` for every 409), and a 409's
+ * machine-readable fields (`code`, `missing`, `waitingOn`, `sentAt`,
+ * `status`) at the top level of the body.
  *
  * @param status - The HTTP status.
  * @param message - The message.
- * @param extra - Top-level fields of the body (`code`, `missing`, `waitingOn`).
+ * @param extra - Top-level fields of the body.
  * @returns The error to throw.
  */
 function fixtureError(status: number, message: string, extra: Partial<GradingConflictBody> = {}): ApiError {
   const code = status === 403 ? "FORBIDDEN" : status === 404 ? "NOT_FOUND" : status === 409 ? "CONFLICT" : "BAD_REQUEST";
-  const body = { success: false, statusCode: status, message, error: { code: extra.code ?? code, message }, ...extra };
+  const body = { success: false, statusCode: status, message, error: { code, message }, ...extra };
   return ApiError.fromResponse({ status }, body as ApiErrorBody);
 }
 
@@ -305,23 +311,29 @@ export function saveScoresFixture(courseId: string, assessmentId: string, body: 
  *
  * @param courseId - The course.
  * @param assessmentId - The assessment.
- * @returns When, who changed since the unlock, and how many people were told.
- * @throws ApiError 409 `{ missing }` while a student has no score.
+ * Publishing scores that are already published is a no-op answering the last
+ * `publishedAt`, `changed: []` and `notified: 0`, as the server does.
+ *
+ * @param courseId - The course.
+ * @param assessmentId - The assessment.
+ * @returns When, whose scores it published (every student on a first publish,
+ *   the changed ones on a republish), and how many people were told (each
+ *   fixture student and one parent).
+ * @throws ApiError 409 `{ missing: studentIds }` while a student has no score.
  */
 export function publishFixture(courseId: string, assessmentId: string): PublishResult {
   const key = `${courseId}|${assessmentId}`;
   const state = store.states.get(key);
   const course = MY_COURSES[courseId];
   if (!state || !course) throw fixtureError(404, "Assessment not found");
-  if (state.status === "published") throw fixtureError(409, "Already published.");
+  if (state.status === "published") return { publishedAt: state.publishedAt ?? FIXTURE_NOW, changed: [], notified: 0 };
   const students = byName(course.classId);
   const scores = store.scores.get(key) ?? {};
-  const missing = students.filter((s) => scores[s.id] === undefined).length;
-  if (missing) throw fixtureError(409, `${missing} students have no score.`, { missing });
-  const changed = state.snapshot ? students.filter((s) => state.snapshot?.[s.id] !== scores[s.id]).map((s) => s.id) : [];
-  const told = state.snapshot ? changed.length : students.length;
+  const missing = students.filter((s) => scores[s.id] === undefined).map((s) => s.id);
+  if (missing.length) throw fixtureError(409, `${missing.length} students have no score.`, { missing });
+  const changed = state.snapshot ? students.filter((s) => state.snapshot?.[s.id] !== scores[s.id]).map((s) => s.id) : students.map((s) => s.id);
   store.states.set(key, { ...state, status: "published", publishedAt: FIXTURE_NOW, snapshot: null });
-  return { publishedAt: FIXTURE_NOW, changed, notified: told * 2 };
+  return { publishedAt: FIXTURE_NOW, changed, notified: changed.length * 2 };
 }
 
 /**
@@ -329,14 +341,16 @@ export function publishFixture(courseId: string, assessmentId: string): PublishR
  *
  * @param courseId - The course.
  * @param assessmentId - The assessment.
- * @throws ApiError 409 unless it is published.
+ * @returns `{ status: 'unlocked', unlockedAt }`.
+ * @throws ApiError 409 `NOT_PUBLISHED` unless it is published.
  */
-export function unlockFixture(courseId: string, assessmentId: string): void {
+export function unlockFixture(courseId: string, assessmentId: string): UnlockResult {
   const key = `${courseId}|${assessmentId}`;
   const state = store.states.get(key);
   if (!state) throw fixtureError(404, "Assessment not found");
-  if (state.status !== "published") throw fixtureError(409, "Only published scores can be unlocked.");
+  if (state.status !== "published") throw fixtureError(409, "Only published scores can be unlocked.", { code: "NOT_PUBLISHED" });
   store.states.set(key, { ...state, status: "unlocked", unlockedAt: FIXTURE_NOW, snapshot: { ...(store.scores.get(key) ?? {}) } });
+  return { status: "unlocked", unlockedAt: FIXTURE_NOW };
 }
 
 /** One subject of JSS1 A as the class report sees it. */
@@ -425,12 +439,14 @@ export function makeReadinessFixture(classId: string): ClassReadiness {
  * @param body.courseId - The colleague's course.
  * @param body.assessmentId - The assessment.
  * @returns When it was sent.
- * @throws ApiError 409 when already sent today.
+ * @throws ApiError 409 `ALREADY_REMINDED` (with the earlier `sentAt`) when already sent today, `PUBLISHED` once published.
  */
 export function sendReminderFixture(classId: string, body: { courseId: string; assessmentId: string }): ReminderResult {
   assertClassTeacher(classId);
   const key = `${body.courseId}|${body.assessmentId}`;
-  if (store.reminders.has(key)) throw fixtureError(409, "A reminder was already sent today.");
+  const earlier = store.reminders.get(key);
+  if (earlier) throw fixtureError(409, "A reminder was already sent today.", { code: "ALREADY_REMINDED", sentAt: earlier });
+  if (store.others.get(key) === "published") throw fixtureError(409, "These scores are already published.", { code: "PUBLISHED" });
   store.reminders.set(key, FIXTURE_NOW);
   return { sentAt: FIXTURE_NOW };
 }
@@ -480,6 +496,8 @@ export function makeBroadsheetFixture(classId: string, basis: string): Broadshee
     class: { id: "c1", name: className("c1") },
     term: { id: FIXTURE_TERM.id, name: FIXTURE_TERM.name },
     basis: { key: isTotal ? "total" : basis, label: assessment?.name ?? "Term total", maxPerSubject: max },
+    scale: DEFAULT_SCALE,
+    passMark: 50,
     subjects: subjects.map((s) => ({ courseId: s.id, code: s.code, title: s.title, published: published(s) })),
     rows,
     ready: waitingOn.length === 0,
@@ -513,7 +531,7 @@ export function makeRemarksFixture(classId: string): TermRemarks {
       publishedCount: perSubject.length,
       subjectCount: subjects.length,
       classTeacherRemark: store.remarks.get(st.id) ?? "",
-      principalRemark: st.id === "s1" ? "A pleasure to have in the school. Keep it up." : null,
+      principalRemark: st.id === "s1" ? "A pleasure to have in the school. Keep it up." : "",
     };
   });
   const ranks = competitionRanks(rows, (r) => r.average);
@@ -527,17 +545,19 @@ export function makeRemarksFixture(classId: string): TermRemarks {
  * @param classId - `c1`.
  * @param body - The remarks.
  * @returns The rows after the save.
- * @throws ApiError 409 while the term results are submitted or published; 400 over 500 characters.
+ * @throws ApiError 409 `RESULTS_SUBMITTED` / `RESULTS_PUBLISHED` while the term results are with the office or published; 400 over 500 characters.
  */
 export function saveRemarksFixture(classId: string, body: SaveRemarksBody): TermRemarks {
   assertClassTeacher(classId);
-  if (store.submissions.some((s) => s.classId === classId && (s.status === "submitted" || s.status === "published"))) {
-    throw fixtureError(409, "Remarks are locked while the term results are with the school office.");
+  const mine = store.submissions.filter((s) => s.class.id === classId);
+  if (mine.some((s) => s.status === "published")) throw fixtureError(409, "The term results are published.", { code: "RESULTS_PUBLISHED" });
+  if (mine.some((s) => s.status === "submitted")) {
+    throw fixtureError(409, "Remarks are locked while the term results are with the school office.", { code: "RESULTS_SUBMITTED" });
   }
   for (const r of body.remarks) {
     if (r.classTeacherRemark.length > 500) throw fixtureError(400, "A remark can be at most 500 characters.");
   }
-  for (const r of body.remarks) store.remarks.set(r.studentId, r.classTeacherRemark);
+  for (const r of body.remarks) store.remarks.set(r.studentId, r.classTeacherRemark.trim());
   return makeRemarksFixture(classId);
 }
 
@@ -550,7 +570,36 @@ export function saveRemarksFixture(classId: string, body: SaveRemarksBody): Term
  */
 export function makeTermResultsFixture(classId: string): TermResultSubmission[] {
   assertClassTeacher(classId);
-  return store.submissions.filter((s) => s.classId === classId);
+  return store.submissions.filter((s) => s.class.id === classId);
+}
+
+/**
+ * A submission as the API answers it, for JSS1 A.
+ *
+ * @param basis - An assessment id or `total`.
+ * @param status - Its status.
+ * @param extra - The dates, people and reason that differ from a fresh submission.
+ * @returns The submission.
+ */
+function submissionOf(basis: string, status: TermResultStatus, extra: Partial<TermResultSubmission> = {}): TermResultSubmission {
+  const students = byName("c1");
+  return {
+    id: `tr-c1-${basis}`,
+    class: { id: "c1", name: className("c1") },
+    term: { id: FIXTURE_TERM.id, name: FIXTURE_TERM.name },
+    basis: { key: basis, label: ASSESSMENTS.find((a) => a.id === basis)?.name ?? "Term total" },
+    status,
+    submittedAt: FIXTURE_NOW,
+    submittedBy: TEACHER,
+    studentCount: students.length,
+    missingRemarks: students.filter((s) => !(store.remarks.get(s.id) ?? "").trim()).length,
+    returnReason: null,
+    returnedAt: null,
+    returnedBy: null,
+    publishedAt: null,
+    publishedBy: null,
+    ...extra,
+  };
 }
 
 /**
@@ -558,27 +607,20 @@ export function makeTermResultsFixture(classId: string): TermResultSubmission[] 
  *
  * @param classId - `c1`.
  * @param basis - An assessment id or `total`.
- * @returns The submission.
- * @throws ApiError 409 `{ waitingOn }` unless every subject has published the basis.
+ * @returns The submission (a returned one is reused, keeping its return as history).
+ * @throws ApiError 409 `{ waitingOn }` unless every subject has published the basis; `ALREADY_SUBMITTED` / `ALREADY_PUBLISHED`.
  */
 export function submitTermResultsFixture(classId: string, basis: string): TermResultSubmission {
   const sheet = makeBroadsheetFixture(classId, basis);
+  const existing = store.submissions.find((s) => s.class.id === classId && s.basis.key === sheet.basis.key);
+  if (existing?.status === "submitted") throw fixtureError(409, "Already with the school office.", { code: "ALREADY_SUBMITTED", status: "submitted" });
+  if (existing?.status === "published") throw fixtureError(409, "Already published.", { code: "ALREADY_PUBLISHED", status: "published" });
   if (!sheet.ready) throw fixtureError(409, "Some subjects have not published yet.", { waitingOn: sheet.waitingOn });
-  const existing = store.submissions.find((s) => s.classId === classId && s.basis === sheet.basis.key);
-  const submission: TermResultSubmission = {
-    id: existing?.id ?? `tr-${classId}-${sheet.basis.key}`,
-    classId,
-    termId: FIXTURE_TERM.id,
-    basis: sheet.basis.key,
-    status: "submitted",
-    submittedAt: FIXTURE_NOW,
-    submittedBy: TEACHER,
-    returnedAt: null,
-    returnedBy: null,
-    returnReason: null,
-    publishedAt: null,
-    publishedBy: null,
-  };
+  const submission = submissionOf(sheet.basis.key, "submitted", {
+    returnReason: existing?.returnReason ?? null,
+    returnedAt: existing?.returnedAt ?? null,
+    returnedBy: existing?.returnedBy ?? null,
+  });
   store.submissions = [...store.submissions.filter((s) => s !== existing), submission];
   return submission;
 }
@@ -603,20 +645,14 @@ export function setOtherSubjectStatusFixture(courseId: string, assessmentId: str
  * @returns The submission.
  */
 export function setTermResultFixture(basis: string, status: TermResultStatus, reason?: string): TermResultSubmission {
-  const submission: TermResultSubmission = {
-    id: `tr-c1-${basis}`,
-    classId: "c1",
-    termId: FIXTURE_TERM.id,
-    basis,
-    status,
+  const submission = submissionOf(basis, status, {
     submittedAt: "2026-09-24T10:00:00.000Z",
-    submittedBy: TEACHER,
     returnedAt: status === "returned" ? "2026-09-25T08:00:00.000Z" : null,
     returnedBy: status === "returned" ? { id: "admin-1", name: "School office" } : null,
     returnReason: status === "returned" ? (reason ?? null) : null,
     publishedAt: status === "published" ? "2026-09-25T08:00:00.000Z" : null,
     publishedBy: status === "published" ? { id: "admin-1", name: "School office" } : null,
-  };
-  store.submissions = [...store.submissions.filter((s) => s.basis !== basis), submission];
+  });
+  store.submissions = [...store.submissions.filter((s) => s.basis.key !== basis), submission];
   return submission;
 }

@@ -118,14 +118,15 @@ const SEED_TAUGHT_AT: Record<number, string> = {
   2: "2026-09-18T14:00:00.000Z",
 };
 
-/** The design's four resources. */
+/** The design's four resources, as the reads answer them (`id` beside `_id`, populated references). */
 const SEED_RESOURCES: readonly CourseResource[] = [
   {
     _id: "r1",
+    id: "r1",
     name: "Place value worksheet",
     courseId: { _id: "k1", title: "Mathematics" },
     classId: { _id: "c1", name: "JSS1 A" },
-    termId: FIXTURE_TERM.id,
+    termId: { _id: FIXTURE_TERM.id, name: FIXTURE_TERM.name },
     week: 1,
     kind: "pdf",
     mimeType: "application/pdf",
@@ -138,10 +139,11 @@ const SEED_RESOURCES: readonly CourseResource[] = [
   },
   {
     _id: "r2",
+    id: "r2",
     name: "Factors and multiples slides",
     courseId: { _id: "k1", title: "Mathematics" },
     classId: { _id: "c1", name: "JSS1 A" },
-    termId: FIXTURE_TERM.id,
+    termId: { _id: FIXTURE_TERM.id, name: FIXTURE_TERM.name },
     week: 2,
     kind: "slides",
     mimeType: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
@@ -154,10 +156,11 @@ const SEED_RESOURCES: readonly CourseResource[] = [
   },
   {
     _id: "r3",
+    id: "r3",
     name: "Directed numbers practice set",
     courseId: { _id: "k2", title: "Mathematics" },
     classId: { _id: "c2", name: "JSS2 B" },
-    termId: FIXTURE_TERM.id,
+    termId: { _id: FIXTURE_TERM.id, name: FIXTURE_TERM.name },
     week: 2,
     kind: "pdf",
     mimeType: "application/pdf",
@@ -170,10 +173,11 @@ const SEED_RESOURCES: readonly CourseResource[] = [
   },
   {
     _id: "r4",
+    id: "r4",
     name: "Truth tables explained",
     courseId: { _id: "k3", title: "Further Mathematics" },
     classId: { _id: "c2", name: "JSS2 B" },
-    termId: FIXTURE_TERM.id,
+    termId: { _id: FIXTURE_TERM.id, name: FIXTURE_TERM.name },
     week: 2,
     kind: "video",
     mimeType: "video/mp4",
@@ -412,8 +416,11 @@ function kindOfMime(mimeType: string): ResourceKind {
  * @returns The created resource, with no views yet.
  */
 export function createResourceFixture(body: CreateCourseResourceBody): CourseResource {
+  const id = `r-new-${store.nextId++}`;
+  // As the create response: `id` beside `_id`, and bare (unpopulated) references.
   const created: CourseResource = {
-    _id: `r-new-${store.nextId++}`,
+    _id: id,
+    id,
     name: body.name,
     courseId: body.courseId,
     classId: body.classId,
