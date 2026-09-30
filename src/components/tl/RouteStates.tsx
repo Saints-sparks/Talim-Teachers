@@ -7,9 +7,10 @@ import { logger } from "@/lib/logger";
 import { ghostButton, primaryButton } from "./styles";
 
 /**
- * The 404 page in the redesign's card: what happened, a way to Today and a
- * way back. The card works whether or not anyone is signed in (a signed-out
- * visitor who follows "Go to Today" is sent to sign in as usual).
+ * The 404 page in the redesign's card: what happened (with a pointer to
+ * Subjects, where the old Resources page went), Go to Today and Open
+ * Subjects. The card works whether or not anyone is signed in (a signed-out
+ * visitor who follows a link is sent to sign in as usual).
  *
  * @returns The screen.
  */
