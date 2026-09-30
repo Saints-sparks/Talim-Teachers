@@ -8,6 +8,7 @@ import React, {
   useMemo,
   useState,
 } from "react";
+import { uploadResourceRoute } from "@/hooks/today/today.routes";
 
 export type TeacherOnboardingStepId =
   | "teacher-profile"
@@ -44,7 +45,7 @@ export const TEACHER_ONBOARDING_STEPS: TeacherOnboardingStep[] = [
     required: true,
     phase: 2,
     deps: [],
-    href: "/resources",
+    href: uploadResourceRoute(),
   },
   {
     id: "mark-attendance",

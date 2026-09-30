@@ -42,7 +42,6 @@ jest.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(search),
 }));
 jest.mock("@/components/CustomToast", () => ({ toast: { success: jest.fn(), error: jest.fn(), info: jest.fn() } }));
-jest.mock("@/components/resources/uploadmodal", () => ({ UploadModal: () => null }));
 jest.mock("@/app/services/classroom/classroom.service", () => ({
   classroomService: { getMyClasses: jest.fn(), getRegister: jest.fn(), saveRegister: jest.fn(), getRoster: jest.fn(), getStudentRecord: jest.fn() },
 }));

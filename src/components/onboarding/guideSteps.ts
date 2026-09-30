@@ -110,42 +110,6 @@ export const guideConfigs: GuideConfig[] = [
     ],
   },
   {
-    id: "resources",
-    pathMatchers: ["/resources"],
-    exactOnly: true,
-    steps: [
-      {
-        target: "resources-header",
-        eyebrow: "Teaching materials",
-        title: "Resource Module",
-        description:
-          "Upload PDFs, videos, and learning materials so students can access them anytime from their e-library.",
-        icon: FileUp,
-      },
-      {
-        target: "resources-upload-button",
-        title: "Upload a Resource",
-        description:
-          "Start here to choose the class, course, and file before publishing the material to students.",
-        icon: FileUp,
-      },
-      {
-        target: "resources-stats",
-        title: "Track Coverage",
-        description:
-          "These cards show how many resources you have shared and whether your assigned classes are covered.",
-        icon: BookOpen,
-      },
-      {
-        target: "resources-list",
-        title: "Manage Shared Files",
-        description:
-          "Review uploaded resources, open files, edit details, or remove materials that should no longer be available.",
-        icon: Search,
-      },
-    ],
-  },
-  {
     id: "attendance",
     pathMatchers: ["/attendance"],
     exactOnly: true,

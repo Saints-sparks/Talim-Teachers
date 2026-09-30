@@ -25,8 +25,6 @@ export const TEACHER_PAGES: readonly PageSpec[] = [
   { path: "/students", label: "Students", content: /2 of 30/, feed: /\/teachers\/me\/classes\/[a-f0-9]{24}\/students$/ },
   { path: "/subjects", label: "Subjects", content: /MTH-5A/, feed: /\/scheme-of-work\/me(\?|$)/ },
   { path: "/curriculum", label: "Curriculum", content: /Select a Course First/ },
-  // The seed uploads two Mathematics 5A resources as Tolu.
-  { path: "/resources", label: "Resources", content: /Fractions worksheet/ },
   // The seed makes a Grade 5A class-group room (the lesson sheet's "Message the class").
   { path: "/messages", label: "Messages", content: /Class Group Chat/ },
   { path: "/notifications", label: "Notifications", content: /Grades published: First Term CA 1/ },
