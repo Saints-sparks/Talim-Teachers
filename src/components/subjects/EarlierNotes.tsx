@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useId, useMemo, useState } from "react";
+import Link from "next/link";
 import { ChevronDown } from "lucide-react";
-import { focusRing, primaryButton } from "@/components/tl/styles";
+import { focusRing, primaryButton, textLink } from "@/components/tl/styles";
+import { richTextClass } from "@/components/curriculum/richText";
 import { sanitizeCurriculumHtml } from "@/components/curriculum/sanitizeHtml";
 import { shortDate } from "@/hooks/subjects/scheme.logic";
 import { useLegacyCurriculum } from "@/hooks/subjects/useSubjects";
@@ -12,17 +14,50 @@ import type { SubjectCard } from "@/types/subjects";
 /** Props for {@link EarlierNotes}. */
 export interface EarlierNotesProps {
   legacy: NonNullable<SubjectCard["legacyCurriculum"]>;
+  /** The Curriculum page for this subject, where the text is edited. */
+  editHref: string;
+}
+
+/** Props for {@link NoWrittenCurriculum}. */
+export interface NoWrittenCurriculumProps {
+  /** The Curriculum page for this subject, where one is written. */
+  writeHref: string;
 }
 
 /**
- * The old text curriculum of the course and term, read only, collapsed until
- * the teacher opens it (only then is `GET /curriculum/:id` requested). The
- * editor's HTML is sanitised before it is shown.
+ * Under a scheme of work whose subject has no written curriculum this term:
+ * what it is, and where to write one.
+ *
+ * @param props - See {@link NoWrittenCurriculumProps}.
+ * @param props.writeHref - The Curriculum page for the subject.
+ * @returns The row.
+ */
+export function NoWrittenCurriculum({ writeHref }: NoWrittenCurriculumProps) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-tl-line-soft px-5 py-4">
+      <div className="min-w-[220px] flex-1">
+        <h3 className="text-[15px] font-bold text-tl-ink">Written curriculum</h3>
+        <p className="mt-0.5 text-[13px] text-tl-muted">Students also read a written curriculum for each subject in their portal. This one has none for the term.</p>
+      </div>
+      <Link href={writeHref} className={textLink} data-guide="subjects-curriculum">
+        Write it on the Curriculum page →
+      </Link>
+    </div>
+  );
+}
+
+/**
+ * The written (text) curriculum of the course and term, read only here,
+ * collapsed until the teacher opens it (only then is `GET /curriculum/:id`
+ * requested). The editor's HTML is sanitised before it is shown. A link
+ * opens the Curriculum page, where it is edited.
  *
  * @param props - See {@link EarlierNotesProps}.
+ * @param props.legacy - The curriculum's id and last update.
+ * @param props.editHref - The Curriculum page for the subject.
  * @returns The collapsible section.
  */
-export function EarlierNotes({ legacy }: EarlierNotesProps) {
+export function EarlierNotes({ legacy, editHref }: EarlierNotesProps) {
   const [open, setOpen] = useState(false);
   const regionId = useId();
   const curriculum = useLegacyCurriculum(legacy.id, open);
@@ -42,7 +77,7 @@ export function EarlierNotes({ legacy }: EarlierNotesProps) {
           <span>
             <span className="block text-[15px] font-bold text-tl-ink">Earlier notes</span>
             <span className="mt-0.5 block text-[13px] font-normal text-tl-muted">
-              Your curriculum text from before the scheme of work, read only.{updated ? ` Last updated ${updated}.` : ""}
+              The written curriculum students read in their portal, read only here.{updated ? ` Last updated ${updated}.` : ""}
             </span>
           </span>
           <ChevronDown aria-hidden className={`h-4 w-4 shrink-0 text-tl-muted transition-transform ${open ? "rotate-180" : ""}`} />
@@ -61,14 +96,14 @@ export function EarlierNotes({ legacy }: EarlierNotesProps) {
             </button>
           </div>
         ) : html.trim() ? (
-          <div
-            className="rounded-2xl border border-tl-line-soft bg-tl-subtle px-4 py-3.5 text-sm leading-[1.7] text-tl-body [&_a]:text-tl-link [&_a]:underline [&_h1]:text-lg [&_h1]:font-extrabold [&_h2]:text-base [&_h2]:font-extrabold [&_h3]:font-extrabold [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-1.5 [&_table]:w-full [&_td]:border [&_td]:border-tl-line [&_td]:p-1.5 [&_th]:border [&_th]:border-tl-line [&_th]:p-1.5 [&_ul]:list-disc [&_ul]:pl-5"
-            dangerouslySetInnerHTML={{ __html: html }}
-          />
+          <div className={`rounded-2xl border border-tl-line-soft bg-tl-subtle px-4 py-3.5 ${richTextClass}`} dangerouslySetInnerHTML={{ __html: html }} />
         ) : (
           <p className="text-sm text-tl-muted">These notes are empty.</p>
         )}
       </div>
+      <Link href={editHref} className={`${textLink} mt-1`} data-guide="subjects-curriculum">
+        Edit it on the Curriculum page →
+      </Link>
     </div>
   );
 }

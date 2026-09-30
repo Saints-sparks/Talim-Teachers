@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "@/components/CustomToast";
@@ -20,6 +21,7 @@ import {
   stepSchoolDay,
   type RegisterBanner,
 } from "@/hooks/attendance/register.logic";
+import { historyHref } from "@/hooks/attendance/history.logic";
 import { useMyClasses, useRegisterEditor, useRegisterView, type DraftState } from "@/hooks/attendance/useRegister";
 import { clockTime } from "@/hooks/today/today.logic";
 import { useSchoolNow, useTeacherToday } from "@/hooks/today/useTeacherToday";
@@ -120,7 +122,7 @@ function RegisterSkeleton() {
  * counts, search and "Mark the rest present", one row per student, and a
  * sticky footer to submit. Marks save as a draft while the register is open;
  * the URL keeps `?classId=&date=` so a reload or a shared link lands on the
- * same register.
+ * same register. "History" opens the class's Attendance history.
  *
  * @param props - See {@link AttendanceScreenProps}.
  * @returns The screen.
@@ -205,11 +207,16 @@ export function AttendanceScreen({ initialClassId, initialDate }: AttendanceScre
   const unknownClass = Boolean(activeClassId) && !pickerOptions.some((c) => c.id === activeClassId);
 
   const header = (
-    <div>
-      <h1 className={pageTitle}>Attendance</h1>
-      <p className="mt-[5px] text-[15px] text-tl-muted">
-        Morning register. Registers close at {closeTime} and parents of absent students are told the same morning.
-      </p>
+    <div className="flex flex-wrap items-end justify-between gap-3.5">
+      <div>
+        <h1 className={pageTitle}>Attendance</h1>
+        <p className="mt-[5px] text-[15px] text-tl-muted">
+          Morning register. Registers close at {closeTime} and parents of absent students are told the same morning.
+        </p>
+      </div>
+      <Link href={historyHref({ classId: activeClassId })} className={ghostButton} title="Each student's attendance over a week, a month or the term">
+        History
+      </Link>
     </div>
   );
 

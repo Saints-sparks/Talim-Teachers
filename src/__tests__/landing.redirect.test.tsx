@@ -160,7 +160,7 @@ describe("the sign-in page at /", () => {
     render(<LoginPage />, { user: null });
 
     expect(screen.getByRole("heading", { name: "Welcome back" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Email or Staff Number")).toBeInTheDocument();
+    expect(screen.getByLabelText("Email or staff number")).toBeInTheDocument();
     expect(screen.queryByRole("status", { name: "Signing in" })).not.toBeInTheDocument();
     await act(async () => undefined);
     expect(replace).not.toHaveBeenCalled();

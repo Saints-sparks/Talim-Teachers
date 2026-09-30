@@ -40,8 +40,8 @@ function topBarDate(nowMs: number, timezone: string | undefined): string {
  * loads. The shell never loads the inbox itself.
  *
  * Also hosts the portal tour (`useTour`) and keeps the per-page AppGuide
- * spotlight tours mounted: they cover Resources, Attendance, Students,
- * Curriculum, Grading and Messages, which the new tour does not replace.
+ * spotlight tours mounted (see `guideSteps.ts`): one per redesigned page,
+ * which the portal tour links to but does not replace.
  *
  * @param props - The page.
  * @param props.children - The page content.

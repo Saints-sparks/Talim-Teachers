@@ -1,131 +1,16 @@
-"use client";
-import { Suspense, useMemo, useState, type ReactNode } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { BookOpen } from "lucide-react";
-import Layout from "@/components/Layout";
-import LoadingCard from "@/components/LoadingCard";
-import { ResourcesHeader } from "@/components/resources/ResourcesHeader";
-import { ResourceStatsCards } from "@/components/resources/ResourceStatsCards";
-import { ResourcesTable } from "@/components/resources/ResourceTable";
-import { UploadModal } from "@/components/resources/uploadmodal";
-import { ApiErrorState, EmptyState } from "@/components/states";
-import { canWriteRecord, idOf } from "@/hooks/curriculum/access";
-import { useWriterContext } from "@/hooks/curriculum/useWriterContext";
-import { computeResourceStats, filterResources } from "@/hooks/resources/stats";
-import type { Resource } from "@/hooks/resources/types";
-import { useMyResources } from "@/hooks/resources/useResources";
-import { useTeacherRoster } from "@/hooks/resources/useTeacherRoster";
-
-/** A white panel, the frame of both halves of the page. */
-const Panel = ({ children, guide }: { children: ReactNode; guide?: string }) => (
-  <div className="bg-white rounded-lg shadow-none border border-[#F0F0F0] p-3 sm:p-6" data-guide={guide}>
-    {children}
-  </div>
-);
+import { redirect } from "next/navigation";
+import { resourcesRedirectHref, type RouteSearchParams } from "@/hooks/subjects/legacyRoutes";
 
 /**
- * `/resources`: the teacher's uploaded teaching materials, with search, the
- * three summary cards, and upload / edit / delete for those allowed to.
+ * The old Resources page. Subjects now holds every subject's resources (with
+ * upload, visibility, the week and Remove), so old links and bookmarks land
+ * on its Resources tab, keeping `courseId`, `week` and `upload=1`
+ * (see {@link resourcesRedirectHref}).
  *
- * Data comes from one cached query (`useMyResources`); uploads, edits and
- * deletes invalidate it, so the page holds no copy of the list of its own.
- *
- * `?upload=1&courseId=&week=` opens the upload dialog with that course
- * preselected and the scheme-of-work week prefilled. It is kept for old
- * links: Today, its attention list and setup card, and the lesson sheet now
- * open the Subjects page's upload sheet instead (`uploadResourceRoute`).
- *
- * @returns The page element.
+ * @param props - What Next passes a page.
+ * @param props.searchParams - The old link's query.
+ * @returns Nothing; it redirects.
  */
-function ResourcePageContent() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [isUploadModalOpen, setIsUploadModalOpen] = useState(() => searchParams?.get("upload") === "1");
-  const initialCourseId = searchParams?.get("courseId") ?? undefined;
-  const weekParam = Number(searchParams?.get("week"));
-  const initialWeek = Number.isInteger(weekParam) && weekParam >= 1 && weekParam <= 30 ? weekParam : undefined;
-  const closeUpload = () => {
-    setIsUploadModalOpen(false);
-    if (searchParams?.get("upload")) router.replace("/resources");
-  };
-
-  const query = useMyResources();
-  const roster = useTeacherRoster();
-  const writer = useWriterContext();
-
-  const resources = useMemo(() => query.data ?? [], [query.data]);
-  const stats = useMemo(() => computeResourceStats(resources, roster.classes.length), [resources, roster.classes.length]);
-  const filtered = useMemo(() => filterResources(resources, searchTerm), [resources, searchTerm]);
-
-  // Teachers upload for courses they teach; sub-admins are shown the control and the API enforces `manage:curriculum`.
-  const canUpload =
-    writer.role === "school_sub_admin" || (writer.role === "teacher" && (writer.taughtCourseIds?.length ?? 0) > 0);
-  // The list is "resources I uploaded", so a missing uploader (an unpopulated reference) still means mine.
-  const canModify = (resource: Resource) =>
-    canWriteRecord(writer, { ownerId: idOf(resource.uploadedBy ?? writer.ownIds[0]), courseId: resource.courseId });
-
-  return (
-    <Layout>
-      <div className="space-y-4 sm:space-y-6 bg-[#F8F8F8] min-h-screen p-3 sm:p-6">
-        <Panel>
-          <ResourcesHeader
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            canUpload={canUpload}
-            onUpload={() => setIsUploadModalOpen(true)}
-          />
-          <ResourceStatsCards stats={stats} />
-        </Panel>
-
-        <Panel guide="resources-list">
-          {query.isLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" role="status" aria-label="Loading resources">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <LoadingCard key={i} height="h-32" />
-              ))}
-            </div>
-          ) : query.error ? (
-            <ApiErrorState error={query.error} fallback="We couldn't load your resources." onRetry={() => query.refetch()} />
-          ) : filtered.length === 0 ? (
-            <EmptyState
-              icon={<BookOpen className="w-6 h-6 text-[#878787]" />}
-              title={searchTerm ? "No resources found" : "No resources yet"}
-              message={
-                searchTerm
-                  ? `No resources match "${searchTerm}". Try a different search term.`
-                  : canUpload
-                    ? "Start by uploading your first educational resource."
-                    : "Resources you upload will appear here."
-              }
-              actionText={!searchTerm && canUpload ? "Upload Your First Resource" : undefined}
-              onAction={!searchTerm && canUpload ? () => setIsUploadModalOpen(true) : undefined}
-            />
-          ) : (
-            <div className="space-y-4">
-              <h2 className="min-w-0 break-words text-base font-semibold text-[#030E18] sm:text-lg">
-                {searchTerm ? `Search Results (${filtered.length})` : `All Resources (${resources.length})`}
-              </h2>
-              <ResourcesTable resources={filtered} classes={roster.classes} courses={roster.courses} canModify={canModify} />
-            </div>
-          )}
-        </Panel>
-
-        <UploadModal isOpen={isUploadModalOpen} onClose={closeUpload} initialCourseId={initialCourseId} initialWeek={initialWeek} />
-      </div>
-    </Layout>
-  );
-}
-
-/**
- * `/resources`. `useSearchParams` needs a Suspense boundary.
- *
- * @returns The page element.
- */
-export default function ResourcePage() {
-  return (
-    <Suspense fallback={null}>
-      <ResourcePageContent />
-    </Suspense>
-  );
+export default async function ResourcesRedirect({ searchParams }: { searchParams: Promise<RouteSearchParams> }) {
+  redirect(resourcesRedirectHref(await searchParams));
 }

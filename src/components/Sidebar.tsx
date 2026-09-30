@@ -32,9 +32,10 @@ export interface NavCounts {
 }
 
 /**
- * The sidebar's groups. Today is the `/dashboard` route. Curriculum and
- * Resources are not redesigned yet and stay reachable as secondary items
- * under Subjects.
+ * The sidebar's groups. Today is the `/dashboard` route. Subjects holds the
+ * scheme of work and the resources (the old `/resources` redirects there);
+ * the written curriculum students read keeps its own page, reachable as a
+ * secondary item under Subjects and from Subjects itself.
  *
  * @param counts - Badge counts.
  * @returns The groups, in order.
@@ -55,8 +56,7 @@ export function navGroups(counts: NavCounts): NavGroup[] {
       items: [
         { label: "Students", href: "/students", tip: "Rosters, guardians and student records" },
         { label: "Subjects", href: "/subjects", tip: "Scheme of work and resources" },
-        { label: "Curriculum", href: "/curriculum", tip: "Write and share each course's curriculum", secondary: true },
-        { label: "Resources", href: "/resources", tip: "Worksheets, slides and videos you have shared", secondary: true },
+        { label: "Curriculum", href: "/curriculum", tip: "The written curriculum students read for each subject", secondary: true },
       ],
     },
     {

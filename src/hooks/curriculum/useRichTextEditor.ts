@@ -29,6 +29,7 @@ export interface RichTextEditor {
 /**
  * The curriculum editor: TipTap with the formatting the toolbar offers, seeded
  * with existing content when editing and with the placeholder text otherwise.
+ * The editable area is labelled "Curriculum text" for screen readers.
  *
  * @param initialHtml - The curriculum's saved content, or `undefined` for a new one.
  * @returns The editor and its live HTML.
@@ -55,6 +56,10 @@ export function useRichTextEditor(initialHtml?: string): RichTextEditor {
       Link.configure({ openOnClick: false }),
     ],
     content: startingHtml,
+    // The editable page is a labelled multi-line text box for screen readers.
+    editorProps: {
+      attributes: { role: "textbox", "aria-multiline": "true", "aria-label": "Curriculum text", class: "min-h-[520px] p-6 focus:outline-none" },
+    },
     onUpdate: ({ editor: updated }) => setHtml(updated.getHTML()),
   });
 

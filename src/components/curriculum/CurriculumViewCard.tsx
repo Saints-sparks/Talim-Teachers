@@ -1,50 +1,33 @@
 import React from "react";
-import { Calendar, Clock, FileText, School, User } from "lucide-react";
+import { cardFrame, eyebrow, focusRing, pill, pillTone } from "@/components/tl/styles";
 import { courseOf, courseTitle, teacherName, termOf, type Curriculum } from "@/hooks/curriculum/types";
 import type { StudentPreview } from "@/hooks/curriculum/useClassPreview";
 import { formatDate } from "./CurriculumCard";
+import { paperClass } from "./richText";
 import { sanitizeCurriculumHtml } from "./sanitizeHtml";
 import { fileNameOf } from "./editor/types";
 
-/** A grey label chip. */
-const Chip = ({ children }: { children: React.ReactNode }) => (
-  <span className="bg-gray-100 text-[#0A2343] text-xs font-semibold rounded px-3 py-1">{children}</span>
-);
-
-/** One "icon, label, value chip" row of the info grid; hidden when there is no value. */
-const InfoRow = ({ icon, label, value, iconFirst = true }: { icon: React.ReactNode; label: string; value?: string | null; iconFirst?: boolean }) => {
-  if (!value) return null;
-  return (
-    <div className="flex items-center gap-2">
-      {iconFirst && icon}
-      <span className="font-medium text-[#030E18]">{label}</span>
-      {!iconFirst && icon}
-      <Chip>{value}</Chip>
-    </div>
-  );
-};
-
-/** The three-student avatar stack. */
+/**
+ * Up to three students of the class as overlapping initials or photos,
+ * decorative (the class name is beside it).
+ *
+ * @param props - The students.
+ * @param props.students - A few students of the class.
+ * @returns The stack.
+ */
 const AvatarStack = ({ students }: { students: StudentPreview[] }) => (
-  <div className="flex -space-x-2 ml-2">
+  <div className="flex -space-x-2" aria-hidden>
     {students.map((student, index) =>
       student.src ? (
-        <img
-          key={index}
-          src={student.src}
-          alt={student.name}
-          className="w-8 h-8 rounded-full border-2 border-white shadow -ml-1"
-          style={{ zIndex: 10 - index }}
-        />
+        <img key={index} src={student.src} alt="" className="h-8 w-8 rounded-full border-2 border-tl-surface object-cover" style={{ zIndex: 10 - index }} />
       ) : (
-        <div
+        <span
           key={index}
-          className="w-8 h-8 rounded-full border-2 border-white bg-[#003366] text-white shadow -ml-1 flex items-center justify-center text-[10px] font-semibold"
+          className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-tl-surface bg-tl-select text-[10px] font-extrabold text-tl-brand"
           style={{ zIndex: 10 - index }}
-          title={student.name}
         >
           {student.initials}
-        </div>
+        </span>
       ),
     )}
   </div>
@@ -57,10 +40,10 @@ export interface CurriculumViewCardProps {
 }
 
 /**
- * The read-only curriculum card on `/curriculum/view`: subject, class, term,
- * teacher, school, dates, the content and its attachments. Everything shown
- * comes from the API; a field the API did not send is left out rather than
- * filled with sample text.
+ * The read-only curriculum on `/curriculum/view`, in the redesign: the
+ * subject, code and class, the facts, the text on a white page (cleaned
+ * before it is shown) and the attachments. Everything shown comes from the
+ * API; a field the API did not send is left out rather than filled in.
  *
  * @param props - See {@link CurriculumViewCardProps}.
  * @param props.curriculum - The curriculum to show.
@@ -72,80 +55,82 @@ const CurriculumViewCard = React.forwardRef<HTMLDivElement, CurriculumViewCardPr
   const term = termOf(curriculum);
   const html = sanitizeCurriculumHtml(curriculum.content ?? "");
   const attachments = curriculum.attachments ?? [];
+  const facts = [
+    ["Term", term?.name],
+    ["Teacher", teacherName(curriculum)],
+    ["School", course?.schoolName],
+    ["Created", curriculum.createdAt ? formatDate(curriculum.createdAt) : null],
+    ["Last updated", curriculum.updatedAt ? formatDate(curriculum.updatedAt) : null],
+  ].filter((f): f is [string, string] => Boolean(f[1]));
 
   return (
-    <div ref={ref} className="bg-white rounded-2xl border border-[#F0F0F0] p-8">
-      <div className="flex flex-wrap items-center justify-between mb-6 gap-4">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <span className="text-xl font-semibold text-[#030E18]">{courseTitle(curriculum)}</span>
-            {course?.courseCode && <Chip>{course.courseCode}</Chip>}
+    <article ref={ref} className={`${cardFrame} p-[clamp(18px,2.4vw,26px)]`} aria-labelledby="curriculum-view-title">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className={eyebrow}>Written curriculum</p>
+          <div className="mt-1 flex flex-wrap items-center gap-2.5">
+            <h1 id="curriculum-view-title" className="text-[clamp(22px,3vw,28px)] font-extrabold tracking-[-0.5px] text-tl-ink">
+              {courseTitle(curriculum)}
+            </h1>
+            {course?.courseCode ? <span className={`${pill} ${pillTone.info}`}>{course.courseCode}</span> : null}
           </div>
-          {course?.description && <span className="text-[#6F6F6F] text-sm">{course.description}</span>}
+          {course?.description ? <p className="mt-1 text-sm text-tl-muted">{course.description}</p> : null}
         </div>
-        <div className="flex items-center gap-4">
-          {course?.className && (
-            <div className="flex items-center gap-2">
-              <Chip>Class</Chip>
-              <Chip>{course.className}</Chip>
+        {course?.className ? (
+          <div className="flex items-center gap-2.5">
+            <span className={`${pill} ${pillTone.muted}`}>{course.className}</span>
+            {students.length > 0 ? <AvatarStack students={students} /> : null}
+          </div>
+        ) : null}
+      </div>
+
+      {facts.length ? (
+        <dl className="mt-5 grid gap-x-5 gap-y-3 [grid-template-columns:repeat(auto-fit,minmax(150px,1fr))]">
+          {facts.map(([label, value]) => (
+            <div key={label}>
+              <dt className="text-xs font-extrabold uppercase tracking-[0.05em] text-tl-faint">{label}</dt>
+              <dd className="mt-0.5 text-sm font-bold text-tl-ink">{value}</dd>
             </div>
-          )}
-          {students.length > 0 && <AvatarStack students={students} />}
-        </div>
-      </div>
+          ))}
+        </dl>
+      ) : null}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <InfoRow icon={<Calendar className="w-5 h-5 text-[#003366]" />} label="Term" value={term?.name} />
-        <InfoRow icon={<User className="w-5 h-5 text-[#003366]" />} label="Teacher" value={teacherName(curriculum)} iconFirst={false} />
-        <InfoRow icon={<School className="w-5 h-5 text-[#003366]" />} label="School" value={course?.schoolName} />
-        <InfoRow icon={<Clock className="w-5 h-5 text-[#003366]" />} label="Last Updated" value={curriculum.updatedAt ? formatDate(curriculum.updatedAt) : null} />
-      </div>
-
-      <div className="mb-6">
-        <h2 className="text-lg font-semibold mb-2 text-[#030E18]">Curriculum Content</h2>
-        <div className="bg-[#F8F8F8] rounded-xl p-5">
+      <section className="mt-5" aria-labelledby="curriculum-view-content">
+        <h2 id="curriculum-view-content" className="text-[17px] font-extrabold text-tl-ink">
+          Curriculum
+        </h2>
+        <div className="mt-2 rounded-2xl border border-tl-line-soft bg-white p-5">
           {html.trim() ? (
-            <div className="prose max-w-none text-[#030E18] leading-relaxed dark:prose-invert" dangerouslySetInnerHTML={{ __html: html }} />
+            <div className={paperClass} dangerouslySetInnerHTML={{ __html: html }} />
           ) : (
-            <div className="text-[#6F6F6F] font-medium">No content added yet</div>
+            <p className="text-sm font-bold text-[#5B6B80]">No content added yet.</p>
           )}
         </div>
-      </div>
+      </section>
 
-      {attachments.length > 0 && (
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold mb-2 text-[#030E18]">Attachments</h2>
-          <ul className="space-y-2">
+      {attachments.length > 0 ? (
+        <section className="mt-5" aria-labelledby="curriculum-view-attachments">
+          <h2 id="curriculum-view-attachments" className="text-[17px] font-extrabold text-tl-ink">
+            Attachments
+          </h2>
+          <ul className="mt-1 flex flex-col">
             {attachments.map((url, index) => (
               <li key={url}>
                 <a
                   href={url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-[#003366] hover:underline"
+                  className={`inline-flex min-h-[44px] items-center rounded-md text-sm font-bold text-tl-link hover:underline ${focusRing}`}
                 >
-                  <FileText className="w-4 h-4" />
                   {fileNameOf(url, `Attachment ${index + 1}`)}
+                  <span className="sr-only"> (opens in a new tab)</span>
                 </a>
               </li>
             ))}
           </ul>
-        </div>
-      )}
-
-      <div className="flex flex-wrap gap-8 text-sm text-[#878787] mt-6">
-        {curriculum.createdAt && (
-          <div>
-            <span className="font-medium">Created:</span> {formatDate(curriculum.createdAt)}
-          </div>
-        )}
-        {curriculum.updatedAt && (
-          <div>
-            <span className="font-medium">Last Modified:</span> {formatDate(curriculum.updatedAt)}
-          </div>
-        )}
-      </div>
-    </div>
+        </section>
+      ) : null}
+    </article>
   );
 });
 CurriculumViewCard.displayName = "CurriculumViewCard";

@@ -4,7 +4,8 @@ import React from "react";
 import { focusRing, pill, pillTone, rowButton } from "@/components/tl/styles";
 import { canMarkWeek, resourcesSharedText, weekTag } from "@/hooks/subjects/scheme.logic";
 import type { SchemeOfWork, SchemeWeek, SubjectCard } from "@/types/subjects";
-import { EarlierNotes } from "./EarlierNotes";
+import { curriculumHref } from "@/hooks/subjects/legacyRoutes";
+import { EarlierNotes, NoWrittenCurriculum } from "./EarlierNotes";
 
 /**
  * The DOM id of a week row, for deep links (`?week=`) to scroll to.
@@ -26,18 +27,23 @@ export interface SchemePlanProps {
   pendingWeek?: number;
   onToggleTaught: (week: SchemeWeek) => void;
   onEdit: (week: SchemeWeek) => void;
+  /** The term picked on the page, when it is not the current one (the Curriculum page opens on it). */
+  termParam?: string;
 }
 
 /**
  * The Scheme of work tab (the design's `weekRows`): one row per week with its
  * topic, tag, objectives and resources, "Mark taught" / "Undo" for weeks up
- * to the current one, and "Edit". Below the weeks, the old text curriculum
- * under "Earlier notes" when the course has one.
+ * to the current one, and "Edit". Below the weeks, the written (text)
+ * curriculum students read: under "Earlier notes" when the course has one,
+ * else a line saying so; both link to the Curriculum page, where it is
+ * written and edited.
  *
  * @param props - See {@link SchemePlanProps}.
  * @returns The tab's content.
  */
-export function SchemePlan({ card, scheme, flashWeek, pendingWeek, onToggleTaught, onEdit }: SchemePlanProps) {
+export function SchemePlan({ card, scheme, flashWeek, pendingWeek, onToggleTaught, onEdit, termParam }: SchemePlanProps) {
+  const writtenHref = curriculumHref(card.course.id, termParam);
   const firstToggle = scheme.weeks.find((w) => canMarkWeek(w.week, scheme.currentWeek))?.week;
   return (
     <div>
@@ -98,7 +104,7 @@ export function SchemePlan({ card, scheme, flashWeek, pendingWeek, onToggleTaugh
           );
         })}
       </ol>
-      {card.legacyCurriculum ? <EarlierNotes legacy={card.legacyCurriculum} /> : null}
+      {card.legacyCurriculum ? <EarlierNotes legacy={card.legacyCurriculum} editHref={writtenHref} /> : <NoWrittenCurriculum writeHref={writtenHref} />}
     </div>
   );
 }

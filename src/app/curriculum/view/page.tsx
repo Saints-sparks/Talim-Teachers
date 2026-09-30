@@ -1,38 +1,54 @@
 "use client";
-import React, { Suspense, useState } from "react";
+import React, { Suspense, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Download, Edit, FileText, Plus } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import Layout from "@/components/Layout";
-import LoadingCard from "@/components/LoadingCard";
 import { toast } from "@/components/CustomToast";
+import CurriculumSkeleton from "@/components/curriculum/CurriculumSkeleton";
 import CurriculumViewCard from "@/components/curriculum/CurriculumViewCard";
 import { downloadCurriculumPdf } from "@/components/curriculum/curriculumPdf";
-import { ApiErrorState, ErrorState } from "@/components/states";
+import { card, cardTitle, focusRing, ghostButton, pagePad, primaryButton } from "@/components/tl/styles";
 import { useClassPreview } from "@/hooks/curriculum/useClassPreview";
 import { useCurriculumAccess } from "@/hooks/curriculum/useCurriculumAccess";
 import { useCurriculumByCourseTerm } from "@/hooks/curriculum/useCurriculumQueries";
+import { getErrorMessage } from "@/lib/apiError";
 import { logger } from "@/lib/logger";
 
-/** The page frame every state of the view shares. */
-const Frame = ({ children }: { children: React.ReactNode }) => (
+/**
+ * The page frame every state of the view shares: the shell and the
+ * redesign's padding, at most 960px wide.
+ *
+ * @param props - The content.
+ * @param props.children - The state to show.
+ * @returns The framed page.
+ */
+const Frame = ({ children }: { children: ReactNode }) => (
   <Layout>
-    <div className="min-h-screen bg-[#F8F8F8] p-6">
-      <div className="max-w-4xl mx-auto">{children}</div>
-    </div>
+    <div className={`${pagePad} flex max-w-[960px] flex-col gap-[18px]`}>{children}</div>
   </Layout>
 );
 
-/** The Back button. */
+/**
+ * The Back button.
+ *
+ * @param props - What it does.
+ * @param props.onClick - Goes back.
+ * @returns The button.
+ */
 const BackButton = ({ onClick }: { onClick: () => void }) => (
-  <button type="button" onClick={onClick} className="flex items-center gap-2 text-[#6F6F6F] hover:text-[#030E18] transition-colors">
-    <ArrowLeft className="w-5 h-5" />
-    <span className="font-medium">Back</span>
+  <button
+    type="button"
+    onClick={onClick}
+    className={`-ml-2 inline-flex min-h-[44px] items-center gap-1 rounded-xl px-2 text-sm font-bold text-tl-brand hover:bg-tl-select ${focusRing}`}
+  >
+    <ChevronLeft className="h-4 w-4" aria-hidden />
+    Back
   </button>
 );
 
 /**
- * `/curriculum/view`: a course's curriculum for a term, read-only, with Edit
- * (for teachers of the course) and a PDF download.
+ * `/curriculum/view`: a course's written curriculum for a term, read-only,
+ * in the redesign, with Edit (for teachers of the course) and a PDF download.
  *
  * @returns The page element.
  */
@@ -70,7 +86,13 @@ const CurriculumViewContent = () => {
   if (!courseId || !termId) {
     return (
       <Frame>
-        <ErrorState title="Can't open this curriculum" message="The link is missing the course or term." retryText="Go Back" onRetry={() => router.back()} />
+        <section className={card} role="alert">
+          <h1 className={cardTitle}>Can&apos;t open this curriculum</h1>
+          <p className="mt-1.5 text-sm text-tl-muted">The link is missing the subject or the term.</p>
+          <button type="button" className={`${primaryButton} mt-4`} onClick={() => router.back()}>
+            Go back
+          </button>
+        </section>
       </Frame>
     );
   }
@@ -78,7 +100,7 @@ const CurriculumViewContent = () => {
   if (query.isLoading) {
     return (
       <Frame>
-        <LoadingCard />
+        <CurriculumSkeleton />
       </Frame>
     );
   }
@@ -86,7 +108,13 @@ const CurriculumViewContent = () => {
   if (query.error) {
     return (
       <Frame>
-        <ApiErrorState error={query.error} fallback="We couldn't load this curriculum." onRetry={() => query.refetch()} />
+        <section className={card} role="alert">
+          <h1 className={cardTitle}>We could not load this curriculum</h1>
+          <p className="mt-1.5 text-sm text-tl-muted">{getErrorMessage(query.error, "Check your connection and try again.")}</p>
+          <button type="button" className={`${primaryButton} mt-4`} onClick={() => void query.refetch()}>
+            Try again
+          </button>
+        </section>
       </Frame>
     );
   }
@@ -94,59 +122,38 @@ const CurriculumViewContent = () => {
   if (!curriculum) {
     return (
       <Frame>
-        <div className="flex items-center justify-between mb-6">
+        <div>
           <BackButton onClick={() => router.back()} />
         </div>
-        <div className="bg-white rounded-xl border border-[#F0F0F0] overflow-hidden">
-          <div className="text-center py-16 px-8">
-            <div className="mx-auto w-24 h-24 bg-[#F8F8F8] rounded-full flex items-center justify-center mb-6">
-              <FileText className="w-12 h-12 text-[#878787]" />
-            </div>
-            <h2 className="text-2xl font-bold text-[#030E18] mb-3">No Curriculum Created Yet</h2>
-            <p className="text-[#6F6F6F] text-lg mb-8 max-w-md mx-auto">
-              {access.canCreate
-                ? "It looks like no curriculum has been created for this course yet. Click on the button below to create one."
-                : "No curriculum has been created for this course yet."}
-            </p>
-            {access.canCreate && (
-              <button
-                type="button"
-                onClick={() => goToEditor("create")}
-                className="inline-flex items-center gap-2 px-8 py-3 bg-[#003366] text-white font-medium rounded-lg hover:bg-[#002244] transition-colors duration-200 shadow-sm"
-              >
-                <Plus className="w-5 h-5" />
-                Create Curriculum
-              </button>
-            )}
-          </div>
-        </div>
+        <section className={card}>
+          <h1 className={cardTitle}>No curriculum yet</h1>
+          <p className="mt-1.5 text-sm leading-relaxed text-tl-muted">
+            {access.canCreate
+              ? "This subject has no written curriculum for the term. Write one and students can read it in their portal."
+              : "This subject has no written curriculum for the term yet."}
+          </p>
+          {access.canCreate ? (
+            <button type="button" onClick={() => goToEditor("create")} className={`${primaryButton} mt-4`}>
+              Write the curriculum
+            </button>
+          ) : null}
+        </section>
       </Frame>
     );
   }
 
   return (
     <Frame>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-2.5">
         <BackButton onClick={() => router.back()} />
-        <div className="flex items-center gap-3">
-          {access.canModify && (
-            <button
-              type="button"
-              onClick={() => goToEditor("edit")}
-              className="flex items-center gap-2 px-4 py-2 border border-[#D9D9D9] rounded-lg bg-white text-[#0A2343] hover:bg-gray-100"
-            >
-              <Edit className="w-4 h-4" />
+        <div className="flex flex-wrap gap-2.5">
+          {access.canModify ? (
+            <button type="button" onClick={() => goToEditor("edit")} className={ghostButton}>
               Edit
             </button>
-          )}
-          <button
-            type="button"
-            onClick={handleDownload}
-            disabled={downloading}
-            className="flex items-center gap-2 px-4 py-2 bg-[#003366] text-white rounded-lg hover:bg-[#002244] disabled:opacity-60"
-          >
-            <Download className="w-4 h-4" />
-            {downloading ? "Preparing…" : "Download"}
+          ) : null}
+          <button type="button" onClick={handleDownload} disabled={downloading} className={primaryButton}>
+            {downloading ? "Preparing…" : "Download PDF"}
           </button>
         </div>
       </div>
@@ -161,7 +168,7 @@ const CurriculumViewContent = () => {
  * @returns The page element.
  */
 const CurriculumViewPage = () => (
-  <Suspense fallback={<LoadingCard />}>
+  <Suspense fallback={<CurriculumSkeleton />}>
     <CurriculumViewContent />
   </Suspense>
 );

@@ -18,6 +18,10 @@ import { StudentsScreen } from "@/components/students/StudentsScreen";
 import { StudentRecordScreen } from "@/components/students/StudentRecordScreen";
 import { GradingScreen } from "@/components/grading/GradingScreen";
 import { SubjectsScreen } from "@/components/subjects/SubjectsScreen";
+import { AttendanceHistoryScreen } from "@/components/attendance/AttendanceHistoryScreen";
+import CourseCurriculumList from "@/components/curriculum/CourseCurriculumList";
+import CurriculumEditor from "@/components/curriculum/CurriculumEditor";
+import { attendanceService } from "@/app/services/attendance/attendance.service";
 import { classroomService } from "@/app/services/classroom/classroom.service";
 import { gradingService } from "@/app/services/grading/grading.service";
 import { subjectsService } from "@/app/services/subjects/subjects.service";
@@ -49,7 +53,6 @@ jest.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(search),
 }));
 jest.mock("@/components/CustomToast", () => ({ toast: { success: jest.fn(), error: jest.fn(), info: jest.fn() } }));
-jest.mock("@/components/resources/uploadmodal", () => ({ UploadModal: () => null }));
 jest.mock("@/app/services/classroom/classroom.service", () => ({
   classroomService: { getMyClasses: jest.fn(), getRegister: jest.fn(), saveRegister: jest.fn(), getRoster: jest.fn(), getStudentRecord: jest.fn() },
 }));
@@ -70,6 +73,18 @@ jest.mock("@/app/services/subjects/subjects.service", () => ({
   subjectsService: { getMySubjects: jest.fn(), getScheme: jest.fn(), getCourseResources: jest.fn(), getLegacyCurriculum: jest.fn() },
 }));
 jest.mock("@/hooks/academic/useSchoolTerms", () => ({ useSchoolTerms: () => ({ data: [] }) }));
+jest.mock("@/hooks/curriculum/useCurriculumMutations", () => ({
+  useSaveCurriculum: () => ({ mutateAsync: jest.fn(), isPending: false }),
+  useDeleteCurriculum: () => ({ mutateAsync: jest.fn(), isPending: false }),
+}));
+jest.mock("@/hooks/curriculum/useAttachmentUploads", () => ({
+  useAttachmentUploads: () => ({ attachments: [], uploading: false, progress: 0, upload: jest.fn(), remove: jest.fn() }),
+}));
+jest.mock("@/app/services/attendance/attendance.service", () => ({ attendanceService: { getStudentKpis: jest.fn() } }));
+jest.mock("@/app/services/api.service", () => ({
+  ...jest.requireActual("@/app/services/api.service"),
+  getCurrentTerm: jest.fn().mockResolvedValue({ _id: "t1", name: "First Term", startDate: "2026-09-07" }),
+}));
 jest.mock("@/app/context/AppContext", () => ({ useAppContext: () => ({ user: { userId: "teacher-1" } }) }));
 jest.mock("@/hooks/settings/useTeacherSettings", () => ({ ...jest.requireActual("@/hooks/settings/useTeacherSettings"), useTeacherPreferences: jest.fn() }));
 jest.mock("@/app/services/notifications.service", () => ({
@@ -79,7 +94,13 @@ jest.mock("@/app/services/notifications.service", () => ({
   getNotificationCounts: jest.fn(),
 }));
 jest.mock("@/app/context/OnboardingContext", () => ({ useTeacherOnboarding: () => ({ markStepComplete: jest.fn() }) }));
-jest.mock("@/hooks/academic/useCurrentTerm", () => ({ useCurrentTerm: () => ({ data: { _id: "term-1" } }) }));
+jest.mock("@/hooks/academic/useCurrentTerm", () => ({
+  useCurrentTerm: () => ({
+    data: { _id: "term-1", name: "First Term", startDate: "2026-09-07", endDate: "2026-12-18" },
+    isSuccess: true,
+    isError: false,
+  }),
+}));
 jest.mock("@/app/services/chat.service", () => ({
   ROOM_MEDIA_PAGE_SIZE: 30,
   getChatContacts: jest.fn(async () => []),
@@ -145,6 +166,18 @@ beforeEach(() => {
   inbox.listNotifications.mockImplementation(async (_user, paging) => inboxFixture.listNotificationsFixture(paging?.page, paging?.limit));
   inbox.listAnnouncements.mockImplementation(async (_user, paging) => inboxFixture.listAnnouncementsFixture(paging?.page, paging?.limit));
   inbox.getNotificationCounts.mockImplementation(async () => inboxFixture.makeNotificationCountsFixture());
+  (attendanceService.getStudentKpis as jest.Mock).mockImplementation(async (studentId: string) => ({
+    studentId,
+    firstName: "F",
+    lastName: "L",
+    email: "",
+    attendanceRate: 0,
+    totalDays: 12,
+    presentDays: 10,
+    lateDays: 1,
+    absentDays: 1,
+    excusedDays: 0,
+  }));
 });
 
 /** Each redesigned page: its path (and query), the guide expected there, and how to render it ready. */
@@ -188,6 +221,43 @@ const PAGES: { path: string; query?: string; guide: string; mount: () => Promise
     mount: async () => {
       render(<AttendanceScreen initialClassId="c1" initialDate="2026-09-25" />);
       await screen.findByRole("heading", { name: "JSS1 A · Friday 25 September · today" });
+    },
+  },
+  {
+    path: "/analytics/attendance",
+    guide: "attendance-history",
+    mount: async () => {
+      render(<AttendanceHistoryScreen initial={{}} />);
+      await screen.findByRole("table");
+    },
+  },
+  {
+    path: "/curriculum",
+    query: "courseId=k1",
+    guide: "curriculum",
+    mount: async () => {
+      render(
+        <CourseCurriculumList
+          courseName="Mathematics"
+          curriculum={{ _id: "cur1", course: { _id: "k1", title: "Mathematics" }, term: { _id: "t1", name: "First term" }, content: "<p>x</p>" }}
+          canCreate
+          canModify
+          onBack={jest.fn()}
+          onCreate={jest.fn()}
+          onOpen={jest.fn()}
+          onEdit={jest.fn()}
+          onDelete={jest.fn()}
+        />,
+      );
+    },
+  },
+  {
+    path: "/curriculum",
+    query: "courseId=k1&mode=create",
+    guide: "curriculum-editor",
+    mount: async () => {
+      render(<CurriculumEditor initialCourseId="k1" courseInfo={{ _id: "k1", title: "Mathematics", courseCode: "MTH111" }} currentTerm={{ _id: "t1", name: "First term" }} onClose={jest.fn()} />);
+      await screen.findByRole("toolbar", { name: "Formatting" });
     },
   },
   {

@@ -1,4 +1,5 @@
-import { FileText, X } from "lucide-react";
+import { X } from "lucide-react";
+import { eyebrow, ghostButton, pageTitle } from "@/components/tl/styles";
 import type { CourseOption } from "./types";
 
 /** Props for {@link EditorHeader}. */
@@ -10,8 +11,8 @@ export interface EditorHeaderProps {
 }
 
 /**
- * The navy bar at the top of the editor: what is being written, for which
- * course, and the close button.
+ * The editor's heading in the redesign: what is being written, for which
+ * course, and Close.
  *
  * @param props - See {@link EditorHeaderProps}.
  * @param props.isEditing - True when an existing curriculum is open.
@@ -20,29 +21,23 @@ export interface EditorHeaderProps {
  * @returns The header element.
  */
 export function EditorHeader({ isEditing, course, onClose }: EditorHeaderProps) {
-  const subtitle = course
-    ? `${course.title || course.name} - ${course.courseCode || course.code}`
-    : "Design your course curriculum";
-
+  const name = course ? course.title || course.name : null;
+  const code = course ? course.courseCode || course.code : null;
   return (
-    <div className="bg-[#003366] p-4 md:p-6 text-white" data-guide="curriculum-editor-header">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3 md:gap-4">
-          <div className="p-2 md:p-3 bg-white/20 rounded-lg backdrop-blur-sm">
-            <FileText className="w-6 h-6 md:w-8 md:h-8" />
-          </div>
-          <div>
-            <h1 className="text-lg md:text-2xl font-bold">{isEditing ? "Edit Curriculum" : "Create New Curriculum"}</h1>
-            <p className="text-white/90 mt-1 text-sm md:text-base">{subtitle}</p>
-          </div>
-        </div>
-
-        {onClose && (
-          <button type="button" onClick={onClose} className="p-2 hover:bg-white/20 rounded-lg transition-colors" title="Close Editor">
-            <X className="w-5 h-5 md:w-6 md:h-6" />
-          </button>
-        )}
+    <div className="flex flex-wrap items-end justify-between gap-3.5" data-guide="curriculum-editor-header">
+      <div className="min-w-0">
+        <p className={eyebrow}>Written curriculum</p>
+        <h1 className={`${pageTitle} mt-1`}>{isEditing ? "Edit the curriculum" : "Write the curriculum"}</h1>
+        <p className="mt-[5px] text-[15px] text-tl-muted">
+          {name ? `${name}${code ? ` · ${code}` : ""}. ` : ""}Students read this in their portal for the term.
+        </p>
       </div>
+      {onClose ? (
+        <button type="button" onClick={onClose} className={ghostButton} title="Close the editor without saving">
+          <X className="h-4 w-4" aria-hidden />
+          Close
+        </button>
+      ) : null}
     </div>
   );
 }

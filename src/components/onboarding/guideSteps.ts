@@ -110,42 +110,6 @@ export const guideConfigs: GuideConfig[] = [
     ],
   },
   {
-    id: "resources",
-    pathMatchers: ["/resources"],
-    exactOnly: true,
-    steps: [
-      {
-        target: "resources-header",
-        eyebrow: "Teaching materials",
-        title: "Resource Module",
-        description:
-          "Upload PDFs, videos, and learning materials so students can access them anytime from their e-library.",
-        icon: FileUp,
-      },
-      {
-        target: "resources-upload-button",
-        title: "Upload a Resource",
-        description:
-          "Start here to choose the class, course, and file before publishing the material to students.",
-        icon: FileUp,
-      },
-      {
-        target: "resources-stats",
-        title: "Track Coverage",
-        description:
-          "These cards show how many resources you have shared and whether your assigned classes are covered.",
-        icon: BookOpen,
-      },
-      {
-        target: "resources-list",
-        title: "Manage Shared Files",
-        description:
-          "Review uploaded resources, open files, edit details, or remove materials that should no longer be available.",
-        icon: Search,
-      },
-    ],
-  },
-  {
     id: "attendance",
     pathMatchers: ["/attendance"],
     exactOnly: true,
@@ -229,30 +193,57 @@ export const guideConfigs: GuideConfig[] = [
     ],
   },
   {
+    id: "attendance-history",
+    pathMatchers: ["/analytics/attendance"],
+    exactOnly: true,
+    steps: [
+      {
+        target: "history-filters",
+        eyebrow: "Attendance history",
+        title: "Pick a class and a period",
+        description:
+          "Choose one of your classes, then this week, this month or this term, or type any From and To up to today. The address keeps what you picked, so you can bookmark or share it.",
+        icon: CalendarDays,
+      },
+      {
+        target: "history-stats",
+        title: "The class over the period",
+        description:
+          "Its attendance rate, the present, late, absent and leave days, and how many students are below 90%. Late counts as attended; leave approved by the office does not count against the rate.",
+        icon: BarChart3,
+      },
+      {
+        target: "history-students",
+        title: "Student by student",
+        description:
+          "Each student's rate and days. Sort by lowest attendance first to see who needs a word, search by name, or open a student's record.",
+        icon: UsersRound,
+      },
+    ],
+  },
+  {
     id: "curriculum",
     pathMatchers: ["/curriculum"],
     exactOnly: true,
     steps: [
       {
         target: "curriculum-header",
-        eyebrow: "Lesson planning",
-        title: "Create or Edit Curriculum",
+        eyebrow: "Written curriculum",
+        title: "What students read",
         description:
-          "Curriculum is your structured plan for a course in the current term, including notes, topics, links, and attachments.",
+          "Each subject has one written curriculum a term, the text students read in their portal. The week-by-week plan stays in Subjects; Back to Subjects returns there.",
         icon: PencilRuler,
       },
       {
         target: "curriculum-primary-action",
-        title: "Choose or Create",
-        description:
-          "Select a course first, then create a new curriculum or edit the existing plan for that course and term.",
+        title: "Write or edit it",
+        description: "Write the curriculum for the term, or edit the one you have. Only the teacher of the subject can.",
         icon: BookOpen,
       },
       {
         target: "curriculum-list",
-        title: "Review Existing Plans",
-        description:
-          "Open curriculum cards to preview the plan, edit it, download it, or remove outdated content.",
+        title: "Read, edit or delete",
+        description: "Read shows the whole text with its attachments and saves it as an image. Edit reopens the editor; Delete removes it for students too.",
         icon: Search,
       },
     ],
@@ -263,38 +254,33 @@ export const guideConfigs: GuideConfig[] = [
     steps: [
       {
         target: "curriculum-editor-header",
-        eyebrow: "Editor guide",
-        title: "Curriculum Editor",
-        description:
-          "This editor is where you turn the course plan into readable learning content for students.",
+        eyebrow: "Curriculum editor",
+        title: "Writing the curriculum",
+        description: "Write what students should know about the subject this term. Close leaves without saving.",
         icon: PencilRuler,
       },
       {
         target: "curriculum-editor-config",
-        title: "Confirm Course and Term",
-        description:
-          "The side panel confirms the course, active term, attachments, and whether the curriculum is ready to save.",
+        title: "Subject, term and files",
+        description: "Check the subject and the term it is filed under, add images or PDFs, and see what is still missing before you save.",
         icon: BookOpen,
       },
       {
         target: "curriculum-editor-toolbar",
-        title: "Format the Lesson Plan",
-        description:
-          "Use the toolbar for headings, emphasis, lists, tables, images, links, alignment, colors, undo, and redo.",
+        title: "Format the text",
+        description: "Headings, bold, lists, tables, images, links, alignment and colours, with undo and redo.",
         icon: PencilRuler,
       },
       {
         target: "curriculum-editor-canvas",
-        title: "Write the Content",
-        description:
-          "Add the actual curriculum body here: weekly topics, learning outcomes, activities, references, and teacher notes.",
+        title: "The page students read",
+        description: "Type here: topics, what students should be able to do, activities and references. It looks the same in their portal.",
         icon: Lightbulb,
       },
       {
         target: "curriculum-editor-actions",
-        title: "Save When Ready",
-        description:
-          "The readiness message helps confirm that the course, term, and content are present before saving.",
+        title: "Save when ready",
+        description: "The line on the left says what is missing. Save once the subject, the term and some text are there.",
         icon: Send,
       },
     ],

@@ -38,25 +38,36 @@ describe("CourseCurriculumList", () => {
     render(<CourseCurriculumList courseName="Mathematics" curriculum={curriculum} canCreate={false} canModify={false} {...handlers()} />);
     expect(screen.queryByText("Edit")).not.toBeInTheDocument();
     expect(screen.queryByText("Delete")).not.toBeInTheDocument();
-    expect(screen.queryByText("Edit Curriculum")).not.toBeInTheDocument();
+    expect(screen.queryByText("Edit curriculum")).not.toBeInTheDocument();
   });
 
-  it("turns Create into Edit once the term has a curriculum (a course has one per term)", () => {
+  it("turns Write into Edit once the term has a curriculum (a course has one per term)", () => {
     const h = handlers();
     render(<CourseCurriculumList courseName="Mathematics" curriculum={curriculum} canCreate canModify {...h} />);
-    expect(screen.queryByText("Create Curriculum")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByText("Edit Curriculum"));
+    expect(screen.queryByRole("button", { name: "Write the curriculum" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Edit curriculum" }));
     expect(h.onEdit).toHaveBeenCalledWith(curriculum);
   });
 
-  it("invites a teacher to create the first one, and only a teacher", () => {
+  it("invites a teacher to write the first one, and only a teacher", () => {
     const h = handlers();
     const { rerender } = render(<CourseCurriculumList courseName="Mathematics" curriculum={null} canCreate canModify {...h} />);
-    fireEvent.click(screen.getByText("Create First Curriculum"));
+    expect(screen.getByRole("heading", { name: "No curriculum yet" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Write the curriculum" }));
     expect(h.onCreate).toHaveBeenCalled();
 
     rerender(<CourseCurriculumList courseName="Mathematics" curriculum={null} canCreate={false} canModify={false} {...h} />);
-    expect(screen.getByText("No Curriculum Found")).toBeInTheDocument();
-    expect(screen.queryByText(/Create/)).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "No curriculum yet" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Write/ })).not.toBeInTheDocument();
+  });
+
+  it("reads the whole text with Read, and goes back to Subjects", () => {
+    const h = handlers();
+    render(<CourseCurriculumList courseName="Mathematics" curriculum={curriculum} canCreate={false} canModify={false} {...h} />);
+    expect(screen.getByRole("heading", { level: 1, name: "Mathematics curriculum" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Read the Mathematics curriculum" }));
+    expect(h.onOpen).toHaveBeenCalledWith(curriculum);
+    fireEvent.click(screen.getByRole("button", { name: "Back to Subjects" }));
+    expect(h.onBack).toHaveBeenCalled();
   });
 });

@@ -1,10 +1,8 @@
 "use client";
 
-import type { FormEvent } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { inputClass, labelClass, submitButtonClass } from "./styles";
+import { useState, type FormEvent } from "react";
+import { focusRing, primaryButton } from "@/components/tl/styles";
+import { AuthField, authInputClass, describedBy } from "../AuthField";
 
 /** Props for {@link OtpStep}. */
 export interface OtpStepProps {
@@ -18,7 +16,8 @@ export interface OtpStepProps {
 
 /**
  * Step two: enter the 6-digit code from the email. The code is checked with
- * the server before the teacher is asked for a new password.
+ * the server before the teacher is asked for a new password. Only digits are
+ * kept, at most six; a short code is also explained under the field.
  *
  * @param props - See {@link OtpStepProps}.
  * @param props.email - Where the code was sent, shown under the field.
@@ -30,41 +29,49 @@ export interface OtpStepProps {
  * @returns The form element.
  */
 export function OtpStep({ email, otp, onOtpChange, loading, onSubmit, onResend }: OtpStepProps) {
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    setError(/^\d{6}$/.test(otp) ? null : "Enter the 6-digit code from your email.");
+    onSubmit(event);
+  };
+
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
-      <div className="space-y-2">
-        <Label htmlFor="otp" className={labelClass}>
-          Enter OTP
-        </Label>
-        <Input
+    <form onSubmit={submit} noValidate aria-label="Check the code" className="flex flex-col gap-[18px]">
+      <AuthField id="otp" label="6-digit code" error={error} hint={`We sent it to ${email}. Check your spam folder if it has not arrived.`}>
+        <input
           id="otp"
+          name="otp"
           type="text"
           inputMode="numeric"
           autoComplete="one-time-code"
-          placeholder="Enter 6-digit OTP"
+          placeholder="000000"
           value={otp}
-          onChange={(e) => onOtpChange(e.target.value.replace(/\D/g, "").slice(0, 6))}
-          className={`${inputClass} text-center text-2xl tracking-widest`}
+          onChange={(e) => {
+            onOtpChange(e.target.value.replace(/\D/g, "").slice(0, 6));
+            if (error) setError(null);
+          }}
           maxLength={6}
+          aria-invalid={Boolean(error) || undefined}
+          aria-describedby={describedBy("otp", { hint: true, error: Boolean(error) })}
+          className={`${authInputClass(Boolean(error))} text-center text-2xl tracking-[0.4em]`}
           required
+          aria-required
         />
-        <p className="text-center text-sm text-gray-600">We&apos;ve sent a 6-digit verification code to {email}</p>
-      </div>
+      </AuthField>
 
-      <Button type="submit" disabled={loading} className={submitButtonClass}>
-        {loading ? "Checking code..." : "Continue"}
-      </Button>
+      <button type="submit" disabled={loading} className={`${primaryButton} w-full min-h-[50px] text-[15px]`}>
+        {loading ? "Checking code…" : "Continue"}
+      </button>
 
-      <div className="text-center">
-        <button
-          type="button"
-          onClick={onResend}
-          disabled={loading}
-          className="text-sm text-[#003366] hover:underline disabled:opacity-50"
-        >
-          Resend OTP
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={onResend}
+        disabled={loading}
+        className={`mx-auto inline-flex min-h-[44px] items-center rounded-md px-2 text-sm font-bold text-tl-link hover:underline disabled:opacity-50 ${focusRing}`}
+      >
+        Send a new code
+      </button>
     </form>
   );
 }
