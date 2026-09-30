@@ -1,10 +1,8 @@
 "use client";
 
-import type { FormEvent } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { inputClass, labelClass, submitButtonClass } from "./styles";
+import { useState, type FormEvent } from "react";
+import { primaryButton } from "@/components/tl/styles";
+import { AuthField, authInputClass, describedBy } from "../AuthField";
 
 /** Props for {@link EmailStep}. */
 export interface EmailStepProps {
@@ -15,7 +13,9 @@ export interface EmailStepProps {
 }
 
 /**
- * Step one: ask for the account's email address and send the reset code.
+ * Step one: ask for the account's email address and send the reset code. An
+ * empty address is also shown under the field (the flow itself says so in a
+ * toast and sends nothing).
  *
  * @param props - See {@link EmailStepProps}.
  * @param props.email - The address typed so far.
@@ -25,27 +25,41 @@ export interface EmailStepProps {
  * @returns The form element.
  */
 export function EmailStep({ email, onEmailChange, loading, onSubmit }: EmailStepProps) {
-  return (
-    <form onSubmit={onSubmit} className="space-y-6">
-      <div className="space-y-2">
-        <Label htmlFor="email" className={labelClass}>
-          Email Address
-        </Label>
-        <Input
-          id="email"
-          type="email"
-          autoComplete="email"
-          placeholder="Enter your email address"
-          value={email}
-          onChange={(e) => onEmailChange(e.target.value)}
-          className={inputClass}
-          required
-        />
-      </div>
+  const [error, setError] = useState<string | null>(null);
 
-      <Button type="submit" disabled={loading} className={submitButtonClass}>
-        {loading ? "Sending OTP..." : "Send OTP"}
-      </Button>
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    setError(email.trim() ? null : "Enter your email address.");
+    onSubmit(event);
+  };
+
+  return (
+    <form onSubmit={submit} noValidate aria-label="Send a reset code" className="flex flex-col gap-[18px]">
+      <AuthField id="email" label="Email address" error={error}>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          autoCapitalize="none"
+          spellCheck={false}
+          placeholder="you@school.com"
+          value={email}
+          onChange={(e) => {
+            onEmailChange(e.target.value);
+            if (error) setError(null);
+          }}
+          aria-invalid={Boolean(error) || undefined}
+          aria-describedby={describedBy("email", { error: Boolean(error) })}
+          className={authInputClass(Boolean(error))}
+          required
+          aria-required
+        />
+      </AuthField>
+
+      <button type="submit" disabled={loading} className={`${primaryButton} w-full min-h-[50px] text-[15px]`}>
+        {loading ? "Sending code…" : "Send code"}
+      </button>
     </form>
   );
 }

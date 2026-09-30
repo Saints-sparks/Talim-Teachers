@@ -1,10 +1,10 @@
 "use client";
 
-import type { FormEvent } from "react";
-import { Button } from "@/components/ui/button";
+import { useState, type FormEvent } from "react";
 import PasswordRequirements from "@/components/auth/PasswordRequirements";
+import { primaryButton } from "@/components/tl/styles";
+import { isPasswordValid } from "@/app/lib/passwordPolicy";
 import { PasswordField } from "./PasswordField";
-import { submitButtonClass } from "./styles";
 
 /** Props for {@link NewPasswordStep}. */
 export interface NewPasswordStepProps {
@@ -18,7 +18,10 @@ export interface NewPasswordStepProps {
 
 /**
  * Step three: choose a new password. The checklist mirrors the server's
- * password policy, so a password that passes here is accepted there.
+ * password policy, so a password that passes here is accepted there. A
+ * confirmation that differs is flagged as it is typed; a password that misses
+ * a rule is flagged under the field when the form is sent (the flow also
+ * says so in a toast and sends nothing).
  *
  * @param props - See {@link NewPasswordStepProps}.
  * @param props.newPassword - The new password typed so far.
@@ -37,29 +40,41 @@ export function NewPasswordStep({
   loading,
   onSubmit,
 }: NewPasswordStepProps) {
+  const [weak, setWeak] = useState(false);
+  const mismatch = confirmPassword.length > 0 && confirmPassword !== newPassword;
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    setWeak(!isPasswordValid(newPassword));
+    onSubmit(event);
+  };
+
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
+    <form onSubmit={submit} noValidate aria-label="Choose a new password" className="flex flex-col gap-[18px]">
       <PasswordField
         id="newPassword"
-        label="New Password"
-        placeholder="Enter new password"
+        label="New password"
         value={newPassword}
-        onChange={onNewPasswordChange}
+        onChange={(value) => {
+          onNewPasswordChange(value);
+          if (weak && isPasswordValid(value)) setWeak(false);
+        }}
+        error={weak ? "Your new password doesn't meet every rule yet." : null}
+        describedByIds={["newPassword-rules"]}
       >
-        <PasswordRequirements password={newPassword} />
+        <PasswordRequirements password={newPassword} id="newPassword-rules" />
       </PasswordField>
 
       <PasswordField
         id="confirmPassword"
-        label="Confirm New Password"
-        placeholder="Confirm new password"
+        label="Confirm new password"
         value={confirmPassword}
         onChange={onConfirmPasswordChange}
+        error={mismatch ? "Passwords do not match" : null}
       />
 
-      <Button type="submit" disabled={loading} className={submitButtonClass}>
-        {loading ? "Resetting Password..." : "Reset Password"}
-      </Button>
+      <button type="submit" disabled={loading} className={`${primaryButton} w-full min-h-[50px] text-[15px]`}>
+        {loading ? "Resetting password…" : "Reset password"}
+      </button>
     </form>
   );
 }
