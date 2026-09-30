@@ -6,7 +6,7 @@ import { toast } from "@/components/CustomToast";
 import { apiClient } from "@/lib/apiClient";
 import { ApiError, getErrorMessage } from "@/lib/apiError";
 import { logger } from "@/lib/logger";
-import { SIGN_IN_ROUTE } from "@/lib/routes";
+import { SIGN_IN_ROUTE, isSignedOutRoute } from "@/lib/routes";
 import {
   ACCESS_TOKEN_KEY,
   KEEP_SIGNED_IN_KEY,
@@ -159,7 +159,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       persistAccessToken(null);
       persistUser(null);
       sessionStore.clear();
-      if (redirectToSignIn && typeof window !== "undefined" && window.location.pathname !== SIGN_IN_ROUTE) {
+      // Not from a page for signed-out visitors: opening /forgot-password from a link has no session to restore.
+      if (redirectToSignIn && typeof window !== "undefined" && !isSignedOutRoute(window.location.pathname)) {
         // Give the local unsubscribe a moment before the page unloads.
         const redirect = () => window.location.assign(SIGN_IN_ROUTE);
         if (pushCleanup) {
