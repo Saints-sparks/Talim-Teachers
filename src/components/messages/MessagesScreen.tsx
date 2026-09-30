@@ -9,6 +9,7 @@ import { useChatRoom } from "@/app/hooks/useChatRoom";
 import type { RealtimeChatRoom } from "@/app/hooks/useRealtimeChat";
 import type { ReplyDraft } from "@/components/chat-kit";
 import { cardFrame, chip, fieldControl, focusRing, ghostButton, pagePad, pageTitle, primaryButton } from "@/components/tl/styles";
+import { cn } from "@/app/lib/utils";
 import { THREAD_FILTERS, filterThreads, threadCounts, type ThreadFilter } from "@/hooks/messages/messages.logic";
 import ChatThread from "./ChatThread";
 import { NewClassGroupSheet } from "./NewClassGroupSheet";
@@ -88,7 +89,9 @@ export function MessagesScreen({ now }: MessagesScreenProps) {
   })();
 
   return (
-    <div className={`${pagePad} flex flex-col gap-[18px]`}>
+    // The page guide's button floats over the bottom right corner: the conversation ends above it
+    // (a shorter card on wide screens, more room below it on phones), so it never covers Send.
+    <div className={cn(pagePad, "flex flex-col gap-[18px] pb-28 lg:pb-16")}>
       <div className="flex flex-wrap items-end justify-between gap-3.5">
         <div>
           <h1 className={pageTitle}>Messages</h1>
@@ -122,7 +125,7 @@ export function MessagesScreen({ now }: MessagesScreenProps) {
         </div>
       </div>
 
-      <div className="flex h-[max(460px,calc(100dvh-240px))] items-stretch gap-[18px] lg:h-[max(560px,calc(100dvh-270px))]">
+      <div className="flex h-[max(460px,calc(100dvh-240px))] items-stretch gap-[18px] lg:h-[max(560px,calc(100dvh-340px))]">
         <div
           className={`${cardFrame} flex-col p-2 lg:flex lg:w-[340px] lg:shrink-0 ${roomId ? "hidden" : "flex w-full"} min-h-0`}
           data-guide="messages-list"
