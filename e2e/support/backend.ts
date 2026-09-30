@@ -5,7 +5,10 @@ import path from "node:path";
  * The backend checkout that holds e2e/seed.js. Defaults to the throwaway
  * worktree next to the app checkouts; override with E2E_BACKEND_DIR.
  */
-const BACKEND_DIR = process.env.E2E_BACKEND_DIR ?? path.resolve(__dirname, "../../../talimBE-V2-e2e");
+export const BACKEND_DIR = process.env.E2E_BACKEND_DIR ?? path.resolve(__dirname, "../../../talimBE-V2-e2e");
+
+/** Where the backend's mail sink keeps every email it accepts (`e2e/mail-sink.js`). */
+export const MAIL_DIR = path.join(BACKEND_DIR, "e2e/.mail");
 
 /**
  * Runs the seed script's `--rearm` (temporary-password teacher back on its

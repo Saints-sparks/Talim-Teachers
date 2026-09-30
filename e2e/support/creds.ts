@@ -20,6 +20,8 @@ export const ACCOUNTS = {
   teacher: { email: "teacher@e2e.talim.test", password: PASSWORD, name: "Tolu Teacher" },
   /** Teaches English 6B only: no access to Grade 5A (the same-school "no access" checks). */
   secondTeacher: { email: "second.teacher@e2e.talim.test", password: PASSWORD, name: "Sola Second" },
+  /** Teaches Basic Science 5A only. 10-inbox-settings signs it in fresh for the settings it changes (and puts back). */
+  thirdTeacher: { email: "third.teacher@e2e.talim.test", password: PASSWORD, name: "Tade Third" },
   /** On a temporary password: `seed.js --rearm` puts it back after a test changes it. */
   tempTeacher: { email: "temp.teacher@e2e.talim.test", password: "Temp#Pass2026x", name: "Temi Temporary" },
   student: { email: "ada.student@e2e.talim.test", password: PASSWORD, name: "Ada Student" },
