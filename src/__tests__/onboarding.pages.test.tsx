@@ -78,9 +78,10 @@ beforeEach(() => {
 describe("Confirm your profile", () => {
   it("shows what the office holds, with Not set for gaps, and confirming opens the checklist", async () => {
     render(<ProfileStep />);
-    expect(await screen.findByRole("heading", { level: 1, name: "Confirm your profile" })).toBeInTheDocument();
+    // The loading frame has the same heading: wait for the record itself.
+    const employment = await screen.findByRole("region", { name: "Employment" });
+    expect(screen.getByRole("heading", { level: 1, name: "Confirm your profile" })).toBeInTheDocument();
     expect(screen.getByText("Step 1 of 2")).toBeInTheDocument();
-    const employment = screen.getByRole("region", { name: "Employment" });
     expect(within(employment).getByText("Full time")).toBeInTheDocument();
     expect(within(employment).getByText("Not set")).toBeInTheDocument(); // no specialisation on record
     expect(within(screen.getByRole("region", { name: "Qualifications" })).getByText("1 year")).toBeInTheDocument();
