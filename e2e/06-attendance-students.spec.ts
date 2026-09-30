@@ -17,6 +17,11 @@ import { dismissGuide } from "./support/ui";
  */
 const ALLOW: readonly Allowed[] = [
   { kind: "external", match: /fonts\.googleapis\.com|fonts\.gstatic\.com/, reason: "Google Fonts; blocked by the harness" },
+  {
+    kind: "external",
+    match: /^https:\/\/res\.cloudinary\.com\/e2e-dummy-cloud\//,
+    reason: "images 10-inbox-settings sends in the class group (made-up Cloudinary addresses); blocked by the harness",
+  },
 ];
 const THEME_KEY = "talim_teacher_theme";
 

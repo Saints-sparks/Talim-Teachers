@@ -301,7 +301,11 @@ test("class report: the broadsheet is a preview while subjects are waiting", asy
   // The broadsheet opens on the first assessment; only Mathematics has published it.
   const sheet = page.getByRole("region", { name: "Grade 5A · First Term CA 1 broadsheet" });
   await expect(sheet.getByRole("columnheader")).toContainText(["Student", "BSC-5A", "ENG-5A", "MTH-5A", "Total", "Average", "Pos.", "Grade"]);
-  await expect(sheet.getByRole("row").filter({ hasText: "Ada Student" })).toContainText("16.4");
+  // Ada's published Mathematics CA 1, as the API holds it (17 in a fresh database, 16.4 in one seeded before Round 3).
+  const maths = await apiCall<Sheet>(token, "GET", `/grading/course/${mth.course.id}`);
+  const ca1 = maths.assessments.find((a) => a.name === "First Term CA 1")!;
+  const adaCa1 = maths.students.find((st) => st.name === "Ada Student")!.scores[ca1.id];
+  await expect(sheet.getByRole("row").filter({ hasText: "Ada Student" })).toContainText(String(adaCa1));
   await expect(sheet.getByRole("button", { name: "Generate First Term CA 1 summary" })).toBeDisabled();
   await expect(sheet.getByRole("row").filter({ hasText: "Ada Student" })).toBeVisible();
 });
