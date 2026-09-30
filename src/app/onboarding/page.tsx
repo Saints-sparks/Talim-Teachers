@@ -2,18 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  ArrowRight,
-  BookOpenText,
-  BriefcaseBusiness,
-  CheckCircle2,
-  Clock,
-  Loader2,
-  Lock,
-  Medal,
-  Upload,
-  UserRound,
-} from "lucide-react";
+import { Loader2, Lock, Upload } from "lucide-react";
+import { OnboardingFrame } from "@/components/onboarding/OnboardingFrame";
+import { Avatar } from "@/components/tl/Avatar";
+import { card, cardTitle, ghostButton, pill, pillTone, primaryButton } from "@/components/tl/styles";
 import { useAppContext } from "@/app/context/AppContext";
 import { useAuth } from "@/app/hooks/useAuth";
 import { fetchTeacherDetails } from "@/app/services/api.service";
@@ -36,6 +28,16 @@ interface TeacherRecord {
   classTeacherCourses?: Array<{ _id?: string; title?: string; courseCode?: string }>;
 }
 
+/**
+ * `/onboarding`, the first step of first-run setup, in the redesign: the
+ * teacher checks the profile the school office holds (name, contact,
+ * employment, qualifications, availability, classes and subjects), adds a
+ * photo, and confirms. Confirming completes phase 1 in the onboarding store
+ * and opens the setup checklist; a teacher who has confirmed before goes
+ * straight there.
+ *
+ * @returns The page.
+ */
 export default function TeacherOnboardingPhase1() {
   const router = useRouter();
   const { user, updateUser } = useAppContext();
@@ -134,178 +136,148 @@ export default function TeacherOnboardingPhase1() {
 
   if (!isHydrated || loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[#003366]" />
-      </div>
+      <OnboardingFrame stepText="Step 1 of 2" title="Confirm your profile" description="Loading what the school office has on record…">
+        <div className="flex flex-col gap-[18px]" role="status" aria-label="Loading your profile">
+          <div className="h-[118px] animate-pulse rounded-[22px] bg-tl-line/70" />
+          <div className="grid gap-[18px] md:grid-cols-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-[170px] animate-pulse rounded-[22px] bg-tl-line/70" />
+            ))}
+          </div>
+        </div>
+      </OnboardingFrame>
     );
   }
 
+  const classNames = teacherInfo.classes.map((c) => c.name).filter((n): n is string => Boolean(n));
+  const courseNames = teacherInfo.courses.map((c) => c.title || c.courseCode).filter((n): n is string => Boolean(n));
+
   return (
-    <div className="min-h-screen grid lg:grid-cols-2 bg-white">
-      <div className="hidden lg:flex flex-col items-center justify-center bg-[#003366] p-12">
-        <div className="text-center max-w-sm">
-          <div className="mx-auto h-16 w-16 rounded-2xl bg-white/15 flex items-center justify-center mb-6">
-            <UserRound className="h-9 w-9 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold text-white">Teacher Setup</h1>
-          <p className="mt-3 text-sm text-white/70 leading-relaxed">
-            Confirm your profile and teaching information. School-controlled
-            details remain read-only and can be changed by your admin.
-          </p>
+    <OnboardingFrame
+      stepText="Step 1 of 2"
+      title="Confirm your profile"
+      description="Check what the school office has on record for you. Add a photo so students and parents recognise you; ask the office to change anything else."
+    >
+      <section className={`${card} flex flex-wrap items-center gap-4`} aria-label="Your photo">
+        <div className="relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-full">
+          {avatarPreview ? (
+            <img src={avatarPreview} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <Avatar id={String(userId ?? teacherInfo.name)} name={teacherInfo.name} size={72} />
+          )}
+          {uploading ? (
+            <div className="absolute inset-0 flex items-center justify-center bg-[rgba(15,27,46,0.45)]">
+              <Loader2 className="h-5 w-5 animate-spin text-white" aria-hidden />
+            </div>
+          ) : null}
         </div>
+        <div className="min-w-[200px] flex-1">
+          <h2 className="text-xl font-extrabold tracking-[-0.3px] text-tl-ink">{teacherInfo.name}</h2>
+          <p className="mt-0.5 text-sm text-tl-muted">{teacherInfo.email}</p>
+        </div>
+        <div>
+          <input id="onboarding-photo" type="file" className="peer sr-only" accept="image/*" onChange={handleAvatarChange} disabled={uploading} />
+          <label
+            htmlFor="onboarding-photo"
+            className={`${ghostButton} cursor-pointer peer-focus-visible:ring-2 peer-focus-visible:ring-tl-link peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-tl-surface ${uploading ? "pointer-events-none opacity-50" : ""}`}
+          >
+            <Upload className="h-4 w-4" aria-hidden />
+            {uploading ? "Saving photo…" : avatarPreview ? "Change photo" : "Add a photo"}
+          </label>
+        </div>
+        {uploadError ? (
+          <p role="alert" className="basis-full text-sm font-bold text-tl-danger">
+            {uploadError}
+          </p>
+        ) : null}
+      </section>
+
+      <div className="grid gap-[18px] md:grid-cols-2">
+        <InfoPanel
+          title="Personal details"
+          items={[
+            ["Full name", teacherInfo.name],
+            ["Email", teacherInfo.email],
+            ["Phone", teacherInfo.phone],
+          ]}
+        />
+        <InfoPanel
+          title="Employment"
+          items={[
+            ["Role", teacherInfo.role],
+            ["Type", teacherInfo.employmentType],
+            ["Specialisation", teacherInfo.specialization],
+          ]}
+        />
+        <InfoPanel
+          title="Qualifications"
+          items={[
+            ["Highest qualification", teacherInfo.qualification],
+            ["Experience", teacherInfo.experience],
+          ]}
+        />
+        <InfoPanel title="Availability" items={[["Available days", teacherInfo.availability]]} />
       </div>
 
-      <main className="flex items-center justify-center px-6 py-10">
-        <div className="w-full max-w-2xl">
-          <div className="mb-8">
-            <p className="text-sm font-semibold text-[#003366]">Phase 1</p>
-            <h2 className="mt-1 text-2xl font-bold text-[#030E18]">
-              Confirm your profile
-            </h2>
-            <p className="mt-2 text-sm text-[#6F6F6F]">
-              Review your details before continuing to your teacher setup
-              checklist.
-            </p>
-          </div>
+      <section className={card} aria-labelledby="onboarding-classes">
+        <h2 id="onboarding-classes" className={cardTitle}>
+          Classes and subjects
+        </h2>
+        <p className="mt-1 text-[13px] text-tl-muted">
+          {teacherInfo.classes.length} {teacherInfo.classes.length === 1 ? "class" : "classes"} and {teacherInfo.courses.length}{" "}
+          {teacherInfo.courses.length === 1 ? "subject" : "subjects"} assigned to you.
+        </p>
+        {classNames.length || courseNames.length ? (
+          <ul className="mt-3 flex flex-wrap gap-2" aria-label="Assigned classes and subjects">
+            {classNames.map((name) => (
+              <li key={`c-${name}`} className={`${pill} ${pillTone.info}`}>
+                {name}
+              </li>
+            ))}
+            {courseNames.map((name) => (
+              <li key={`k-${name}`} className={`${pill} ${pillTone.muted}`}>
+                {name}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </section>
 
-          <section className="rounded-2xl border border-[#F0F0F0] bg-white p-5">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-              <div className="relative h-20 w-20 overflow-hidden rounded-full bg-[#EAF2FB] flex items-center justify-center">
-                {avatarPreview ? (
-                  <img
-                    src={avatarPreview}
-                    alt={teacherInfo.name}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <UserRound className="h-9 w-9 text-[#003366]" />
-                )}
-                {uploading && (
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                    <Loader2 className="h-5 w-5 animate-spin text-white" />
-                  </div>
-                )}
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-[#030E18]">
-                  {teacherInfo.name}
-                </h3>
-                <p className="text-sm text-[#6F6F6F]">{teacherInfo.email}</p>
-                <label className="mt-3 inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-[#003366]">
-                  <Upload className="h-4 w-4" />
-                  {avatarPreview ? "Change photo" : "Upload photo"}
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept="image/*"
-                    onChange={handleAvatarChange}
-                    disabled={uploading}
-                  />
-                </label>
-                {uploadError && (
-                  <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">
-                    {uploadError}
-                  </p>
-                )}
-              </div>
-            </div>
-          </section>
+      <p className="flex items-start gap-2.5 rounded-[18px] bg-tl-select px-[18px] py-3.5 text-sm leading-[1.55] text-tl-ink">
+        <Lock className="mt-0.5 h-4 w-4 shrink-0 text-tl-brand" aria-hidden />
+        To change your employment, classes, subjects or contact details, ask the school office.
+      </p>
 
-          <div className="mt-5 grid gap-4 md:grid-cols-2">
-            <InfoPanel
-              icon={<UserRound className="h-5 w-5" />}
-              title="Personal details"
-              items={[
-                ["Full name", teacherInfo.name],
-                ["Email", teacherInfo.email],
-                ["Phone", teacherInfo.phone],
-              ]}
-            />
-            <InfoPanel
-              icon={<BriefcaseBusiness className="h-5 w-5" />}
-              title="Employment"
-              items={[
-                ["Role", teacherInfo.role],
-                ["Type", teacherInfo.employmentType],
-                ["Specialization", teacherInfo.specialization],
-              ]}
-            />
-            <InfoPanel
-              icon={<Medal className="h-5 w-5" />}
-              title="Qualifications"
-              items={[
-                ["Highest qualification", teacherInfo.qualification],
-                ["Experience", teacherInfo.experience],
-              ]}
-            />
-            <InfoPanel
-              icon={<Clock className="h-5 w-5" />}
-              title="Availability"
-              items={[["Available days", teacherInfo.availability]]}
-            />
-          </div>
-
-          <section className="mt-5 rounded-2xl border border-[#F0F0F0] bg-[#FBFBFB] p-5">
-            <div className="flex items-start gap-3">
-              <BookOpenText className="mt-0.5 h-5 w-5 text-[#003366]" />
-              <div>
-                <h3 className="text-sm font-semibold text-[#030E18]">
-                  Classes and courses
-                </h3>
-                <p className="mt-1 text-sm text-[#6F6F6F]">
-                  {teacherInfo.classes.length} class
-                  {teacherInfo.classes.length === 1 ? "" : "es"} assigned,{" "}
-                  {teacherInfo.courses.length} course
-                  {teacherInfo.courses.length === 1 ? "" : "s"} assigned.
-                </p>
-              </div>
-            </div>
-          </section>
-
-          <div className="mt-5 flex items-center gap-2 rounded-xl bg-blue-50 px-4 py-3">
-            <Lock className="h-4 w-4 shrink-0 text-blue-600" />
-            <p className="text-xs text-blue-700">
-              Contact your school admin to change employment, class, course, or
-              contact information.
-            </p>
-          </div>
-
-          <button
-            onClick={handleContinue}
-            className="mt-8 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#003366] text-sm font-semibold text-white hover:bg-[#002244]"
-          >
-            <CheckCircle2 className="h-4 w-4" />
-            Confirm & Continue <ArrowRight className="h-4 w-4" />
-          </button>
-        </div>
-      </main>
-    </div>
+      <div>
+        <button type="button" onClick={handleContinue} className={`${primaryButton} w-full sm:w-auto`}>
+          Confirm and continue
+        </button>
+      </div>
+    </OnboardingFrame>
   );
 }
 
-function InfoPanel({
-  icon,
-  title,
-  items,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  items: Array<[string, string]>;
-}) {
+/**
+ * One panel of the profile: a heading over label and value rows (the
+ * design's class-card rows). An empty value reads "Not set".
+ *
+ * @param props - The panel.
+ * @param props.title - The heading.
+ * @param props.items - Label and value pairs.
+ * @returns The panel.
+ */
+function InfoPanel({ title, items }: { title: string; items: Array<[string, string]> }) {
   return (
-    <section className="rounded-2xl border border-[#F0F0F0] bg-white p-5">
-      <div className="flex items-center gap-2 text-[#003366]">
-        {icon}
-        <h3 className="text-sm font-semibold text-[#030E18]">{title}</h3>
-      </div>
-      <div className="mt-4 space-y-3">
+    <section className={card} aria-label={title}>
+      <h2 className={cardTitle}>{title}</h2>
+      <dl className="mt-2 flex flex-col">
         {items.map(([label, value]) => (
-          <div key={label}>
-            <p className="text-xs text-[#878787]">{label}</p>
-            <p className="text-sm font-medium text-[#030E18]">{value || "Not set"}</p>
+          <div key={label} className="flex justify-between gap-3 border-t border-tl-line-soft py-2.5 text-sm first:border-t-0">
+            <dt className="text-tl-muted">{label}</dt>
+            <dd className={`text-right font-extrabold ${value && value !== "Not set" ? "text-tl-ink" : "text-tl-faint"}`}>{value || "Not set"}</dd>
           </div>
         ))}
-      </div>
+      </dl>
     </section>
   );
 }

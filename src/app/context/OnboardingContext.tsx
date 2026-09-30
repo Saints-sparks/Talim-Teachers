@@ -31,8 +31,8 @@ export interface TeacherOnboardingStep {
 export const TEACHER_ONBOARDING_STEPS: TeacherOnboardingStep[] = [
   {
     id: "teacher-profile",
-    label: "Confirm Profile",
-    description: "Review your personal details and teacher information.",
+    label: "Confirm your profile",
+    description: "Check the details the school office has on record, and add a photo.",
     required: true,
     phase: 1,
     deps: [],
@@ -40,8 +40,8 @@ export const TEACHER_ONBOARDING_STEPS: TeacherOnboardingStep[] = [
   },
   {
     id: "upload-resource",
-    label: "Upload First Resource",
-    description: "Share your first learning material with a class or course.",
+    label: "Upload a resource",
+    description: "Share a worksheet, slides or a video with one of your classes in Subjects.",
     required: true,
     phase: 2,
     deps: [],
@@ -49,8 +49,8 @@ export const TEACHER_ONBOARDING_STEPS: TeacherOnboardingStep[] = [
   },
   {
     id: "mark-attendance",
-    label: "Enter First Attendance",
-    description: "Record attendance for one of your assigned classes.",
+    label: "Mark a register",
+    description: "Take the morning register for one of your classes in Attendance.",
     required: true,
     phase: 2,
     deps: [],
@@ -58,8 +58,8 @@ export const TEACHER_ONBOARDING_STEPS: TeacherOnboardingStep[] = [
   },
   {
     id: "view-notifications",
-    label: "View Notifications",
-    description: "Open school announcements and updates.",
+    label: "Read your notifications",
+    description: "Open the school's announcements and your deadlines.",
     required: true,
     phase: 2,
     deps: [],
@@ -67,8 +67,8 @@ export const TEACHER_ONBOARDING_STEPS: TeacherOnboardingStep[] = [
   },
   {
     id: "create-curriculum",
-    label: "Create First Curriculum",
-    description: "Create curriculum content for an assigned course.",
+    label: "Write a curriculum",
+    description: "Write the curriculum students read for one of your subjects.",
     required: true,
     phase: 2,
     deps: [],
@@ -76,8 +76,8 @@ export const TEACHER_ONBOARDING_STEPS: TeacherOnboardingStep[] = [
   },
   {
     id: "create-group-chat",
-    label: "Create First Group Chat",
-    description: "Start a class or course group chat.",
+    label: "Start a group chat",
+    description: "Start a group chat for a class or a subject in Messages.",
     required: true,
     phase: 2,
     deps: [],

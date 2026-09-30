@@ -1,48 +1,29 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  Bell,
-  BookOpenText,
-  CheckCircle2,
-  Circle,
-  LayoutDashboard,
-  Loader2,
-  Lock,
-  MessageSquare,
-  Upload,
-  Users,
-} from "lucide-react";
-import Image from "next/image";
-import {
-  TEACHER_ONBOARDING_STEPS,
-  TeacherOnboardingStepId,
-  useTeacherOnboarding,
-} from "@/app/context/OnboardingContext";
+import { TEACHER_ONBOARDING_STEPS, useTeacherOnboarding } from "@/app/context/OnboardingContext";
 import { useOnboardingSync } from "@/app/hooks/useOnboardingSync";
+import { OnboardingFrame } from "@/components/onboarding/OnboardingFrame";
+import { card, cardTitle, pill, pillTone, primaryButton, rowButton } from "@/components/tl/styles";
 
-const STEP_ICONS: Record<TeacherOnboardingStepId, React.ReactNode> = {
-  "teacher-profile": <Users className="h-5 w-5" />,
-  "upload-resource": <Upload className="h-5 w-5" />,
-  "mark-attendance": <CheckCircle2 className="h-5 w-5" />,
-  "view-notifications": <Bell className="h-5 w-5" />,
-  "create-curriculum": <BookOpenText className="h-5 w-5" />,
-  "create-group-chat": <MessageSquare className="h-5 w-5" />,
-};
-
+/**
+ * `/onboarding/setup`, the second step of first-run setup, in the redesign
+ * and in the shape of Today's "Finish setting up" card: how many steps are
+ * done, the same navy progress bar, then each step with what it is and
+ * Start (which opens where it is done), Done, or Locked while a step it
+ * depends on is open. What the teacher has already done is checked with the
+ * server when the page opens (`useOnboardingSync`); the steps and their
+ * storage are the onboarding context's, unchanged. A teacher who has not
+ * confirmed their profile is sent back to it.
+ *
+ * @returns The page.
+ */
 export default function TeacherOnboardingSetup() {
   const router = useRouter();
-  const {
-    isHydrated,
-    phase1Completed,
-    isStepComplete,
-    isStepLocked,
-    progressPercent,
-    completedCount,
-    totalCount,
-    isFullyComplete,
-  } = useTeacherOnboarding();
+  const { isHydrated, phase1Completed, isStepComplete, isStepLocked, progressPercent, completedCount, totalCount, isFullyComplete } =
+    useTeacherOnboarding();
   const { syncProgress } = useOnboardingSync();
   const [syncing, setSyncing] = useState(false);
 
@@ -60,167 +41,95 @@ export default function TeacherOnboardingSetup() {
 
   if (!isHydrated || !phase1Completed) {
     return (
-      <div className="min-h-screen bg-[#F8F8F8] flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[#003366]" />
-      </div>
+      <OnboardingFrame stepText="Step 2 of 2" title="Finish setting up" description="Loading your checklist…">
+        <div className="h-[420px] animate-pulse rounded-[22px] bg-tl-line/70" role="status" aria-label="Loading your checklist" />
+      </OnboardingFrame>
     );
   }
 
-  const phase2Steps = TEACHER_ONBOARDING_STEPS.filter((s) => s.phase === 2);
+  const pct = Math.max(0, Math.min(100, Math.round(progressPercent)));
 
   return (
-    <div className="min-h-screen bg-[#F8F8F8]">
-      <header className="sticky top-0 z-10 border-b border-[#F0F0F0] bg-white px-6 py-4">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Image
-              src="/icons/talim.png"
-              alt="Talim"
-              width={40}
-              height={40}
-              className="h-10 w-10 object-contain"
-            />
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-[#003366]">
-                Teacher Setup
-              </p>
-              <h1 className="text-xl font-bold text-[#030E18]">
-                Complete your onboarding
-              </h1>
-            </div>
+    <OnboardingFrame
+      stepText="Step 2 of 2"
+      title="Finish setting up"
+      description={`${completedCount} of ${totalCount} done. Each step takes a minute or two, and each one opens where you do it.`}
+      showToday
+      aside={<div className="text-[32px] font-extrabold tracking-[-0.5px] text-tl-brand">{pct}%</div>}
+    >
+      {isFullyComplete ? (
+        <section className="flex flex-wrap items-center gap-3.5 rounded-[18px] bg-tl-success-bg px-[18px] py-3.5 text-tl-ink" aria-labelledby="setup-done-title">
+          <div className="min-w-[220px] flex-1">
+            <h2 id="setup-done-title" className="text-[15px] font-extrabold text-tl-success">
+              You&apos;re all set
+            </h2>
+            <p className="mt-0.5 text-sm text-tl-body">Every step is done. Today is where your day starts from now on.</p>
           </div>
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="inline-flex items-center gap-2 rounded-lg border border-[#F0F0F0] bg-white px-3 py-2 text-sm font-semibold text-[#030E18] hover:bg-[#F7F7F7]"
-          >
-            <LayoutDashboard className="h-4 w-4" />
-            Dashboard
-          </button>
-        </div>
-      </header>
+          <Link href="/dashboard" className={primaryButton}>
+            Go to Today
+          </Link>
+        </section>
+      ) : null}
 
-      <main className="mx-auto grid max-w-6xl gap-6 p-6 lg:grid-cols-[280px_1fr]">
-        <aside className="rounded-2xl border border-[#F0F0F0] bg-white p-4 h-fit">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-[#030E18]">
-              {completedCount} / {totalCount}
+      <section className={card} aria-labelledby="setup-steps-title">
+        <div className="flex items-baseline justify-between gap-2.5">
+          <h2 id="setup-steps-title" className={cardTitle}>
+            Your first steps
+          </h2>
+          {syncing ? (
+            <p role="status" className="text-[13px] font-bold text-tl-faint">
+              Checking what you have already done…
             </p>
-            <p className="text-sm font-bold text-[#003366]">{progressPercent}%</p>
-          </div>
-          <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#F0F0F0]">
-            <div
-              className="h-full rounded-full bg-[#003366] transition-all"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
+          ) : null}
+        </div>
+        <div
+          role="progressbar"
+          aria-label="Setup progress"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={pct}
+          className="mt-3.5 h-2 overflow-hidden rounded bg-tl-line-soft"
+        >
+          <div className="h-full rounded bg-tl-brand-fill transition-[width]" style={{ width: `${pct}%` }} />
+        </div>
 
-          <div className="mt-5 space-y-2">
-            {phase2Steps.map((step) => {
-              const complete = isStepComplete(step.id);
-              const locked = isStepLocked(step.id);
-              return (
-                <button
-                  key={step.id}
-                  disabled={locked}
-                  onClick={() => router.push(step.href)}
-                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm ${
-                    complete
-                      ? "bg-green-50 text-green-700"
-                      : locked
-                      ? "text-[#A0A0A0]"
-                      : "text-[#4B5563] hover:bg-[#F8F8F8]"
+        <ul className="mt-3" aria-label="Setup steps">
+          {TEACHER_ONBOARDING_STEPS.map((step) => {
+            const complete = isStepComplete(step.id);
+            const locked = !complete && isStepLocked(step.id);
+            return (
+              <li key={step.id} className="flex flex-wrap items-center gap-3.5 border-t border-tl-line-soft py-3.5 first:border-t-0">
+                <span
+                  aria-hidden
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-extrabold ${
+                    complete ? "bg-tl-success-bg text-tl-success" : "border border-tl-control text-tl-brand"
                   }`}
                 >
-                  {complete ? (
-                    <CheckCircle2 className="h-4 w-4" />
-                  ) : locked ? (
-                    <Lock className="h-4 w-4" />
-                  ) : (
-                    <Circle className="h-4 w-4" />
-                  )}
-                  <span>{step.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </aside>
-
-        <section className="space-y-4">
-          {isFullyComplete && (
-            <div className="rounded-2xl border border-green-100 bg-green-50 p-5">
-              <div className="flex items-start gap-3">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 text-green-600" />
-                <div>
-                  <h2 className="text-sm font-semibold text-[#030E18]">
-                    All required setup steps are complete
-                  </h2>
-                  <p className="mt-1 text-sm text-[#6F6F6F]">
-                    You can continue using the dashboard. This checklist will
-                    stay available until you dismiss it there.
-                  </p>
+                  {complete ? "✓" : "○"}
+                </span>
+                <div className="min-w-[200px] flex-1">
+                  <h3 className="text-[15px] font-bold text-tl-ink">
+                    {step.label}
+                    {complete ? <span className="sr-only"> (done)</span> : null}
+                  </h3>
+                  <p className="mt-[3px] text-[13px] leading-normal text-tl-muted">{step.description}</p>
                 </div>
-              </div>
-            </div>
-          )}
-
-          {syncing && (
-            <div className="flex items-center gap-2 text-sm text-[#6F6F6F]">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Checking your setup progress...
-            </div>
-          )}
-
-          <div className="grid gap-4 md:grid-cols-2">
-            {phase2Steps.map((step) => {
-              const complete = isStepComplete(step.id);
-              const locked = isStepLocked(step.id);
-              return (
-                <article
-                  key={step.id}
-                  className="rounded-2xl border border-[#F0F0F0] bg-white p-5"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex gap-3">
-                      <div
-                        className={`flex h-10 w-10 items-center justify-center rounded-xl ${
-                          complete
-                            ? "bg-green-50 text-green-600"
-                            : "bg-[#EAF2FB] text-[#003366]"
-                        }`}
-                      >
-                        {STEP_ICONS[step.id]}
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-semibold text-[#030E18]">
-                          {step.label}
-                        </h3>
-                        <p className="mt-1 text-sm text-[#6F6F6F]">
-                          {step.description}
-                        </p>
-                      </div>
-                    </div>
-                    {complete && <CheckCircle2 className="h-5 w-5 text-green-600" />}
-                  </div>
-
-                  <button
-                    disabled={locked || complete}
-                    onClick={() => router.push(step.href)}
-                    className={`mt-5 rounded-lg px-4 py-2 text-sm font-semibold ${
-                      complete
-                        ? "bg-green-50 text-green-700"
-                        : locked
-                        ? "bg-[#F0F0F0] text-[#A0A0A0]"
-                        : "bg-[#003366] text-white hover:bg-[#002244]"
-                    }`}
-                  >
-                    {complete ? "Completed" : "Open"}
-                  </button>
-                </article>
-              );
-            })}
-          </div>
-        </section>
-      </main>
-    </div>
+                {complete ? (
+                  <span className={`${pill} ${pillTone.success}`}>Done</span>
+                ) : locked ? (
+                  <span className={`${pill} ${pillTone.muted}`} title="Finish the step before it first">
+                    Locked
+                  </span>
+                ) : (
+                  <Link href={step.href} className={rowButton} aria-label={`Start: ${step.label}`}>
+                    Start
+                  </Link>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+    </OnboardingFrame>
   );
 }
