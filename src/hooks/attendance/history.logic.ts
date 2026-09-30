@@ -89,14 +89,21 @@ export function presetRange(preset: HistoryPreset, today: string, termStart?: st
 }
 
 /**
- * Which quick period a range is, if any.
+ * Which quick period a range is, if any. Two presets can be the same range
+ * (a term that starts on the 1st is also "This month"): `prefer`, the one the
+ * teacher picked or the page's default, wins then.
  *
  * @param range - The range on screen.
  * @param today - Today at the school.
  * @param termStart - The current term's first day, if known.
+ * @param prefer - The preset to answer when its range is this one.
  * @returns The preset, or "custom".
  */
-export function matchPreset(range: DateRange, today: string, termStart?: string | null): HistoryPreset {
+export function matchPreset(range: DateRange, today: string, termStart?: string | null, prefer?: HistoryPreset | null): HistoryPreset {
+  if (prefer && prefer !== "custom") {
+    const r = presetRange(prefer, today, termStart);
+    if (r && r.from === range.from && r.to === range.to) return prefer;
+  }
   for (const { key } of HISTORY_PRESETS) {
     const r = presetRange(key, today, termStart);
     if (r && r.from === range.from && r.to === range.to) return key;

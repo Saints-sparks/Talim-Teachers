@@ -25,6 +25,7 @@ import {
   sortRows,
   type DateRange,
   type HistoryParams,
+  type HistoryPreset,
   type HistoryRow,
   type HistorySort,
 } from "@/hooks/attendance/history.logic";
@@ -156,6 +157,8 @@ export function AttendanceHistoryScreen({ initial }: AttendanceHistoryScreenProp
   const lookup = useStudentAttendanceKpis(!initial.classId && initial.studentId ? initial.studentId : null);
   const [classId, setClassId] = useState<string | undefined>(initial.classId);
   const [picked, setPicked] = useState<Partial<DateRange> | null>(initial.from || initial.to ? { from: initial.from, to: initial.to } : null);
+  // The quick period last pressed (null once dates are typed), so it stays pressed when another preset is the same range.
+  const [pickedPreset, setPickedPreset] = useState<HistoryPreset | null>(null);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<HistorySort>("name");
   const [highlight, setHighlight] = useState<string | undefined>(initial.studentId);
@@ -164,7 +167,10 @@ export function AttendanceHistoryScreen({ initial }: AttendanceHistoryScreenProp
   // A link or back/forward that changes the address moves the screen with it.
   useEffect(() => {
     if (initial.classId) setClassId(initial.classId);
-    if (initial.from || initial.to) setPicked({ from: initial.from, to: initial.to });
+    if (initial.from || initial.to) {
+      setPicked({ from: initial.from, to: initial.to });
+      setPickedPreset(null);
+    }
     if (initial.studentId) setHighlight(initial.studentId);
   }, [initial.classId, initial.from, initial.to, initial.studentId]);
 
@@ -177,7 +183,8 @@ export function AttendanceHistoryScreen({ initial }: AttendanceHistoryScreenProp
   const shown: Partial<DateRange> = picked ?? (defaultReady ? (fallback ?? {}) : {});
   const problem = picked || defaultReady ? rangeProblem(shown, todayDate) : null;
   const range: DateRange | null = !problem && shown.from && shown.to ? { from: shown.from, to: shown.to } : null;
-  const preset = range ? matchPreset(range, todayDate, termStart) : "custom";
+  // Nothing picked means the default, this term.
+  const preset = range ? matchPreset(range, todayDate, termStart, picked ? pickedPreset : "term") : "custom";
 
   const roster = useClassRoster(activeClassId);
   const students = useMemo(() => roster.data?.students ?? [], [roster.data]);
@@ -223,9 +230,15 @@ export function AttendanceHistoryScreen({ initial }: AttendanceHistoryScreenProp
   };
   const pickPreset = (key: (typeof HISTORY_PRESETS)[number]["key"]) => {
     const next = presetRange(key, todayDate, termStart);
-    if (next) setPicked(next);
+    if (next) {
+      setPicked(next);
+      setPickedPreset(key);
+    }
   };
-  const setEnd = (end: "from" | "to", value: string) => setPicked({ ...shown, [end]: value });
+  const setEnd = (end: "from" | "to", value: string) => {
+    setPicked({ ...shown, [end]: value });
+    setPickedPreset(null);
+  };
 
   const options = classes.data ?? [];
   const unknownClass = Boolean(activeClassId) && !options.some((c) => c.id === activeClassId);

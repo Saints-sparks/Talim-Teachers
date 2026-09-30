@@ -134,6 +134,10 @@ describe("history logic", () => {
     expect(presetRange("custom", "2026-09-25")).toBeNull();
     expect(matchPreset({ from: "2026-09-01", to: "2026-09-25" }, "2026-09-25", "2026-09-07")).toBe("month");
     expect(matchPreset({ from: "2026-09-02", to: "2026-09-25" }, "2026-09-25", "2026-09-07")).toBe("custom");
+    // A term that starts on the 1st is also "This month": the preferred one wins, else the first.
+    expect(matchPreset({ from: "2026-09-01", to: "2026-09-25" }, "2026-09-25", "2026-09-01")).toBe("month");
+    expect(matchPreset({ from: "2026-09-01", to: "2026-09-25" }, "2026-09-25", "2026-09-01", "term")).toBe("term");
+    expect(matchPreset({ from: "2026-09-01", to: "2026-09-25" }, "2026-09-25", "2026-09-07", "term")).toBe("month");
   });
 
   it("explains a range it cannot load", () => {
@@ -229,6 +233,20 @@ describe("AttendanceHistoryScreen", () => {
     expect(within(ada).getAllByRole("cell").map((c) => c.textContent)).toEqual(["95%", "18", "1", "1", "2"]);
     expect(within(table).getByRole("row", { name: /Chi Eze/ })).toHaveTextContent("No records");
     expect(within(ada).getByRole("link", { name: "Ada Obi" })).toHaveAttribute("href", "/students/a1");
+  });
+
+  it("keeps the pressed period pressed when this term and this month are the same days", async () => {
+    currentTerm.mockResolvedValue({ _id: "t1", name: "First Term", startDate: "2026-09-01T00:00:00.000Z" });
+    const user = await renderHistory();
+    const pressed = () => screen.getByRole("group", { name: "Period" }).querySelectorAll('[aria-pressed="true"]');
+    expect(screen.getByRole("button", { name: "This term" })).toHaveAttribute("aria-pressed", "true");
+    expect(pressed()).toHaveLength(1);
+    await user.click(screen.getByRole("button", { name: "This month" }));
+    expect(screen.getByRole("button", { name: "This month" })).toHaveAttribute("aria-pressed", "true");
+    expect(pressed()).toHaveLength(1);
+    await user.click(screen.getByRole("button", { name: "This term" }));
+    expect(screen.getByRole("button", { name: "This term" })).toHaveAttribute("aria-pressed", "true");
+    expect(pressed()).toHaveLength(1);
   });
 
   it("switches to this week, keeps the dates in the address, and reloads for them", async () => {
