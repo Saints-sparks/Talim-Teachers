@@ -66,7 +66,8 @@ export default function MessageBubble({
         <BubbleMenu message={message} isOwn={isOwn} onReply={onReply} onDeleteMessage={onDeleteMessage} />
         {showSender && !isOwn ? <p className="mb-[3px] text-xs font-extrabold text-tl-success">{message.senderName || "Member"}</p> : null}
         <MessageContent message={message} isOwn={isOwn} onJump={onJump} />
-        <p className="mt-[5px] flex items-center justify-end gap-1 text-[11px] opacity-75">
+        {/* Dimmed on a white bubble; not on mine in dark, where 75% white on the blue fill is below 4.5:1. */}
+        <p className={`mt-[5px] flex items-center justify-end gap-1 text-[11px] ${isOwn ? "opacity-75 dark:opacity-100" : "opacity-75"}`}>
           <span>{time}</span>
           {isOwn && receipt === "pending" ? <Clock className="h-3 w-3" role="img" aria-label="Sending" /> : null}
           {isOwn && receipt === "sent" ? <Check className="h-3.5 w-3.5" role="img" aria-label="Sent" /> : null}
