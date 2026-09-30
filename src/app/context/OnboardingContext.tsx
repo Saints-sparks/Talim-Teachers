@@ -6,6 +6,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { uploadResourceRoute } from "@/hooks/today/today.routes";
@@ -180,6 +181,20 @@ const saveState = (userId: string, state: TeacherOnboardingState) => {
 };
 
 /**
+ * Two records of one teacher's checklist as one: progress only ever grows
+ * (steps are added, the flags only turn on), so nothing either holds is lost.
+ *
+ * @param a - One record.
+ * @param b - The other.
+ * @returns Every step in either, and each flag set in either.
+ */
+const mergeProgress = (a: TeacherOnboardingState, b: TeacherOnboardingState): TeacherOnboardingState => ({
+  completedSteps: Array.from(new Set([...a.completedSteps, ...b.completedSteps])),
+  phase1Completed: a.phase1Completed || b.phase1Completed,
+  setupDismissed: a.setupDismissed || b.setupDismissed,
+});
+
+/**
  * Holds the signed-in teacher's first-run checklist, kept per teacher in
  * localStorage (`teacher_onboarding_<userId>`).
  *
@@ -194,8 +209,11 @@ export const TeacherOnboardingProvider: React.FC<{
 }> = ({ children, userId }) => {
   const [state, setState] = useState<TeacherOnboardingState>(defaultState);
   const [isHydrated, setIsHydrated] = useState(false);
+  // Whose checklist `state` holds (set when it is loaded).
+  const ownerRef = useRef<string | null>(null);
 
   useEffect(() => {
+    ownerRef.current = userId ?? null;
     if (!userId) {
       setState(defaultState);
       setIsHydrated(true);
@@ -203,8 +221,8 @@ export const TeacherOnboardingProvider: React.FC<{
     }
 
     setIsHydrated(false);
-    const local = loadState(userId);
-    setState(local);
+    // Read when the update is applied, after any update queued before it has saved its step.
+    setState(() => loadState(userId));
     setIsHydrated(true);
   }, [userId]);
 
@@ -215,8 +233,14 @@ export const TeacherOnboardingProvider: React.FC<{
       ) => TeacherOnboardingState
     ) => {
       setState((current) => {
-        const next = updater(current);
-        if (userId) saveState(userId, next);
+        if (!userId) return updater(current);
+        // A step can be ticked before this teacher's saved checklist is loaded: on sign-in the
+        // onboarding sync (a child) runs its effect before this provider's. Build on what is
+        // saved, so that tick never overwrites a checklist finished earlier on this device.
+        const saved = loadState(userId);
+        const base = ownerRef.current === userId ? mergeProgress(current, saved) : saved;
+        const next = updater(base);
+        saveState(userId, next);
         return next;
       });
     },
