@@ -72,10 +72,12 @@ const FIRST_PAGE: InboxPageParam = { page: 1, notifications: true, announcements
 /**
  * The signed-in user's id, as the notification keys use it.
  *
- * @returns The id, or an empty string when signed out.
+ * @returns The id, or an empty string when signed out or still on a temporary password.
  */
 function useNotificationUserId(): string {
   const { user } = useAuth();
+  // On a temporary password the API refuses everything but the change (403): ask for nothing until then.
+  if (user?.mustChangePassword) return "";
   return user?.userId || user?._id || "";
 }
 

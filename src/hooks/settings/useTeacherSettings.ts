@@ -188,7 +188,7 @@ export function toPreferencesPayload(updates: Partial<TeacherPreferences>): Teac
 /**
  * The settings overview for the signed-in teacher.
  *
- * @returns The query result; idle until there is a signed-in user.
+ * @returns The query result; idle until there is a signed-in user who has replaced any temporary password.
  */
 export function useTeacherSettings(): UseQueryResult<TeacherSettings, unknown> {
   const { user } = useAuth();
@@ -201,7 +201,8 @@ export function useTeacherSettings(): UseQueryResult<TeacherSettings, unknown> {
       cacheLandingPage(userId, settings?.preferences?.teaching?.landingPage ?? DEFAULT_PREFERENCES.teaching.landingPage);
       return settings;
     },
-    enabled: Boolean(userId),
+    // On a temporary password the API refuses everything but the change (403).
+    enabled: Boolean(userId) && !user?.mustChangePassword,
     staleTime: staleTimes.reference,
   });
 }
