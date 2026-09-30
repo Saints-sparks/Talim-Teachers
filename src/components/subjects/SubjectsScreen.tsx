@@ -335,6 +335,7 @@ export function SubjectsScreen({ initialCourseId, initialTab, initialWeek, initi
                   pendingWeek={markTaught.isPending ? markTaught.variables?.week : undefined}
                   onToggleTaught={toggleTaught}
                   onEdit={setEditing}
+                  termParam={termId}
                 />
               ) : scheme.isError ? (
                 <div role="alert" className="px-5 py-5">

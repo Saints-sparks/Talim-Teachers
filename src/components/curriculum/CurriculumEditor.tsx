@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import { EditorContent } from "@tiptap/react";
-import { LoadingState } from "@/components/states";
+import { cardFrame, pagePad } from "@/components/tl/styles";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { useAttachmentUploads } from "@/hooks/curriculum/useAttachmentUploads";
 import { useCurriculumForm } from "@/hooks/curriculum/useCurriculumForm";
@@ -12,7 +12,8 @@ import { CourseCard, StatusCard, TermCard } from "./editor/ConfigCards";
 import { EditorActionBar } from "./editor/EditorActionBar";
 import { EditorHeader } from "./editor/EditorHeader";
 import { EditorToolbar, DEFAULT_FONT_SIZE } from "./editor/EditorToolbar";
-import type { CardSize, CourseOption, TermOption } from "./editor/types";
+import { paperClass } from "./richText";
+import type { CourseOption, TermOption } from "./editor/types";
 
 /** Props for {@link CurriculumEditor}. */
 export interface CurriculumEditorProps {
@@ -35,9 +36,11 @@ export interface CurriculumEditorProps {
 }
 
 /**
- * Full-page rich-text editor for a course's curriculum. Layout only: the form
- * rules live in `useCurriculumForm`, the editor in `useRichTextEditor` and the
- * uploads in `useAttachmentUploads`.
+ * The rich-text editor for a course's curriculum, in the redesign: heading
+ * and Close, a side column (subject, term, attachments, a checklist), and the
+ * toolbar over a white page with Cancel and Save below it. Layout only: the
+ * form rules live in `useCurriculumForm`, the editor in `useRichTextEditor`
+ * and the uploads in `useAttachmentUploads`.
  *
  * @param props - See {@link CurriculumEditorProps}.
  * @returns The editor element.
@@ -65,7 +68,14 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
     onSaved: () => onClose?.(),
   });
 
-  if (!editor) return <LoadingState message="Loading editor…" fullHeight />;
+  if (!editor) {
+    return (
+      <div className={`${pagePad} flex flex-col gap-[18px]`} role="status" aria-label="Loading the editor">
+        <div className="h-9 w-72 max-w-full animate-pulse rounded-lg bg-tl-line/70" />
+        <div className="h-[560px] animate-pulse rounded-[22px] bg-tl-line/70" />
+      </div>
+    );
+  }
 
   const selectedCourse: CourseOption | null =
     teacherCourses.find((course) => course._id === form.courseId) ??
@@ -73,82 +83,49 @@ const CurriculumEditor: React.FC<CurriculumEditorProps> = ({
   const isCourseFixed = Boolean(initialCourseId);
   const contentReady = hasContent(html);
 
-  const configCards = (size: CardSize) => (
-    <>
-      <CourseCard
-        size={size}
-        isFixed={isCourseFixed}
-        fixedCourse={selectedCourse}
-        courses={teacherCourses}
-        courseId={form.courseId}
-        onSelect={form.selectCourse}
-      />
-      <TermCard size={size} term={currentTerm} isLoading={termLoading} />
-      <AttachmentsCard
-        size={size}
-        attachments={uploads.attachments}
-        uploading={uploads.uploading}
-        progress={uploads.progress}
-        onPick={uploads.upload}
-        onRemove={uploads.remove}
-      />
-    </>
-  );
-
   return (
-    <div className="min-h-screen bg-[#F8F8F8]">
-      <div className="max-w-7xl mx-auto p-3 md:p-6">
-        <div className="bg-white rounded-xl shadow-none border border-[#F0F0F0] overflow-hidden">
-          <EditorHeader isEditing={Boolean(curriculum)} course={selectedCourse} onClose={onClose} />
+    <div className={`${pagePad} flex flex-col gap-[18px]`}>
+      <EditorHeader isEditing={Boolean(curriculum)} course={selectedCourse} onClose={onClose} />
 
-          {/* Phones and tablets: configuration sits above the editor. */}
-          <div className="lg:hidden bg-[#F8F8F8] border-b border-[#F0F0F0] p-4" data-guide="curriculum-editor-config">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {configCards("sm")}
-              <StatusCard
-                size="sm"
-                className="sm:col-span-2"
-                hasCourse={Boolean(form.courseId)}
-                hasTerm={Boolean(form.termId)}
-                hasContent={contentReady}
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col lg:flex-row">
-            {/* Desktop: configuration is a sidebar. */}
-            <div className="hidden lg:block w-80 bg-[#F8F8F8] border-r border-[#F0F0F0] p-6 space-y-6" data-guide="curriculum-editor-config">
-              <div className="space-y-4">
-                {configCards("md")}
-                <StatusCard size="md" hasCourse={Boolean(form.courseId)} hasTerm={Boolean(form.termId)} hasContent={contentReady} />
-              </div>
-            </div>
-
-            <div className="flex-1 flex flex-col">
-              <EditorToolbar editor={editor} />
-
-              <div className="flex-1 p-6 bg-gray-50" data-guide="curriculum-editor-canvas">
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 min-h-[600px]">
-                  <EditorContent
-                    editor={editor}
-                    className="prose prose-lg max-w-none p-6 focus:outline-none min-h-[600px] dark:prose-invert"
-                    style={{ fontFamily: "Arial", fontSize: `${DEFAULT_FONT_SIZE}px` }}
-                  />
-                </div>
-              </div>
-
-              <EditorActionBar
-                isComplete={form.isComplete}
-                isEditing={Boolean(curriculum)}
-                isSaving={form.isSaving}
-                isUploading={uploads.uploading}
-                canSave={canSave && Boolean(form.courseId && form.termId)}
-                onSave={form.save}
-                onCancel={onClose}
-              />
-            </div>
-          </div>
+      <div className="grid items-start gap-[18px] lg:grid-cols-[300px_minmax(0,1fr)]">
+        <div className="flex flex-col gap-3" data-guide="curriculum-editor-config">
+          <CourseCard
+            size="md"
+            isFixed={isCourseFixed}
+            fixedCourse={selectedCourse}
+            courses={teacherCourses}
+            courseId={form.courseId}
+            onSelect={form.selectCourse}
+          />
+          <TermCard size="md" term={currentTerm} isLoading={termLoading} />
+          <AttachmentsCard
+            size="md"
+            attachments={uploads.attachments}
+            uploading={uploads.uploading}
+            progress={uploads.progress}
+            onPick={uploads.upload}
+            onRemove={uploads.remove}
+          />
+          <StatusCard size="md" hasCourse={Boolean(form.courseId)} hasTerm={Boolean(form.termId)} hasContent={contentReady} />
         </div>
+
+        <section className={`${cardFrame} flex min-w-0 flex-col overflow-hidden`} aria-label="Curriculum text">
+          <EditorToolbar editor={editor} />
+          <div className="flex-1 bg-tl-bg p-3 sm:p-5" data-guide="curriculum-editor-canvas">
+            <div className="min-h-[520px] rounded-2xl border border-tl-line-soft bg-white shadow-[0_1px_2px_rgba(15,27,46,0.06)]">
+              <EditorContent editor={editor} className={paperClass} style={{ fontFamily: "Arial", fontSize: `${DEFAULT_FONT_SIZE}px` }} />
+            </div>
+          </div>
+          <EditorActionBar
+            isComplete={form.isComplete}
+            isEditing={Boolean(curriculum)}
+            isSaving={form.isSaving}
+            isUploading={uploads.uploading}
+            canSave={canSave && Boolean(form.courseId && form.termId)}
+            onSave={form.save}
+            onCancel={onClose}
+          />
+        </section>
       </div>
     </div>
   );

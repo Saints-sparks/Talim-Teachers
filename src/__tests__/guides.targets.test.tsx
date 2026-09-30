@@ -19,6 +19,8 @@ import { StudentRecordScreen } from "@/components/students/StudentRecordScreen";
 import { GradingScreen } from "@/components/grading/GradingScreen";
 import { SubjectsScreen } from "@/components/subjects/SubjectsScreen";
 import { AttendanceHistoryScreen } from "@/components/attendance/AttendanceHistoryScreen";
+import CourseCurriculumList from "@/components/curriculum/CourseCurriculumList";
+import CurriculumEditor from "@/components/curriculum/CurriculumEditor";
 import { attendanceService } from "@/app/services/attendance/attendance.service";
 import { classroomService } from "@/app/services/classroom/classroom.service";
 import { gradingService } from "@/app/services/grading/grading.service";
@@ -64,6 +66,13 @@ jest.mock("@/app/services/subjects/subjects.service", () => ({
   subjectsService: { getMySubjects: jest.fn(), getScheme: jest.fn(), getCourseResources: jest.fn(), getLegacyCurriculum: jest.fn() },
 }));
 jest.mock("@/hooks/academic/useSchoolTerms", () => ({ useSchoolTerms: () => ({ data: [] }) }));
+jest.mock("@/hooks/curriculum/useCurriculumMutations", () => ({
+  useSaveCurriculum: () => ({ mutateAsync: jest.fn(), isPending: false }),
+  useDeleteCurriculum: () => ({ mutateAsync: jest.fn(), isPending: false }),
+}));
+jest.mock("@/hooks/curriculum/useAttachmentUploads", () => ({
+  useAttachmentUploads: () => ({ attachments: [], uploading: false, progress: 0, upload: jest.fn(), remove: jest.fn() }),
+}));
 jest.mock("@/app/services/attendance/attendance.service", () => ({ attendanceService: { getStudentKpis: jest.fn() } }));
 jest.mock("@/app/services/api.service", () => ({
   ...jest.requireActual("@/app/services/api.service"),
@@ -167,6 +176,35 @@ const PAGES: { path: string; query?: string; guide: string; mount: () => Promise
     mount: async () => {
       render(<AttendanceHistoryScreen initial={{}} />);
       await screen.findByRole("table");
+    },
+  },
+  {
+    path: "/curriculum",
+    query: "courseId=k1",
+    guide: "curriculum",
+    mount: async () => {
+      render(
+        <CourseCurriculumList
+          courseName="Mathematics"
+          curriculum={{ _id: "cur1", course: { _id: "k1", title: "Mathematics" }, term: { _id: "t1", name: "First term" }, content: "<p>x</p>" }}
+          canCreate
+          canModify
+          onBack={jest.fn()}
+          onCreate={jest.fn()}
+          onOpen={jest.fn()}
+          onEdit={jest.fn()}
+          onDelete={jest.fn()}
+        />,
+      );
+    },
+  },
+  {
+    path: "/curriculum",
+    query: "courseId=k1&mode=create",
+    guide: "curriculum-editor",
+    mount: async () => {
+      render(<CurriculumEditor initialCourseId="k1" courseInfo={{ _id: "k1", title: "Mathematics", courseCode: "MTH111" }} currentTerm={{ _id: "t1", name: "First term" }} onClose={jest.fn()} />);
+      await screen.findByRole("toolbar", { name: "Formatting" });
     },
   },
   {

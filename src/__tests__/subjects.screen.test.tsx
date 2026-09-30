@@ -379,6 +379,17 @@ describe("SubjectsScreen", () => {
     expect(container.querySelector("img")?.getAttribute("onerror")).toBeNull();
   });
 
+  it("links each subject's written curriculum to the Curriculum page, to edit or to write", async () => {
+    render(<SubjectsScreen />);
+    // Mathematics · JSS1 A has one: read it here, edit it there.
+    await screen.findByRole("button", { name: /Earlier notes/ });
+    expect(screen.getByRole("link", { name: "Edit it on the Curriculum page →" })).toHaveAttribute("href", "/curriculum?courseId=k1");
+    // Mathematics · JSS2 B has none: write it there.
+    fireEvent.click(within(screen.getByRole("group", { name: "Your subjects" })).getAllByRole("button")[1]);
+    expect(await screen.findByRole("link", { name: "Write it on the Curriculum page →" })).toHaveAttribute("href", "/curriculum?courseId=k2");
+    expect(screen.queryByRole("button", { name: /Earlier notes/ })).not.toBeInTheDocument();
+  });
+
   it("explains an empty term", async () => {
     service.getMySubjects.mockResolvedValue(makeNoSubjectsFixture());
     render(<SubjectsScreen />);

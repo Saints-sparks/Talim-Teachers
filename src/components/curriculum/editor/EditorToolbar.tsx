@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import type { Editor } from "@tiptap/react";
+import { focusRing } from "@/components/tl/styles";
 import {
   AlignCenter,
   AlignJustify,
@@ -51,7 +52,17 @@ export const DEFAULT_FONT_SIZE = 14;
 const MIN_FONT_SIZE = 8;
 const MAX_FONT_SIZE = 72;
 
-/** One toolbar button. */
+/**
+ * One toolbar button: 44px, pressed state for marks that are on.
+ *
+ * @param props - The button.
+ * @param props.title - Its name (also the tooltip).
+ * @param props.active - Whether the format is on at the selection.
+ * @param props.disabled - Whether it can be used now.
+ * @param props.onClick - Applies the format.
+ * @param props.children - The icon.
+ * @returns The button.
+ */
 function ToolbarButton({
   title,
   active = false,
@@ -73,8 +84,8 @@ function ToolbarButton({
       title={title}
       aria-label={title}
       aria-pressed={active}
-      className={`p-2 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-        active ? "bg-blue-100 text-blue-600" : "text-gray-600"
+      className={`flex h-11 w-11 items-center justify-center rounded-xl transition-colors hover:bg-tl-bg disabled:cursor-not-allowed disabled:opacity-40 ${focusRing} ${
+        active ? "bg-tl-select text-tl-brand" : "text-tl-muted"
       }`}
     >
       {children}
@@ -82,12 +93,27 @@ function ToolbarButton({
   );
 }
 
-/** A vertical group of controls separated from the next by a rule. */
+/**
+ * A group of controls separated from the next by a rule.
+ *
+ * @param props - The group.
+ * @param props.children - The controls.
+ * @param props.last - The last group has no rule after it.
+ * @returns The group.
+ */
 function Group({ children, last = false }: { children: ReactNode; last?: boolean }) {
-  return <div className={`flex items-center gap-1 px-3 ${last ? "" : "border-r border-gray-200"}`}>{children}</div>;
+  return <div className={`flex items-center gap-0.5 px-1.5 ${last ? "" : "border-r border-tl-line-soft"}`}>{children}</div>;
 }
 
-/** A colour swatch button that opens a palette. */
+/**
+ * A colour button that opens a palette of swatches.
+ *
+ * @param props - The menu.
+ * @param props.title - Its name ("Text colour", "Highlight").
+ * @param props.icon - Its icon.
+ * @param props.onPick - Applies the colour picked.
+ * @returns The button and, while open, the palette.
+ */
 function ColorMenu({
   title,
   icon: Icon,
@@ -101,10 +127,10 @@ function ColorMenu({
   return (
     <div className="relative">
       <ToolbarButton title={title} active={open} onClick={() => setOpen(!open)}>
-        <Icon className="w-4 h-4" />
+        <Icon className="h-4 w-4" aria-hidden />
       </ToolbarButton>
       {open && (
-        <div className="absolute top-12 left-0 bg-white border border-gray-200 rounded-lg p-3 shadow-lg z-20">
+        <div className="absolute left-0 top-12 z-20 rounded-2xl border border-tl-line bg-tl-surface p-3 shadow-[0_18px_40px_-20px_rgba(15,27,46,0.35)]">
           <div className="grid grid-cols-5 gap-2">
             {COLORS.map((color) => (
               <button
@@ -114,7 +140,7 @@ function ColorMenu({
                   onPick(color);
                   setOpen(false);
                 }}
-                className="w-8 h-8 rounded-lg border-2 border-gray-200 hover:border-gray-400 transition-colors"
+                className={`h-8 w-8 rounded-lg border-2 border-tl-line hover:border-tl-muted ${focusRing}`}
                 style={{ backgroundColor: color }}
                 title={color}
                 aria-label={`${title} ${color}`}
@@ -128,9 +154,9 @@ function ColorMenu({
 }
 
 const ALIGNMENTS: Array<{ value: "left" | "center" | "right" | "justify"; icon: LucideIcon; title: string }> = [
-  { value: "left", icon: AlignLeft, title: "Align Left" },
-  { value: "center", icon: AlignCenter, title: "Align Center" },
-  { value: "right", icon: AlignRight, title: "Align Right" },
+  { value: "left", icon: AlignLeft, title: "Align left" },
+  { value: "center", icon: AlignCenter, title: "Align centre" },
+  { value: "right", icon: AlignRight, title: "Align right" },
   { value: "justify", icon: AlignJustify, title: "Justify" },
 ];
 
@@ -162,13 +188,13 @@ export function EditorToolbar({ editor }: { editor: Editor }) {
   const [sizeDraft, setSizeDraft] = useState<string | null>(null);
 
   const insertImageFromUrl = () => {
-    const url = window.prompt("Enter image URL:");
+    const url = window.prompt("Image address (URL):");
     if (url) chain().setImage({ src: url }).run();
   };
 
   const toggleLink = () => {
     const previousUrl = editor.getAttributes("link").href;
-    const url = window.prompt("Enter URL:", previousUrl);
+    const url = window.prompt("Link address (URL). Leave empty to remove the link:", previousUrl);
     if (url === null) return;
     if (url === "") {
       chain().extendMarkRange("link").unsetLink().run();
@@ -192,13 +218,13 @@ export function EditorToolbar({ editor }: { editor: Editor }) {
   };
 
   return (
-    <div className="p-4 bg-white border-b border-[#F0F0F0]" data-guide="curriculum-editor-toolbar">
-      <div className="flex flex-wrap gap-1 items-center">
-        <div className="flex items-center gap-2 pr-3 border-r border-[#F0F0F0]">
+    <div className="border-b border-tl-line-soft bg-tl-surface px-3 py-2" data-guide="curriculum-editor-toolbar" role="toolbar" aria-label="Formatting">
+      <div className="flex flex-wrap items-center gap-y-1">
+        <div className="flex items-center gap-2 border-r border-tl-line-soft pr-2">
           <select
             value={(editor.getAttributes("textStyle").fontFamily as string | undefined) ?? "Arial"}
             onChange={(e) => chain().setFontFamily(e.target.value).run()}
-            className="px-3 py-2 border border-[#F0F0F0] rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#003366]"
+            className={`min-h-[44px] rounded-xl border border-tl-control bg-tl-surface px-3 text-sm font-semibold text-tl-ink ${focusRing}`}
             aria-label="Font"
           >
             {FONTS.map((font) => (
@@ -212,7 +238,7 @@ export function EditorToolbar({ editor }: { editor: Editor }) {
             value={sizeDraft ?? currentFontSize(editor)}
             onChange={(e) => onFontSizeChange(e.target.value)}
             onBlur={() => setSizeDraft(null)}
-            className="w-16 px-2 py-2 border border-[#F0F0F0] rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-[#003366]"
+            className={`min-h-[44px] w-16 rounded-xl border border-tl-control bg-tl-surface px-2 text-center text-sm font-semibold text-tl-ink ${focusRing}`}
             min={MIN_FONT_SIZE}
             max={MAX_FONT_SIZE}
             aria-label="Font size"
@@ -221,71 +247,71 @@ export function EditorToolbar({ editor }: { editor: Editor }) {
 
         <Group>
           <ToolbarButton title="Bold" active={editor.isActive("bold")} onClick={() => chain().toggleBold().run()}>
-            <Bold className="w-4 h-4" />
+            <Bold className="h-4 w-4" aria-hidden />
           </ToolbarButton>
           <ToolbarButton title="Italic" active={editor.isActive("italic")} onClick={() => chain().toggleItalic().run()}>
-            <Italic className="w-4 h-4" />
+            <Italic className="h-4 w-4" aria-hidden />
           </ToolbarButton>
           <ToolbarButton title="Underline" active={editor.isActive("underline")} onClick={() => chain().toggleUnderline().run()}>
-            <UnderlineIcon className="w-4 h-4" />
+            <UnderlineIcon className="h-4 w-4" aria-hidden />
           </ToolbarButton>
         </Group>
 
         <Group>
-          <ColorMenu title="Text Color" icon={Palette} onPick={(color) => chain().setColor(color).run()} />
+          <ColorMenu title="Text colour" icon={Palette} onPick={(color) => chain().setColor(color).run()} />
           <ColorMenu title="Highlight" icon={Highlighter} onPick={(color) => chain().toggleHighlight({ color }).run()} />
         </Group>
 
         <Group>
           {ALIGNMENTS.map(({ value, icon: Icon, title }) => (
             <ToolbarButton key={value} title={title} active={editor.isActive({ textAlign: value })} onClick={() => chain().setTextAlign(value).run()}>
-              <Icon className="w-4 h-4" />
+              <Icon className="h-4 w-4" aria-hidden />
             </ToolbarButton>
           ))}
         </Group>
 
         <Group>
-          <ToolbarButton title="Bullet List" active={editor.isActive("bulletList")} onClick={() => chain().toggleBulletList().run()}>
-            <List className="w-4 h-4" />
+          <ToolbarButton title="Bulleted list" active={editor.isActive("bulletList")} onClick={() => chain().toggleBulletList().run()}>
+            <List className="h-4 w-4" aria-hidden />
           </ToolbarButton>
-          <ToolbarButton title="Numbered List" active={editor.isActive("orderedList")} onClick={() => chain().toggleOrderedList().run()}>
-            <ListOrdered className="w-4 h-4" />
+          <ToolbarButton title="Numbered list" active={editor.isActive("orderedList")} onClick={() => chain().toggleOrderedList().run()}>
+            <ListOrdered className="h-4 w-4" aria-hidden />
           </ToolbarButton>
           <ToolbarButton title="Quote" active={editor.isActive("blockquote")} onClick={() => chain().toggleBlockquote().run()}>
-            <Quote className="w-4 h-4" />
+            <Quote className="h-4 w-4" aria-hidden />
           </ToolbarButton>
         </Group>
 
         <Group>
-          <ToolbarButton title="Insert Table" onClick={() => chain().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
-            <TableIcon className="w-4 h-4" />
+          <ToolbarButton title="Insert table" onClick={() => chain().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
+            <TableIcon className="h-4 w-4" aria-hidden />
           </ToolbarButton>
-          <ToolbarButton title="Insert Image" onClick={insertImageFromUrl}>
-            <ImageIcon className="w-4 h-4" />
+          <ToolbarButton title="Insert image" onClick={insertImageFromUrl}>
+            <ImageIcon className="h-4 w-4" aria-hidden />
           </ToolbarButton>
-          <ToolbarButton title="Insert Link" active={editor.isActive("link")} onClick={toggleLink}>
-            <LinkIcon className="w-4 h-4" />
+          <ToolbarButton title="Insert link" active={editor.isActive("link")} onClick={toggleLink}>
+            <LinkIcon className="h-4 w-4" aria-hidden />
           </ToolbarButton>
         </Group>
 
         <Group>
           <ToolbarButton title="Undo" disabled={!editor.can().undo()} onClick={() => chain().undo().run()}>
-            <Undo className="w-4 h-4" />
+            <Undo className="h-4 w-4" aria-hidden />
           </ToolbarButton>
           <ToolbarButton title="Redo" disabled={!editor.can().redo()} onClick={() => chain().redo().run()}>
-            <Redo className="w-4 h-4" />
+            <Redo className="h-4 w-4" aria-hidden />
           </ToolbarButton>
         </Group>
 
         <Group last>
           <select
             onChange={(e) => onHeadingChange(e.target.value)}
-            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            title="Heading Level"
+            className={`min-h-[44px] rounded-xl border border-tl-control bg-tl-surface px-3 text-sm font-semibold text-tl-ink ${focusRing}`}
+            title="Heading level"
             aria-label="Heading level"
             value={[1, 2, 3, 4, 5, 6].find((level) => editor.isActive("heading", { level })) ?? 0}
           >
-            <option value="0">Normal Text</option>
+            <option value="0">Normal text</option>
             {[1, 2, 3, 4, 5, 6].map((level) => (
               <option key={level} value={level}>
                 Heading {level}

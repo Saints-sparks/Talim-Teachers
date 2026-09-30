@@ -1,17 +1,17 @@
 import React from "react";
-import { Edit, Trash2 } from "lucide-react";
+import { card, cardTitle, dangerGhostButton, eyebrow, primaryButton, rowButton } from "@/components/tl/styles";
 import { courseOf, courseTitle, teacherName, termOf, type Curriculum } from "@/hooks/curriculum/types";
 
 /**
- * A date as the cards show it.
+ * A date as the cards show it: "10 Sep 2026".
  *
  * @param value - An ISO date string from the API.
- * @returns The local date, or an em dash when the API sent none.
+ * @returns The date, or an em dash when the API sent none.
  */
 export function formatDate(value: string | undefined): string {
   if (!value) return "—";
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleDateString();
+  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
 
 /** Props for {@link CurriculumCard}. */
@@ -26,80 +26,73 @@ export interface CurriculumCardProps {
   onDelete: (curriculum: Curriculum) => void;
 }
 
-/** One line of the card's facts; hidden when the API had no value. */
+/**
+ * One fact of the card; left out when the API had no value.
+ *
+ * @param props - The fact.
+ * @param props.label - What it is.
+ * @param props.value - The value, if any.
+ * @returns The row, or nothing.
+ */
 function Fact({ label, value }: { label: string; value: string | null | undefined }) {
   if (!value) return null;
   return (
-    <p>
-      <span className="font-medium">{label}:</span> {value}
-    </p>
+    <div className="flex justify-between gap-3 border-t border-tl-line-soft pt-2.5 text-sm">
+      <dt className="text-tl-muted">{label}</dt>
+      <dd className="text-right font-extrabold text-tl-ink">{value}</dd>
+    </div>
   );
 }
 
 /**
- * A curriculum on the course page: title, term, who wrote it, when, and the
- * Edit / Delete actions the teacher is allowed.
+ * The course's curriculum on its page, as a redesign card: the course and
+ * term, who wrote it and when, then Read (the full text), and Edit and Delete
+ * for a teacher of the course. The actions are separate buttons, not a
+ * clickable card around buttons.
  *
  * @param props - See {@link CurriculumCardProps}.
  * @param props.curriculum - The curriculum.
  * @param props.fallbackTitle - Title used when the API sent no course name.
  * @param props.canModify - Whether Edit and Delete show.
- * @param props.onOpen - Opens the detail view.
+ * @param props.onOpen - Opens the full text.
  * @param props.onEdit - Opens the editor.
  * @param props.onDelete - Asks to delete.
  * @returns The card element.
  */
 const CurriculumCard: React.FC<CurriculumCardProps> = ({ curriculum, fallbackTitle, canModify, onOpen, onEdit, onDelete }) => {
   const course = courseOf(curriculum);
+  const title = courseTitle(curriculum, fallbackTitle);
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={() => onOpen(curriculum)}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onOpen(curriculum);
-        }
-      }}
-      className="bg-white border border-[#F0F0F0] rounded-xl p-6 shadow-none transition-colors duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#003366]"
-    >
-      <h3 className="text-xl font-semibold text-gray-900 mb-3">{courseTitle(curriculum, fallbackTitle)}</h3>
-      <p className="text-sm text-gray-500 mb-4">Term: {termOf(curriculum)?.name || "N/A"}</p>
-      <div className="space-y-3 text-sm text-gray-600">
+    <article className={`${card} flex flex-col gap-3`} aria-labelledby={`curriculum-${curriculum._id}`}>
+      <div>
+        <p className={eyebrow}>{termOf(curriculum)?.name || "Term not recorded"}</p>
+        <h2 id={`curriculum-${curriculum._id}`} className={`${cardTitle} mt-1`}>
+          {title}
+        </h2>
+      </div>
+      <dl className="flex flex-col gap-2.5">
         <Fact label="Class" value={course?.className} />
         <Fact label="Teacher" value={teacherName(curriculum)} />
         <Fact label="School" value={course?.schoolName} />
         <Fact label="Created" value={formatDate(curriculum.createdAt)} />
         <Fact label="Updated" value={formatDate(curriculum.updatedAt)} />
+      </dl>
+      <div className="mt-1 flex flex-wrap gap-2">
+        <button type="button" className={primaryButton} onClick={() => onOpen(curriculum)}>
+          Read<span className="sr-only"> the {title} curriculum</span>
+        </button>
+        {canModify ? (
+          <>
+            <button type="button" className={rowButton} onClick={() => onEdit(curriculum)}>
+              Edit
+            </button>
+            <button type="button" className={dangerGhostButton} onClick={() => onDelete(curriculum)}>
+              Delete
+            </button>
+          </>
+        ) : null}
       </div>
-      {canModify && (
-        <div className="mt-6 flex gap-2">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(curriculum);
-            }}
-            className="text-[#003366] hover:text-[#002244] text-sm flex items-center gap-2 font-medium"
-          >
-            <Edit size={16} />
-            Edit
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(curriculum);
-            }}
-            className="text-[#878787] hover:text-[#6F6F6F] text-sm flex items-center gap-2 font-medium"
-          >
-            <Trash2 size={16} />
-            Delete
-          </button>
-        </div>
-      )}
-    </div>
+    </article>
   );
 };
 

@@ -228,24 +228,22 @@ export const guideConfigs: GuideConfig[] = [
     steps: [
       {
         target: "curriculum-header",
-        eyebrow: "Lesson planning",
-        title: "Create or Edit Curriculum",
+        eyebrow: "Written curriculum",
+        title: "What students read",
         description:
-          "Curriculum is your structured plan for a course in the current term, including notes, topics, links, and attachments.",
+          "Each subject has one written curriculum a term, the text students read in their portal. The week-by-week plan stays in Subjects; Back to Subjects returns there.",
         icon: PencilRuler,
       },
       {
         target: "curriculum-primary-action",
-        title: "Choose or Create",
-        description:
-          "Select a course first, then create a new curriculum or edit the existing plan for that course and term.",
+        title: "Write or edit it",
+        description: "Write the curriculum for the term, or edit the one you have. Only the teacher of the subject can.",
         icon: BookOpen,
       },
       {
         target: "curriculum-list",
-        title: "Review Existing Plans",
-        description:
-          "Open curriculum cards to preview the plan, edit it, download it, or remove outdated content.",
+        title: "Read, edit or delete",
+        description: "Read shows the whole text with its attachments and saves it as an image. Edit reopens the editor; Delete removes it for students too.",
         icon: Search,
       },
     ],
@@ -256,38 +254,33 @@ export const guideConfigs: GuideConfig[] = [
     steps: [
       {
         target: "curriculum-editor-header",
-        eyebrow: "Editor guide",
-        title: "Curriculum Editor",
-        description:
-          "This editor is where you turn the course plan into readable learning content for students.",
+        eyebrow: "Curriculum editor",
+        title: "Writing the curriculum",
+        description: "Write what students should know about the subject this term. Close leaves without saving.",
         icon: PencilRuler,
       },
       {
         target: "curriculum-editor-config",
-        title: "Confirm Course and Term",
-        description:
-          "The side panel confirms the course, active term, attachments, and whether the curriculum is ready to save.",
+        title: "Subject, term and files",
+        description: "Check the subject and the term it is filed under, add images or PDFs, and see what is still missing before you save.",
         icon: BookOpen,
       },
       {
         target: "curriculum-editor-toolbar",
-        title: "Format the Lesson Plan",
-        description:
-          "Use the toolbar for headings, emphasis, lists, tables, images, links, alignment, colors, undo, and redo.",
+        title: "Format the text",
+        description: "Headings, bold, lists, tables, images, links, alignment and colours, with undo and redo.",
         icon: PencilRuler,
       },
       {
         target: "curriculum-editor-canvas",
-        title: "Write the Content",
-        description:
-          "Add the actual curriculum body here: weekly topics, learning outcomes, activities, references, and teacher notes.",
+        title: "The page students read",
+        description: "Type here: topics, what students should be able to do, activities and references. It looks the same in their portal.",
         icon: Lightbulb,
       },
       {
         target: "curriculum-editor-actions",
-        title: "Save When Ready",
-        description:
-          "The readiness message helps confirm that the course, term, and content are present before saving.",
+        title: "Save when ready",
+        description: "The line on the left says what is missing. Save once the subject, the term and some text are there.",
         icon: Send,
       },
     ],
