@@ -697,12 +697,31 @@ test("Attendance history: the period presets and the dates filter the class's fi
     await expect(period.getByRole("button", { name: preset })).toHaveAttribute("aria-pressed", "false");
   }
   const tile = (label: string) => page.locator('[data-guide="history-stats"]').getByText(label, { exact: true }).locator("xpath=..");
-  // Ada present every day; Ben present three days, late once, absent once (and no leave on those days): 9 of 10 attended.
-  await expect(tile("Present")).toHaveText(/^Present\s*8$/);
-  await expect(tile("Late")).toHaveText(/^Late\s*1$/);
-  await expect(tile("Absent")).toHaveText(/^Absent\s*1$/);
-  await expect(tile("On leave")).toHaveText(/^On leave\s*0$/);
-  await expect(tile("Attendance rate")).toHaveText(/^Attendance rate\s*90(\.0)?%$/);
+  // The class's figures are the sum of each student's for the range (GET /attendance/student/:id/kpis).
+  // In a database seeded today that is Ada present five days and Ben present three, late once and absent
+  // once: 8, 1, 1, no leave, 90%. A database seeded on several days holds more past days.
+  const classes = await apiCall<{ id: string; name: string }[]>(token, "GET", "/teachers/me/classes");
+  const grade5A = classes.find((c) => c.name === "Grade 5A")!.id;
+  const roster = await apiCall<{ students: { id: string }[] }>(token, "GET", `/teachers/me/classes/${grade5A}/students`);
+  const sum = { present: 0, late: 0, absent: 0, onLeave: 0 };
+  for (const student of roster.students) {
+    const k = await apiCall<{ presentDays: number; lateDays: number; absentDays: number; excusedDays: number }>(
+      token,
+      "GET",
+      `/attendance/student/${student.id}/kpis?startDate=${earlier}&endDate=${yesterday}`,
+    );
+    sum.present += k.presentDays ?? 0;
+    sum.late += k.lateDays ?? 0;
+    sum.absent += k.absentDays ?? 0;
+    sum.onLeave += k.excusedDays ?? 0;
+  }
+  expect(sum.present + sum.late + sum.absent, "the seed's past days are in the range").toBeGreaterThan(0);
+  const rate = Math.round(((sum.present + sum.late) / (sum.present + sum.late + sum.absent)) * 1000) / 10;
+  await expect(tile("Present")).toHaveText(new RegExp(`^Present\\s*${sum.present}$`));
+  await expect(tile("Late")).toHaveText(new RegExp(`^Late\\s*${sum.late}$`));
+  await expect(tile("Absent")).toHaveText(new RegExp(`^Absent\\s*${sum.absent}$`));
+  await expect(tile("On leave")).toHaveText(new RegExp(`^On leave\\s*${sum.onLeave}$`));
+  await expect(tile("Attendance rate")).toHaveText(new RegExp(`^Attendance rate\\s*${String(rate).replace(".", "\\.")}(\\.0)?%$`));
   // A range that ends before it starts is explained, not loaded.
   await from.fill(yesterday);
   await to.fill(earlier);
