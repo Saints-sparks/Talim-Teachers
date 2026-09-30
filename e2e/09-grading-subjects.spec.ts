@@ -22,7 +22,6 @@ import { dismissGuide } from "./support/ui";
  */
 const ALLOW: readonly Allowed[] = [
   { kind: "external", match: /fonts\.googleapis\.com|fonts\.gstatic\.com/, reason: "Google Fonts; blocked by the harness" },
-  { kind: "http", match: /GET \/curriculum\?teacherId=[a-f0-9]+ -> 404/, reason: "known backend bug, see 02-smoke.spec.ts" },
 ];
 const THEME_KEY = "talim_teacher_theme";
 const RUN = Date.now().toString(36).slice(-5);
@@ -36,7 +35,14 @@ interface Card {
 interface Sheet {
   term: { id: string; name: string };
   assessments: { id: string; name: string; status: string; maxScore: number }[];
-  students: { id: string; name: string; scores: Record<string, number | null> }[];
+  students: {
+    id: string;
+    name: string;
+    scores: Record<string, number | null>;
+    total: number | null;
+    grade: string | null;
+    position: { rank: number; of: number } | null;
+  }[];
 }
 interface SchemeWeek {
   week: number;
@@ -238,15 +244,19 @@ test("Term total: a column per assessment, the total, grade and position", async
   for (const head of ["First Term CA 1", "First Term CA 2", "First Term Exam", QUIZ, "Total", "Grade", "Pos."]) {
     await expect(table.getByRole("columnheader").filter({ hasText: head }).first()).toBeVisible();
   }
-  // Ada 80.4 + 8 = 88.4 of 110 (80.4%, A), 1st; Ben 66.5 + 7 = 73.5 (66.8%, B), 2nd.
-  const ada = table.getByRole("row").filter({ hasText: "Ada Student" });
-  const ben = table.getByRole("row").filter({ hasText: "Ben Student" });
-  await expect(ada).toContainText("88.4");
-  await expect(ada).toContainText("1st");
-  await expect(ben).toContainText("73.5");
-  await expect(ben).toContainText("2nd");
-  await expect(ada.getByRole("cell").filter({ hasText: /^A$/ })).toHaveCount(1);
-  await expect(ben.getByRole("cell").filter({ hasText: /^B$/ })).toHaveCount(1);
+  // The totals come from the API: the seeded scores differ between a fresh database (Ada 81, Ben 65.5
+  // before the quiz's 8 and 7) and one seeded before Round 3 (80.4 and 66.5 after the CA 1 repair).
+  // Either way Ada is 1st with an A and Ben 2nd with a B.
+  const sheet = await apiCall<Sheet>(token, "GET", `/grading/course/${mth.course.id}`);
+  const expected = (name: string) => sheet.students.find((s) => s.name === name)!;
+  for (const [name, rank, letter] of [["Ada Student", "1st", "A"], ["Ben Student", "2nd", "B"]] as const) {
+    const want = expected(name);
+    expect(want.grade).toBe(letter);
+    const row = table.getByRole("row").filter({ hasText: name });
+    await expect(row).toContainText(String(want.total));
+    await expect(row).toContainText(rank);
+    await expect(row.getByRole("cell").filter({ hasText: new RegExp(`^${letter}$`) })).toHaveCount(1);
+  }
 });
 
 test("the throwaway assessment goes again, and Mathematics 5A is as the seed left it", async () => {

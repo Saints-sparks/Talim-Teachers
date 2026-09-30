@@ -17,12 +17,6 @@ export const ALLOW: readonly Allowed[] = [
     match: /fonts\.googleapis\.com|fonts\.gstatic\.com/,
     reason: "The layout loads Poppins and Montserrat from Google Fonts. The harness blocks every off-machine request; the page falls back to a system font.",
   },
-  {
-    kind: "http",
-    match: /GET \/curriculum\?teacherId=[a-f0-9]+ -> 404/,
-    reason:
-      "BACKEND BUG (open): GET /curriculum?teacherId= validates the id against the Teacher profile collection but filters on the User id, so no id can succeed. The onboarding sync sends the user id and swallows the 404 on every navigation.",
-  },
 ];
 
 test.use({ storageState: authFile("teacher") });

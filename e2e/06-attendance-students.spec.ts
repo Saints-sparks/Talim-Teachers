@@ -17,7 +17,6 @@ import { dismissGuide } from "./support/ui";
  */
 const ALLOW: readonly Allowed[] = [
   { kind: "external", match: /fonts\.googleapis\.com|fonts\.gstatic\.com/, reason: "Google Fonts; blocked by the harness" },
-  { kind: "http", match: /GET \/curriculum\?teacherId=[a-f0-9]+ -> 404/, reason: "known backend bug, see 02-smoke.spec.ts" },
 ];
 const THEME_KEY = "talim_teacher_theme";
 
@@ -33,6 +32,8 @@ interface RosterBody {
 let token = "";
 let grade5A: MyClass;
 let ada = "";
+/** The seeded Grade 5A class group (the Messages guide opens it). */
+let classRoom = "";
 
 const registerLoaded = (page: Page) =>
   page.waitForResponse((r) => /\/registers\/[a-f0-9]{24}(\?|$)/.test(r.url()) && r.request().method() === "GET" && r.ok());
@@ -51,6 +52,8 @@ test.beforeAll(async () => {
   grade5A = classes.find((c) => c.name === "Grade 5A")!;
   const roster = await apiCall<RosterBody>(token, "GET", `/teachers/me/classes/${grade5A.id}/students`);
   ada = roster.students.find((s) => s.name === "Ada Student")!.id;
+  const rooms = await apiCall<{ _id: string; type: string; classId?: string | null }[]>(token, "GET", "/chat/rooms");
+  classRoom = rooms.find((r) => r.type === "class_group")!._id;
 });
 
 async function openAttendance(page: Page, query = ""): Promise<void> {
@@ -103,6 +106,32 @@ const GUIDES: { path: () => string; name: string; targets: string[]; ready: RegE
     name: "Subjects",
     targets: ["subjects-cards", "subjects-plan", "subjects-mark-taught", "subjects-tab-resources", "subjects-upload"],
     ready: /\/scheme-of-work\/course\/[a-f0-9]{24}/,
+  },
+  {
+    // A conversation is open, so the header's info button (the last step) is on the page.
+    path: () => `/messages?room=${classRoom}`,
+    name: "Messages",
+    targets: ["messages-filters", "messages-new", "messages-list", "messages-info"],
+    // Rooms and messages arrive over the socket; the chat context's preferences read is the page's first request.
+    ready: /\/teacher\/settings$/,
+  },
+  {
+    path: () => "/notifications",
+    name: "Notifications",
+    targets: ["notifications-tabs", "notifications-list", "notifications-detail", "notifications-mark-all"],
+    ready: /\/notifications\/counts$/,
+  },
+  {
+    path: () => "/settings",
+    name: "Settings",
+    targets: ["settings-tabs", "settings-tab-notifications", "settings-tab-security", "settings-tab-help"],
+    ready: /\/teacher\/settings$/,
+  },
+  {
+    path: () => "/analytics/attendance",
+    name: "Attendance history",
+    targets: ["history-filters", "history-stats", "history-students"],
+    ready: /\/teachers\/me\/classes\/[a-f0-9]{24}\/students$/,
   },
 ];
 
@@ -342,6 +371,10 @@ test("the student record shows the guardian without empty rows, and Message open
 
   await guardian.getByRole("button", { name: "Message" }).click();
   await expect(page).toHaveURL(/\/messages\?room=[a-f0-9]{24}/);
+  // The room it opens is the one-to-one chat with the guardian, who can be called (§27 callPhone).
+  await expect(page.getByRole("heading", { level: 2, name: "Paul Parent" })).toBeVisible();
+  await expect(page.getByText(/^Parent of Ada Student/).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "Call Paul Parent" })).toHaveAttribute("href", /^tel:/);
 });
 
 test("a second teacher cannot pick or open Grade 5A: pickers leave it out and direct links say so", async ({ browser, baseURL }) => {

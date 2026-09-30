@@ -99,11 +99,7 @@ test.describe.serial("temporary password", () => {
     await page.goto("/dashboard");
     await expect(page.getByText(/Good (morning|afternoon|evening), Temi/)).toBeVisible();
     await page.waitForLoadState("networkidle", { timeout: 15_000 }).catch(() => undefined);
-    const allow: Allowed[] = [
-      FONTS,
-      { kind: "http", match: /GET \/curriculum\?teacherId=[a-f0-9]+ -> 404/, reason: "known backend bug, see 02-smoke.spec.ts" },
-    ];
-    expect(monitor.unexpected(allow)).toEqual([]);
+    expect(monitor.unexpected([FONTS])).toEqual([]);
   });
 
   test("after the change, the new password signs in normally and the temporary one is dead", async ({ page }) => {

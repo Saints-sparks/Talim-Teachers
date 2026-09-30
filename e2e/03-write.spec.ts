@@ -12,7 +12,6 @@ import { dismissGuide } from "./support/ui";
  */
 const ALLOW: readonly Allowed[] = [
   { kind: "external", match: /fonts\.googleapis\.com|fonts\.gstatic\.com/, reason: "Google Fonts; blocked by the harness" },
-  { kind: "http", match: /GET \/curriculum\?teacherId=[a-f0-9]+ -> 404/, reason: "known backend bug, see 02-smoke.spec.ts" },
 ];
 
 test.use({ storageState: authFile("teacher") });

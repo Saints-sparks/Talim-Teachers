@@ -24,9 +24,12 @@ export const TEACHER_PAGES: readonly PageSpec[] = [
   { path: "/grading", label: "Grading", content: /First Term CA 1/, feed: /\/grading\/course\/[a-f0-9]{24}(\?|$)/ },
   { path: "/students", label: "Students", content: /2 of 30/, feed: /\/teachers\/me\/classes\/[a-f0-9]{24}\/students$/ },
   { path: "/subjects", label: "Subjects", content: /MTH-5A/, feed: /\/scheme-of-work\/me(\?|$)/ },
-  { path: "/curriculum", label: "Curriculum", content: /Choose a subject first/ },
-  // The seed makes a Grade 5A class-group room (the lesson sheet's "Message the class").
+  // Without `?courseId=` the written curriculum asks for a subject (Subjects links to each one).
+  { path: "/curriculum", label: "Curriculum", content: /Choose a subject first/, empty: true },
+  // The seed makes a Grade 5A class-group room (the lesson sheet's "Message the class"); it is in the conversations list.
   { path: "/messages", label: "Messages", content: /Class Group Chat/ },
-  { path: "/notifications", label: "Notifications", content: /Grades published: First Term CA 1/ },
-  { path: "/settings", label: "Settings", content: /Manage your account/ },
+  // The publish confirmation the seed's Mathematics 5A publish sends the teacher.
+  { path: "/notifications", label: "Notifications", content: /Grades published: First Term CA 1/, feed: /\/notifications\/counts$/ },
+  // Settings opens on Account: the teacher's email appears once their settings have loaded.
+  { path: "/settings", label: "Settings", content: /teacher@e2e\.talim\.test/, feed: /\/teacher\/settings$/ },
 ];
