@@ -193,6 +193,35 @@ export const guideConfigs: GuideConfig[] = [
     ],
   },
   {
+    id: "attendance-history",
+    pathMatchers: ["/analytics/attendance"],
+    exactOnly: true,
+    steps: [
+      {
+        target: "history-filters",
+        eyebrow: "Attendance history",
+        title: "Pick a class and a period",
+        description:
+          "Choose one of your classes, then this week, this month or this term, or type any From and To up to today. The address keeps what you picked, so you can bookmark or share it.",
+        icon: CalendarDays,
+      },
+      {
+        target: "history-stats",
+        title: "The class over the period",
+        description:
+          "Its attendance rate, the present, late, absent and leave days, and how many students are below 90%. Late counts as attended; leave approved by the office does not count against the rate.",
+        icon: BarChart3,
+      },
+      {
+        target: "history-students",
+        title: "Student by student",
+        description:
+          "Each student's rate and days. Sort by lowest attendance first to see who needs a word, search by name, or open a student's record.",
+        icon: UsersRound,
+      },
+    ],
+  },
+  {
     id: "curriculum",
     pathMatchers: ["/curriculum"],
     exactOnly: true,

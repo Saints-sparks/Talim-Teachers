@@ -18,6 +18,8 @@ import { StudentsScreen } from "@/components/students/StudentsScreen";
 import { StudentRecordScreen } from "@/components/students/StudentRecordScreen";
 import { GradingScreen } from "@/components/grading/GradingScreen";
 import { SubjectsScreen } from "@/components/subjects/SubjectsScreen";
+import { AttendanceHistoryScreen } from "@/components/attendance/AttendanceHistoryScreen";
+import { attendanceService } from "@/app/services/attendance/attendance.service";
 import { classroomService } from "@/app/services/classroom/classroom.service";
 import { gradingService } from "@/app/services/grading/grading.service";
 import { subjectsService } from "@/app/services/subjects/subjects.service";
@@ -62,6 +64,11 @@ jest.mock("@/app/services/subjects/subjects.service", () => ({
   subjectsService: { getMySubjects: jest.fn(), getScheme: jest.fn(), getCourseResources: jest.fn(), getLegacyCurriculum: jest.fn() },
 }));
 jest.mock("@/hooks/academic/useSchoolTerms", () => ({ useSchoolTerms: () => ({ data: [] }) }));
+jest.mock("@/app/services/attendance/attendance.service", () => ({ attendanceService: { getStudentKpis: jest.fn() } }));
+jest.mock("@/app/services/api.service", () => ({
+  ...jest.requireActual("@/app/services/api.service"),
+  getCurrentTerm: jest.fn().mockResolvedValue({ _id: "t1", name: "First Term", startDate: "2026-09-07" }),
+}));
 jest.mock("@/app/context/AppContext", () => ({ useAppContext: () => ({ user: { userId: "teacher-1" } }) }));
 jest.mock("@/hooks/settings/useTeacherSettings", () => ({ useTeacherPreferences: jest.fn() }));
 
@@ -97,6 +104,18 @@ beforeEach(() => {
   subjects.getMySubjects.mockImplementation(async (termId) => subjectsFixture.makeSubjectCardsFixture(termId));
   subjects.getScheme.mockImplementation(async (courseId, termId) => subjectsFixture.makeSchemeFixture(courseId, termId)!);
   subjects.getCourseResources.mockImplementation(async (courseId) => subjectsFixture.makeCourseResourcesFixture(courseId));
+  (attendanceService.getStudentKpis as jest.Mock).mockImplementation(async (studentId: string) => ({
+    studentId,
+    firstName: "F",
+    lastName: "L",
+    email: "",
+    attendanceRate: 0,
+    totalDays: 12,
+    presentDays: 10,
+    lateDays: 1,
+    absentDays: 1,
+    excusedDays: 0,
+  }));
 });
 
 /** Each redesigned page: its path (and query), the guide expected there, and how to render it ready. */
@@ -140,6 +159,14 @@ const PAGES: { path: string; query?: string; guide: string; mount: () => Promise
     mount: async () => {
       render(<AttendanceScreen initialClassId="c1" initialDate="2026-09-25" />);
       await screen.findByRole("heading", { name: "JSS1 A · Friday 25 September · today" });
+    },
+  },
+  {
+    path: "/analytics/attendance",
+    guide: "attendance-history",
+    mount: async () => {
+      render(<AttendanceHistoryScreen initial={{}} />);
+      await screen.findByRole("table");
     },
   },
   {
