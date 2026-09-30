@@ -98,8 +98,7 @@ describe("teacher write payloads type-check against the backend DTOs", () => {
 
   it("PATCH /teacher/settings/preferences and /notifications/preferences", () => {
     const preferences = {
-      notifications: { announcements: true, quietStart: "22:00", quietEnd: "07:00" },
-      messages: { defaultFilter: "groups" },
+      messages: { defaultFilter: "groups", showOnlineStatus: false, readReceipts: true, soundEnabled: true },
       theme: "dark",
     } satisfies TeacherPreferencesPayload;
     const switches = { pushEnabled: true, webPushEnabled: false, quietHoursStart: "22:00" } satisfies NotificationPreferencesPayload;
