@@ -28,6 +28,7 @@ export interface TeacherOnboardingStep {
   href: string;
 }
 
+/** The first-run steps, in order: the profile (phase 1), then the five first tasks (phase 2). */
 export const TEACHER_ONBOARDING_STEPS: TeacherOnboardingStep[] = [
   {
     id: "teacher-profile",
@@ -112,6 +113,13 @@ const TeacherOnboardingContext = createContext<
   TeacherOnboardingContextType | undefined
 >(undefined);
 
+/**
+ * The first-run checklist: which steps are done, progress, and the actions
+ * that tick steps, complete the profile step and dismiss the setup prompt.
+ *
+ * @returns The onboarding state and actions.
+ * @throws When used outside {@link TeacherOnboardingProvider}.
+ */
 export const useTeacherOnboarding = () => {
   const ctx = useContext(TeacherOnboardingContext);
   if (!ctx) {
@@ -128,8 +136,20 @@ const defaultState: TeacherOnboardingState = {
   setupDismissed: false,
 };
 
+/**
+ * The per-teacher storage key of the checklist.
+ *
+ * @param userId - The teacher.
+ * @returns The localStorage key.
+ */
 const storageKey = (userId: string) => `teacher_onboarding_${userId}`;
 
+/**
+ * Reads a teacher's checklist from this device, falling back to a fresh one.
+ *
+ * @param userId - The teacher.
+ * @returns The stored state, or the default.
+ */
 const loadState = (userId: string): TeacherOnboardingState => {
   if (typeof window === "undefined") return defaultState;
 
@@ -145,6 +165,12 @@ const loadState = (userId: string): TeacherOnboardingState => {
   return defaultState;
 };
 
+/**
+ * Writes a teacher's checklist to this device; a storage failure is ignored.
+ *
+ * @param userId - The teacher.
+ * @param state - The state to keep.
+ */
 const saveState = (userId: string, state: TeacherOnboardingState) => {
   try {
     localStorage.setItem(storageKey(userId), JSON.stringify(state));
@@ -153,6 +179,15 @@ const saveState = (userId: string, state: TeacherOnboardingState) => {
   }
 };
 
+/**
+ * Holds the signed-in teacher's first-run checklist, kept per teacher in
+ * localStorage (`teacher_onboarding_<userId>`).
+ *
+ * @param props - The provider's props.
+ * @param props.children - The app.
+ * @param props.userId - The signed-in teacher, or null when signed out.
+ * @returns The provider.
+ */
 export const TeacherOnboardingProvider: React.FC<{
   children: React.ReactNode;
   userId?: string | null;

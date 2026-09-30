@@ -37,12 +37,16 @@ const PAIRS: Array<[string, string[]]> = [
   ["ink", ["surface", "subtle", "today", "bg"]],
   ["body", ["surface"]],
   ["muted", ["surface", "subtle", "today", "bg", "select"]],
-  ["faint", ["surface", "subtle", "today"]],
+  // Eyebrows and footnotes sit on the grey page too (onboarding, the signed-out card's page).
+  ["faint", ["surface", "subtle", "today", "bg"]],
   ["brand", ["surface", "select", "bg"]],
   ["link", ["surface"]],
-  ["success", ["surface", "success-bg", "success-soft"]],
-  ["warning", ["surface", "warning-bg"]],
-  ["danger", ["surface", "danger-bg"]],
+  // Rates on the highlighted row of Attendance history sit on the selection tint.
+  ["success", ["surface", "success-bg", "success-soft", "select"]],
+  ["warning", ["surface", "warning-bg", "select"]],
+  ["danger", ["surface", "danger-bg", "select"]],
+  // The body copy of the alert banners on the signed-out pages.
+  ["body", ["danger-bg", "warning-bg", "subtle", "select"]],
   ["accent", ["surface", "accent-bg"]],
   ["on-brand", ["brand-fill", "now"]],
 ];
