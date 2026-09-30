@@ -13,6 +13,9 @@ const CONFIG = "/__talim_push__/config";
 
 interface Scope {
   fire: (event: Record<string, unknown>) => Promise<void>;
+  /** Delivers a push with this JSON payload. */
+  push: (payload: Record<string, unknown>) => Promise<void>;
+  showNotification: jest.Mock;
   notes: Map<string, string>;
   subscribe: jest.Mock;
   postMessage: jest.Mock;
@@ -25,7 +28,9 @@ interface Scope {
  * @param options - What the worker's registration and clients do.
  * @returns Handles to drive and inspect the worker.
  */
-function loadWorker(options: { subscribeFails?: boolean; currentSubscription?: unknown } = {}): Scope {
+function loadWorker(
+  options: { subscribeFails?: boolean; currentSubscription?: unknown; windows?: { url: string; focused: boolean }[] } = {},
+): Scope {
   const notes = new Map<string, string>();
   const cache = {
     match: async (url: string) => (notes.has(url) ? new Response(notes.get(url)) : undefined),
@@ -38,6 +43,7 @@ function loadWorker(options: { subscribeFails?: boolean; currentSubscription?: u
   const postMessage = jest.fn();
   const fetchMock = jest.fn();
   const handlers: Record<string, (event: unknown) => void> = {};
+  const showNotification = jest.fn();
   const self = {
     location: { origin: "https://app.example" },
     addEventListener: (type: string, handler: (event: unknown) => void) => {
@@ -45,13 +51,16 @@ function loadWorker(options: { subscribeFails?: boolean; currentSubscription?: u
     },
     registration: {
       pushManager: { getSubscription: async () => options.currentSubscription ?? null, subscribe },
-      showNotification: jest.fn(),
+      showNotification,
     },
   };
   const sandbox = {
     self,
     caches: { open: async () => cache },
-    clients: { matchAll: async () => [{ postMessage }], openWindow: jest.fn() },
+    clients: {
+      matchAll: async () => (options.windows ? options.windows.map((w) => ({ ...w, postMessage })) : [{ postMessage }]),
+      openWindow: jest.fn(),
+    },
     fetch: fetchMock,
     atob: (value: string) => Buffer.from(value, "base64").toString("binary"),
     Response,
@@ -70,9 +79,15 @@ function loadWorker(options: { subscribeFails?: boolean; currentSubscription?: u
     subscribe,
     postMessage,
     fetch: fetchMock,
+    showNotification,
     fire: async (event) => {
       let pending: Promise<unknown> = Promise.resolve();
       handlers.pushsubscriptionchange({ ...event, waitUntil: (promise: Promise<unknown>) => (pending = promise) });
+      await pending;
+    },
+    push: async (payload) => {
+      let pending: Promise<unknown> = Promise.resolve();
+      handlers.push({ data: { json: () => payload, text: () => JSON.stringify(payload) }, waitUntil: (promise: Promise<unknown>) => (pending = promise) });
       await pending;
     },
   };
@@ -146,5 +161,46 @@ describe("service worker: pushsubscriptionchange", () => {
     });
 
     expect(note(worker, PENDING).staleEndpoints.sort()).toEqual(["https://push.example/first", "https://push.example/second"]);
+  });
+});
+
+describe("service worker: push for a chat message", () => {
+  const message = { title: "Mrs. Adaobi Obi", body: "Good morning", data: { roomId: "room-obi", url: "/messages?room=room-obi" } };
+
+  it("stays quiet when that room is open in a focused window", async () => {
+    const worker = loadWorker({ windows: [{ url: "https://app.example/messages?room=room-obi", focused: true }] });
+    await worker.push(message);
+    expect(worker.showNotification).not.toHaveBeenCalled();
+  });
+
+  it("matches the room whatever else is in the url", async () => {
+    const worker = loadWorker({ windows: [{ url: "https://app.example/messages?tab=x&room=room-obi", focused: true }] });
+    await worker.push(message);
+    expect(worker.showNotification).not.toHaveBeenCalled();
+  });
+
+  it("still notifies when the room is open but the window is not focused", async () => {
+    const worker = loadWorker({ windows: [{ url: "https://app.example/messages?room=room-obi", focused: false }] });
+    await worker.push(message);
+    expect(worker.showNotification).toHaveBeenCalledWith("Mrs. Adaobi Obi", expect.objectContaining({ body: "Good morning" }));
+  });
+
+  it("still notifies when a different room, or another page, is focused", async () => {
+    const other = loadWorker({ windows: [{ url: "https://app.example/messages?room=room-c2", focused: true }] });
+    await other.push(message);
+    expect(other.showNotification).toHaveBeenCalledTimes(1);
+    const dashboard = loadWorker({ windows: [{ url: "https://app.example/dashboard", focused: true }] });
+    await dashboard.push(message);
+    expect(dashboard.showNotification).toHaveBeenCalledTimes(1);
+  });
+
+  it("reads a top-level roomId too, and notifies for a push without one", async () => {
+    const focused = [{ url: "https://app.example/messages?room=room-obi", focused: true }];
+    const topLevel = loadWorker({ windows: focused });
+    await topLevel.push({ title: "New message", roomId: "room-obi" });
+    expect(topLevel.showNotification).not.toHaveBeenCalled();
+    const plain = loadWorker({ windows: focused });
+    await plain.push({ title: "Scores published", data: { url: "/grading" } });
+    expect(plain.showNotification).toHaveBeenCalledTimes(1);
   });
 });

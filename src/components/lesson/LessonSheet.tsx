@@ -10,6 +10,44 @@ import { displayRange, lessonTitle } from "@/hooks/today/today.logic";
 import { classMessagesRoute, registerRoute, schemeOfWorkRoute } from "@/hooks/today/today.routes";
 import { groupPeriodLabel, type LessonGroup } from "@/hooks/timetable/timetableWeek.logic";
 import { useMarkTaught } from "@/hooks/today/useTeacherToday";
+import { useClassGroup } from "@/hooks/messages/useInbox";
+
+/**
+ * "Message the class" for a lesson whose class has no group room yet
+ * (`classRoomId` null): creates the class group, or reuses the one the
+ * server already has, through the existing `POST /chat/groups`
+ * (`class_group`) flow, then opens it in Messages.
+ *
+ * @param props - The class and what to do once the group is open.
+ * @param props.classId - The lesson's class.
+ * @param props.className - Its name, for the copy and the new group's name.
+ * @param props.onOpened - Closes the sheet once Messages is opening.
+ * @returns The sheet row.
+ */
+function MessageClassRow({ classId, className, onOpened }: { classId: string; className: string; onOpened: () => void }) {
+  const { open, pendingClassId } = useClassGroup();
+  const busy = pendingClassId === classId;
+  /** Opens the class group, then closes the sheet; a failure is a toast. */
+  const start = async () => {
+    try {
+      await open({ classId, name: `${className} class group` });
+      onOpened();
+    } catch (error) {
+      toast.error(getErrorMessage(error, `The ${className} class group could not be opened. Please try again.`));
+    }
+  };
+  return (
+    <SheetRow
+      label="Message the class"
+      description={`Starts a group for ${className}`}
+      action={
+        <button type="button" className={rowButton} onClick={() => void start()} disabled={busy} aria-busy={busy || undefined}>
+          {busy ? "Opening…" : "Message"}
+        </button>
+      }
+    />
+  );
+}
 
 /** Props for {@link LessonSheet}. */
 export interface LessonSheetProps {
@@ -26,7 +64,8 @@ export interface LessonSheetProps {
  * The lesson sheet: "Friday · Period 4 · 10:20 – 11:00", the class and
  * course, the room, this week's topic and objectives, and the lesson's
  * actions — take the register (class teacher only), mark the week taught (or
- * undo), open the scheme of work, share a resource, message the class.
+ * undo), open the scheme of work, share a resource, message the class (its
+ * group room, or a new class group when it has none).
  *
  * @param props - See {@link LessonSheetProps}.
  * @returns The sheet.
@@ -133,15 +172,19 @@ export function LessonSheet({ group, termId, onClose, onShareResource }: LessonS
               </button>
             }
           />
-          <SheetRow
-            label="Message the class"
-            description={lesson.classRoomId ? `The ${lesson.class.name} class group in Messages` : "Open Messages (this class has no group chat yet)"}
-            action={
-              <Link href={classMessagesRoute(lesson.classRoomId)} className={rowButton}>
-                Message
-              </Link>
-            }
-          />
+          {lesson.classRoomId ? (
+            <SheetRow
+              label="Message the class"
+              description={`The ${lesson.class.name} class group in Messages`}
+              action={
+                <Link href={classMessagesRoute(lesson.classRoomId)} className={rowButton}>
+                  Message
+                </Link>
+              }
+            />
+          ) : (
+            <MessageClassRow classId={lesson.class.id} className={lesson.class.name} onOpened={onClose} />
+          )}
         </>
       ) : null}
     </Sheet>

@@ -1,53 +1,64 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
-import { Loader2, MessageCircle, WifiOff } from "lucide-react";
+import { useLayoutEffect, useRef, useState } from "react";
+import { Loader2, WifiOff } from "lucide-react";
 import ChatHeader from "./ChatHeader";
+import ConversationInfo from "./ConversationInfo";
+import MessageBubble from "./MessageBubble";
 import MessageInput from "./MessageInput";
-import GroupMessageBubble from "./GroupMessageBubble";
-import PrivateMessageBubble from "./PrivateMessageBubble";
 import { ReplyBar, type ReplyDraft } from "@/components/chat-kit";
+import { focusRing, primaryButton } from "@/components/tl/styles";
 import { useChatRoom } from "@/app/hooks/useChatRoom";
-import { RealtimeChatRoom } from "@/app/hooks/useRealtimeChat";
-import { ChatParticipant } from "@/app/hooks/useWebSocket";
-import { ChatMessageView } from "@/app/lib/chat/normalizeMessage";
+import type { RealtimeChatRoom } from "@/app/hooks/useRealtimeChat";
+import type { ChatParticipant } from "@/app/hooks/useWebSocket";
+import { roleLabel } from "@/app/lib/chat/groupPermissions";
+import type { ChatMessageView } from "@/app/lib/chat/normalizeMessage";
 import { readersOf, receiptState } from "@/app/lib/chat/readModel";
-import { generateColorFromString } from "@/lib/colorUtils";
+import { clockTime } from "@/hooks/messages/messages.logic";
 
 const NEAR_BOTTOM_PX = 120;
 const LOAD_OLDER_AT_PX = 40;
 
+/** Props for {@link ChatThread}. */
 export interface ChatThreadProps {
+  /** `group` for anything but a one-to-one chat (sender names over bubbles, "Read by N"). */
   variant: "group" | "private";
   roomId: string;
-  /** The room as listed in the sidebar, kept live by chat-rooms-update. */
+  /** The room as listed, kept live by chat-rooms-update. */
   room?: RealtimeChatRoom | null;
   replyingMessage: ReplyDraft | null;
   setReplyingMessage: (msg: ReplyDraft | null) => void;
+  /** Back to the list (phones). */
   onBack?: () => void;
 }
 
 const participantId = (p: ChatParticipant) => p.userId ?? p._id;
-const participantName = (p: ChatParticipant) =>
-  `${p.firstName || ""} ${p.lastName || ""}`.trim() || "Unknown User";
+const participantName = (p: ChatParticipant) => `${p.firstName || ""} ${p.lastName || ""}`.trim() || "Unknown user";
 const messageKey = (m: ChatMessageView) => m.clientMessageId || m._id;
 
-const formatTime = (iso: string) =>
-  new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-
+/**
+ * "Today", "Yesterday" or the date, for the day separators.
+ *
+ * @param date - Midnight of the day.
+ * @returns The label.
+ */
 const formatDate = (date: Date) => {
   const today = new Date();
   const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const messageMidnight = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   const yesterday = new Date(todayMidnight);
   yesterday.setDate(yesterday.getDate() - 1);
-
   if (messageMidnight.getTime() === todayMidnight.getTime()) return "Today";
   if (messageMidnight.getTime() === yesterday.getTime()) return "Yesterday";
-  return date.toLocaleDateString();
+  return date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 };
 
-/** Messages grouped by day, oldest first (the store is already sorted). */
+/**
+ * Messages grouped by day, oldest first (the store is already sorted).
+ *
+ * @param messages - The thread.
+ * @returns One group per day.
+ */
 const groupByDate = (messages: ChatMessageView[]) => {
   const groups: Array<{ dateKey: string; messages: ChatMessageView[] }> = [];
   for (const message of messages) {
@@ -60,19 +71,20 @@ const groupByDate = (messages: ChatMessageView[]) => {
 };
 
 /**
- * The thread shared by private and group chats: header, history with paging,
- * pending/failed sends and the composer. Only the header and bubbles differ.
+ * The open conversation (the design's chat card): the header (subtitle, a
+ * Call link only for a room with `callPhone`, the info modal), the history
+ * with paging, day separators, receipts, replies and delete, pending and
+ * failed sends, and the composer with attachments and voice notes. The
+ * engine (`useChatRoom` / `useRealtimeChat`) is unchanged; this is its
+ * surface.
+ *
+ * @param props - See {@link ChatThreadProps}.
+ * @returns The chat card's content.
  */
-export default function ChatThread({
-  variant,
-  roomId,
-  room,
-  replyingMessage,
-  setReplyingMessage,
-  onBack,
-}: ChatThreadProps) {
+export default function ChatThread({ variant, roomId, room, replyingMessage, setReplyingMessage, onBack }: ChatThreadProps) {
   const thread = useChatRoom(roomId);
   const me = thread.currentUserId;
+  const [infoOpen, setInfoOpen] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const nearBottomRef = useRef(true);
@@ -115,15 +127,11 @@ export default function ChatThread({
   const handleScroll = () => {
     const container = containerRef.current;
     if (!container) return;
-    const distanceFromBottom =
-      container.scrollHeight - container.scrollTop - container.clientHeight;
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
     nearBottomRef.current = distanceFromBottom < NEAR_BOTTOM_PX;
 
     if (container.scrollTop < LOAD_OLDER_AT_PX && hasMore && !loadingOlder && thread.isConnected) {
-      prependAnchorRef.current = {
-        scrollHeight: container.scrollHeight,
-        scrollTop: container.scrollTop,
-      };
+      prependAnchorRef.current = { scrollHeight: container.scrollHeight, scrollTop: container.scrollTop };
       thread.loadOlder();
     }
   };
@@ -150,45 +158,26 @@ export default function ChatThread({
     }
   }
 
-  const header = (() => {
-    if (variant === "private") {
-      const other = others[0];
-      return {
-        name: other ? participantName(other) : room?.displayName || "Private Chat",
-        avatar: other?.userAvatar || "",
-        status: other ? (other.isOnline ? "Online" : "Offline") : undefined,
-        subtext: undefined,
-      };
-    }
-
-    const onlineCount = others.filter((p) => p.isOnline).length;
-    const names = others.map(participantName);
-    return {
-      // The server always names a group, so no class/course lookup is needed here.
-      name: roomData?.name || room?.displayName || "Group Chat",
-      avatar: roomData?.avatarUrl || "",
-      status:
-        onlineCount === 0
-          ? "Group chat"
-          : onlineCount === 1
-            ? "1 member online"
-            : `${onlineCount} members online`,
-      subtext:
-        names.length === 0
-          ? "No other participants"
-          : names.length <= 3
-            ? names.join(", ")
-            : `${names.slice(0, 2).join(", ")} and ${names.length - 2} others`,
-    };
+  const other = others[0];
+  const name = variant === "private" ? (other ? participantName(other) : room?.displayName || "Conversation") : roomData?.name || room?.displayName || "Group";
+  const fallbackSubtitle = (() => {
+    if (variant === "private") return other ? roleLabel(other.role) : undefined;
+    const count = participants.length;
+    return `${count} ${count === 1 ? "member" : "members"}`;
   })();
+  const subtitle = roomData?.subtitle || fallbackSubtitle;
+  const avatar = variant === "private" ? other?.userAvatar || null : roomData?.avatarUrl || null;
 
   const isInitialLoad = messages.length === 0 && (joinStatus === "joining" || joinStatus === "idle");
-  const Bubble = variant === "group" ? GroupMessageBubble : PrivateMessageBubble;
-
   const loadedIds = new Set(messages.map((m) => m._id));
   const clearReply = () => setReplyingMessage(null);
 
-  /** Delete is offered for my own messages, and in a group for others' (the server decides who may). */
+  /**
+   * Delete is offered for my own messages, and in a group for others' (the server decides who may).
+   *
+   * @param message - The message.
+   * @returns The delete handler, or undefined when there is none.
+   */
   const deleteHandlerFor = (message: ChatMessageView) => {
     if (message.status !== "sent" || message.isDeleted) return undefined;
     const mine = Boolean(me) && message.senderId === me;
@@ -196,138 +185,123 @@ export default function ChatThread({
     return () => thread.removeStored(message._id);
   };
 
+  /**
+   * Scrolls to a quoted message and flashes it.
+   *
+   * @param messageId - The quoted message.
+   */
   const jump = (messageId: string) => {
     const el = document.getElementById(`msg-${messageId}`);
     if (!el) return;
     el.scrollIntoView({ behavior: "smooth", block: "center" });
-    el.classList.add("bg-blue-50");
-    window.setTimeout(() => el.classList.remove("bg-blue-50"), 1200);
+    el.classList.add("bg-tl-select");
+    window.setTimeout(() => el.classList.remove("bg-tl-select"), 1200);
   };
 
-  /** Sends with the reply attached, then drops the reply bar. */
+  /**
+   * Sends with the reply attached, then drops the reply bar.
+   *
+   * @param text - The text or caption.
+   * @param media - Files or a voice note.
+   */
   const sendWithReply = (text: string, media?: Parameters<typeof thread.send>[1]) => {
     thread.send(text, { ...media, replyTo: replyingMessage ?? undefined });
     clearReply();
   };
 
   return (
-    <div className="w-full h-full flex flex-col relative bg-white">
+    <div className="flex h-full min-h-0 w-full flex-col">
       <ChatHeader
-        avatar={header.avatar}
-        name={header.name}
-        status={header.status}
-        subtext={header.subtext}
-        roomId={variant === "group" ? roomId : undefined}
-        contact={
-          variant === "private" && others[0]
-            ? {
-                name: header.name,
-                avatar: others[0].userAvatar,
-                role: others[0].role,
-                isOnline: others[0].isOnline,
-              }
-            : undefined
-        }
+        name={name}
+        subtitle={subtitle}
+        avatar={avatar}
+        group={variant === "group"}
+        online={variant === "private" && Boolean(other?.isOnline)}
+        callPhone={variant === "private" ? roomData?.callPhone : null}
+        onInfo={() => setInfoOpen(true)}
         onBack={onBack}
-        showBackButton={true}
       />
 
       <div
-        className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-2 sm:space-y-3 bg-gray-50"
         ref={containerRef}
         onScroll={handleScroll}
+        className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto bg-tl-subtle p-[18px]"
+        aria-label={`Messages with ${name}`}
+        role="log"
+        aria-live="polite"
+        aria-relevant="additions"
+        data-guide="messages-thread"
       >
-        {loadingOlder && (
-          <div className="flex justify-center py-2">
-            <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+        {loadingOlder ? (
+          <div className="flex justify-center py-2" role="status" aria-label="Loading older messages">
+            <Loader2 className="h-5 w-5 animate-spin text-tl-brand" aria-hidden />
           </div>
-        )}
+        ) : null}
 
-        {joinStatus === "error" && messages.length > 0 && (
-          <div className="flex items-center justify-center gap-2 text-xs text-red-600">
+        {joinStatus === "error" && messages.length > 0 ? (
+          <div className="flex items-center justify-center gap-2 text-xs font-bold text-tl-danger" role="alert">
             <span>{thread.joinError || "Couldn't load this chat"}</span>
-            <button type="button" className="underline" onClick={thread.retryJoin}>
+            <button type="button" className={`inline-flex min-h-[44px] items-center rounded px-1 underline ${focusRing}`} onClick={thread.retryJoin}>
               Retry
             </button>
           </div>
-        )}
+        ) : null}
 
         {isInitialLoad ? (
-          <div className="flex flex-col items-center justify-center h-48">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-2" />
-            <p className="text-sm text-gray-500">Loading messages...</p>
+          <div className="m-auto flex flex-col items-center gap-2 text-sm text-tl-muted" role="status">
+            <Loader2 className="h-7 w-7 animate-spin text-tl-brand" aria-hidden />
+            Loading messages…
           </div>
         ) : joinStatus === "error" && messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-48">
-            <p className="text-sm text-red-500 mb-2">
-              {thread.joinError || "Couldn't load this chat"}
-            </p>
-            <button
-              className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm"
-              onClick={thread.retryJoin}
-            >
-              Retry
+          <div className="m-auto flex flex-col items-center gap-3 text-center" role="alert">
+            <p className="text-sm font-bold text-tl-danger">{thread.joinError || "Couldn't load this chat"}</p>
+            <button type="button" className={primaryButton} onClick={thread.retryJoin}>
+              Try again
             </button>
           </div>
         ) : messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full">
-            <div className="text-center p-8">
-              <MessageCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Start a conversation</h3>
-              <p className="text-sm text-gray-400">Send a message below to get started.</p>
-            </div>
-          </div>
+          <p className="m-auto text-center text-sm text-tl-faint">No messages yet. Say hello below.</p>
         ) : (
           groupByDate(messages).map(({ dateKey, messages: dayMessages }) => (
-            <div key={dateKey}>
-              <div className="flex justify-center my-4">
-                <div className="px-3 py-1 bg-gray-200 text-gray-600 rounded-full text-xs font-medium">
-                  {formatDate(new Date(dateKey))}
-                </div>
+            <section key={dateKey} className="flex flex-col gap-3" aria-label={formatDate(new Date(dateKey))}>
+              <div className="flex justify-center">
+                <span className="rounded-full bg-tl-track px-3 py-1 text-xs font-bold text-tl-muted">{formatDate(new Date(dateKey))}</span>
               </div>
-
               {dayMessages.map((message) => {
                 const isOwn = Boolean(me) && message.senderId === me;
                 const clientMessageId = message.clientMessageId;
                 const readCount = message._id === latestOwnId ? readersOf(message, me).length : 0;
                 return (
-                  <div key={messageKey(message)} id={`msg-${message._id}`} className="transition-colors duration-500">
-                  <Bubble
-                    msg={{
-                      sender: message.senderName,
-                      text: message.text,
-                      time: formatTime(message.createdAt),
-                      senderType: isOwn ? "self" : "other",
-                      avatar: message.senderAvatar || "/icons/user-placeholder.svg",
-                      color: generateColorFromString(message.senderName || message.senderId),
-                    }}
-                    message={message}
-                    receipt={isOwn ? receiptState(message, me, otherParticipantId) : undefined}
-                    readByLabel={readCount > 0 ? `Read by ${readCount}` : undefined}
-                    onReply={setReplyingMessage}
-                    onDeleteMessage={deleteHandlerFor(message)}
-                    onJump={message.replyTo && loadedIds.has(message.replyTo.messageId) ? jump : undefined}
-                    onRetry={clientMessageId ? () => thread.retry(clientMessageId) : undefined}
-                    onDelete={clientMessageId ? () => thread.remove(clientMessageId) : undefined}
-                  />
+                  <div key={messageKey(message)} id={`msg-${message._id}`} className="rounded-2xl transition-colors duration-500">
+                    <MessageBubble
+                      message={message}
+                      isOwn={isOwn}
+                      showSender={variant === "group"}
+                      time={clockTime(new Date(message.createdAt))}
+                      receipt={isOwn ? receiptState(message, me, otherParticipantId) : undefined}
+                      readByLabel={readCount > 0 ? `Read by ${readCount}` : undefined}
+                      onReply={setReplyingMessage}
+                      onDeleteMessage={deleteHandlerFor(message)}
+                      onJump={message.replyTo && loadedIds.has(message.replyTo.messageId) ? jump : undefined}
+                      onRetry={clientMessageId ? () => thread.retry(clientMessageId) : undefined}
+                      onDelete={clientMessageId ? () => thread.remove(clientMessageId) : undefined}
+                    />
                   </div>
                 );
               })}
-            </div>
+            </section>
           ))
         )}
       </div>
 
-      {!thread.isConnected && (
-        <div className="flex items-center gap-2 bg-amber-50 border-t border-amber-200 px-3 py-2 text-xs text-amber-800">
-          <WifiOff size={14} className="flex-shrink-0" />
+      {!thread.isConnected ? (
+        <div className="flex items-center gap-2 border-t border-tl-line-soft bg-tl-warning-bg px-4 py-2 text-xs font-bold text-tl-warning" role="status">
+          <WifiOff size={14} className="shrink-0" aria-hidden />
           <span>You&apos;re offline. Messages will send when you reconnect.</span>
         </div>
-      )}
+      ) : null}
 
-      {replyingMessage && (
-        <ReplyBar reply={replyingMessage} onCancel={clearReply} className="mx-2 sm:mx-4" />
-      )}
+      {replyingMessage ? <ReplyBar reply={replyingMessage} onCancel={clearReply} className="mx-3.5 mt-3" /> : null}
 
       <MessageInput
         value={thread.draft}
@@ -336,7 +310,18 @@ export default function ChatThread({
         onSendFiles={(files, caption) => sendWithReply(caption, { files })}
         onSendVoice={(file, duration) => sendWithReply("", { voice: { file, duration } })}
         disabled={!roomId}
-        placeholder="Type a message..."
+        placeholder="Write a message"
+      />
+
+      <ConversationInfo
+        open={infoOpen}
+        onClose={() => setInfoOpen(false)}
+        roomId={roomId}
+        room={roomData ?? null}
+        participants={participants}
+        name={name}
+        subtitle={roomData?.subtitle}
+        currentUserId={me}
       />
     </div>
   );

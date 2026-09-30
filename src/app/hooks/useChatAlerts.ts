@@ -3,6 +3,8 @@
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { toast } from "@/components/CustomToast";
+import { isWatchingThread, shouldPlayMessageSound } from "@/hooks/messages/messages.logic";
+import { playMessageSound, unlockMessageSound } from "@/lib/messageSound";
 import { useWebSocketContextSafe } from "../context/WebSocketContext";
 import type { ChatRoomActivityData, NotificationData } from "./useWebSocket";
 import { CHAT_ROOM_REMOVED_EVENT, type ChatRoomRemovedDetail } from "./useRealtimeChat";
@@ -25,15 +27,25 @@ interface UseChatAlertsOptions {
   currentUserId: string | null;
   totalUnread: number;
   isRoomOpen: (roomId: string) => boolean;
+  /** Settings → Messages → "Sound for new messages" (`messages.soundEnabled`). */
+  soundEnabled?: boolean;
 }
 
 /**
  * Mounted once, in the root chat provider. Tells the user about chat activity
  * anywhere in the app: a toast for messages in rooms they aren't reading, the
  * unread total in the tab title, in-app notifications, and clicks on browser
- * push notifications (relayed by public/sw.js).
+ * push notifications (relayed by public/sw.js). With "Sound for new
+ * messages" on, a message also plays a short chime while the page is
+ * visible (see `shouldPlayMessageSound`). The banner and the chime are
+ * skipped only for the conversation that is open in a focused window
+ * (`isWatchingThread`), the same rule the service worker applies to the
+ * OS notification.
+ *
+ * @param options - The signed-in user, the unread total, the open-room test and the sound preference.
+ * @returns Nothing; it only subscribes.
  */
-export function useChatAlerts({ currentUserId, totalUnread, isRoomOpen }: UseChatAlertsOptions) {
+export function useChatAlerts({ currentUserId, totalUnread, isRoomOpen, soundEnabled = false }: UseChatAlertsOptions) {
   const router = useRouter();
   const pathname = usePathname();
   const webSocket = useWebSocketContextSafe();
@@ -44,13 +56,20 @@ export function useChatAlerts({ currentUserId, totalUnread, isRoomOpen }: UseCha
   const currentUserIdRef = useRef(currentUserId);
   const isRoomOpenRef = useRef(isRoomOpen);
   const routerRef = useRef(router);
+  const soundEnabledRef = useRef(soundEnabled);
 
   useEffect(() => {
     pathnameRef.current = pathname;
     currentUserIdRef.current = currentUserId;
     isRoomOpenRef.current = isRoomOpen;
     routerRef.current = router;
-  }, [pathname, currentUserId, isRoomOpen, router]);
+    soundEnabledRef.current = soundEnabled;
+  }, [pathname, currentUserId, isRoomOpen, router, soundEnabled]);
+
+  // Browsers allow sound only after an interaction: arm it once it is wanted.
+  useEffect(() => {
+    if (soundEnabled) unlockMessageSound();
+  }, [soundEnabled]);
 
   // New messages in rooms the user isn't looking at.
   useEffect(() => {
@@ -59,8 +78,21 @@ export function useChatAlerts({ currentUserId, totalUnread, isRoomOpen }: UseCha
       const lastMessage = data?.lastMessage;
       if (!data?.roomId || !lastMessage) return;
       if (lastMessage.senderId && lastMessage.senderId === currentUserIdRef.current) return;
-      const viewingRoom =
-        pathnameRef.current?.startsWith("/messages") && isRoomOpenRef.current(data.roomId);
+      const pageVisible = typeof document !== "undefined" && document.visibilityState === "visible";
+      // Open AND focused: the only case with no banner, no sound (and no OS
+      // notification: public/sw.js checks the focused window's ?room=).
+      const viewingRoom = isWatchingThread({
+        onMessagesPage: Boolean(pathnameRef.current?.startsWith("/messages")),
+        roomOpen: isRoomOpenRef.current(data.roomId),
+        pageFocused: pageVisible && typeof document !== "undefined" && document.hasFocus(),
+      });
+      const play = shouldPlayMessageSound({
+        soundEnabled: soundEnabledRef.current,
+        pageVisible,
+        inOpenThread: viewingRoom,
+        fromMe: false,
+      });
+      if (play) playMessageSound();
       if (viewingRoom) return;
 
       const sender = lastMessage.senderName || "New message";

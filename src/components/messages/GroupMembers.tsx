@@ -1,79 +1,71 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Loader2, Search, UserMinus, UserPlus, X } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { useEffect, useId, useMemo, useState } from "react";
+import { ChevronLeft, Loader2, Search, UserMinus, UserPlus } from "lucide-react";
 import { toast } from "@/components/CustomToast";
+import { fieldControl, fieldLabel, focusRing, ghostButton, pill, pillTone, primaryButton } from "@/components/tl/styles";
 import { useAppContext } from "@/app/context/AppContext";
-import { useAuth } from "@/app/hooks/useAuth";
 import type { ChatParticipant, ChatRoomData } from "@/app/hooks/useWebSocket";
 import { roleLabel } from "@/app/lib/chat/groupPermissions";
 import { getAllStudentsByClass } from "@/app/services/api.service";
 import { addChatParticipants, removeChatParticipant } from "@/app/services/chat.service";
-import { generateColorFromString, getUserInitials } from "@/lib/colorUtils";
-import { errorMessage, idOf, type ClassRecord, type CourseRecord } from "./helpers";
+import type { RoomAdmin } from "@/types/inboxSettings";
 import type { Student } from "@/types/student";
+import { errorMessage, idOf, type ClassRecord, type CourseRecord } from "./helpers";
+import { ThreadAvatar } from "./ThreadAvatar";
 
+/** Props for {@link GroupMembers}. */
 interface GroupMembersProps {
   roomId: string;
   room: ChatRoomData | null;
   participants: ChatParticipant[];
   currentUserId: string | null;
+  /** I'm a group admin: I can add students and remove members. */
   canManage: boolean;
+  /** The group's admins (room view `admins`), badged "Group admin". */
+  admins?: RoomAdmin[];
 }
 
 const participantId = (p: ChatParticipant) => p.userId ?? p._id;
-const fullName = (p: { firstName?: string; lastName?: string }) =>
-  `${p.firstName || ""} ${p.lastName || ""}`.trim() || "Unknown User";
+const fullName = (p: { firstName?: string; lastName?: string }) => `${p.firstName || ""} ${p.lastName || ""}`.trim() || "Unknown user";
 
-function PersonAvatar({ name, src }: { name: string; src?: string | null }) {
+/**
+ * A labelled search box for the member lists.
+ *
+ * @param props - The value and its setter.
+ * @param props.value - The search text.
+ * @param props.onChange - Called with the new text.
+ * @param props.label - The accessible label.
+ * @returns The search field.
+ */
+function SearchBox({ value, onChange, label }: { value: string; onChange: (value: string) => void; label: string }) {
+  const id = useId();
   return (
-    <Avatar className="w-10 h-10 rounded-full flex-shrink-0">
-      <AvatarImage src={src || undefined} alt="" />
-      <AvatarFallback
-        className="text-white font-medium text-sm"
-        style={{ backgroundColor: generateColorFromString(name) }}
-      >
-        {getUserInitials(name)}
-      </AvatarFallback>
-    </Avatar>
-  );
-}
-
-function SearchBox({ value, onChange }: { value: string; onChange: (value: string) => void }) {
-  return (
-    <div className="relative flex items-center border border-[#F0F0F0] px-2 rounded-lg">
-      <Search strokeWidth={1.5} size={18} className="text-[#898989]" />
-      <input
-        type="text"
-        value={value}
-        placeholder="Search"
-        aria-label="Search"
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full bg-transparent p-2 text-sm focus:outline-none"
-      />
-      {value && (
-        <button type="button" aria-label="Clear search" onClick={() => onChange("")}>
-          <X className="text-gray-500" size={16} />
-        </button>
-      )}
+    <div className="relative flex-1">
+      <label htmlFor={id} className="sr-only">
+        {label}
+      </label>
+      <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-tl-faint" aria-hidden />
+      <input id={id} type="search" value={value} placeholder="Search" onChange={(e) => onChange(e.target.value)} className={`${fieldControl} pl-10 text-sm`} />
     </div>
   );
 }
 
-/** The group's real members; managers can remove members and add students. */
-export default function GroupMembers({
-  roomId,
-  room,
-  participants,
-  currentUserId,
-  canManage,
-}: GroupMembersProps) {
+/**
+ * The conversation's members (the info modal's Members tab): me first, then
+ * who is online, then by name, each with their role, presence and a "Group
+ * admin" badge for the group's admins. Group admins can remove members and
+ * add students from their classes.
+ *
+ * @param props - See {@link GroupMembersProps}.
+ * @returns The member list, or the add-students picker.
+ */
+export default function GroupMembers({ roomId, room, participants, currentUserId, canManage, admins }: GroupMembersProps) {
   const [query, setQuery] = useState("");
   const [adding, setAdding] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
 
   const memberIds = useMemo(() => new Set(participants.map(participantId)), [participants]);
+  const adminIds = useMemo(() => new Set((admins ?? []).map((admin) => admin.id)), [admins]);
 
   const members = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -104,81 +96,58 @@ export default function GroupMembers({
   };
 
   if (adding) {
-    return (
-      <AddStudents
-        roomId={roomId}
-        room={room}
-        memberIds={memberIds}
-        onDone={() => setAdding(false)}
-      />
-    );
+    return <AddStudents roomId={roomId} room={room} memberIds={memberIds} onDone={() => setAdding(false)} />;
   }
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
-        <div className="flex-1">
-          <SearchBox value={query} onChange={setQuery} />
-        </div>
-        {canManage && (
-          <Button
-            size="sm"
-            className="h-10 bg-[#003366] hover:bg-[#002244]"
-            onClick={() => setAdding(true)}
-          >
-            <UserPlus size={16} className="mr-1" />
+        <SearchBox value={query} onChange={setQuery} label="Search members" />
+        {canManage ? (
+          <button type="button" className={primaryButton} onClick={() => setAdding(true)}>
+            <UserPlus className="h-4 w-4" aria-hidden />
             Add students
-          </Button>
-        )}
+          </button>
+        ) : null}
       </div>
 
       {members.length === 0 ? (
-        <p className="py-8 text-center text-sm text-[#7B7B7B]">
-          {query ? "No members match your search" : "No members yet"}
-        </p>
+        <p className="py-8 text-center text-sm text-tl-muted">{query ? "No members match your search." : "No members yet."}</p>
       ) : (
         <ul className="flex flex-col">
           {members.map((participant) => {
             const id = participantId(participant);
             const name = fullName(participant);
             const isMe = id === currentUserId;
+            const isAdmin = adminIds.has(id);
             return (
-              <li key={id} className="flex items-center gap-3 rounded p-2 hover:bg-gray-50">
-                <div className="relative">
-                  <PersonAvatar name={name} src={participant.userAvatar} />
-                  {participant.isOnline && (
-                    <span
-                      className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-green-500"
-                      aria-label="Online"
-                    />
-                  )}
-                </div>
+              <li key={id} className="flex items-center gap-3 border-t border-tl-line-soft py-3 first:border-t-0">
+                <ThreadAvatar name={name} src={participant.userAvatar} size={40} online={participant.isOnline} />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm text-[#030E18]">
-                    {name}
-                    {isMe && <span className="text-[#7B7B7B]"> (You)</span>}
+                  <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[15px] font-bold text-tl-ink">
+                    <span className="truncate">
+                      {name}
+                      {isMe ? <span className="font-semibold text-tl-muted"> (you)</span> : null}
+                    </span>
+                    {isAdmin ? <span className={`${pill} ${pillTone.info}`}>Group admin</span> : null}
                   </p>
-                  <p className="text-xs text-[#7B7B7B]">
+                  <p className="mt-0.5 text-[13px] text-tl-muted">
                     {roleLabel(participant.role)}
                     {participant.isOnline ? " · Online" : ""}
                   </p>
                 </div>
-                {canManage && !isMe && (
+                {canManage && !isMe ? (
                   <button
                     type="button"
                     aria-label={`Remove ${name}`}
                     title="Remove from group"
                     disabled={removingId !== null}
-                    onClick={() => removeMember(participant)}
-                    className="rounded-full p-2 text-[#878787] hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                    onClick={() => void removeMember(participant)}
+                    className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-tl-muted hover:bg-tl-danger-bg hover:text-tl-danger disabled:opacity-50 ${focusRing}`}
                   >
-                    {removingId === id ? (
-                      <Loader2 size={16} className="animate-spin" />
-                    ) : (
-                      <UserMinus size={16} />
-                    )}
+                    {removingId === id ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <UserMinus className="h-4 w-4" aria-hidden />}
                   </button>
-                )}
+                ) : null}
               </li>
             );
           })}
@@ -188,6 +157,7 @@ export default function GroupMembers({
   );
 }
 
+/** Props for {@link AddStudents}. */
 interface AddStudentsProps {
   roomId: string;
   room: ChatRoomData | null;
@@ -195,10 +165,15 @@ interface AddStudentsProps {
   onDone: () => void;
 }
 
-/** Picks students from the teacher's classes who aren't in the group yet. */
+/**
+ * Picks students from the teacher's classes who aren't in the group yet.
+ *
+ * @param props - See {@link AddStudentsProps}.
+ * @returns The picker.
+ */
 function AddStudents({ roomId, room, memberIds, onDone }: AddStudentsProps) {
   const { classes, courses } = useAppContext();
-  const { getAccessToken } = useAuth();
+  const classSelectId = useId();
 
   const classOptions = useMemo(
     () =>
@@ -236,8 +211,7 @@ function AddStudents({ roomId, room, memberIds, onDone }: AddStudentsProps) {
     setLoading(true);
     setLoadError(null);
     setSelected(new Set());
-    const token = getAccessToken() || "";
-    getAllStudentsByClass(classId, token)
+    getAllStudentsByClass(classId)
       .then((list) => {
         if (!cancelled) setStudents(list);
       })
@@ -253,7 +227,7 @@ function AddStudents({ roomId, room, memberIds, onDone }: AddStudentsProps) {
     return () => {
       cancelled = true;
     };
-  }, [classId, getAccessToken]);
+  }, [classId]);
 
   const candidates = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -261,13 +235,8 @@ function AddStudents({ roomId, room, memberIds, onDone }: AddStudentsProps) {
       .map((student) => {
         // The API populates `userId`, but tolerate a bare id string.
         const raw: unknown = student?.userId;
-        const user: { firstName?: string; lastName?: string; userAvatar?: string } =
-          raw && typeof raw === "object" ? raw : {};
-        return {
-          id: idOf(raw),
-          name: fullName(user),
-          avatar: user.userAvatar,
-        };
+        const user: { firstName?: string; lastName?: string; userAvatar?: string } = raw && typeof raw === "object" ? raw : {};
+        return { id: idOf(raw), name: fullName(user), avatar: user.userAvatar };
       })
       .filter((s) => s.id && !memberIds.has(s.id))
       .filter((s) => !term || s.name.toLowerCase().includes(term))
@@ -282,7 +251,7 @@ function AddStudents({ roomId, room, memberIds, onDone }: AddStudentsProps) {
       return next;
     });
 
-  // Someone already added (e.g. by another manager) is no longer selectable.
+  // Someone already added (e.g. by another admin) is no longer selectable.
   const selectedIds = Array.from(selected).filter((id) => !memberIds.has(id));
 
   const add = async () => {
@@ -290,9 +259,7 @@ function AddStudents({ roomId, room, memberIds, onDone }: AddStudentsProps) {
     setSaving(true);
     try {
       await addChatParticipants(roomId, selectedIds);
-      toast.success(
-        selectedIds.length === 1 ? "Added 1 student" : `Added ${selectedIds.length} students`,
-      );
+      toast.success(selectedIds.length === 1 ? "Added 1 student" : `Added ${selectedIds.length} students`);
       onDone();
     } catch (error) {
       toast.error(errorMessage(error) || "Couldn't add members");
@@ -302,61 +269,52 @@ function AddStudents({ roomId, room, memberIds, onDone }: AddStudentsProps) {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="sm" className="p-2" onClick={onDone} aria-label="Back to members">
-          <ArrowLeft size={16} />
-        </Button>
-        <p className="font-medium text-[#030E18]">Add students</p>
+        <button type="button" className={`flex h-11 w-11 items-center justify-center rounded-xl border border-tl-line text-tl-brand ${focusRing}`} onClick={onDone} aria-label="Back to members">
+          <ChevronLeft className="h-5 w-5" aria-hidden />
+        </button>
+        <p className="text-[15px] font-extrabold text-tl-ink">Add students</p>
       </div>
 
       {classOptions.length === 0 ? (
-        <p className="py-8 text-center text-sm text-[#7B7B7B]">
-          You don&apos;t have any classes to add students from.
-        </p>
+        <p className="py-8 text-center text-sm text-tl-muted">You don&apos;t have any classes to add students from.</p>
       ) : (
         <>
-          <select
-            value={classId}
-            onChange={(e) => setClassId(e.target.value)}
-            aria-label="Class"
-            className="w-full rounded-lg border border-[#F0F0F0] bg-white p-2 text-sm focus:border-[#003366] focus:outline-none"
-          >
-            {classOptions.map((c: { id: string; name: string }) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <SearchBox value={query} onChange={setQuery} />
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor={classSelectId} className={fieldLabel}>
+              Class
+            </label>
+            <select id={classSelectId} value={classId} onChange={(e) => setClassId(e.target.value)} className={fieldControl}>
+              {classOptions.map((c: { id: string; name: string }) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <SearchBox value={query} onChange={setQuery} label="Search students" />
 
           <div className="max-h-72 overflow-y-auto">
             {loading ? (
-              <div className="flex items-center justify-center py-8 text-sm text-[#7B7B7B]">
-                <Loader2 className="mr-2 h-5 w-5 animate-spin text-[#003366]" />
-                Loading students...
-              </div>
-            ) : loadError ? (
-              <p className="py-8 text-center text-sm text-red-600">{loadError}</p>
-            ) : candidates.length === 0 ? (
-              <p className="py-8 text-center text-sm text-[#7B7B7B]">
-                {query
-                  ? "No students match your search"
-                  : "Everyone in this class is already in the group"}
+              <p className="flex items-center justify-center py-8 text-sm text-tl-muted" role="status">
+                <Loader2 className="mr-2 h-5 w-5 animate-spin text-tl-brand" aria-hidden />
+                Loading students…
               </p>
+            ) : loadError ? (
+              <p className="py-8 text-center text-sm font-bold text-tl-danger" role="alert">
+                {loadError}
+              </p>
+            ) : candidates.length === 0 ? (
+              <p className="py-8 text-center text-sm text-tl-muted">{query ? "No students match your search." : "Everyone in this class is already in the group."}</p>
             ) : (
               <ul className="flex flex-col">
                 {candidates.map((student) => (
                   <li key={student.id}>
-                    <label className="flex cursor-pointer items-center gap-3 rounded p-2 hover:bg-gray-50">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 accent-[#003366]"
-                        checked={selected.has(student.id)}
-                        onChange={() => toggle(student.id)}
-                      />
-                      <PersonAvatar name={student.name} src={student.avatar} />
-                      <span className="truncate text-sm text-[#030E18]">{student.name}</span>
+                    <label className="flex min-h-[48px] cursor-pointer items-center gap-3 rounded-xl px-2 hover:bg-tl-subtle">
+                      <input type="checkbox" className="h-4 w-4 accent-tl-brand-fill" checked={selected.has(student.id)} onChange={() => toggle(student.id)} />
+                      <ThreadAvatar name={student.name} src={student.avatar} size={36} />
+                      <span className="truncate text-sm font-semibold text-tl-ink">{student.name}</span>
                     </label>
                   </li>
                 ))}
@@ -366,18 +324,14 @@ function AddStudents({ roomId, room, memberIds, onDone }: AddStudentsProps) {
         </>
       )}
 
-      <div className="flex justify-end gap-2 border-t border-[#F0F0F0] pt-3">
-        <Button variant="ghost" onClick={onDone}>
+      <div className="flex justify-end gap-2 border-t border-tl-line-soft pt-3">
+        <button type="button" className={ghostButton} onClick={onDone}>
           Cancel
-        </Button>
-        <Button
-          className="bg-[#003366] hover:bg-[#002244]"
-          disabled={selectedIds.length === 0 || saving}
-          onClick={add}
-        >
-          {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        </button>
+        <button type="button" className={primaryButton} disabled={selectedIds.length === 0 || saving} onClick={() => void add()}>
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
           {selectedIds.length > 0 ? `Add ${selectedIds.length}` : "Add"}
-        </Button>
+        </button>
       </div>
     </div>
   );

@@ -1,14 +1,13 @@
 import {
+  attachmentFilesOf,
+  attachmentKindOf,
   buildInbox,
-  countNotifications,
-  filterNotifications,
+  fileNameFromUrl,
   inferCategory,
   isSchoolAnnouncementNotification,
   normalizeAnnouncement,
   normalizeSystemNotification,
 } from "@/app/lib/notifications/inbox";
-import { categoryLabel } from "@/components/notifications/categoryMeta";
-import { formatDate } from "@/components/notifications/format";
 import { extractRecords, extractTotal, type NotificationRecord } from "@/app/services/notifications.service";
 
 const USER = "68c0a1b2c3d4e5f600000001";
@@ -30,6 +29,12 @@ describe("inferCategory", () => {
     expect(inferCategory(record({ type: "attendance_alert" }), "other")).toBe("attendance");
     expect(inferCategory(record({ type: "result_published" }), "other")).toBe("grading");
     expect(inferCategory(record({ type: "chat_message" }), "other")).toBe("messages");
+  });
+
+  it("trusts the stored category over the type, unless it is the schema's default 'other'", () => {
+    expect(inferCategory(record({ category: "resources", type: "assessment_reminder" }), "other")).toBe("resources");
+    expect(inferCategory(record({ metadata: { category: "grading" }, type: "custom" }), "other")).toBe("grading");
+    expect(inferCategory(record({ category: "other", type: "attendance_alert" }), "other")).toBe("attendance");
   });
 
   it("falls back to keywords for unknown types, then to the given default", () => {
@@ -60,21 +65,22 @@ describe("normalizeSystemNotification", () => {
     expect(normalizeSystemNotification(record({}), USER).senderName).toBe("System Notification");
   });
 
-  it("collects attachments and related links from their fields", () => {
+  it("collects attachments from both fields and keeps the metadata for the action", () => {
     const item = normalizeSystemNotification(
       record({
         attachments: ["https://x/a.pdf"],
         attachment: "https://x/b.pdf",
-        metadata: { className: "JSS 1A", resourceTitle: "Notes", resourceUrl: "https://x/notes", href: "/grading" },
+        metadata: { className: "JSS 1A", href: "/grading", target: { page: "grading", courseId: "k1" }, actionLabel: "Open grading" },
       }),
       USER,
     );
     expect(item.attachments).toEqual(["https://x/a.pdf", "https://x/b.pdf"]);
-    expect(item.related).toEqual([
-      { label: "JSS 1A" },
-      { label: "Notes", href: "https://x/notes" },
-      { label: "Open related item", href: "/grading" },
+    expect(item.attachmentFiles.map((file) => [file.name, file.kind])).toEqual([
+      ["a.pdf", "pdf"],
+      ["b.pdf", "pdf"],
     ]);
+    expect(item.metadata?.target).toEqual({ page: "grading", courseId: "k1" });
+    expect(item.metadata?.actionLabel).toBe("Open grading");
   });
 
   it("gives ids a prefix that cannot collide across the two lists", () => {
@@ -95,8 +101,45 @@ describe("normalizeAnnouncement", () => {
     expect(item.source).toBe("school");
   });
 
+  it("always files an announcement under announcement, as the server counts it", () => {
+    expect(normalizeAnnouncement(record({ title: "Attendance policy", message: "Absent students…" }), USER).category).toBe("announcement");
+  });
+
   it("falls back to the school name when the sender is unnamed", () => {
     expect(normalizeAnnouncement(record({ schoolName: "Talim Test School" }), USER).senderName).toBe("Talim Test School");
+  });
+});
+
+describe("attachment files", () => {
+  it("keeps the server's attachmentFiles", () => {
+    const files = attachmentFilesOf(
+      record({
+        attachments: ["https://x/raw/Sports%20day.pdf"],
+        attachmentFiles: [{ url: "https://x/raw/Sports%20day.pdf", name: "Sports day.pdf", kind: "pdf", size: 182_000 }],
+      }),
+    );
+    expect(files).toEqual([{ url: "https://x/raw/Sports%20day.pdf", name: "Sports day.pdf", kind: "pdf", size: 182_000 }]);
+  });
+
+  it("derives name and kind from older records' attachment URLs", () => {
+    const item = normalizeAnnouncement(
+      record({ attachments: ["https://x/raw/upload/Consent%20form.docx?v=2", "https://x/image/upload/board.JPG"], attachment: "https://x/a/clip.mp4" }),
+      USER,
+    );
+    expect(item.attachmentFiles).toEqual([
+      { url: "https://x/raw/upload/Consent%20form.docx?v=2", name: "Consent form.docx", kind: "doc", size: null },
+      { url: "https://x/image/upload/board.JPG", name: "board.JPG", kind: "image", size: null },
+      { url: "https://x/a/clip.mp4", name: "clip.mp4", kind: "video", size: null },
+    ]);
+  });
+
+  it("reads kinds from extensions and survives odd URLs", () => {
+    expect(attachmentKindOf("Deck.pptx")).toBe("slides");
+    expect(attachmentKindOf("notes.pdf")).toBe("pdf");
+    expect(attachmentKindOf("archive.zip")).toBe("other");
+    expect(attachmentKindOf("README")).toBe("other");
+    expect(fileNameFromUrl("https://x/files/%E0%A4%A.pdf")).toBe("%E0%A4%A.pdf");
+    expect(fileNameFromUrl("https://x/")).toBe("Attachment");
   });
 });
 
@@ -120,50 +163,6 @@ describe("buildInbox", () => {
   });
 });
 
-describe("countNotifications and filterNotifications", () => {
-  const inbox = buildInbox(
-    [record({ _id: "a1", title: "Sports day", createdAt: "2026-09-09T08:00:00.000Z", readBy: [USER] })],
-    [
-      record({ _id: "n1", type: "attendance_alert", title: "Class 1A absent", createdAt: "2026-09-10T08:00:00.000Z" }),
-      record({ _id: "n2", type: "grade_released", title: "Grades out", createdAt: "2026-09-11T08:00:00.000Z" }),
-    ],
-    USER,
-  );
-
-  it("counts the total, unread and per category", () => {
-    const counts = countNotifications(inbox);
-    expect(counts.all).toBe(3);
-    expect(counts.unread).toBe(2);
-    expect(counts.announcement).toBe(1);
-    expect(counts.attendance).toBe(1);
-    expect(counts.grading).toBe(1);
-    expect(counts.other).toBe(0);
-  });
-
-  it("filters by tab", () => {
-    const ids = (tab: Parameters<typeof filterNotifications>[1]["tab"]) =>
-      filterNotifications(inbox, { tab, query: "", sort: "newest" }, categoryLabel).map((item) => item.rawId);
-    expect(ids("unread")).toEqual(["n2", "n1"]);
-    expect(ids("attendance")).toEqual(["n1"]);
-    expect(ids("all")).toEqual(["n2", "n1", "a1"]);
-  });
-
-  it("searches title, message, sender, source and the category label the user sees", () => {
-    const search = (query: string) =>
-      filterNotifications(inbox, { tab: "all", query, sort: "newest" }, categoryLabel).map((item) => item.rawId);
-    expect(search("sports")).toEqual(["a1"]);
-    expect(search("ATTENDANCE")).toEqual(["n1"]);
-    expect(search("nothing like this")).toEqual([]);
-  });
-
-  it("sorts oldest first, and unread first within newest-first order", () => {
-    const sorted = (sort: Parameters<typeof filterNotifications>[1]["sort"]) =>
-      filterNotifications(inbox, { tab: "all", query: "", sort }, categoryLabel).map((item) => item.rawId);
-    expect(sorted("oldest")).toEqual(["a1", "n1", "n2"]);
-    expect(sorted("unread")).toEqual(["n2", "n1", "a1"]);
-  });
-});
-
 describe("list body helpers", () => {
   it("reads records from a bare array, data or announcements", () => {
     const item = record();
@@ -176,15 +175,5 @@ describe("list body helpers", () => {
   it("reports meta.total when present, else the page length", () => {
     expect(extractTotal({ data: [record()], meta: { total: 42 } })).toBe(42);
     expect(extractTotal([record(), record()])).toBe(2);
-  });
-});
-
-describe("formatDate", () => {
-  const now = new Date(2026, 8, 18, 12, 0, 0);
-
-  it("says Today and Yesterday for recent dates and a date otherwise", () => {
-    expect(formatDate(new Date(2026, 8, 18, 9, 0, 0).toISOString(), now)).toBe("Today");
-    expect(formatDate(new Date(2026, 8, 17, 9, 0, 0).toISOString(), now)).toBe("Yesterday");
-    expect(formatDate(new Date(2026, 7, 1, 9, 0, 0).toISOString(), now)).toMatch(/2026/);
   });
 });

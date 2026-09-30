@@ -1,36 +1,36 @@
 "use client";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { X } from "lucide-react";
 
+/** Props for {@link ChatInfoDialog}. */
 interface ChatInfoDialogProps {
   open: boolean;
   onClose: () => void;
-  title: string;
-  /** Rendered under the title, e.g. tabs. */
-  header?: React.ReactNode;
-  children: React.ReactNode;
+  /** Id of the element that names the dialog. */
+  labelledBy: string;
+  children: ReactNode;
   className?: string;
 }
 
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 /**
- * The panel behind group info and the contact card. Not the Radix dialog:
- * that one blocks pointer events and focus outside itself, which would break
- * the chat kit's Lightbox (portalled to <body>) opened from inside. Escape
- * closes it unless something on top (the Lightbox) already handled the key.
+ * The shell of the conversation info modal. Not the Radix dialog: that one
+ * blocks pointer events and focus outside itself, which would break the chat
+ * kit's Lightbox (portalled to <body>) opened from inside. It still behaves
+ * like a modal: focus moves in on open, Tab cycles inside it, focus returns
+ * on close, the page behind doesn't scroll, and Escape or the backdrop
+ * closes it — unless something on top (the Lightbox) already handled the key
+ * or holds the focus.
+ *
+ * @param props - See {@link ChatInfoDialogProps}.
+ * @returns The dialog, portalled to <body>, or nothing while closed.
  */
-export default function ChatInfoDialog({
-  open,
-  onClose,
-  title,
-  header,
-  children,
-  className = "",
-}: ChatInfoDialogProps) {
+export default function ChatInfoDialog({ open, onClose, labelledBy, children, className = "" }: ChatInfoDialogProps) {
   const [mounted, setMounted] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
-  const titleId = useId();
 
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -43,11 +43,39 @@ export default function ChatInfoDialog({
     const previousFocus = document.activeElement as HTMLElement | null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const focusTimer = setTimeout(() => panelRef.current?.focus(), 0);
+    const focusTimer = setTimeout(() => {
+      const panel = panelRef.current;
+      if (!panel || panel.contains(document.activeElement)) return;
+      (panel.querySelector<HTMLElement>("[data-autofocus]") ?? panel).focus();
+    }, 0);
 
     // On window, so a Lightbox listening on document sees Escape first.
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !event.defaultPrevented) onCloseRef.current();
+      const panel = panelRef.current;
+      if (!panel) return;
+      if (event.key === "Escape" && !event.defaultPrevented) {
+        onCloseRef.current();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      // Only trap focus that is ours: a Lightbox on top manages its own.
+      const active = document.activeElement;
+      if (active && active !== document.body && !panel.contains(active)) return;
+      const focusable = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE));
+      if (focusable.length === 0) {
+        event.preventDefault();
+        panel.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && (active === first || active === panel)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => {
@@ -62,7 +90,7 @@ export default function ChatInfoDialog({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-[rgba(15,27,46,0.42)] sm:items-center sm:p-5"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -71,25 +99,11 @@ export default function ChatInfoDialog({
         ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-labelledby={titleId}
+        aria-labelledby={labelledBy}
         tabIndex={-1}
-        className={`relative flex max-h-[90vh] w-full flex-col overflow-hidden rounded-lg bg-white font-manrope shadow-lg outline-none ${className}`}
+        className={`relative flex max-h-[88vh] w-full overflow-hidden rounded-t-[22px] bg-tl-surface font-manrope text-tl-ink shadow-[0_30px_60px_-20px_rgba(15,27,46,0.4)] outline-none sm:max-h-[82vh] sm:rounded-[22px] dark:border dark:border-tl-line ${className}`}
       >
-        <div className="border-b border-[#F0F0F0] px-5 pb-3 pt-5">
-          <h2 id={titleId} className="pr-8 text-base font-semibold text-[#030E18]">
-            {title}
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="absolute right-3 top-3 rounded-full p-1.5 text-[#434343] hover:bg-gray-100"
-            aria-label="Close"
-          >
-            <X size={18} />
-          </button>
-          {header}
-        </div>
-        <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
+        {children}
       </div>
     </div>,
     document.body,

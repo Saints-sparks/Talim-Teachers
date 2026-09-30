@@ -1,9 +1,11 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { Eye, EyeOff, ShieldAlert, AlertCircle, Loader2 } from "lucide-react";
 import { useAuth } from "./hooks/useAuth";
+import { resolveSignedInRoute } from "./lib/landing";
 import ModernLoader from "@/components/ModernLoader";
 
 type LoginError =
@@ -11,8 +13,51 @@ type LoginError =
   | { kind: "invalid_credentials" }
   | { kind: "unknown"; message: string };
 
+/**
+ * Sends a teacher who is already signed in on to where they work, instead
+ * of showing the sign-in form: once the stored session has been restored,
+ * `resolveSignedInRoute` picks set-password, onboarding or their "First
+ * screen after sign-in". Checked once per visit, so a sign-in through the
+ * form is routed by `login` alone.
+ *
+ * @returns True while the session is restoring or the redirect is under way (show the loader).
+ */
+function useSignedInRedirect(): boolean {
+  const { user, isAuthenticated, isRestoringSession } = useAuth();
+  const router = useRouter();
+  const checked = useRef(false);
+  const mounted = useRef(true);
+  const [redirecting, setRedirecting] = useState(false);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isRestoringSession || checked.current) return;
+    checked.current = true;
+    if (!isAuthenticated || !user) return;
+    setRedirecting(true);
+    void resolveSignedInRoute(user).then((route) => {
+      if (mounted.current) router.replace(route);
+    });
+  }, [isRestoringSession, isAuthenticated, user, router]);
+
+  return isRestoringSession || redirecting;
+}
+
+/**
+ * The sign-in page (`/`). A visitor who is already signed in is sent on
+ * (see {@link useSignedInRedirect}) and sees the loader meanwhile.
+ *
+ * @returns The page.
+ */
 const LoginPage: React.FC = () => {
   const { login, isLoading } = useAuth();
+  const redirecting = useSignedInRedirect();
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState<LoginError | null>(null);
   const [formData, setFormData] = useState({
@@ -57,7 +102,7 @@ const LoginPage: React.FC = () => {
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
-      <ModernLoader visible={isLoading} />
+      <ModernLoader visible={isLoading || redirecting} />
 
       {/* ── Left panel — Form ── */}
       <div className="flex flex-col justify-center items-center px-8 py-12 sm:px-16 bg-white">

@@ -1,5 +1,6 @@
 "use client";
 
+import type { RoomAdmin, RoomCategory } from "@/types/inboxSettings";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { sessionStore } from "@/lib/session";
 import { io, Socket } from "socket.io-client";
@@ -92,6 +93,14 @@ export interface ChatRoomData {
   createdBy?: string;
   /** When the current user last read this room. */
   lastReadAt?: string;
+  /** Round 4 §27 (per viewer): which Messages chip the room belongs to. */
+  category?: RoomCategory;
+  /** Round 4 §27: "Parent of Ada Obi · Grade 5A", "Class group · 12 students", … */
+  subtitle?: string;
+  /** Round 4 §27: the parent's phone, in a teacher's one-to-one with a parent of their student. */
+  callPhone?: string | null;
+  /** Round 4 addendum: the group's admins, who alone may rename it or change its description. */
+  admins?: RoomAdmin[];
 }
 
 /** Payload of `chat-rooms-update`: the user's whole room list. */
@@ -162,6 +171,8 @@ export interface RoomUpdatedData {
   description: string;
   avatarUrl: string | null;
   updatedBy: string;
+  /** Round 4 addendum: the admins, when they changed or the server sends them along. */
+  admins?: RoomAdmin[];
 }
 
 /** Payload of `participants-changed`: members were added to or removed from a room. */

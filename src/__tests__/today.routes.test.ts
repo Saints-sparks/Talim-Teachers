@@ -17,6 +17,11 @@ describe("attention targets → routes", () => {
     [{ page: "subjects" }, "/subjects"],
     [{ page: "leave", classId: "c1" }, "/attendance/class/c1"],
     [{ page: "leave" }, "/attendance"],
+    // Round 4 §30: the pages notifications add.
+    [{ page: "announcements" }, "/notifications?tab=announcements"],
+    [{ page: "timetable" }, "/timetable"],
+    [{ page: "timetable", date: "2026-09-28" }, "/timetable?date=2026-09-28"],
+    [{ page: "settings" }, "/settings"],
   ] as const)("%j → %s", (target, href) => {
     expect(attentionHref(target)).toBe(href);
   });

@@ -501,40 +501,102 @@ export const guideConfigs: GuideConfig[] = [
     exactOnly: true,
     steps: [
       {
-        target: "messages-shell",
-        eyebrow: "Communication",
-        title: "Chat and Messaging",
+        target: "messages-filters",
+        eyebrow: "Messages",
+        title: "Parents, colleagues, groups and the office",
         description:
-          "Use messages to coordinate with students and groups while keeping classroom conversations organized.",
-        icon: MessageSquareText,
-      },
-      {
-        target: "messages-search",
-        title: "Find Conversations",
-        description:
-          "Search and filters help separate direct chats from group conversations when the inbox gets busy.",
+          "The chips narrow the list to parents, colleagues, class groups or the school office. Search finds a name, a class or something that was said.",
         icon: Search,
       },
       {
-        target: "messages-create-group",
-        title: "Create a Group",
+        target: "messages-new",
+        title: "Start a conversation",
         description:
-          "Start a group chat when a class or project needs one shared conversation space.",
-        icon: UsersRound,
+          "New message lists the parents of your students, your colleagues and the school office. New class group starts a group for a whole class: students can reply, parents are not included.",
+        icon: Send,
       },
       {
         target: "messages-list",
-        title: "Open a Thread",
+        title: "Open a thread",
         description:
-          "Select a conversation to view message history, unread counts, participants, and live updates.",
+          "Newest first. A count shows what you haven't read, square green avatars are groups, and your own last message starts with ‘You:’.",
         icon: MessageSquareText,
       },
       {
-        target: "messages-chat-area",
-        title: "Reply and Share",
+        target: "messages-info",
+        title: "Who is in it and what was shared",
         description:
-          "Use the message box to send replies and attach supporting files when the conversation needs context.",
-        icon: Send,
+          "Info lists the members, with group admins marked (only they can rename a group or change its description), and every image, document and link shared in the conversation. With a parent of your student, Call rings their phone.",
+        icon: UsersRound,
+      },
+    ],
+  },
+  {
+    id: "notifications",
+    pathMatchers: ["/notifications"],
+    exactOnly: true,
+    steps: [
+      {
+        target: "notifications-tabs",
+        eyebrow: "Notifications",
+        title: "Sorted into tabs",
+        description:
+          "All, Unread, Academics (deadlines, grading and resources), Attendance and Announcements, each with how many there are. Messages have their own page.",
+        icon: ListChecks,
+      },
+      {
+        target: "notifications-list",
+        title: "Newest first",
+        description: "A blue dot marks what you haven't read. Selecting one opens it and marks it read; Load more brings older ones.",
+        icon: BellRing,
+      },
+      {
+        target: "notifications-detail",
+        title: "Read it, then act on it",
+        description:
+          "The whole message, its attachments to download, and a button that takes you straight to it: the register, the scores, the timetable or the announcement.",
+        icon: ClipboardCheck,
+      },
+      {
+        target: "notifications-mark-all",
+        title: "Clear every dot at once",
+        description: "Mark all as read clears the unread markers here and on the bell. Alert settings chooses which alerts reach you and how.",
+        icon: Lightbulb,
+      },
+    ],
+  },
+  {
+    id: "settings",
+    pathMatchers: ["/settings"],
+    exactOnly: true,
+    steps: [
+      {
+        target: "settings-tabs",
+        eyebrow: "Settings",
+        title: "Everything in one place",
+        description:
+          "Your account, alerts, messages, teaching defaults, theme, security, help and legal. Changes save as you make them and follow you to every device.",
+        icon: LayoutGrid,
+      },
+      {
+        target: "settings-tab-notifications",
+        title: "Choose what reaches you",
+        description:
+          "Turn each kind of alert on or off, choose push or email, and set quiet hours. Deadlines from the school are always delivered.",
+        icon: BellRing,
+      },
+      {
+        target: "settings-tab-security",
+        title: "Your password and devices",
+        description:
+          "Change your password against your school's rules, see every device signed in to your account, and sign out the ones you don't recognise.",
+        icon: ClipboardCheck,
+      },
+      {
+        target: "settings-tab-help",
+        title: "Help when you need it",
+        description: "Replay the tour, call, email or message the school office, or report a problem straight to the Talim support team.",
+        icon: Lightbulb,
       },
     ],
   },

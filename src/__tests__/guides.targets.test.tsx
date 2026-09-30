@@ -7,7 +7,7 @@
  * target of the guide for its path is looked up.
  */
 import React from "react";
-import { act, render, screen } from "@/test-utils/render";
+import { act, render, screen, waitFor } from "@/test-utils/render";
 import { findGuideConfig, guideConfigFor, guideConfigs } from "@/components/onboarding/guideSteps";
 import AppGuide from "@/components/onboarding/AppGuide";
 import { TOUR_STEPS } from "@/components/tour/TourProvider";
@@ -33,6 +33,13 @@ import {
   resetClassroomFixtureStore,
 } from "@/lib/fixtures/classroom.fixture";
 import { useTeacherPreferences } from "@/hooks/settings/useTeacherSettings";
+import { MessagesScreen } from "@/components/messages/MessagesScreen";
+import { NotificationsScreen } from "@/components/notifications/NotificationsScreen";
+import { SettingsScreen } from "@/components/settings/SettingsScreen";
+import * as notificationsService from "@/app/services/notifications.service";
+import { api } from "@/lib/apiClient";
+import { roomStore } from "@/app/lib/chat/roomStore";
+import * as inboxFixture from "@/lib/fixtures/inbox.fixture";
 
 let pathname = "/dashboard";
 let search = "";
@@ -64,7 +71,41 @@ jest.mock("@/app/services/subjects/subjects.service", () => ({
 }));
 jest.mock("@/hooks/academic/useSchoolTerms", () => ({ useSchoolTerms: () => ({ data: [] }) }));
 jest.mock("@/app/context/AppContext", () => ({ useAppContext: () => ({ user: { userId: "teacher-1" } }) }));
-jest.mock("@/hooks/settings/useTeacherSettings", () => ({ useTeacherPreferences: jest.fn() }));
+jest.mock("@/hooks/settings/useTeacherSettings", () => ({ ...jest.requireActual("@/hooks/settings/useTeacherSettings"), useTeacherPreferences: jest.fn() }));
+jest.mock("@/app/services/notifications.service", () => ({
+  ...jest.requireActual("@/app/services/notifications.service"),
+  listAnnouncements: jest.fn(),
+  listNotifications: jest.fn(),
+  getNotificationCounts: jest.fn(),
+}));
+jest.mock("@/app/context/OnboardingContext", () => ({ useTeacherOnboarding: () => ({ markStepComplete: jest.fn() }) }));
+jest.mock("@/hooks/academic/useCurrentTerm", () => ({ useCurrentTerm: () => ({ data: { _id: "term-1" } }) }));
+jest.mock("@/app/services/chat.service", () => ({
+  ROOM_MEDIA_PAGE_SIZE: 30,
+  getChatContacts: jest.fn(async () => []),
+  getRoomMedia: jest.fn(async () => ({ items: [], nextCursor: null, counts: { image: 0, document: 0, link: 0 } })),
+}));
+jest.mock("@/app/context/ChatContext", () => ({
+  useChat: () => ({
+    chatRooms: jest.requireActual("@/lib/fixtures/inbox.fixture").makeRoomsFixture(),
+    isLoading: false,
+    isConnected: true,
+    error: null,
+    currentUserId: "u-teacher-seyi",
+    refreshChatRooms: jest.fn(),
+    selectRoom: jest.fn(),
+    unselectRoom: jest.fn(),
+    sendMessage: jest.fn(),
+    retryMessage: jest.fn(),
+    deleteMessage: jest.fn(),
+    deleteStoredMessage: jest.fn(),
+    loadOlderMessages: jest.fn(),
+    retryJoin: jest.fn(),
+    setDraft: jest.fn(),
+    dropRoom: jest.fn(),
+    applyRoomDetails: jest.fn(),
+  }),
+}));
 
 const classroom = classroomService as jest.Mocked<typeof classroomService>;
 const today = todayService as jest.Mocked<typeof todayService>;
@@ -82,6 +123,8 @@ beforeEach(() => {
   search = "";
   resetClassroomFixtureStore();
   localStorage.clear();
+  roomStore.reset();
+  inboxFixture.resetInboxFixtureStore();
   classroom.getMyClasses.mockResolvedValue(makeMyClassesFixture());
   classroom.getRegister.mockImplementation(async (classId, date) => makeRegisterFixture(classId, date));
   classroom.getRoster.mockImplementation(async (classId) => makeRosterFixture(classId));
@@ -98,6 +141,10 @@ beforeEach(() => {
   subjects.getMySubjects.mockImplementation(async (termId) => subjectsFixture.makeSubjectCardsFixture(termId));
   subjects.getScheme.mockImplementation(async (courseId, termId) => subjectsFixture.makeSchemeFixture(courseId, termId)!);
   subjects.getCourseResources.mockImplementation(async (courseId) => subjectsFixture.makeCourseResourcesFixture(courseId));
+  const inbox = notificationsService as jest.Mocked<typeof notificationsService>;
+  inbox.listNotifications.mockImplementation(async (_user, paging) => inboxFixture.listNotificationsFixture(paging?.page, paging?.limit));
+  inbox.listAnnouncements.mockImplementation(async (_user, paging) => inboxFixture.listAnnouncementsFixture(paging?.page, paging?.limit));
+  inbox.getNotificationCounts.mockImplementation(async () => inboxFixture.makeNotificationCountsFixture());
 });
 
 /** Each redesigned page: its path (and query), the guide expected there, and how to render it ready. */
@@ -184,6 +231,37 @@ const PAGES: { path: string; query?: string; guide: string; mount: () => Promise
       await screen.findByRole("list", { name: /Weeks of the scheme of work/ });
     },
   },
+  {
+    path: "/messages",
+    query: "room=room-c2",
+    guide: "messages",
+    mount: async () => {
+      search = "room=room-c2";
+      roomStore.update("room-c2", (s) => ({ ...s, joinStatus: "joined" }));
+      render(<MessagesScreen />);
+      await screen.findByRole("heading", { level: 2, name: "JSS2 B Mathematics" });
+    },
+  },
+  {
+    path: "/notifications",
+    guide: "notifications",
+    mount: async () => {
+      render(<NotificationsScreen />);
+      await screen.findByRole("list", { name: "Notifications" });
+      // The newest one opens in the detail pane.
+      await waitFor(() => expect(screen.getAllByText("Register not yet submitted: JSS1 A").length).toBeGreaterThan(1));
+    },
+  },
+  {
+    path: "/settings",
+    guide: "settings",
+    mount: async () => {
+      // The panels read the teacher's settings; the guide only needs the rail.
+      jest.spyOn(api, "get").mockResolvedValue({});
+      render(<SettingsScreen />);
+      await screen.findByRole("navigation", { name: "Settings sections" });
+    },
+  },
 ];
 
 describe.each(PAGES)("the $guide guide on $path", ({ path, query, guide, mount }) => {
@@ -207,7 +285,11 @@ describe("guide configs", () => {
 describe("portal tour", () => {
   it("covers the redesigned pages, and every step links to a page with a guide or its own screen", () => {
     const hrefs = TOUR_STEPS.map((s) => s.href);
-    expect(hrefs).toEqual(expect.arrayContaining(["/dashboard", "/attendance", "/students", "/timetable", "/grading", "/grading?mode=class", "/subjects"]));
+    expect(hrefs).toEqual(
+      expect.arrayContaining(["/dashboard", "/attendance", "/students", "/timetable", "/grading", "/grading?mode=class", "/subjects", "/messages", "/notifications", "/settings"]),
+    );
+    expect(TOUR_STEPS.slice(-3).map((s) => s.title)).toEqual(["Messages", "Notifications", "Settings"]);
+    expect(TOUR_STEPS.find((s) => s.href === "/messages")?.body).toMatch(/school office/);
     for (const href of hrefs) {
       const url = new URL(href, "http://talim.test");
       expect(guideConfigFor(url.pathname, url.searchParams)).toBeDefined();

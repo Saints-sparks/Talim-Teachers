@@ -10,7 +10,7 @@ import PasswordRequirements from "@/components/auth/PasswordRequirements";
 import { useAuth } from "../hooks/useAuth";
 import { getApiError } from "../lib/apiError";
 import { isPasswordValid } from "../lib/passwordPolicy";
-import { resolvePostLoginRoute } from "../lib/postLoginRoute";
+import { resolveSignedInRoute } from "../lib/landing";
 import { SIGN_IN_ROUTE } from "@/lib/routes";
 import type { User } from "../../types/auth";
 
@@ -19,7 +19,11 @@ type FieldErrors = Partial<Record<"currentPassword" | "newPassword" | "confirmPa
 /**
  * First-sign-in password change. A teacher whose account was created by the
  * school has a temporary password; the API refuses every other request until
- * they choose their own, so this screen is the only place they can go.
+ * they choose their own, so this screen is the only place they can go. Once
+ * it is set (or when the visitor doesn't need it) they go on through
+ * `resolveSignedInRoute`: onboarding, else their landing page.
+ *
+ * @returns The page, or nothing while it redirects.
  */
 export default function SetPasswordPage() {
   const router = useRouter();
@@ -41,7 +45,7 @@ export default function SetPasswordPage() {
         return;
       }
       if (!stored.mustChangePassword) {
-        router.replace(resolvePostLoginRoute(stored));
+        void resolveSignedInRoute(stored).then((route) => router.replace(route));
         return;
       }
       setUser(stored);
@@ -56,6 +60,12 @@ export default function SetPasswordPage() {
     [currentPassword, newPassword, confirmPassword, saving],
   );
 
+  /**
+   * Replaces the temporary password, then routes on through `resolveSignedInRoute`.
+   *
+   * @param e - The form submit.
+   * @returns Resolves when the change (and the redirect) is done; failures are shown on the form.
+   */
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setFormError(null);
@@ -70,7 +80,7 @@ export default function SetPasswordPage() {
       updateUser({ mustChangePassword: false });
       const updated: User = { ...user, mustChangePassword: false };
       toast.success("Your password is set. Welcome to Talim!");
-      router.replace(resolvePostLoginRoute(updated));
+      router.replace(await resolveSignedInRoute(updated));
     } catch (err) {
       const info = getApiError(err, "We couldn't update your password. Please try again.");
       if (Object.keys(info.fieldErrors).length > 0) {

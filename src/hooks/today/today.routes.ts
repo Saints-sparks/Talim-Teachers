@@ -12,6 +12,7 @@
  * `?courseId=&assessmentId=` on Grading.
  */
 import type { AttentionTarget, AttentionTone, RegisterStatus, SetupStepKey } from "@/types/today";
+import type { NotificationTarget } from "@/types/inboxSettings";
 
 /**
  * Builds a path with a query string, dropping empty values.
@@ -43,7 +44,9 @@ export function registerRoute(classId: string, date?: string): string {
 
 /**
  * "Message the class": the class-group chat room when the lesson has one
- * (`classRoomId`), otherwise the inbox.
+ * (`classRoomId`), otherwise the inbox. The lesson sheet only links here
+ * when there is a room; without one it creates or reuses the class group
+ * first (`useClassGroup`).
  *
  * @param classRoomId - The lesson's class-group room, or null.
  * @returns The href.
@@ -79,7 +82,8 @@ export function uploadResourceRoute(courseId?: string, week?: number | null): st
 }
 
 /**
- * Maps an attention action's target to a route in this app.
+ * Maps an attention action's target, or a notification's `metadata.target`
+ * (Round 4 §30, which adds four pages), to a route in this app.
  *
  * - `attendance` → the class's register (`/attendance/class/:id`), or the class list.
  * - `grading` → `/grading?courseId=&assessmentId=`, which opens that course and assessment.
@@ -88,11 +92,14 @@ export function uploadResourceRoute(courseId?: string, week?: number | null): st
  * - `subjects` → the course's scheme of work, or `/subjects`.
  * - `leave` → there is no leave screen in the teacher app yet, so the class's
  *   register, where approved leave shows, or `/attendance`.
+ * - `announcements` → the Notifications page on its Announcements tab.
+ * - `timetable` → `/timetable` (with `?date=`, not read yet).
+ * - `settings` → `/settings`.
  *
  * @param target - The action's target.
  * @returns The href.
  */
-export function attentionHref(target: AttentionTarget): string {
+export function attentionHref(target: AttentionTarget | NotificationTarget): string {
   switch (target.page) {
     case "attendance":
       return target.classId ? registerRoute(target.classId, target.date) : "/attendance";
@@ -106,6 +113,12 @@ export function attentionHref(target: AttentionTarget): string {
       return target.courseId ? schemeOfWorkRoute(target.courseId, target.week) : "/subjects";
     case "leave":
       return target.classId ? registerRoute(target.classId, target.date) : "/attendance";
+    case "announcements":
+      return "/notifications?tab=announcements";
+    case "timetable":
+      return withQuery("/timetable", { date: target.date });
+    case "settings":
+      return "/settings";
     default:
       return "/dashboard";
   }

@@ -17,7 +17,7 @@ import {
   type SessionUser,
 } from "@/lib/session";
 import { authService } from "@/app/services/auth.service";
-import { resolvePostLoginRoute } from "@/app/lib/postLoginRoute";
+import { resolveSignedInRoute } from "@/app/lib/landing";
 import { startWebPushSync, unsubscribeBrowserPush, unsubscribeWebPushOnLogout } from "@/lib/webPushSync";
 import type { AuthResponse, LoginCredentials, User } from "@/types/auth";
 
@@ -41,7 +41,7 @@ export interface AuthContextType {
   isLoading: boolean;
   /** True until the stored session has been restored (or found to be gone). */
   isRestoringSession: boolean;
-  /** Signs in, admits only teacher-portal roles, and routes onwards. */
+  /** Signs in, admits only teacher-portal roles, and routes onwards (to the teacher's landing page once set up). */
   login: (credentials: LoginCredentials) => Promise<AuthResponse>;
   /** Clears the session everywhere and returns to sign-in. */
   logout: () => Promise<void>;
@@ -268,7 +268,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (userData.mustChangePassword) toast.info("Set a new password to finish signing in.");
       else toast.success("Login successful!");
 
-      router.replace(resolvePostLoginRoute(userData));
+      // Set-password and onboarding first, then the teacher's "First screen
+      // after sign-in" (Settings → Teaching preferences). Never rejects, and
+      // waits at most a couple of seconds for the settings.
+      router.replace(await resolveSignedInRoute(userData));
       setIsLoading(false);
       return response;
     },

@@ -6,12 +6,17 @@
  * it with `getErrorMessage()`.
  *
  * Contract: `talimBE-V2/src/modules/chat/controllers/chat.controller.ts` and
- * `dto/create-group-chat.dto.ts`, `dto/room-details.dto.ts`.
+ * `dto/create-group-chat.dto.ts`, `dto/room-details.dto.ts`. Round 4 (§26,
+ * §28, §29 of `docs/redesign-teachers-round4-inbox-settings.md`) adds the
+ * contacts picker, the office inbox and shared media; with
+ * `NEXT_PUBLIC_USE_FIXTURES=true` in a dev build those answer from
+ * `src/lib/fixtures/inbox.fixture.ts`.
  */
 import { ChatRoom } from "@/types/chat";
 import { api, apiClient } from "@/lib/apiClient";
 import type { AddChatParticipantsBody, CreateChatRoomBody, CreateGroupChatBody, UpdateChatRoomBody } from "@/types/apiPayloads";
 import { fixturesEnabled } from "@/lib/fixtures/flag";
+import type { ChatContact, OfficeRoom, SharedMediaKind, SharedMediaPage } from "@/types/inboxSettings";
 
 /**
  * `CreateGroupChatDto` from the generated contract — the server rejects any
@@ -174,4 +179,78 @@ export const startDirectChat = async (otherUserId: string, myUserId: string): Pr
   const id = room?._id || room?.roomId;
   if (!id) throw new Error("The conversation could not be opened.");
   return String(id);
+};
+
+/**
+ * `GET /chat/contacts` (§26): the people the teacher can message — the
+ * guardians of students in their classes (unless a parent turned teacher
+ * messages off), the school's other teachers, and one "School office" entry
+ * (`userId: 'office'`). Sorted by group, then name.
+ *
+ * @returns The contacts.
+ * @throws ApiError when the request fails.
+ */
+export const getChatContacts = async (): Promise<ChatContact[]> => {
+  if (fixturesEnabled()) {
+    const { makeContactsFixture } = await import("@/lib/fixtures/inbox.fixture");
+    return makeContactsFixture();
+  }
+  const contacts = await api.get<ChatContact[]>("/chat/contacts");
+  return Array.isArray(contacts) ? contacts : [];
+};
+
+/**
+ * `POST /chat/office` (§28): the teacher's own "School office" room, created
+ * on first use. Every admin (and sub-admin with `manage:messages`) reads and
+ * replies there.
+ *
+ * @returns The room's id, for `/messages?room=`.
+ * @throws ApiError when the room cannot be opened; Error when the answer has no id.
+ */
+export const openOfficeRoom = async (): Promise<string> => {
+  let room: OfficeRoom;
+  if (fixturesEnabled()) {
+    const { makeOfficeRoomFixture } = await import("@/lib/fixtures/inbox.fixture");
+    room = makeOfficeRoomFixture();
+  } else {
+    room = await api.post<OfficeRoom>("/chat/office");
+  }
+  const id = room?._id || room?.roomId;
+  if (!id) throw new Error("The school office conversation could not be opened.");
+  return String(id);
+};
+
+/** The media page size the info modal asks for. */
+export const ROOM_MEDIA_PAGE_SIZE = 30;
+
+/**
+ * `GET /chat/rooms/:roomId/media?kind=&cursor=&limit=` (§29): shared images,
+ * documents or links (URLs found in message text), newest first, without
+ * deleted messages, with the total per kind.
+ *
+ * @param roomId - The room (participants only).
+ * @param kind - Which kind to list.
+ * @param cursor - `nextCursor` of the previous page.
+ * @param limit - Page size.
+ * @returns One page.
+ * @throws ApiError when the caller is not a participant (403) or the room is another school's (404).
+ */
+export const getRoomMedia = async (
+  roomId: string,
+  kind: SharedMediaKind,
+  cursor?: string | null,
+  limit: number = ROOM_MEDIA_PAGE_SIZE,
+): Promise<SharedMediaPage> => {
+  if (fixturesEnabled()) {
+    const { makeRoomMediaFixture } = await import("@/lib/fixtures/inbox.fixture");
+    return makeRoomMediaFixture(roomId, kind, cursor, limit);
+  }
+  const page = await api.get<Partial<SharedMediaPage>>(`/chat/rooms/${encodeURIComponent(roomId)}/media`, {
+    params: { kind, limit, ...(cursor ? { cursor } : {}) },
+  });
+  return {
+    items: Array.isArray(page?.items) ? page.items : [],
+    nextCursor: page?.nextCursor ?? null,
+    counts: { image: page?.counts?.image ?? 0, document: page?.counts?.document ?? 0, link: page?.counts?.link ?? 0 },
+  };
 };

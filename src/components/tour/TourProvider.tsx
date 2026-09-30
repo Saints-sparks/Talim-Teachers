@@ -60,10 +60,22 @@ export const TOUR_STEPS: readonly TourStep[] = [
     linkLabel: "Open Timetable",
   },
   {
-    title: "Messages and alerts",
-    body: "Parents, colleagues and class groups are in Messages. Deadlines and announcements are in Notifications. Choose what reaches you in Settings → Notifications. Each page also has a Guide button in the corner that walks you through it.",
+    title: "Messages",
+    body: "Parents, colleagues, class groups and the school office are in Messages. Filter by who it's with, start a new message or a class group, and open Info for the members and everything shared. With a parent of your student, Call rings their phone.",
     href: "/messages",
     linkLabel: "Open Messages",
+  },
+  {
+    title: "Notifications",
+    body: "Deadlines, register reminders and school announcements are in Notifications, each with a button that takes you to it. The bell at the top shows how many you haven't read.",
+    href: "/notifications",
+    linkLabel: "Open Notifications",
+  },
+  {
+    title: "Settings",
+    body: "Choose what reaches you, how you appear in conversations, where the portal opens after sign-in and the theme. Sign out other devices under Security, and replay this tour under Help. Each page also has a Guide button in the corner that walks you through it.",
+    href: "/settings",
+    linkLabel: "Open Settings",
   },
 ];
 

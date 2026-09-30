@@ -4,29 +4,34 @@
  * The teacher settings overview and the workspace preferences stored with it.
  *
  * `GET /teacher/settings` returns the profile, employment and roster summary a
- * teacher sees on the Account section, plus the preferences the Messages,
- * Teaching, Guides and Appearance sections write back. It used to be fetched
- * twice per visit (once by the page, once per preference hook) and mirrored
- * into `localStorage` by hand; it is now one cached query, invalidated
- * explicitly by the mutations below.
+ * teacher sees on the Account tab, plus the preferences the Messages,
+ * Teaching preferences, Help and Appearance tabs write back. It is one cached
+ * query, invalidated explicitly by the mutations below.
+ *
+ * Round 4 (§31, §32 of `talimBE-V2/docs/redesign-teachers-round4-inbox-settings.md`):
+ * - `messages` is exactly `{ showOnlineStatus, readReceipts, soundEnabled }`.
+ * - The old `notifications` section is gone from the DTOs (alert switches
+ *   live in `/notifications/preferences`); it is neither read nor sent.
+ * The generated contract does not have that shape yet, so the payload type is
+ * hand-written here from `MessagePreferences` until `npm run types:api` does.
+ *
+ * Whenever the settings load, and whenever the teaching section is saved,
+ * the landing page is cached on this device (`cacheLandingPage`) so sign-in
+ * can honour it even when this request is slow.
  */
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
 import { api } from "@/lib/apiClient";
 import { queryKeys, staleTimes } from "@/lib/queryKeys";
 import { useAuth } from "@/app/context/AuthContext";
+import { cacheLandingPage } from "@/app/lib/landing";
 import type { TeacherPreferencesPayload, TeacherProfilePayload } from "@/types/apiPayloads";
+import type { MessagePreferences } from "@/types/inboxSettings";
 
-/** A section of `UpdateTeacherPreferencesDto` with every field required (the DTO makes them optional). */
-type FullSection<K extends keyof TeacherPreferencesPayload> = Required<NonNullable<TeacherPreferencesPayload[K]>>;
+/** Chat preferences (§32): online status and read receipts are the chat module's, the sound stays here. */
+export type TeacherMessagePrefs = MessagePreferences;
 
-/** Notification switches stored with the teacher's workspace preferences (`TeacherNotificationPreferencesDto`). */
-export type TeacherNotificationPrefs = FullSection<"notifications">;
-
-/** Chat preferences (`TeacherMessagePreferencesDto`). */
-export type TeacherMessagePrefs = FullSection<"messages">;
-
-/** Workspace defaults (`TeacherTeachingPreferencesDto`). */
-export type TeacherTeachingPrefs = FullSection<"teaching">;
+/** Workspace defaults (`TeacherTeachingPreferencesDto`), every field required. */
+export type TeacherTeachingPrefs = Required<NonNullable<TeacherPreferencesPayload["teaching"]>>;
 
 /**
  * In-app guide preferences (`TeacherGuidePreferencesDto`). `tourCompleted` is
@@ -36,16 +41,23 @@ export type TeacherTeachingPrefs = FullSection<"teaching">;
  */
 export type TeacherGuidePrefs = Required<Omit<NonNullable<TeacherPreferencesPayload["guides"]>, "tourCompleted">>;
 
-/**
- * Everything `UpdateTeacherPreferencesDto` accepts, with nothing optional.
- * Derived from the generated contract: a field the DTO adds, renames or drops
- * fails `tsc` here and in `DEFAULT_PREFERENCES`.
- */
-export type TeacherPreferences = Required<TeacherPreferencesPayload> & {
-  notifications: TeacherNotificationPrefs;
+/** The theme choice (`light`, `dark` or `system`). */
+export type TeacherThemePref = NonNullable<TeacherPreferencesPayload["theme"]>;
+
+/** Everything the Round 4 preferences hold, with nothing optional. */
+export interface TeacherPreferences {
   messages: TeacherMessagePrefs;
   teaching: TeacherTeachingPrefs;
   guides: TeacherGuidePrefs;
+  theme: TeacherThemePref;
+}
+
+/**
+ * The body of `PATCH /teacher/settings/preferences` in Round 4: the generated
+ * DTO without `notifications`, and with the new `messages` section.
+ */
+export type TeacherPreferencesBody = Omit<TeacherPreferencesPayload, "notifications" | "messages"> & {
+  messages?: TeacherMessagePrefs;
 };
 
 /** The profile block of `GET /teacher/settings`. */
@@ -80,34 +92,20 @@ export interface TeacherSettingsSummary {
   accountStatus?: string;
 }
 
-/** The whole `GET /teacher/settings` body. */
+/** The whole `GET /teacher/settings` body. `preferences` may still carry fields older releases stored. */
 export interface TeacherSettings {
   profile?: TeacherSettingsProfile;
   employment?: TeacherSettingsEmployment;
   summary?: TeacherSettingsSummary;
-  preferences?: TeacherPreferences;
+  preferences?: StoredPreferences;
 }
 
 /** The preferences a teacher starts with, matching the server's own defaults. */
 export const DEFAULT_PREFERENCES: TeacherPreferences = {
-  notifications: {
-    announcements: true,
-    attendance: true,
-    grading: true,
-    resources: true,
-    messages: true,
-    inApp: true,
-    email: false,
-    quietHoursEnabled: false,
-    quietStart: "22:00",
-    quietEnd: "07:00",
-  },
   messages: {
-    groupNotifications: true,
-    unreadBadge: true,
-    soundEnabled: false,
     showOnlineStatus: true,
-    defaultFilter: "all",
+    readReceipts: true,
+    soundEnabled: false,
   },
   teaching: {
     landingPage: "dashboard",
@@ -143,12 +141,16 @@ export function pickKnown<T extends object>(defaults: T, value: unknown): Partia
   return out as Partial<T>;
 }
 
-/** What a stored (or partially typed) preferences document may look like: every section, and every field within it, optional. */
+/**
+ * What a stored (or partially typed) preferences document may look like:
+ * every section, and every field within it, optional. A section an older
+ * release stored (`notifications`) may still be there; it is ignored.
+ */
 export type StoredPreferences = {
   [K in keyof TeacherPreferences]?: TeacherPreferences[K] extends object
     ? Partial<TeacherPreferences[K]>
     : TeacherPreferences[K];
-};
+} & { notifications?: unknown };
 
 /**
  * Fills in every missing preference from the defaults, dropping keys the DTO
@@ -159,7 +161,6 @@ export type StoredPreferences = {
  */
 export function mergePreferences(stored: StoredPreferences | undefined): TeacherPreferences {
   return {
-    notifications: { ...DEFAULT_PREFERENCES.notifications, ...pickKnown(DEFAULT_PREFERENCES.notifications, stored?.notifications) },
     messages: { ...DEFAULT_PREFERENCES.messages, ...pickKnown(DEFAULT_PREFERENCES.messages, stored?.messages) },
     teaching: { ...DEFAULT_PREFERENCES.teaching, ...pickKnown(DEFAULT_PREFERENCES.teaching, stored?.teaching) },
     guides: { ...DEFAULT_PREFERENCES.guides, ...pickKnown(DEFAULT_PREFERENCES.guides, stored?.guides) },
@@ -168,15 +169,15 @@ export function mergePreferences(stored: StoredPreferences | undefined): Teacher
 }
 
 /**
- * Strips a preferences patch down to exactly what `UpdateTeacherPreferencesDto`
- * declares, so an extra field never turns a save into a 400.
+ * Strips a preferences patch down to exactly what the Round 4 DTO declares,
+ * so an extra field never turns a save into a 400. The old `notifications`
+ * section is never sent.
  *
  * @param updates - The sections the user changed.
  * @returns The payload to PATCH.
  */
-export function toPreferencesPayload(updates: Partial<TeacherPreferences>): TeacherPreferencesPayload {
-  const payload: TeacherPreferencesPayload = {};
-  if (updates.notifications) payload.notifications = { ...DEFAULT_PREFERENCES.notifications, ...pickKnown(DEFAULT_PREFERENCES.notifications, updates.notifications) };
+export function toPreferencesPayload(updates: Partial<TeacherPreferences>): TeacherPreferencesBody {
+  const payload: TeacherPreferencesBody = {};
   if (updates.messages) payload.messages = { ...DEFAULT_PREFERENCES.messages, ...pickKnown(DEFAULT_PREFERENCES.messages, updates.messages) };
   if (updates.teaching) payload.teaching = { ...DEFAULT_PREFERENCES.teaching, ...pickKnown(DEFAULT_PREFERENCES.teaching, updates.teaching) };
   if (updates.guides) payload.guides = { ...DEFAULT_PREFERENCES.guides, ...pickKnown(DEFAULT_PREFERENCES.guides, updates.guides) };
@@ -195,7 +196,11 @@ export function useTeacherSettings(): UseQueryResult<TeacherSettings, unknown> {
 
   return useQuery({
     queryKey: queryKeys.settings.teacher(userId),
-    queryFn: () => api.get<TeacherSettings>("/teacher/settings"),
+    queryFn: async () => {
+      const settings = await api.get<TeacherSettings>("/teacher/settings");
+      cacheLandingPage(userId, settings?.preferences?.teaching?.landingPage ?? DEFAULT_PREFERENCES.teaching.landingPage);
+      return settings;
+    },
     enabled: Boolean(userId),
     staleTime: staleTimes.reference,
   });
@@ -216,7 +221,7 @@ export function useTeacherPreferences(): { preferences: TeacherPreferences; isLo
  *
  * The cached settings are updated optimistically so the control the teacher
  * just moved does not flick back, then invalidated so the server's own view
- * wins.
+ * wins. A saved landing page is also cached on this device for sign-in.
  *
  * @returns The mutation; `mutate` takes the sections that changed.
  */
@@ -240,6 +245,9 @@ export function useUpdateTeacherPreferences() {
     },
     onError: (_error, _updates, context) => {
       if (context?.previous) queryClient.setQueryData(key, context.previous);
+    },
+    onSuccess: (_data, updates) => {
+      if (updates.teaching?.landingPage) cacheLandingPage(userId, updates.teaching.landingPage);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: key });

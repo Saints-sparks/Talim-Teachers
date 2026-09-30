@@ -4,6 +4,26 @@ const DEFAULT_URL = "/dashboard";
 
 const absoluteUrl = (url) => new URL(url || DEFAULT_URL, self.location.origin).href;
 
+/**
+ * Whether a window is showing this chat room, focused: the messages page
+ * with `?room=<roomId>` in the foreground. The backend pushes every message
+ * to every participant (with `roomId` in the data), so the one person who is
+ * reading that conversation right now is not also alerted about it.
+ *
+ * @param {WindowClient} client - An open window of this app.
+ * @param {string} roomId - The message's room.
+ * @returns {boolean} True when that room is open and focused there.
+ */
+const isViewingRoom = (client, roomId) => {
+  if (!client || !client.focused || !roomId) return false;
+  try {
+    const url = new URL(client.url);
+    return url.pathname.replace(/\/+$/, "") === "/messages" && url.searchParams.get("room") === String(roomId);
+  } catch {
+    return false;
+  }
+};
+
 self.addEventListener("push", (event) => {
   if (!event.data) return;
 
@@ -30,7 +50,10 @@ self.addEventListener("push", (event) => {
     clients
       .matchAll({ type: "window", includeUncontrolled: true })
       .then((clientList) => {
-        // Don't alert about a chat the user is looking at right now.
+        // Don't alert about a chat the user is looking at right now: by room
+        // (every chat push carries roomId), else by the exact url.
+        const roomId = payloadData.roomId || data.roomId;
+        if (roomId && clientList.some((client) => isViewingRoom(client, roomId))) return;
         if (payloadData.url) {
           const target = absoluteUrl(payloadData.url);
           const viewing = clientList.some(

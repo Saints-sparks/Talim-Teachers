@@ -7,6 +7,7 @@ import {
   UseRealtimeChatReturn,
 } from '@/app/hooks/useRealtimeChat';
 import { useChatAlerts } from '@/app/hooks/useChatAlerts';
+import { useTeacherPreferences } from '@/hooks/settings/useTeacherSettings';
 
 interface ChatContextType extends UseRealtimeChatReturn {
   selectedRoom: RealtimeChatRoom | null;
@@ -18,14 +19,25 @@ interface ChatProviderProps {
   children: ReactNode;
 }
 
+/**
+ * Holds the live chat for the whole app: the realtime engine, the app-wide
+ * alerts (toasts, the new-message sound with the teacher's "Sound for new
+ * messages" preference, the tab title, push clicks) and the selected room.
+ *
+ * @param props - The app tree.
+ * @param props.children - Everything under the provider.
+ * @returns The provider.
+ */
 export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   const realtimeChat = useRealtimeChat();
+  const { preferences } = useTeacherPreferences();
 
-  // App-wide chat toasts, tab title, notification events and push clicks.
+  // App-wide chat toasts, the new-message sound, tab title, notification events and push clicks.
   useChatAlerts({
     currentUserId: realtimeChat.currentUserId,
     totalUnread: realtimeChat.totalUnread,
     isRoomOpen: realtimeChat.isRoomOpen,
+    soundEnabled: preferences.messages?.soundEnabled === true,
   });
 
   // Find selected room
@@ -45,6 +57,12 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   );
 };
 
+/**
+ * The live chat: rooms, the open room's actions and the connection.
+ *
+ * @returns The chat context.
+ * @throws When used outside `ChatProvider`.
+ */
 export const useChat = (): ChatContextType => {
   const context = useContext(ChatContext);
   if (context === undefined) {

@@ -1,7 +1,6 @@
 "use client";
 import { useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Mic, Paperclip, SendHorizontal, X } from "lucide-react";
+import { Mic, Paperclip, X } from "lucide-react";
 import {
   ATTACHMENT_ACCEPT,
   ComposerAttachments,
@@ -11,7 +10,9 @@ import {
   useVoiceRecorder,
   type VoiceRecording,
 } from "@/components/chat-kit";
+import { focusRing } from "@/components/tl/styles";
 
+/** Props for {@link MessageInput}. */
 interface MessageInputProps {
   value?: string;
   onValueChange?: (value: string) => void;
@@ -23,10 +24,19 @@ interface MessageInputProps {
   placeholder?: string;
 }
 
+const squareButton = `flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-[13px] border border-tl-control text-tl-muted transition-colors hover:bg-tl-bg disabled:cursor-not-allowed disabled:opacity-40 ${focusRing}`;
+const sendButton = `flex min-h-[46px] shrink-0 items-center rounded-[13px] bg-tl-brand-fill px-5 text-sm font-bold text-tl-on-brand transition-colors hover:bg-tl-brand-fill-hover disabled:cursor-not-allowed disabled:opacity-40 ${focusRing}`;
+
 /**
- * The composer: text, files (paperclip, up to 10, checked against the upload
- * allowlist) and voice notes. The chat remounts it per room, so switching
- * rooms throws away a recording in progress and releases the microphone.
+ * The composer (the design's: attach, the message box, Send): text, files
+ * (the paperclip, up to 10, checked against the upload allowlist, shown as
+ * chips above) and voice notes (the microphone). The chat remounts it per
+ * room, so switching rooms throws away a recording in progress and
+ * releases the microphone. Enter sends with a mouse; on a touch screen it is
+ * a new line and Send sends.
+ *
+ * @param props - See {@link MessageInputProps}.
+ * @returns The composer.
  */
 export default function MessageInput({
   value,
@@ -35,7 +45,7 @@ export default function MessageInput({
   onSendFiles,
   onSendVoice,
   disabled = false,
-  placeholder = "Type something here...",
+  placeholder = "Write a message",
 }: MessageInputProps) {
   const [message, setMessage] = useState(value || "");
   const [files, setFiles] = useState<File[]>([]);
@@ -92,121 +102,93 @@ export default function MessageInput({
   };
 
   return (
-    <div className="bg-white border-t border-gray-200 p-3 sm:p-4">
+    <div className={`flex flex-col gap-2 p-3.5 ${hasFiles ? "" : "border-t border-tl-line-soft"}`}>
       <ComposerAttachments
         files={files}
         onRemove={(index) => setFiles((prev) => prev.filter((_, i) => i !== index))}
         errors={fileErrors}
         onDismissErrors={() => setFileErrors([])}
         disabled={disabled}
-        className="mb-2"
       />
 
-      {recorder.error && !recorder.isRecording && (
-        <div
-          role="alert"
-          className="mb-2 flex items-center gap-2 rounded-md bg-red-50 px-2.5 py-1.5 text-xs text-red-700"
-        >
+      {recorder.error && !recorder.isRecording ? (
+        <div role="alert" className="flex items-center gap-2 rounded-xl bg-tl-danger-bg px-3 py-2 text-xs font-bold text-tl-danger">
           <span className="flex-1">{recorder.error}</span>
-          <button
-            type="button"
-            onClick={recorder.clearError}
-            className="rounded p-0.5 hover:bg-red-100"
-            aria-label="Dismiss"
-          >
-            <X size={12} />
+          <button type="button" onClick={recorder.clearError} className={`flex h-8 w-8 items-center justify-center rounded-lg ${focusRing}`} aria-label="Dismiss">
+            <X size={14} aria-hidden />
           </button>
         </div>
-      )}
+      ) : null}
 
-      <div className="flex items-end gap-2 sm:gap-3">
+      <div className="flex items-end gap-2.5">
         {recorder.isRecording ? (
-          <div className="flex-1 flex items-center gap-3 px-4 py-2 bg-red-50 border border-red-200 rounded-full">
-            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse flex-shrink-0" aria-hidden />
-            <span className="text-sm text-red-600 font-medium">Recording</span>
-            <span className="text-sm text-red-500 ml-auto tabular-nums" aria-live="polite">
+          <div className="flex min-h-[46px] flex-1 items-center gap-3 rounded-[13px] border border-tl-danger/30 bg-tl-danger-bg px-4">
+            <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-tl-danger" aria-hidden />
+            <span className="text-sm font-bold text-tl-danger">Recording</span>
+            <span className="ml-auto text-sm tabular-nums text-tl-danger" aria-live="polite">
               {formatDuration(recorder.elapsed)}
             </span>
             <button
               type="button"
               onClick={recorder.cancel}
-              className="p-1 rounded-full hover:bg-red-100"
+              className={`flex h-9 w-9 items-center justify-center rounded-full text-tl-danger hover:bg-tl-surface ${focusRing}`}
               title="Cancel recording"
               aria-label="Cancel recording"
             >
-              <X size={16} className="text-red-500" />
+              <X size={16} aria-hidden />
             </button>
           </div>
         ) : (
           <>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              className="hidden"
-              accept={ATTACHMENT_ACCEPT}
-              onChange={handleFileChange}
-            />
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-8 h-8 p-0 rounded-full hover:bg-gray-100 flex-shrink-0"
+            <input ref={fileInputRef} type="file" multiple className="hidden" accept={ATTACHMENT_ACCEPT} onChange={handleFileChange} tabIndex={-1} aria-hidden />
+            <button
+              type="button"
+              className={squareButton}
               onClick={() => fileInputRef.current?.click()}
               disabled={disabled || !onSendFiles}
-              title="Attach files"
+              title="Attach a document, photo or video"
               aria-label="Attach files"
             >
-              <Paperclip size={16} className="text-gray-500" />
-            </Button>
+              <Paperclip size={17} aria-hidden />
+            </button>
 
-            <div className="flex-1">
+            <div className="min-w-0 flex-1">
               <ComposerTextarea
                 aria-label="Message"
-                placeholder={hasFiles ? "Add a caption..." : placeholder}
-                className="block w-full border border-gray-300 rounded-2xl bg-gray-50 px-4 py-2 text-sm leading-6 outline-none focus:bg-white focus:border-blue-500 transition-colors disabled:opacity-60"
+                placeholder={hasFiles ? "Add a caption" : placeholder}
+                className="block min-h-[46px] w-full resize-none rounded-[13px] border border-tl-control bg-tl-surface px-3.5 py-[11px] text-[15px] font-semibold leading-6 text-tl-ink outline-none placeholder:text-tl-faint focus-visible:ring-2 focus-visible:ring-tl-link disabled:opacity-60"
                 value={currentMessage}
                 onValueChange={handleChange}
-                // Enter sends with a mouse; on a touch screen it is a new line and Send sends.
                 onSubmit={() => {
                   if (canSend) handleSend();
                 }}
                 disabled={disabled}
               />
             </div>
+
+            {!canSend && onSendVoice ? (
+              <button
+                type="button"
+                className={squareButton}
+                onClick={() => void startRecording()}
+                disabled={disabled}
+                title="Record a voice note"
+                aria-label="Record voice note"
+              >
+                <Mic size={17} aria-hidden />
+              </button>
+            ) : null}
           </>
         )}
 
         {recorder.isRecording ? (
-          <Button
-            className="h-8 sm:h-10 px-3 rounded-full bg-red-500 hover:bg-red-600 text-white flex-shrink-0 gap-1.5"
-            onClick={() => void stopAndSend()}
-            title="Stop and send"
-            aria-label="Stop and send voice note"
-          >
-            <SendHorizontal size={16} />
-            <span className="hidden sm:inline text-sm">Send</span>
-          </Button>
-        ) : canSend ? (
-          <Button
-            className="w-8 h-8 sm:w-10 sm:h-10 p-0 rounded-full transition-all flex-shrink-0 bg-blue-500 hover:bg-blue-600 shadow-md"
-            onClick={handleSend}
-            disabled={disabled}
-            aria-label="Send"
-          >
-            <SendHorizontal size={16} className="text-white" />
-          </Button>
+          <button type="button" className={sendButton} onClick={() => void stopAndSend()} title="Stop and send" aria-label="Stop and send voice note">
+            Send
+          </button>
         ) : (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-8 h-8 sm:w-10 sm:h-10 p-0 rounded-full flex-shrink-0 hover:bg-gray-100"
-            onClick={() => void startRecording()}
-            disabled={disabled || !onSendVoice}
-            title="Record voice note"
-            aria-label="Record voice note"
-          >
-            <Mic size={16} className="text-gray-500" />
-          </Button>
+          <button type="button" className={sendButton} onClick={handleSend} disabled={disabled || !canSend} title="Send (Enter)">
+            Send
+          </button>
         )}
       </div>
     </div>

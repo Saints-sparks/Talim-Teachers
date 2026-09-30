@@ -8,10 +8,19 @@
  * caller by the server; marking one read always applies to the authenticated
  * user, so no body is sent.
  *
+ * Round 4 (§30 of `talimBE-V2/docs/redesign-teachers-round4-inbox-settings.md`)
+ * adds `GET /notifications/counts`, `PATCH /notifications/read-all` (both
+ * feeds), the `unread` filter, `metadata.target` / `metadata.actionLabel` and
+ * `attachmentFiles`. With `NEXT_PUBLIC_USE_FIXTURES=true` in a dev build the
+ * calls answer from `src/lib/fixtures/inbox.fixture.ts`.
+ *
  * Contract: `talimBE-V2/src/modules/notification/controllers/notifications.controller.ts`
  * and `annoucements.controller.ts`.
  */
 import { api } from "@/lib/apiClient";
+import { ApiError } from "@/lib/apiError";
+import { fixturesEnabled } from "@/lib/fixtures/flag";
+import type { AttachmentFile, NotificationCountsBody, NotificationTarget, ReadAllResult } from "@/types/inboxSettings";
 
 /** A person as the server populates them on a notification or announcement. */
 export interface NotificationPerson {
@@ -42,6 +51,10 @@ export interface NotificationMetadata {
   resourceUrl?: string;
   href?: string;
   url?: string;
+  /** Where the notification's action goes (§30); older rows have none. */
+  target?: NotificationTarget;
+  /** The action button's label, e.g. "Take register". */
+  actionLabel?: string;
   [key: string]: unknown;
 }
 
@@ -73,6 +86,8 @@ export interface NotificationRecord {
   metadata?: NotificationMetadata;
   attachments?: string[];
   attachment?: string;
+  /** §30: `attachments` with a name, a kind and (when known) a size. */
+  attachmentFiles?: AttachmentFile[];
   readBy?: PersonRef[];
   isRead?: boolean;
   read?: boolean;
@@ -97,6 +112,8 @@ export type NotificationListBody =
 export interface NotificationPaging {
   page?: number;
   limit?: number;
+  /** `GET /notifications` only: unread ones only (§30). */
+  unread?: boolean;
 }
 
 /** How many of each list one inbox load reads. */
@@ -134,10 +151,15 @@ export function extractTotal(body: NotificationListBody | null | undefined): num
  * @returns One page of announcements.
  * @throws ApiError when the request fails.
  */
-export const listAnnouncements = (userId: string, paging: NotificationPaging = {}): Promise<NotificationListBody> =>
-  api.get<NotificationListBody>(`/notifications/announcements/receiver/${encodeURIComponent(userId)}`, {
+export const listAnnouncements = async (userId: string, paging: NotificationPaging = {}): Promise<NotificationListBody> => {
+  if (fixturesEnabled()) {
+    const { listAnnouncementsFixture } = await import("@/lib/fixtures/inbox.fixture");
+    return listAnnouncementsFixture(paging.page ?? 1, paging.limit ?? INBOX_PAGE_SIZE);
+  }
+  return api.get<NotificationListBody>(`/notifications/announcements/receiver/${encodeURIComponent(userId)}`, {
     params: { page: paging.page ?? 1, limit: paging.limit ?? INBOX_PAGE_SIZE },
   });
+};
 
 /**
  * The system notifications addressed to a user.
@@ -147,10 +169,52 @@ export const listAnnouncements = (userId: string, paging: NotificationPaging = {
  * @returns One page of notifications.
  * @throws ApiError when the request fails.
  */
-export const listNotifications = (userId: string, paging: NotificationPaging = {}): Promise<NotificationListBody> =>
-  api.get<NotificationListBody>("/notifications", {
-    params: { recipientId: userId, page: paging.page ?? 1, limit: paging.limit ?? INBOX_PAGE_SIZE },
+export const listNotifications = async (userId: string, paging: NotificationPaging = {}): Promise<NotificationListBody> => {
+  if (fixturesEnabled()) {
+    const { listNotificationsFixture } = await import("@/lib/fixtures/inbox.fixture");
+    return listNotificationsFixture(paging.page ?? 1, paging.limit ?? INBOX_PAGE_SIZE, paging.unread);
+  }
+  return api.get<NotificationListBody>("/notifications", {
+    params: {
+      recipientId: userId,
+      page: paging.page ?? 1,
+      limit: paging.limit ?? INBOX_PAGE_SIZE,
+      ...(paging.unread ? { unread: "true" } : {}),
+    },
   });
+};
+
+/**
+ * `GET /notifications/counts`: totals over both feeds, for the tab badges and
+ * the bell. Announcements count under `announcement`.
+ *
+ * @returns `{ all, unread, byCategory }`.
+ * @throws ApiError when the request fails.
+ */
+export const getNotificationCounts = async (): Promise<NotificationCountsBody> => {
+  if (fixturesEnabled()) {
+    const { makeNotificationCountsFixture } = await import("@/lib/fixtures/inbox.fixture");
+    return makeNotificationCountsFixture();
+  }
+  const body = await api.get<Partial<NotificationCountsBody>>("/notifications/counts");
+  return { all: Number(body?.all) || 0, unread: Number(body?.unread) || 0, byCategory: body?.byCategory ?? {} };
+};
+
+/**
+ * `PATCH /notifications/read-all`: marks every notification and announcement
+ * of the signed-in user read, in one call.
+ *
+ * @returns `{ updated }`.
+ * @throws ApiError when the request fails.
+ */
+export const markAllNotificationsRead = async (): Promise<ReadAllResult> => {
+  if (fixturesEnabled()) {
+    const { markAllReadFixture } = await import("@/lib/fixtures/inbox.fixture");
+    return markAllReadFixture();
+  }
+  const body = await api.patch<Partial<ReadAllResult> | null>("/notifications/read-all");
+  return { updated: Number(body?.updated) || 0 };
+};
 
 /**
  * One notification by id.
@@ -159,8 +223,15 @@ export const listNotifications = (userId: string, paging: NotificationPaging = {
  * @returns The notification.
  * @throws ApiError with `NOT_FOUND` when it does not exist or is not the caller's.
  */
-export const getNotification = (id: string): Promise<NotificationRecord> =>
-  api.get<NotificationRecord>(`/notifications/${encodeURIComponent(id)}`);
+export const getNotification = async (id: string): Promise<NotificationRecord> => {
+  if (fixturesEnabled()) {
+    const { getNotificationFixture } = await import("@/lib/fixtures/inbox.fixture");
+    const record = getNotificationFixture(id);
+    if (!record) throw ApiError.fromResponse({ status: 404 }, { success: false, statusCode: 404, message: "Notification not found", error: { code: "NOT_FOUND" } });
+    return record;
+  }
+  return api.get<NotificationRecord>(`/notifications/${encodeURIComponent(id)}`);
+};
 
 /**
  * Marks a system notification read for the signed-in user.
@@ -169,8 +240,13 @@ export const getNotification = (id: string): Promise<NotificationRecord> =>
  * @returns The updated notification.
  * @throws ApiError when it cannot be marked.
  */
-export const markNotificationRead = (id: string): Promise<NotificationRecord> =>
-  api.put<NotificationRecord>(`/notifications/${encodeURIComponent(id)}/read`);
+export const markNotificationRead = async (id: string): Promise<NotificationRecord> => {
+  if (fixturesEnabled()) {
+    const { markReadFixture } = await import("@/lib/fixtures/inbox.fixture");
+    return markReadFixture(id) ?? { _id: id };
+  }
+  return api.put<NotificationRecord>(`/notifications/${encodeURIComponent(id)}/read`);
+};
 
 /**
  * Marks an announcement read for the signed-in user.
@@ -179,5 +255,10 @@ export const markNotificationRead = (id: string): Promise<NotificationRecord> =>
  * @returns The updated announcement.
  * @throws ApiError when it cannot be marked.
  */
-export const markAnnouncementRead = (id: string): Promise<NotificationRecord> =>
-  api.put<NotificationRecord>(`/notifications/announcements/${encodeURIComponent(id)}/read`);
+export const markAnnouncementRead = async (id: string): Promise<NotificationRecord> => {
+  if (fixturesEnabled()) {
+    const { markReadFixture } = await import("@/lib/fixtures/inbox.fixture");
+    return markReadFixture(id) ?? { _id: id };
+  }
+  return api.put<NotificationRecord>(`/notifications/announcements/${encodeURIComponent(id)}/read`);
+};

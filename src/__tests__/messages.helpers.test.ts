@@ -1,12 +1,4 @@
-import {
-  courseName,
-  errorMessage,
-  filterClasses,
-  filterCourses,
-  getCourseIcon,
-  idOf,
-  parseCreatedGroup,
-} from "@/components/messages/helpers";
+import { errorMessage, idOf, parseCreatedGroup } from "@/components/messages/helpers";
 
 describe("idOf", () => {
   it("returns a string id as is", () => {
@@ -38,45 +30,6 @@ describe("errorMessage", () => {
     expect(errorMessage(null)).toBeUndefined();
     expect(errorMessage({ message: "" })).toBeUndefined();
     expect(errorMessage({ message: 5 })).toBeUndefined();
-  });
-});
-
-describe("filterClasses / filterCourses", () => {
-  const classes = [{ _id: "1", name: "JSS 1A" }, { _id: "2", name: "SS 2B" }, { _id: "3" }];
-  const courses = [
-    { _id: "1", title: "Mathematics" },
-    { _id: "2", name: "English Language" },
-    { _id: "3" },
-  ];
-
-  it("matches class names case-insensitively and skips nameless classes", () => {
-    expect(filterClasses(classes, "jss")).toEqual([classes[0]]);
-    expect(filterClasses(classes, "")).toEqual([classes[0], classes[1]]);
-  });
-
-  it("matches a course by title or name", () => {
-    expect(filterCourses(courses, "MATH")).toEqual([courses[0]]);
-    expect(filterCourses(courses, "language")).toEqual([courses[1]]);
-  });
-
-  it("returns an empty list while the roster is missing", () => {
-    expect(filterClasses(undefined, "a")).toEqual([]);
-    expect(filterCourses(null, "a")).toEqual([]);
-  });
-});
-
-describe("courseName / getCourseIcon", () => {
-  it("prefers the title over the name", () => {
-    expect(courseName({ title: "Physics", name: "Phys" })).toBe("Physics");
-    expect(courseName({ name: "Phys" })).toBe("Phys");
-    expect(courseName({})).toBeUndefined();
-  });
-
-  it("picks an icon from keywords and defaults to a book", () => {
-    expect(getCourseIcon("Advanced Mathematics")).toBe("📊");
-    expect(getCourseIcon("Chemistry")).toBe("🧪");
-    expect(getCourseIcon("Woodwork")).toBe("📖");
-    expect(getCourseIcon(undefined)).toBe("📖");
   });
 });
 

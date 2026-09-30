@@ -155,12 +155,18 @@ export const queryKeys = {
     list: (userId: string, params?: Record<string, unknown>) => ["notifications", userId, "list", params ?? {}] as const,
     detail: (notificationId: string) => ["notifications", "detail", notificationId] as const,
     unreadCount: (userId: string) => ["notifications", userId, "unread"] as const,
+    /** `GET /notifications/counts` — totals per category over both feeds (Round 4 §30). */
+    counts: (userId: string) => ["notifications", userId, "counts"] as const,
   },
   chat: {
     all: ["chat"] as const,
     rooms: (userId: string) => ["chat", userId, "rooms"] as const,
     messages: (roomId: string, params?: Record<string, unknown>) => ["chat", "room", roomId, "messages", params ?? {}] as const,
     participants: (roomId: string) => ["chat", "room", roomId, "participants"] as const,
+    /** `GET /chat/contacts` — the "New message" picker (Round 4 §26). */
+    contacts: (userId: string) => ["chat", userId, "contacts"] as const,
+    /** `GET /chat/rooms/:roomId/media?kind=` — shared images, documents or links (Round 4 §29). */
+    media: (roomId: string, kind: string) => ["chat", "room", roomId, "media", kind] as const,
   },
   profile: {
     all: ["profile"] as const,
@@ -172,6 +178,12 @@ export const queryKeys = {
     teacher: (userId: string) => ["settings", userId, "teacher"] as const,
     /** `/notifications/preferences` — per-category delivery switches. */
     notificationPreferences: (userId: string) => ["settings", userId, "notification-preferences"] as const,
+    /** `GET /auth/sessions` — signed-in devices (Round 4 §34). */
+    sessions: (userId: string) => ["settings", userId, "sessions"] as const,
+    /** `GET /auth/password-policy` — public, the same for everyone (Round 4 §34). */
+    passwordPolicy: () => ["settings", "password-policy"] as const,
+    /** `GET /teachers/me/school` — the school office's contact details (Round 4 §36). */
+    schoolContact: (userId: string) => ["settings", userId, "school-contact"] as const,
   },
 } as const;
 

@@ -269,6 +269,20 @@ describe("SubjectsScreen", () => {
     expect(within(dialog).getByRole("button", { name: "Upload" })).toBeDisabled();
   });
 
+  it("shares with students and parents unless the teacher narrows it to students", async () => {
+    service.uploadFile.mockResolvedValue("https://res.cloudinary.test/notes.pdf");
+    render(<SubjectsScreen />);
+    const dialog = await openUpload();
+    expect(within(dialog).getByRole("button", { name: "Students and parents" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(dialog).getByRole("button", { name: "Students" })).toHaveAttribute("aria-pressed", "false");
+    fireEvent.change(within(dialog).getByLabelText("Name"), { target: { value: "Notes" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Students" }));
+    chooseFile(dialog, new File(["x"], "notes.pdf", { type: "application/pdf" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Upload" }));
+    expect(await screen.findByRole("dialog", { name: "Uploaded" })).toBeInTheDocument();
+    expect(service.createResource).toHaveBeenLastCalledWith(expect.objectContaining({ visibility: "students" }));
+  });
+
   it("uploads with the §24 fields, and a retry after an API failure does not upload the file again", async () => {
     service.uploadFile.mockImplementation(async (_file, options) => {
       options?.onProgress?.(0.42);

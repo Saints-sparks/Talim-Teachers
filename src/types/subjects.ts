@@ -52,6 +52,15 @@ export type SubjectCard = S["SubjectCardDto"];
 /** §24: who can see a resource. Parents only with `students_and_parents`. */
 export type ResourceVisibility = S["CreateResourceDto"]["visibility"];
 
+/**
+ * The visibility a new resource starts with. HAND-WRITTEN: the product
+ * owner's Round 4 addendum (2026-09-30) moves the backend's default for a
+ * body without `visibility` from `students` to `students_and_parents`, and
+ * the upload sheet preselects the same. Replace with the generated default
+ * once `npm run types:api` carries it (the generated DTO has no default yet).
+ */
+export const DEFAULT_RESOURCE_VISIBILITY: ResourceVisibility = "students_and_parents";
+
 /** §24: derived by the server from the MIME type or extension when not sent. */
 export type ResourceKind = NonNullable<S["CreateResourceDto"]["kind"]>;
 

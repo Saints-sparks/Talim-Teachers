@@ -7,7 +7,7 @@ import { chip, fieldControl, fieldLabel, ghostButton, primaryButton, rowButton }
 import { formatBytes, subjectLabel, uploadDoneNote, uploadNamePlaceholder, uploadWeekLabel } from "@/hooks/subjects/scheme.logic";
 import { UPLOAD_ACCEPT, maxUploadBytes, megabytes, uploadStatusText, validateUpload } from "@/hooks/subjects/upload.logic";
 import { useResourceUploader, useScheme } from "@/hooks/subjects/useSubjects";
-import type { ResourceVisibility, SubjectCard } from "@/types/subjects";
+import { DEFAULT_RESOURCE_VISIBILITY, type ResourceVisibility, type SubjectCard } from "@/types/subjects";
 
 /** Props for {@link UploadResourceSheet}. */
 export interface UploadResourceSheetProps {
@@ -30,7 +30,8 @@ const VISIBILITY: { value: ResourceVisibility; label: string }[] = [
 
 /**
  * The design's upload sheet: name, week (from the chosen subject's scheme),
- * subject and class, who can see it, and the file. Upload is disabled until
+ * subject and class, who can see it (students and parents unless the teacher
+ * narrows it to students), and the file. Upload is disabled until
  * the form is valid; progress is announced while the file uploads and the
  * resource saves, and a failure is shown in the sheet. Cancel aborts an
  * upload in flight.
@@ -44,7 +45,7 @@ export function UploadResourceSheet({ open, onClose, cards, initialCourseId, ini
   const [courseId, setCourseId] = useState<string | undefined>(initialCourseId);
   const [week, setWeek] = useState<number | undefined>(undefined);
   const [name, setName] = useState("");
-  const [visibility, setVisibility] = useState<ResourceVisibility>("students");
+  const [visibility, setVisibility] = useState<ResourceVisibility>(DEFAULT_RESOURCE_VISIBILITY);
   const [file, setFile] = useState<File | null>(null);
   const [done, setDone] = useState<{ name: string; visibility: ResourceVisibility; className: string; week: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -67,7 +68,7 @@ export function UploadResourceSheet({ open, onClose, cards, initialCourseId, ini
     setCourseId(initialCourseId);
     setWeek(undefined);
     setName("");
-    setVisibility("students");
+    setVisibility(DEFAULT_RESOURCE_VISIBILITY);
     setFile(null);
     setDone(null);
   }, [open, initialCourseId, reset]);

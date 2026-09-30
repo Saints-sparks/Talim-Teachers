@@ -6,12 +6,16 @@
  * These are separate from the workspace preferences in
  * `useTeacherSettings`: they are the server-side switches the notification
  * service itself reads before sending anything, shared with the mobile app.
+ * Round 4 (§31) adds `gradingEnabled`, `registerReminderEnabled` and
+ * `resourceOpenedEnabled`; the generated DTO lacks them, so they are typed
+ * from the hand-written `AlertPreferenceAdditions` until it catches up.
  */
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
 import { api } from "@/lib/apiClient";
 import { queryKeys, staleTimes } from "@/lib/queryKeys";
 import { useAuth } from "@/app/context/AuthContext";
 import type { NotificationPreferencesPayload } from "@/types/apiPayloads";
+import type { AlertPreferenceAdditions } from "@/types/inboxSettings";
 
 /**
  * The switches this portal exposes. `UpdateNotificationPreferenceDto` declares
@@ -32,7 +36,11 @@ export type NotificationPreferences = Required<
     | "quietHoursStart"
     | "quietHoursEnd"
   >
->;
+> &
+  AlertPreferenceAdditions;
+
+/** The PATCH body: the generated DTO plus the Round 4 switches. */
+export type NotificationPreferencesBody = NotificationPreferencesPayload & Partial<AlertPreferenceAdditions>;
 
 /** What a teacher sees switched on before the server has answered. */
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
@@ -46,6 +54,9 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   quietHoursEnabled: false,
   quietHoursStart: "22:00",
   quietHoursEnd: "07:00",
+  gradingEnabled: true,
+  registerReminderEnabled: true,
+  resourceOpenedEnabled: true,
 };
 
 /** One switch and the value to give it. */
@@ -87,7 +98,7 @@ export function useNotificationPreferences() {
 
   const mutation = useMutation({
     mutationFn: ({ field, value }: NotificationPreferencePatch) => {
-      const body: NotificationPreferencesPayload = { [field]: value };
+      const body: NotificationPreferencesBody = { [field]: value };
       return api.patch<Partial<NotificationPreferences>>("/notifications/preferences", body);
     },
     onMutate: async ({ field, value }) => {

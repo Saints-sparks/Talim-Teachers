@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { PushNotificationToggle } from "@/components/notifications/PushNotificationToggle";
 import { usePushNotifications } from "@/app/hooks/usePushNotifications";
 
@@ -38,15 +38,47 @@ describe("PushNotificationToggle when the browser blocks notifications", () => {
     expect(screen.queryByText("Blocked")).not.toBeInTheDocument();
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
-    expect(container.innerHTML).not.toMatch(/red-/);
-    // Readable in both themes.
-    expect(container.innerHTML).toMatch(/dark:text-slate-400/);
+    expect(container.innerHTML).not.toMatch(/red-|tl-danger/);
+    // Readable in both themes: the tl-* tokens switch with the dark theme.
+    expect(container.innerHTML).toMatch(/text-tl-muted/);
   });
 
   it("still offers the switch when permission has not been decided", () => {
     renderWith({ permission: "default" });
 
-    expect(screen.getByRole("button", { name: /enable browser notifications/i })).toBeEnabled();
+    const toggle = screen.getByRole("switch", { name: "Browser notifications" });
+    expect(toggle).toBeEnabled();
+    expect(toggle).toHaveAttribute("aria-checked", "false");
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+});
+
+describe("PushNotificationToggle as a Settings switch row", () => {
+  it("subscribes this browser when switched on, and unsubscribes when switched off", () => {
+    const subscribe = jest.fn().mockResolvedValue(undefined);
+    const { unmount } = renderWith({ subscribe });
+    fireEvent.click(screen.getByRole("switch", { name: "Browser notifications" }));
+    expect(subscribe).toHaveBeenCalledTimes(1);
+    unmount();
+
+    const unsubscribe = jest.fn().mockResolvedValue(undefined);
+    renderWith({ isSubscribed: true, unsubscribe });
+    const toggle = screen.getByRole("switch", { name: "Browser notifications" });
+    expect(toggle).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(toggle);
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it("is disabled while the subscription changes, and shows the hook's error", () => {
+    renderWith({ isLoading: true, error: "Notification permission was dismissed." });
+    expect(screen.getByRole("switch", { name: "Browser notifications" })).toBeDisabled();
+    expect(screen.getByRole("alert")).toHaveTextContent("Notification permission was dismissed.");
+  });
+
+  it("says so when the browser cannot do push at all", () => {
+    renderWith({ isSupported: false });
+    expect(screen.getByText("Not supported in this browser")).toBeInTheDocument();
+    expect(screen.getByText("Unavailable")).toBeInTheDocument();
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument();
   });
 });

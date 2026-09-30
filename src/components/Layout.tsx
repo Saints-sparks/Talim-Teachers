@@ -6,7 +6,7 @@ import AppGuide from "./onboarding/AppGuide";
 import { TourProvider } from "./tour/TourProvider";
 import { useAuth } from "@/app/context/AuthContext";
 import { useChat } from "@/app/context/ChatContext";
-import useNotifications from "@/app/hooks/useNotifications";
+import { useNotificationCounts } from "@/hooks/notifications/useNotificationInbox";
 import { schoolClock, shortDate } from "@/hooks/today/today.logic";
 import { useSchoolNow, useTeacherToday } from "@/hooks/today/useTeacherToday";
 
@@ -33,9 +33,11 @@ function topBarDate(nowMs: number, timezone: string | undefined): string {
 /**
  * The app shell of the teachers redesign: sidebar (a drawer below 960px),
  * top bar and the scrolling page. Badge counts: pending registers from
- * `/teachers/today` (`counts.pendingRegisters`); unread messages and
- * notifications from the live chat and notification hooks, which the
- * websocket keeps current between Today refetches.
+ * `/teachers/today` (`counts.pendingRegisters`); unread messages from the
+ * live chat (`totalUnread`); unread notifications from
+ * `GET /notifications/counts` (`useNotificationCounts`, kept live over the
+ * socket), falling back to Today's `counts.unreadNotifications` until it
+ * loads. The shell never loads the inbox itself.
  *
  * Also hosts the portal tour (`useTour`) and keeps the per-page AppGuide
  * spotlight tours mounted: they cover Resources, Attendance, Students,
@@ -49,7 +51,7 @@ function Layout({ children }: LayoutProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { user } = useAuth();
   const { totalUnread } = useChat();
-  const { counts: notifCounts } = useNotifications();
+  const notificationCounts = useNotificationCounts();
   const today = useTeacherToday();
   const nowMs = useSchoolNow(today.data?.now, today.dataUpdatedAt);
 
@@ -72,7 +74,7 @@ function Layout({ children }: LayoutProps) {
   const counts = {
     pendingRegisters: today.data?.counts.pendingRegisters ?? 0,
     unreadMessages: totalUnread ?? today.data?.counts.unreadMessages ?? 0,
-    unreadNotifications: notifCounts?.unread ?? today.data?.counts.unreadNotifications ?? 0,
+    unreadNotifications: notificationCounts.data?.unread ?? today.data?.counts.unreadNotifications ?? 0,
   };
 
   return (

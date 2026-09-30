@@ -18,6 +18,7 @@ import {
   RoomUpdatedData,
   WebSocketContextType,
 } from "./useWebSocket";
+import type { RoomAdmin } from "@/types/inboxSettings";
 import { useWebSocketContextSafe } from "../context/WebSocketContext";
 import { useAuth } from "./useAuth";
 import {
@@ -146,7 +147,7 @@ export interface UseRealtimeChatReturn {
   /** Applies saved group details right away (room-updated brings the same). */
   applyRoomDetails: (
     roomId: string,
-    details: { name?: string; description?: string | null; avatarUrl?: string | null },
+    details: { name?: string; description?: string | null; avatarUrl?: string | null; admins?: RoomAdmin[] },
   ) => void;
 }
 
@@ -481,15 +482,24 @@ export const useRealtimeChat = (): UseRealtimeChatReturn => {
     [emitMarkRoomRead, isSocketConnected, updateRooms],
   );
 
+  /**
+   * Patches a room's saved details (name, description, picture and, from the
+   * Round 4 addendum, its admins) in the list and in the open thread, after a
+   * save here or a `room-updated` from someone else.
+   *
+   * @param roomId - The room.
+   * @param details - The fields that changed.
+   */
   const applyRoomDetails = useCallback(
     (
       roomId: string,
-      details: { name?: string; description?: string | null; avatarUrl?: string | null },
+      details: { name?: string; description?: string | null; avatarUrl?: string | null; admins?: RoomAdmin[] },
     ) => {
       const patch: Partial<ChatRoomData> = {};
       if (details.name !== undefined) patch.name = details.name ?? "";
       if (details.description !== undefined) patch.description = details.description ?? "";
       if (details.avatarUrl !== undefined) patch.avatarUrl = details.avatarUrl || null;
+      if (Array.isArray(details.admins)) patch.admins = details.admins;
       const me = currentUserIdRef.current;
       updateRooms((prev) =>
         prev.map((r) => (r.roomId === roomId ? transformChatRoom({ ...r, ...patch }, me) : r)),

@@ -1,152 +1,82 @@
 "use client";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowLeft, Search, X, Info } from "lucide-react";
-import { useState } from "react";
-import GroupInfoModal from "./GroupInfoModal";
-import ContactCard, { type ContactInfo } from "./ContactCard";
-import { generateColorFromString, getUserInitials } from "@/lib/colorUtils";
 
-interface ChatHeaderProps {
-  avatar: string;
+import React from "react";
+import { ChevronLeft, Info, Phone } from "lucide-react";
+import { focusRing } from "@/components/tl/styles";
+import { callHref } from "@/hooks/messages/messages.logic";
+import { ThreadAvatar } from "./ThreadAvatar";
+
+/** Props for {@link ChatHeader}. */
+export interface ChatHeaderProps {
   name: string;
-  status?: string;
-  subtext?: string; // For group members
-  /** Groups: opens the group info panel. */
-  roomId?: string;
-  /** Direct messages: opens a contact card for the other person. */
-  contact?: ContactInfo;
-  onBack?: () => void; // Navigation back to chat list
-  showBackButton?: boolean; // Whether to show back button (mobile)
+  /** The room's `subtitle` (§27), or a fallback built from the members. */
+  subtitle?: string;
+  avatar?: string | null;
+  /** A group conversation (square green avatar). */
+  group: boolean;
+  /** The other person is online (direct chats). */
+  online?: boolean;
+  /** The room's `callPhone` (§27): shows the Call link; nothing else offers a call. */
+  callPhone?: string | null;
+  /** Opens the conversation info (members, images, documents, links). */
+  onInfo: () => void;
+  /** Back to the list (phones). */
+  onBack?: () => void;
 }
 
-export default function ChatHeader({
-  avatar,
-  name,
-  status,
-  subtext,
-  roomId,
-  contact,
-  onBack,
-  showBackButton = true,
-}: ChatHeaderProps) {
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const hasInfo = Boolean(roomId || contact);
+/**
+ * The chat header (the design's, without in-app calls): Back on phones, the
+ * avatar, name and subtitle, a "Call" link only when the room has a
+ * `callPhone` (a teacher's chat with a parent of one of their students), and
+ * the info button.
+ *
+ * @param props - See {@link ChatHeaderProps}.
+ * @returns The header.
+ */
+export default function ChatHeader({ name, subtitle, avatar, group, online, callPhone, onInfo, onBack }: ChatHeaderProps) {
+  const tel = callHref(callPhone);
+  const round = `flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-tl-line text-tl-muted transition-colors hover:bg-tl-bg ${focusRing}`;
 
   return (
-    <div className="flex w-full items-center bg-white border-b border-gray-200 px-3 py-2 sm:px-4 sm:py-3">
-      <div className="flex w-full items-center gap-2 sm:gap-3">
-        {/* Back Button - Mobile Only */}
-        {showBackButton && onBack && (
-          <button
-            onClick={onBack}
-            className="flex lg:hidden items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 transition-colors"
-            aria-label="Back to chats"
-          >
-            <ArrowLeft size={20} className="text-gray-600" />
-          </button>
-        )}
-
-        {/* Avatar */}
-        <div className="relative">
-          <Avatar className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex-shrink-0">
-            <AvatarImage src={avatar} />
-            <AvatarFallback 
-              className="text-white font-medium text-sm"
-              style={{ backgroundColor: generateColorFromString(name) }}
-            >
-              {getUserInitials(name)}
-            </AvatarFallback>
-          </Avatar>
-          {/* Online Indicator */}
-          {(status === "Online" || status === "Active Now") && (
-            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-500 border-2 border-white rounded-full"></span>
-          )}
-        </div>
-
-        {/* Chat Info */}
-        <div
-          className={`flex-1 min-w-0 ${hasInfo ? "cursor-pointer" : ""}`}
-          onClick={hasInfo ? () => setIsModalOpen(true) : undefined}
-          role={hasInfo ? "button" : undefined}
-          tabIndex={hasInfo ? 0 : undefined}
-          onKeyDown={
-            hasInfo
-              ? (event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    setIsModalOpen(true);
-                  }
-                }
-              : undefined
-          }
+    <div className="flex items-center gap-3 border-b border-tl-line-soft px-[18px] py-3.5">
+      {onBack ? (
+        <button
+          type="button"
+          onClick={onBack}
+          aria-label="Back to conversations"
+          title="Back to conversations"
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-tl-line text-tl-brand lg:hidden ${focusRing}`}
         >
-          <div className="flex items-center gap-1">
-            <p className="font-medium text-sm sm:text-base text-gray-900 truncate">
-              {name}
-            </p>
-            {hasInfo && <Info size={14} className="text-gray-400 flex-shrink-0 hidden sm:block" />}
-          </div>
-          {!isSearching && status && (
-            <p className="text-xs text-gray-500 truncate">{status}</p>
-          )}
-          {!isSearching && subtext && (
-            <p className="text-xs text-[#7B7B7B] truncate hidden sm:block">{subtext}</p>
-          )}
-        </div>
-
-        {/* Action Icons */}
-        <div className="flex items-center gap-1 sm:gap-3">
-          {/* Search */}
-          {isSearching ? (
-            <div className="flex items-center gap-1 sm:gap-2">
-              <div className="relative flex items-center border border-gray-300 rounded-full px-2 py-1 bg-gray-50 w-32 sm:w-44">
-                <Search size={16} className="text-gray-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search"
-                  className="w-full bg-transparent pl-2 text-sm focus:outline-none"
-                  autoFocus
-                />
-                <button
-                  onClick={() => {
-                    setIsSearching(false);
-                    setSearchQuery("");
-                  }}
-                  className="ml-1 text-gray-400 hover:text-gray-600"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* Search Button */}
-              <button
-                onClick={() => setIsSearching(true)}
-                className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 transition-colors"
-              >
-                <Search size={18} className="text-gray-600" />
-              </button>
-            </>
-          )}
-        </div>
-
-        {/* Group Info Modal */}
-        {!roomId && contact && (
-          <ContactCard open={isModalOpen} onClose={() => setIsModalOpen(false)} contact={contact} />
-        )}
-        {roomId && (
-          <GroupInfoModal
-            isOpen={isModalOpen}
-            onClose={() => setIsModalOpen(false)}
-            roomId={roomId}
-            fallbackName={name}
-          />
-        )}
+          <ChevronLeft className="h-5 w-5" aria-hidden />
+        </button>
+      ) : null}
+      <ThreadAvatar name={name} group={group} src={avatar} size={42} online={online} />
+      <div className="min-w-0 flex-1">
+        <h2 className="truncate text-base font-extrabold text-tl-ink">{name}</h2>
+        {subtitle ? <p className="mt-0.5 truncate text-[13px] text-tl-muted">{subtitle}</p> : null}
+      </div>
+      <div className="flex shrink-0 gap-2">
+        {tel ? (
+          <a
+            href={tel}
+            title={`Call ${name}`}
+            aria-label={`Call ${name}`}
+            className={`inline-flex h-11 items-center gap-1.5 rounded-full border border-tl-line px-3.5 text-sm font-bold text-tl-brand transition-colors hover:bg-tl-bg ${focusRing}`}
+          >
+            <Phone className="h-4 w-4" aria-hidden />
+            Call
+          </a>
+        ) : null}
+        <button
+          type="button"
+          onClick={onInfo}
+          aria-label="Conversation info"
+          title="Conversation info: members, images, documents and links"
+          className={round}
+          data-guide="messages-info"
+        >
+          <Info className="h-[18px] w-[18px]" aria-hidden />
+        </button>
       </div>
     </div>
   );

@@ -22,6 +22,9 @@ jest.mock("@/app/services/today/today.service", () => ({
   todayService: { getToday: jest.fn(), getMyWeek: jest.fn(), setTaught: jest.fn(), completeTour: jest.fn() },
 }));
 
+const openClassGroup = jest.fn();
+jest.mock("@/hooks/messages/useInbox", () => ({ useClassGroup: () => ({ open: openClassGroup, pendingClassId: null }) }));
+
 const push = jest.fn();
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push, replace: jest.fn() }),
@@ -205,13 +208,18 @@ describe("the lesson sheet", () => {
     expect(within(dialog).getByRole("link", { name: "Message" })).toHaveAttribute("href", "/messages?room=room-c1");
   });
 
-  it("sends Message the class to the inbox when the class has no group room", async () => {
+  it("creates or reuses the class group for Message the class when the class has no group room", async () => {
+    openClassGroup.mockResolvedValue({ roomId: "room-new", reused: false });
     const today = makeTodayFixture();
     today.lessons = today.lessons.map((l) => ({ ...l, classRoomId: null }));
     renderToday(today);
     fireEvent.click(screen.getByRole("button", { name: /Mathematics · JSS1 A ?, Period 1,/ }));
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByRole("link", { name: "Message" })).toHaveAttribute("href", "/messages");
+    expect(within(dialog).queryByRole("link", { name: "Message" })).not.toBeInTheDocument();
+    expect(within(dialog).getByText("Starts a group for JSS1 A")).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Message" }));
+    await waitFor(() => expect(openClassGroup).toHaveBeenCalledWith({ classId: "c1", name: "JSS1 A class group" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
   it("offers the register only to the class teacher", async () => {

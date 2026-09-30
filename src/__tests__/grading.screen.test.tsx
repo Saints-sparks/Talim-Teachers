@@ -300,9 +300,15 @@ describe("Subject scores", () => {
     window.history.pushState({ __NA: true, page: "grading" }, "", "/grading");
     const length = window.history.length;
     window.addEventListener("popstate", router);
+    // Wait for jsdom's popstate itself (slower under a parallel run), then for a guard that puts the entry back.
     const back = () =>
       act(async () => {
+        const popped = new Promise<void>((resolve) => {
+          window.addEventListener("popstate", () => resolve(), { once: true });
+          setTimeout(resolve, 2000);
+        });
         window.history.back();
+        await popped;
         await new Promise((resolve) => setTimeout(resolve, 30));
       });
     try {
@@ -326,6 +332,8 @@ describe("Subject scores", () => {
 
       fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
       await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith("Draft saved. Students and parents cannot see it yet."));
+      // The toast can land before the saved sheet re-renders; wait until nothing is left to save, so the guard is off.
+      await waitFor(() => expect(screen.getByRole("button", { name: "Save draft" })).toBeDisabled());
       confirm.mockClear();
       fireEvent.click(screen.getByRole("link", { name: "Students" }));
       await back();

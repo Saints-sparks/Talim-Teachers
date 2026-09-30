@@ -21,11 +21,21 @@ function startOnGrading(gradingUrl = "/grading?courseId=k1"): void {
 }
 
 /**
- * Presses the browser's Back and lets jsdom fire `popstate`.
+ * Presses the browser's Back and lets jsdom fire `popstate`: waits for the
+ * event itself (jsdom queues the traversal, which can take longer than a
+ * fixed delay when the whole suite runs in parallel), then a little longer
+ * for a guard that puts the entry back.
+ *
+ * @returns Once the traversal has settled.
  */
 async function back(): Promise<void> {
   await act(async () => {
+    const popped = new Promise<void>((resolve) => {
+      window.addEventListener("popstate", () => resolve(), { once: true });
+      setTimeout(resolve, 2000);
+    });
     window.history.back();
+    await popped;
     await new Promise((resolve) => setTimeout(resolve, 30));
   });
 }
