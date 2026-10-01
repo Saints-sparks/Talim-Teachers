@@ -16,11 +16,13 @@ export interface AuthCardProps {
 }
 
 /**
- * The redesign's signed-out screen (the design's `signedOut` card): a white
+ * The redesign's full-screen card (the design's `signedOut` card): a white
  * card of at most 430px on the grey page, the Talim mark, an 800-weight
- * heading, a muted line under it and a faint footnote. Sign-in, the forgotten
- * password flow and the first-sign-in password change all sit in it. Colours
- * come from the `tl-*` tokens, so it follows the dark theme.
+ * heading, a muted line under it and a faint footnote. The 404 and error
+ * screens sit in it (`tl/RouteStates`). The sign-in, forgotten-password and
+ * set-password pages no longer do: they use the Talim sign-in look
+ * (`auth/signin-ui`). Colours come from the `tl-*` tokens, so it follows the
+ * dark theme.
  *
  * @param props - See {@link AuthCardProps}.
  * @param props.title - The page heading.

@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { focusRing, primaryButton } from "@/components/tl/styles";
-import { AuthField, authInputClass, describedBy } from "../AuthField";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { signInDescribedBy } from "../signin-ui";
+import { errorClass, hintClass, inputClass, invalidInputClass, labelClass, submitButtonClass } from "./styles";
 
 /** Props for {@link OtpStep}. */
 export interface OtpStepProps {
@@ -17,7 +20,8 @@ export interface OtpStepProps {
 /**
  * Step two: enter the 6-digit code from the email. The code is checked with
  * the server before the teacher is asked for a new password. Only digits are
- * kept, at most six; a short code is also explained under the field.
+ * kept, at most six; a short code is also explained under the field, and the
+ * line saying where the code went describes the field too.
  *
  * @param props - See {@link OtpStepProps}.
  * @param props.email - Where the code was sent, shown under the field.
@@ -31,15 +35,23 @@ export interface OtpStepProps {
 export function OtpStep({ email, otp, onOtpChange, loading, onSubmit, onResend }: OtpStepProps) {
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * Flags a code that isn't six digits under the field, then hands the submit to the flow.
+   *
+   * @param event - The form submit.
+   */
   const submit = (event: FormEvent<HTMLFormElement>) => {
     setError(/^\d{6}$/.test(otp) ? null : "Enter the 6-digit code from your email.");
     onSubmit(event);
   };
 
   return (
-    <form onSubmit={submit} noValidate aria-label="Check the code" className="flex flex-col gap-[18px]">
-      <AuthField id="otp" label="6-digit code" error={error} hint={`We sent it to ${email}. Check your spam folder if it has not arrived.`}>
-        <input
+    <form onSubmit={submit} noValidate aria-label="Check the code" className="space-y-6">
+      <div className="space-y-2">
+        <Label htmlFor="otp" className={labelClass}>
+          6-digit code
+        </Label>
+        <Input
           id="otp"
           name="otp"
           type="text"
@@ -53,25 +65,35 @@ export function OtpStep({ email, otp, onOtpChange, loading, onSubmit, onResend }
           }}
           maxLength={6}
           aria-invalid={Boolean(error) || undefined}
-          aria-describedby={describedBy("otp", { hint: true, error: Boolean(error) })}
-          className={`${authInputClass(Boolean(error))} text-center text-2xl tracking-[0.4em]`}
+          aria-describedby={signInDescribedBy("otp", { hint: true, error: Boolean(error) })}
+          className={`${inputClass} text-center text-2xl tracking-widest ${error ? invalidInputClass : ""}`}
           required
           aria-required
         />
-      </AuthField>
+        {error ? (
+          <p id="otp-error" className={`text-center ${errorClass}`}>
+            {error}
+          </p>
+        ) : null}
+        <p id="otp-hint" className={hintClass}>
+          We sent it to {email}. Check your spam folder if it has not arrived.
+        </p>
+      </div>
 
-      <button type="submit" disabled={loading} className={`${primaryButton} w-full min-h-[50px] text-[15px]`}>
+      <Button type="submit" disabled={loading} className={submitButtonClass}>
         {loading ? "Checking code…" : "Continue"}
-      </button>
+      </Button>
 
-      <button
-        type="button"
-        onClick={onResend}
-        disabled={loading}
-        className={`mx-auto inline-flex min-h-[44px] items-center rounded-md px-2 text-sm font-bold text-tl-link hover:underline disabled:opacity-50 ${focusRing}`}
-      >
-        Send a new code
-      </button>
+      <div className="flex justify-center">
+        <button
+          type="button"
+          onClick={onResend}
+          disabled={loading}
+          className="-my-3 inline-flex min-h-[44px] items-center px-2 text-sm text-[#003366] hover:underline disabled:opacity-50"
+        >
+          Send a new code
+        </button>
+      </div>
     </form>
   );
 }

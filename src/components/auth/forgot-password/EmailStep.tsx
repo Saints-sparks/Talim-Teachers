@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { primaryButton } from "@/components/tl/styles";
-import { AuthField, authInputClass, describedBy } from "../AuthField";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { signInDescribedBy } from "../signin-ui";
+import { errorClass, inputClass, invalidInputClass, labelClass, submitButtonClass } from "./styles";
 
 /** Props for {@link EmailStep}. */
 export interface EmailStepProps {
@@ -14,8 +17,8 @@ export interface EmailStepProps {
 
 /**
  * Step one: ask for the account's email address and send the reset code. An
- * empty address is also shown under the field (the flow itself says so in a
- * toast and sends nothing).
+ * empty address is also shown under the field, tied to it with
+ * `aria-describedby` (the flow itself says so in a toast and sends nothing).
  *
  * @param props - See {@link EmailStepProps}.
  * @param props.email - The address typed so far.
@@ -27,15 +30,23 @@ export interface EmailStepProps {
 export function EmailStep({ email, onEmailChange, loading, onSubmit }: EmailStepProps) {
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * Flags an empty address under the field, then hands the submit to the flow.
+   *
+   * @param event - The form submit.
+   */
   const submit = (event: FormEvent<HTMLFormElement>) => {
     setError(email.trim() ? null : "Enter your email address.");
     onSubmit(event);
   };
 
   return (
-    <form onSubmit={submit} noValidate aria-label="Send a reset code" className="flex flex-col gap-[18px]">
-      <AuthField id="email" label="Email address" error={error}>
-        <input
+    <form onSubmit={submit} noValidate aria-label="Send a reset code" className="space-y-6">
+      <div className="space-y-2">
+        <Label htmlFor="email" className={labelClass}>
+          Email address
+        </Label>
+        <Input
           id="email"
           name="email"
           type="email"
@@ -50,16 +61,21 @@ export function EmailStep({ email, onEmailChange, loading, onSubmit }: EmailStep
             if (error) setError(null);
           }}
           aria-invalid={Boolean(error) || undefined}
-          aria-describedby={describedBy("email", { error: Boolean(error) })}
-          className={authInputClass(Boolean(error))}
+          aria-describedby={signInDescribedBy("email", { error: Boolean(error) })}
+          className={`${inputClass} ${error ? invalidInputClass : ""}`}
           required
           aria-required
         />
-      </AuthField>
+        {error ? (
+          <p id="email-error" className={errorClass}>
+            {error}
+          </p>
+        ) : null}
+      </div>
 
-      <button type="submit" disabled={loading} className={`${primaryButton} w-full min-h-[50px] text-[15px]`}>
+      <Button type="submit" disabled={loading} className={submitButtonClass}>
         {loading ? "Sending code…" : "Send code"}
-      </button>
+      </Button>
     </form>
   );
 }

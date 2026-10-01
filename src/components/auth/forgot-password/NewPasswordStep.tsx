@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { Button } from "@/components/ui/button";
 import PasswordRequirements from "@/components/auth/PasswordRequirements";
-import { primaryButton } from "@/components/tl/styles";
 import { isPasswordValid } from "@/app/lib/passwordPolicy";
 import { PasswordField } from "./PasswordField";
+import { submitButtonClass } from "./styles";
 
 /** Props for {@link NewPasswordStep}. */
 export interface NewPasswordStepProps {
@@ -43,13 +44,18 @@ export function NewPasswordStep({
   const [weak, setWeak] = useState(false);
   const mismatch = confirmPassword.length > 0 && confirmPassword !== newPassword;
 
+  /**
+   * Flags a password that misses a rule under the field, then hands the submit to the flow.
+   *
+   * @param event - The form submit.
+   */
   const submit = (event: FormEvent<HTMLFormElement>) => {
     setWeak(!isPasswordValid(newPassword));
     onSubmit(event);
   };
 
   return (
-    <form onSubmit={submit} noValidate aria-label="Choose a new password" className="flex flex-col gap-[18px]">
+    <form onSubmit={submit} noValidate aria-label="Choose a new password" className="space-y-6">
       <PasswordField
         id="newPassword"
         label="New password"
@@ -72,9 +78,9 @@ export function NewPasswordStep({
         error={mismatch ? "Passwords do not match" : null}
       />
 
-      <button type="submit" disabled={loading} className={`${primaryButton} w-full min-h-[50px] text-[15px]`}>
+      <Button type="submit" disabled={loading} className={submitButtonClass}>
         {loading ? "Resetting password…" : "Reset password"}
-      </button>
+      </Button>
     </form>
   );
 }
