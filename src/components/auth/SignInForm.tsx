@@ -79,6 +79,7 @@ export function SignInForm() {
    *
    * @param field - The field typed in.
    * @param value - Its new value.
+   * @returns Nothing; the form's state is updated.
    */
   const change = (field: "identifier" | "password", value: string) => {
     setValues((prev) => ({ ...prev, [field]: value }));

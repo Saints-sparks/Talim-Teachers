@@ -34,6 +34,7 @@ export function EmailStep({ email, onEmailChange, loading, onSubmit }: EmailStep
    * Flags an empty address under the field, then hands the submit to the flow.
    *
    * @param event - The form submit.
+   * @returns Nothing; the flow sends the code or says what is missing.
    */
   const submit = (event: FormEvent<HTMLFormElement>) => {
     setError(email.trim() ? null : "Enter your email address.");

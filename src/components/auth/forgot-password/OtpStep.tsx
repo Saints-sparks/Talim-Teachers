@@ -39,6 +39,7 @@ export function OtpStep({ email, otp, onOtpChange, loading, onSubmit, onResend }
    * Flags a code that isn't six digits under the field, then hands the submit to the flow.
    *
    * @param event - The form submit.
+   * @returns Nothing; the flow checks the code or says what is missing.
    */
   const submit = (event: FormEvent<HTMLFormElement>) => {
     setError(/^\d{6}$/.test(otp) ? null : "Enter the 6-digit code from your email.");

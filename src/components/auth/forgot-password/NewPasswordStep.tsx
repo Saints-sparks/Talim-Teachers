@@ -48,6 +48,7 @@ export function NewPasswordStep({
    * Flags a password that misses a rule under the field, then hands the submit to the flow.
    *
    * @param event - The form submit.
+   * @returns Nothing; the flow sets the password or says what is missing.
    */
   const submit = (event: FormEvent<HTMLFormElement>) => {
     setWeak(!isPasswordValid(newPassword));
