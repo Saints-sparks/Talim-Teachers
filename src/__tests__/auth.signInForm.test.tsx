@@ -1,7 +1,7 @@
 /**
  * @jest-environment jsdom
  *
- * The redesigned sign-in page, rendered inside the real AuthProvider with the
+ * The sign-in page, rendered inside the real AuthProvider with the
  * auth service mocked: empty fields are caught before anything is sent and
  * tied to their fields, and each refused sign-in is explained the way it
  * always was (the e2e specs look for the same sentences).
@@ -190,11 +190,14 @@ describe("classifyLoginError", () => {
   });
 });
 
-describe("the signed-out card", () => {
-  it("has the design's heading, line and footnote", async () => {
+describe("the sign-in look", () => {
+  it("has the Teachers pill, the heading, the brand panel and the support line", async () => {
     await renderSignIn();
+    expect(screen.getByRole("main")).toBeInTheDocument();
+    expect(screen.getByText("Teachers")).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 1, name: "Welcome back" })).toBeInTheDocument();
-    expect(screen.getByText("Teachers see only the classes and subjects the school has assigned to them.")).toBeInTheDocument();
+    expect(screen.getByText("Talim Teacher Portal")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "support@mytalim.com" })).toHaveAttribute("href", "mailto:support@mytalim.com");
     expect(screen.getByRole("link", { name: "Forgot password?" })).toHaveAttribute("href", "/forgot-password");
     expect(screen.getByLabelText(/Keep me signed in/)).not.toBeChecked();
   });

@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { AuthCard } from "@/components/auth/AuthCard";
+import ModernLoader from "@/components/ModernLoader";
 import { SignInForm } from "@/components/auth/SignInForm";
+import { SignInFooter, SignInHeading, SignInLogoHeader, SignInShell } from "@/components/auth/signin-ui";
 import { useAuth } from "./hooks/useAuth";
 import { resolveSignedInRoute } from "./lib/landing";
 
@@ -44,39 +46,38 @@ function useSignedInRedirect(): boolean {
 }
 
 /**
- * `/`, the one sign-in page (`SIGN_IN_ROUTE`), in the redesign's signed-out
- * card. Signing in, the role check, the temporary-password redirect and the
- * onboarding redirect all happen in the auth context's `login`; a visitor who
- * is already signed in is sent on by {@link useSignedInRedirect} and sees a
- * short status line instead of the form meanwhile.
+ * `/`, the one sign-in page (`SIGN_IN_ROUTE`), in the Talim sign-in look:
+ * the form column with the tree logo and the "Teachers" pill, and the navy
+ * panel with the illustration. Signing in, the role check, the
+ * temporary-password redirect and the onboarding redirect all happen in the
+ * auth context's `login`, while the "Talim" loader covers the page. A visitor
+ * who is already signed in is sent on by {@link useSignedInRedirect} and sees
+ * only the loader meanwhile.
  *
  * @returns The page.
  */
 export default function LoginPage() {
+  const { isLoading } = useAuth();
   const redirecting = useSignedInRedirect();
+
+  if (redirecting) return <ModernLoader visible />;
+
   return (
-    <AuthCard
-      title="Welcome back"
-      description="Sign in to the teacher portal with your school email or staff number."
-      footnote={
-        <>
-          <p>Teachers see only the classes and subjects the school has assigned to them.</p>
-          <p className="mt-2">
-            Need help signing in?{" "}
-            <a href="mailto:support@mytalim.com" className="font-bold text-tl-link underline-offset-2 hover:underline">
-              support@mytalim.com
-            </a>
-          </p>
-        </>
-      }
-    >
-      {redirecting ? (
-        <p role="status" aria-live="polite" aria-label="Signing in" className="text-sm text-tl-muted">
-          Opening your portal…
-        </p>
-      ) : (
+    <>
+      <ModernLoader visible={isLoading} />
+      <SignInShell
+        illustration={<Image src="/icons/login/school-illustration.svg" alt="" fill priority className="object-contain" />}
+        panelTitle="Talim Teacher Portal"
+        panelText="Manage your classes, students, attendance, and curriculum — all in one place."
+      >
+        <SignInLogoHeader
+          appName="Teachers"
+          logo={<Image src="/icons/login/tree.svg" alt="" width={40} height={40} className="h-10 w-10" priority />}
+        />
+        <SignInHeading title="Welcome back" subtitle="Sign in to the teacher portal with your school email or staff number." />
         <SignInForm />
-      )}
-    </AuthCard>
+        <SignInFooter supportEmail="support@mytalim.com" />
+      </SignInShell>
+    </>
   );
 }

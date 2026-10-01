@@ -2,9 +2,7 @@
 
 import React, { useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
 import { useAuth } from "@/app/hooks/useAuth";
-import { primaryButton, textLink, focusRing } from "@/components/tl/styles";
 import {
   INVALID_CREDENTIALS_TEXT,
   classifyLoginError,
@@ -13,13 +11,22 @@ import {
   type SignInFieldErrors,
   type SignInValues,
 } from "@/hooks/auth/signIn.logic";
-import { AuthField, FormAlert, PasswordInput, authInputClass, describedBy } from "./AuthField";
+import {
+  SignInCheckbox,
+  SignInErrorBanner,
+  SignInField,
+  SignInOptionsRow,
+  SignInPasswordField,
+  SignInPrimaryButton,
+  signInLinkClass,
+} from "./signin-ui";
 
 /** The id of the banner a refused sign-in shows, which the password field names. */
 const ALERT_ID = "signin-alert";
 
 /**
- * The banner for a refused sign-in.
+ * The banner for a refused sign-in: red with the shield for another role's
+ * account, amber for wrong credentials, grey for anything else.
  *
  * @param props - The failure.
  * @param props.error - Why the sign-in was refused.
@@ -28,49 +35,62 @@ const ALERT_ID = "signin-alert";
 function LoginErrorAlert({ error }: { error: LoginError }) {
   if (error.kind === "access_denied") {
     return (
-      <FormAlert id={ALERT_ID} tone="danger" title="Access denied" shield>
+      <SignInErrorBanner id={ALERT_ID} tone="danger" title="Access denied" icon="shield" className="mt-6">
         {error.message}
-      </FormAlert>
+      </SignInErrorBanner>
     );
   }
   if (error.kind === "invalid_credentials") {
     return (
-      <FormAlert id={ALERT_ID} tone="warning">
+      <SignInErrorBanner id={ALERT_ID} tone="warning" className="mt-6">
         {INVALID_CREDENTIALS_TEXT}
-      </FormAlert>
+      </SignInErrorBanner>
     );
   }
   return (
-    <FormAlert id={ALERT_ID} tone="neutral">
+    <SignInErrorBanner id={ALERT_ID} tone="neutral" className="mt-6">
       {error.message}
-    </FormAlert>
+    </SignInErrorBanner>
   );
 }
 
 /**
- * The sign-in form: email or staff number, password (with show/hide), keep
- * me signed in and "Forgot password?". Empty fields are caught before
- * anything is sent, each error is tied to its field and the first one gets
- * focus. The sign-in itself is the auth context's `login`, unchanged: it
+ * The teachers' sign-in form in the Talim sign-in look (see
+ * `components/auth/signin-ui`): email or staff number, password (with
+ * show/hide), keep me signed in and "Forgot password?". Empty fields are
+ * caught before anything is sent, each error is tied to its field and the
+ * first one gets focus. The sign-in itself is the auth context's `login`: it
  * admits teachers and sub-admins only and routes on (set-password,
- * onboarding or Today); a refusal is shown as a banner above the fields.
+ * onboarding or the landing page); a refusal is shown as a banner above the
+ * fields.
  *
- * @returns The form.
+ * @returns The banner (when a sign-in was refused) and the form.
  */
 export function SignInForm() {
   const { login, isLoading } = useAuth();
   const [values, setValues] = useState<SignInValues>({ identifier: "", password: "", rememberMe: false });
   const [errors, setErrors] = useState<SignInFieldErrors>({});
   const [loginError, setLoginError] = useState<LoginError | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
   const identifierRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
 
+  /**
+   * Stores a typed value and clears that field's error.
+   *
+   * @param field - The field typed in.
+   * @param value - Its new value.
+   */
   const change = (field: "identifier" | "password", value: string) => {
     setValues((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
+  /**
+   * Checks the fields, then signs in; a refusal is classified for the banner.
+   *
+   * @param event - The form submit.
+   * @returns Resolves once the attempt is over.
+   */
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoginError(null);
@@ -99,17 +119,22 @@ export function SignInForm() {
   };
 
   const credentialsWrong = loginError?.kind === "invalid_credentials";
+  const alertIds = credentialsWrong ? [ALERT_ID] : [];
 
   return (
-    <form onSubmit={handleSubmit} noValidate aria-label="Sign in" className="flex flex-col gap-[18px]">
+    <>
       {loginError ? <LoginErrorAlert error={loginError} /> : null}
 
-      <AuthField id="identifier" label="Email or staff number" hint="A staff number looks like ESEC-260200001." error={errors.identifier}>
-        <input
+      <form onSubmit={handleSubmit} noValidate aria-label="Sign in" className="mt-8 space-y-5">
+        <SignInField
           ref={identifierRef}
           id="identifier"
           name="identifier"
-          type="text"
+          label="Email or staff number"
+          hint="A staff number looks like ESEC-260200001."
+          error={errors.identifier}
+          invalid={credentialsWrong}
+          describedBy={alertIds}
           autoComplete="username"
           autoCapitalize="none"
           spellCheck={false}
@@ -119,56 +144,41 @@ export function SignInForm() {
           disabled={isLoading}
           required
           aria-required
-          aria-invalid={Boolean(errors.identifier) || credentialsWrong || undefined}
-          aria-describedby={describedBy("identifier", { hint: true, error: Boolean(errors.identifier), extra: credentialsWrong ? [ALERT_ID] : [] })}
-          className={authInputClass(Boolean(errors.identifier))}
         />
-      </AuthField>
 
-      <AuthField id="password" label="Password" error={errors.password}>
-        <PasswordInput
+        <SignInPasswordField
           ref={passwordRef}
           id="password"
           name="password"
+          label="Password"
+          error={errors.password}
+          invalid={credentialsWrong}
+          describedBy={alertIds}
           autoComplete="current-password"
+          placeholder="••••••••"
           value={values.password}
           onChange={(e) => change("password", e.target.value)}
-          visible={showPassword}
-          onToggleVisible={() => setShowPassword((v) => !v)}
-          invalid={Boolean(errors.password) || credentialsWrong}
           disabled={isLoading}
           required
           aria-required
-          aria-describedby={describedBy("password", { error: Boolean(errors.password), extra: credentialsWrong ? [ALERT_ID] : [] })}
         />
-      </AuthField>
 
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-        <label className="flex min-h-[44px] cursor-pointer select-none items-center gap-2.5 text-sm font-semibold text-tl-body">
-          <input
-            type="checkbox"
+        <SignInOptionsRow>
+          <SignInCheckbox
+            label="Keep me signed in"
             name="rememberMe"
             checked={values.rememberMe}
             onChange={(e) => setValues((prev) => ({ ...prev, rememberMe: e.target.checked }))}
-            className={`h-5 w-5 shrink-0 cursor-pointer rounded accent-tl-brand-fill ${focusRing}`}
           />
-          Keep me signed in
-        </label>
-        <Link href="/forgot-password" className={textLink}>
-          Forgot password?
-        </Link>
-      </div>
+          <Link href="/forgot-password" className={signInLinkClass}>
+            Forgot password?
+          </Link>
+        </SignInOptionsRow>
 
-      <button type="submit" disabled={isLoading} className={`${primaryButton} w-full min-h-[50px] text-[15px]`}>
-        {isLoading ? (
-          <>
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-            Signing in…
-          </>
-        ) : (
-          "Sign in"
-        )}
-      </button>
-    </form>
+        <SignInPrimaryButton loading={isLoading} loadingText="Signing in…">
+          Sign in
+        </SignInPrimaryButton>
+      </form>
+    </>
   );
 }
