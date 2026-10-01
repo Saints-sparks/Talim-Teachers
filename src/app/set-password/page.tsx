@@ -1,14 +1,19 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { KeyRound } from "lucide-react";
 import { toast } from "@/components/CustomToast";
-import { AuthCard } from "@/components/auth/AuthCard";
-import { AuthField, FormAlert, PasswordInput, describedBy } from "@/components/auth/AuthField";
 import PasswordRequirements from "@/components/auth/PasswordRequirements";
-import { focusRing, primaryButton, textLink } from "@/components/tl/styles";
+import {
+  SignInErrorBanner,
+  SignInLogoHeader,
+  SignInPasswordField,
+  SignInPrimaryButton,
+  signInLinkClass,
+} from "@/components/auth/signin-ui";
 import { useAuth } from "../hooks/useAuth";
 import { getApiError } from "../lib/apiError";
 import { isPasswordValid } from "../lib/passwordPolicy";
@@ -19,7 +24,8 @@ import type { User } from "../../types/auth";
 type FieldErrors = Partial<Record<"currentPassword" | "newPassword" | "confirmPassword", string>>;
 
 /**
- * First-sign-in password change, in the redesign's signed-out card. A
+ * First-sign-in password change, in a white card on the grey page with the
+ * Talim logo and "Teachers" pill, built from the sign-in look's parts. A
  * teacher whose account was created by the school has a temporary password;
  * the API refuses every other request until they choose their own, so this
  * screen is the only place they can go. The new password has to meet every
@@ -102,105 +108,104 @@ export default function SetPasswordPage() {
   if (!user) return null;
 
   const confirmError = fieldErrors.confirmPassword ?? (confirmMismatch ? "Passwords do not match" : null);
+  /**
+   * Shows or hides the three passwords together (one toggle, on the first field).
+   *
+   * @returns Nothing; the shared visibility flips.
+   */
   const toggle = () => setShowPasswords((v) => !v);
 
   return (
-    <AuthCard
-      title="Set your password"
-      description={
-        <>
+    <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 dark:bg-slate-950">
+      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-sm ring-1 ring-gray-100 dark:bg-slate-900 dark:ring-slate-800">
+        <SignInLogoHeader
+          appName="Teachers"
+          className="mb-6"
+          logo={<Image src="/icons/login/tree.svg" alt="" width={36} height={36} className="h-9 w-9" priority />}
+        />
+
+        <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-full bg-[#EAF2FB] dark:bg-blue-900/40">
+          <KeyRound className="h-5 w-5 text-[#003366] dark:text-blue-200" aria-hidden />
+        </div>
+        <h1 className="text-2xl font-bold text-[#030E18] dark:text-slate-100">Set your password</h1>
+        <p className="mt-1 text-sm text-gray-600 dark:text-slate-400">
           {user.firstName ? `Hi ${user.firstName}, your` : "Your"} school created this account with a temporary password. Choose your own
           to continue.
-        </>
-      }
-      footnote="You will use this password from now on. The temporary one stops working as soon as you set it."
-    >
-      <form className="flex flex-col gap-[18px]" onSubmit={handleSubmit} noValidate aria-label="Set your password">
-        {formError ? <FormAlert tone="danger">{formError}</FormAlert> : null}
+        </p>
 
-        <AuthField id="currentPassword" label="Temporary password" error={fieldErrors.currentPassword}>
-          <PasswordInput
+        {formError ? (
+          <SignInErrorBanner tone="danger" className="mt-5">
+            {formError}
+          </SignInErrorBanner>
+        ) : null}
+
+        <form className="mt-6 space-y-5" onSubmit={handleSubmit} noValidate aria-label="Set your password">
+          <SignInPasswordField
             id="currentPassword"
             name="currentPassword"
+            label="Temporary password"
+            error={fieldErrors.currentPassword}
             autoComplete="current-password"
             value={currentPassword}
             onChange={(e) => setCurrentPassword(e.target.value)}
             visible={showPasswords}
             onToggleVisible={toggle}
             toggleLabels={["Show passwords", "Hide passwords"]}
-            invalid={Boolean(fieldErrors.currentPassword)}
-            aria-describedby={describedBy("currentPassword", { error: Boolean(fieldErrors.currentPassword) })}
             disabled={saving}
             required
             aria-required
           />
-        </AuthField>
 
-        <AuthField
-          id="newPassword"
-          label="New password"
-          error={fieldErrors.newPassword}
-          after={<PasswordRequirements password={newPassword} id="newPassword-rules" />}
-        >
-          <PasswordInput
+          <SignInPasswordField
             id="newPassword"
             name="newPassword"
+            label="New password"
+            error={fieldErrors.newPassword}
+            describedBy={["newPassword-rules"]}
+            after={<PasswordRequirements password={newPassword} id="newPassword-rules" />}
             autoComplete="new-password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             visible={showPasswords}
-            onToggleVisible={toggle}
             hideToggle
-            invalid={Boolean(fieldErrors.newPassword)}
-            aria-describedby={describedBy("newPassword", { error: Boolean(fieldErrors.newPassword), extra: ["newPassword-rules"] })}
             disabled={saving}
             required
             aria-required
           />
-        </AuthField>
 
-        <AuthField id="confirmPassword" label="Confirm new password" error={confirmError}>
-          <PasswordInput
+          <SignInPasswordField
             id="confirmPassword"
             name="confirmPassword"
+            label="Confirm new password"
+            error={confirmError}
             autoComplete="new-password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             visible={showPasswords}
-            onToggleVisible={toggle}
             hideToggle
-            invalid={Boolean(confirmError)}
-            aria-describedby={describedBy("confirmPassword", { error: Boolean(confirmError) })}
             disabled={saving}
             required
             aria-required
           />
-        </AuthField>
 
-        <button type="submit" disabled={!canSubmit} className={`${primaryButton} w-full min-h-[50px] text-[15px]`}>
-          {saving ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              Saving…
-            </>
-          ) : (
-            "Set password and continue"
-          )}
-        </button>
-      </form>
+          <SignInPrimaryButton disabled={!canSubmit} loading={saving} loadingText="Saving…">
+            Set password and continue
+          </SignInPrimaryButton>
+        </form>
 
-      <div className="mt-4 flex flex-col items-center gap-1">
-        <Link href="/forgot-password" className={textLink}>
-          Use the code from your email instead
-        </Link>
-        <button
-          type="button"
-          onClick={logout}
-          className={`inline-flex min-h-[44px] items-center rounded-md px-2 text-sm font-bold text-tl-muted hover:text-tl-ink hover:underline ${focusRing}`}
-        >
-          Sign out
-        </button>
+        <div className="-mb-3 mt-3 flex flex-col items-center text-sm">
+          <Link href="/forgot-password" className={signInLinkClass}>
+            Use the code from your email instead
+          </Link>
+          <button
+            type="button"
+            onClick={logout}
+            className="inline-flex min-h-[44px] items-center text-gray-500 hover:underline dark:text-slate-400"
+          >
+            Sign out
+          </button>
+        </div>
       </div>
-    </AuthCard>
+    </main>
   );
 }
