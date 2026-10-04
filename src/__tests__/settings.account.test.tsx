@@ -101,6 +101,26 @@ describe("Settings → Account", () => {
     expect(screen.queryByText("Subject expertise")).not.toBeInTheDocument();
   });
 
+  it("says class teacher from the classes the teacher leads, whatever the stale profile flag says (A6)", async () => {
+    get.mockImplementation(async (url: string) => {
+      if (url === "/teacher/settings") return { ...SETTINGS, employment: { ...SETTINGS.employment, isFormTeacher: false } };
+      throw new Error(`unexpected GET ${url}`);
+    });
+    appContext.mockReturnValue({ teacherData: { ...RECORD, classTeacherOf: [{ id: "c1", name: "Grade 5A" }] } });
+    const { unmount } = render(<AccountPanel />);
+    expect(await screen.findByText("Teacher · class teacher")).toBeInTheDocument();
+    unmount();
+
+    get.mockImplementation(async (url: string) => {
+      if (url === "/teacher/settings") return SETTINGS;
+      throw new Error(`unexpected GET ${url}`);
+    });
+    appContext.mockReturnValue({ teacherData: { ...RECORD, classTeacherOf: [] } });
+    render(<AccountPanel />);
+    expect(await screen.findByText("Teacher")).toBeInTheDocument();
+    expect(screen.queryByText("Teacher · class teacher")).not.toBeInTheDocument();
+  });
+
   it("shows no record sections when the teacher record is empty, and dashes for missing details", async () => {
     appContext.mockReturnValue({ teacherData: null });
     get.mockResolvedValue({ profile: { firstName: "Tolu" } });

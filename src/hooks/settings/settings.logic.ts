@@ -418,9 +418,41 @@ function names(value: unknown, name: (entry: Record<string, unknown>) => string)
 }
 
 /**
+ * The classes the teacher is class teacher of, by name. Since A6 only
+ * `Class.classTeacherId` makes a teacher a class's class teacher: the record's
+ * `classTeacherOf` lists exactly those. An older API without it falls back to
+ * `classTeacherClasses`, which also mixes in classes merely assigned on the
+ * profile.
+ *
+ * @param record - The teacher record (`GET /teachers/:id`), untyped.
+ * @returns The class names, blanks and duplicates removed.
+ */
+export function classTeacherOfNames(record: Record<string, unknown> | null | undefined): string[] {
+  const source = record ?? {};
+  const led = Array.isArray(source.classTeacherOf) ? source.classTeacherOf : source.classTeacherClasses;
+  return names(led, (entry) => text(entry, "name"));
+}
+
+/**
+ * Whether the teacher is a class teacher, for the Account "Role" line: any
+ * class whose `Class.classTeacherId` is theirs (`classTeacherOf`, A6). The
+ * profile's `isFormTeacher` flag no longer grants the role and goes stale, so
+ * it is read only when the API sends no `classTeacherOf`.
+ *
+ * @param record - The teacher record (`GET /teachers/:id`), untyped, or null while loading.
+ * @param isFormTeacher - `employment.isFormTeacher` from `GET /teacher/settings`.
+ * @returns True when the teacher leads at least one class.
+ */
+export function isClassTeacher(record: Record<string, unknown> | null | undefined, isFormTeacher?: boolean | null): boolean {
+  if (record && Array.isArray(record.classTeacherOf)) return record.classTeacherOf.length > 0;
+  return Boolean(isFormTeacher);
+}
+
+/**
  * What the old Profile page showed that the Account fields don't: the
- * classes and subjects assigned, qualifications and experience, the
- * employment type and availability, from the teacher record
+ * classes they are class teacher of ({@link classTeacherOfNames}) and the
+ * subjects assigned, qualifications and experience, the employment type and
+ * availability, from the teacher record
  * (`GET /teachers/:id`). Only filled values are kept, and a section with none
  * is left out.
  *
@@ -430,7 +462,7 @@ function names(value: unknown, name: (entry: Record<string, unknown>) => string)
  */
 export function profileRecordSections(record: Record<string, unknown> | null | undefined, employmentType?: string | null): RecordSection[] {
   const source = record ?? {};
-  const classes = names(source.classTeacherClasses, (entry) => text(entry, "name"));
+  const classes = classTeacherOfNames(source);
   const courses = names(source.assignedCourses, (entry) => {
     const title = text(entry, "title");
     const code = text(entry, "courseCode");

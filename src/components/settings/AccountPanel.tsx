@@ -10,7 +10,7 @@ import { ApiError, getErrorMessage } from "@/lib/apiError";
 import { logger } from "@/lib/logger";
 import { useSaveProfileField } from "@/hooks/settings/useAccount";
 import { useTeacherSettings, useUpdateTeacherAvatar } from "@/hooks/settings/useTeacherSettings";
-import { formatJoinedDate, profileRecordSections, validateProfileField, type ProfileField } from "@/hooks/settings/settings.logic";
+import { formatJoinedDate, isClassTeacher, profileRecordSections, validateProfileField, type ProfileField } from "@/hooks/settings/settings.logic";
 import { PanelError, PanelSkeleton, groupHeading } from "./SettingsRows";
 
 /** The small uppercase label above an Account input (the design's field label). */
@@ -213,7 +213,8 @@ function InfoGrid({ items }: { items: Array<{ label: string; value: string; note
 
 /**
  * Settings → Account: the photo, the editable name and phone (saved on
- * blur, §33), the read-only email, role, staff ID, school and join date, and
+ * blur, §33), the read-only email, role ("· class teacher" from the classes
+ * the teacher leads, A6), staff ID, school and join date, and
  * what the old Profile page showed from the teacher record (classes and
  * subjects, qualifications, employment and availability).
  *
@@ -248,7 +249,7 @@ export function AccountPanel() {
       <InfoGrid
         items={[
           { label: "Email", value: profile?.email || user?.email || "—", note: "The school office changes your email." },
-          { label: "Role", value: `Teacher${employment?.isFormTeacher ? " · class teacher" : ""}` },
+          { label: "Role", value: `Teacher${isClassTeacher(teacherData, employment?.isFormTeacher) ? " · class teacher" : ""}` },
           { label: "Staff ID", value: staffId || "—" },
           { label: "School", value: profile?.schoolName || user?.schoolName || "—" },
           { label: "Joined", value: formatJoinedDate(profile?.joinedAt) },

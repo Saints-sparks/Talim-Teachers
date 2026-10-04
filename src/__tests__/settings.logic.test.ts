@@ -11,6 +11,8 @@ import {
   officeSubtitle,
   parseSettingsTab,
   profileRecordSections,
+  classTeacherOfNames,
+  isClassTeacher,
   quietHoursDescription,
   revokedOthersMessage,
   sessionActivity,
@@ -205,5 +207,25 @@ describe("profile", () => {
     ]);
     expect(profileRecordSections(null)).toEqual([]);
     expect(profileRecordSections({ yearsOfExperience: 0, assignedCourses: [] })).toEqual([]);
+  });
+
+  it("names only the classes the teacher leads (classTeacherOf, A6), not those merely assigned", () => {
+    const record = {
+      classTeacherClasses: [{ name: "Grade 6B" }, { name: "Grade 5A" }],
+      classTeacherOf: [{ id: "c1", name: "Grade 5A" }],
+    };
+    expect(classTeacherOfNames(record)).toEqual(["Grade 5A"]);
+    expect(profileRecordSections(record)[0].items[0]).toEqual({ label: "Class teacher of", value: "Grade 5A" });
+    // An older API without classTeacherOf: the mixed list is all there is.
+    expect(classTeacherOfNames({ classTeacherClasses: [{ name: "Grade 6B" }] })).toEqual(["Grade 6B"]);
+    expect(classTeacherOfNames(null)).toEqual([]);
+  });
+
+  it("takes the class-teacher role from classTeacherOf, and the profile flag only from an older API", () => {
+    expect(isClassTeacher({ classTeacherOf: [{ id: "c1", name: "Grade 5A" }] }, false)).toBe(true);
+    expect(isClassTeacher({ classTeacherOf: [] }, true)).toBe(false);
+    expect(isClassTeacher({ classTeacherClasses: [{ name: "Grade 5A" }] }, true)).toBe(true);
+    expect(isClassTeacher({}, false)).toBe(false);
+    expect(isClassTeacher(null, true)).toBe(true);
   });
 });
