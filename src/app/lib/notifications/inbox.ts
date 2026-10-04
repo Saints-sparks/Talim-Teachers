@@ -23,7 +23,12 @@ import type { AttachmentFile, AttachmentFileKind } from "@/types/inboxSettings";
 /** Where a notification came from. */
 export type NotificationSource = "school" | "talim" | "system";
 
-/** The categories the inbox groups by; mirrors the backend `NotificationCategory` enum. */
+/**
+ * The categories the inbox groups by; mirrors the backend `NotificationCategory`
+ * enum. `payments` and `leave` arrived with the portals backend (B11); older
+ * rows keep their old categories (leave under `attendance`, payments under
+ * `account`).
+ */
 export type NotificationCategory =
   | "announcement"
   | "attendance"
@@ -32,6 +37,8 @@ export type NotificationCategory =
   | "resources"
   | "messages"
   | "account"
+  | "payments"
+  | "leave"
   | "other";
 
 /** One inbox item, normalised from either server list. */
@@ -150,13 +157,19 @@ const CATEGORY_BY_TYPE: Record<string, NotificationCategory> = {
   assignment_or_resource: "resources",
   security_alert: "account",
   login_alert: "account",
+  leave_request_update: "leave",
   system_alert: "other",
   system_notice: "other",
   app_update: "other",
-  fee_reminder: "other",
-  fee_overdue: "other",
-  payment_confirmed: "other",
-  receipt_generated: "other",
+  fee_reminder: "payments",
+  fee_overdue: "payments",
+  payment_confirmed: "payments",
+  receipt_generated: "payments",
+  payment_receipt_issued: "payments",
+  payment_refunded: "payments",
+  payment_refund_issued: "payments",
+  school_payment_received: "payments",
+  manual_payment_recorded: "payments",
 };
 
 /**
@@ -181,6 +194,8 @@ const KNOWN_CATEGORIES: ReadonlySet<string> = new Set<NotificationCategory>([
   "resources",
   "messages",
   "account",
+  "payments",
+  "leave",
   "other",
 ]);
 
@@ -188,7 +203,7 @@ const KNOWN_CATEGORIES: ReadonlySet<string> = new Set<NotificationCategory>([
  * Whether a value is one of the backend's notification categories.
  *
  * @param value - Anything.
- * @returns True for `announcement`, `attendance`, …, `other`.
+ * @returns True for `announcement`, `attendance`, …, `payments`, `leave`, `other`.
  */
 export function isNotificationCategory(value: unknown): value is NotificationCategory {
   return typeof value === "string" && KNOWN_CATEGORIES.has(value);
@@ -217,12 +232,14 @@ export function inferCategory(item: NotificationRecord, fallback: NotificationCa
   const explicit = String(item.category || item.type || item.metadata?.category || item.metadata?.module || "").toLowerCase();
   const text = `${explicit} ${textBlob(item)}`;
 
+  if (/leave request|leave_request/.test(text)) return "leave";
   if (/attendance|absence|absent|late/.test(text)) return "attendance";
   if (/grade|grading|result|report/.test(text)) return "grading";
   if (/assessment|assignment|curriculum|academic/.test(text)) return "academics";
   if (/resource|material|pdf|e-library/.test(text)) return "resources";
   if (/chat|message/.test(text)) return "messages";
   if (/account|password|login|security/.test(text)) return "account";
+  if (/\bpayments?\b|\bfees?\b|\breceipts?\b/.test(text)) return "payments";
   if (text.includes("announcement")) return "announcement";
   return fallback;
 }

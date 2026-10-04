@@ -42,6 +42,23 @@ describe("inferCategory", () => {
     expect(inferCategory(record({ type: "custom", title: "New resource uploaded" }), "other")).toBe("resources");
     expect(inferCategory(record({ type: "custom", title: "Hello", message: "Hi" }), "other")).toBe("other");
   });
+
+  it("files the portals categories: leave and payments (B11)", () => {
+    // Stored by the new producers.
+    expect(inferCategory(record({ category: "leave", type: "leave_request_update" }), "other")).toBe("leave");
+    expect(inferCategory(record({ category: "payments", type: "payment_receipt_issued" }), "other")).toBe("payments");
+    // Typed rows stored under the schema's default.
+    expect(inferCategory(record({ category: "other", type: "leave_request_update" }), "other")).toBe("leave");
+    expect(inferCategory(record({ type: "fee_reminder" }), "other")).toBe("payments");
+    expect(inferCategory(record({ type: "manual_payment_recorded" }), "other")).toBe("payments");
+    // Older rows keep the category they were stored with.
+    expect(inferCategory(record({ category: "attendance", type: "leave_request_update" }), "other")).toBe("attendance");
+    expect(inferCategory(record({ category: "account", type: "payment_confirmed" }), "other")).toBe("account");
+    // Keywords, last: a leave request is not an attendance alert; "fee" is a whole word only.
+    expect(inferCategory(record({ type: "custom", title: "New leave request for Ben" }), "other")).toBe("leave");
+    expect(inferCategory(record({ type: "custom", title: "School fees are due" }), "other")).toBe("payments");
+    expect(inferCategory(record({ type: "custom", title: "Thanks for the feedback" }), "other")).toBe("other");
+  });
 });
 
 describe("normalizeSystemNotification", () => {

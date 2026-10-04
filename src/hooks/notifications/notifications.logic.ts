@@ -9,6 +9,13 @@
  *
  * Decision 3 of 2026-09-29: there is no "Messages" tab; `messages`,
  * `account` and `other` notifications show under All and Unread only.
+ *
+ * The portals backend (B11) adds two categories. `leave` (a parent's leave
+ * request for a student in the teacher's class) lists under Attendance, with
+ * its own "Leave" chip, and opens the class register on the first day of
+ * leave. `payments` is a parent and bursary category: a teacher should not
+ * get one, and if they do it shows under All and Unread only, with a
+ * "Payments" chip and no action (this app has no payments page).
  */
 import type { NotificationCategory, TeacherNotification } from "@/app/lib/notifications/inbox";
 import { extractRecords, extractTotal, type NotificationListBody } from "@/app/services/notifications.service";
@@ -64,9 +71,11 @@ const TAB_OF_CATEGORY: Record<NotificationCategory, "academics" | "attendance" |
   grading: "academics",
   resources: "academics",
   attendance: "attendance",
+  leave: "attendance",
   announcement: "announcements",
   messages: null,
   account: null,
+  payments: null,
   other: null,
 };
 
@@ -74,7 +83,7 @@ const TAB_OF_CATEGORY: Record<NotificationCategory, "academics" | "attendance" |
  * The category tab a category belongs to.
  *
  * @param category - The notification's category.
- * @returns `academics` (academics, grading, resources), `attendance`, `announcements`, or `null`.
+ * @returns `academics` (academics, grading, resources), `attendance` (attendance, leave), `announcements`, or `null`.
  */
 export function tabOfCategory(category: NotificationCategory): "academics" | "attendance" | "announcements" | null {
   return TAB_OF_CATEGORY[category] ?? null;
@@ -135,8 +144,8 @@ export function countsFromItems(items: readonly TeacherNotification[]): Notifica
 
 /**
  * The number on each tab: All and Unread from the totals, Academics the sum of
- * `academics`, `grading` and `resources`, Attendance and Announcements their
- * one category.
+ * `academics`, `grading` and `resources`, Attendance the sum of `attendance`
+ * and `leave`, Announcements its one category.
  *
  * @param counts - `GET /notifications/counts`.
  * @returns The count per tab.
@@ -147,7 +156,7 @@ export function tabCounts(counts: NotificationCountsBody): Record<NotificationTa
     all: counts.all,
     unread: counts.unread,
     academics: all("academics") + all("grading") + all("resources"),
-    attendance: all("attendance"),
+    attendance: all("attendance") + all("leave"),
     announcements: all("announcement"),
   };
 }
@@ -245,9 +254,11 @@ const CATEGORY_CHIPS: Record<NotificationCategory, Chip> = {
   grading: { label: "Academics", tone: "info" },
   resources: { label: "Academics", tone: "info" },
   attendance: { label: "Attendance", tone: "warning" },
+  leave: { label: "Leave", tone: "warning" },
   announcement: { label: "Announcement", tone: "accent" },
   messages: { label: "Messages", tone: "muted" },
   account: { label: "Account", tone: "muted" },
+  payments: { label: "Payments", tone: "muted" },
   other: { label: "Other", tone: "muted" },
 };
 
@@ -300,6 +311,9 @@ const DEFAULT_ACTION_LABELS: Record<NotificationTargetPage, string> = {
   settings: "Open settings",
 };
 
+/** The target pages this app has a route for; any other page (`payments`, a parent's `results`) gets no action. */
+const ROUTED_PAGES: ReadonlySet<string> = new Set(Object.keys(DEFAULT_ACTION_LABELS));
+
 /**
  * The action's label when the producer sent no `actionLabel`.
  *
@@ -335,7 +349,9 @@ function isTarget(value: unknown): value is NotificationTarget {
  * Where a notification's action goes and what it says: `metadata.target`
  * through the shared route mapper (`attentionHref`), labelled
  * `metadata.actionLabel` or the page's default; else a legacy internal
- * `metadata.href` / `metadata.url` as "Open"; else no action.
+ * `metadata.href` / `metadata.url` as "Open"; else no action. A target on a
+ * page this app does not have (`payments`, which the payments producers set)
+ * is ignored rather than sent to the dashboard.
  *
  * @param item - The notification (its metadata).
  * @param item.metadata - The notification's metadata.
@@ -344,7 +360,7 @@ function isTarget(value: unknown): value is NotificationTarget {
 export function notificationAction(item: Pick<TeacherNotification, "metadata">): NotificationAction | null {
   const metadata = item.metadata;
   if (!metadata) return null;
-  if (isTarget(metadata.target)) {
+  if (isTarget(metadata.target) && ROUTED_PAGES.has(metadata.target.page)) {
     const label = typeof metadata.actionLabel === "string" && metadata.actionLabel.trim() ? metadata.actionLabel.trim() : defaultActionLabel(metadata.target.page);
     return { href: attentionHref(metadata.target), label };
   }

@@ -85,6 +85,23 @@ describe("tabs", () => {
     expect(matchesTab({ category: "grading", unread: false }, "unread")).toBe(false);
   });
 
+  it("lists leave under Attendance, and payments under All and Unread only (B11)", () => {
+    expect(tabOfCategory("leave")).toBe("attendance");
+    expect(tabOfCategory("payments")).toBeNull();
+    expect(matchesTab({ category: "leave", unread: false }, "attendance")).toBe(true);
+    expect(matchesTab({ category: "payments", unread: true }, "all")).toBe(true);
+    expect(matchesTab({ category: "payments", unread: true }, "unread")).toBe(true);
+    expect(NOTIFICATION_TABS.every((tab) => !matchesTab({ category: "payments", unread: false }, tab.id) || tab.id === "all")).toBe(true);
+
+    const inbox = [
+      item({ _id: "l1", category: "leave", type: "leave_request_update", createdAt: "2026-10-02T08:00:00.000Z" }),
+      item({ _id: "p1", category: "payments", type: "payment_receipt_issued", createdAt: "2026-10-01T08:00:00.000Z" }),
+    ];
+    expect(filterByTab(inbox, "attendance").map((n) => n.rawId)).toEqual(["l1"]);
+    expect(filterByTab(inbox, "academics")).toEqual([]);
+    expect(filterByTab(inbox, "all").map((n) => n.rawId)).toEqual(["l1", "p1"]);
+  });
+
   it("filters the fixture inbox per tab, and keeps a just-read one on the Unread tab", () => {
     const inbox = fixtureInbox();
     const ids = (tab: Parameters<typeof filterByTab>[1], keep?: Set<string>) => filterByTab(inbox, tab, keep).map((n) => n.rawId);
@@ -113,6 +130,20 @@ describe("counts", () => {
     };
     expect(tabCounts(counts)).toEqual({ all: 12, unread: 5, academics: 6, attendance: 4, announcements: 1 });
     expect(tabCounts({ all: 0, unread: 0, byCategory: {} })).toEqual({ all: 0, unread: 0, academics: 0, attendance: 0, announcements: 0 });
+  });
+
+  it("counts leave on the Attendance tab and payments on no category tab", () => {
+    const counts: NotificationCountsBody = {
+      all: 9,
+      unread: 6,
+      byCategory: {
+        attendance: { all: 2, unread: 1 },
+        leave: { all: 4, unread: 4 },
+        payments: { all: 3, unread: 1 },
+      },
+    };
+    expect(tabCounts(counts)).toEqual({ all: 9, unread: 6, academics: 0, attendance: 6, announcements: 0 });
+    expect(countsAfterRead(counts, "leave").byCategory.leave).toEqual({ all: 4, unread: 3 });
   });
 
   it("counts the loaded items the way the server counts both feeds", () => {
@@ -164,6 +195,8 @@ describe("chips", () => {
     expect(categoryChip("messages")).toEqual({ label: "Messages", tone: "muted" });
     expect(categoryChip("account").label).toBe("Account");
     expect(categoryChip("other").label).toBe("Other");
+    expect(categoryChip("leave")).toEqual({ label: "Leave", tone: "warning" });
+    expect(categoryChip("payments")).toEqual({ label: "Payments", tone: "muted" });
   });
 
   it("names each attachment kind for what it is", () => {
@@ -203,6 +236,20 @@ describe("notificationAction", () => {
     expect(defaultActionLabel("subjects")).toBe("Open subjects");
     expect(defaultActionLabel("settings")).toBe("Open settings");
     expect(defaultActionLabel("somewhere-new")).toBe("Open");
+  });
+
+  it("opens the register for a leave request, and gives a payments target no action", () => {
+    const leave = item({
+      category: "leave",
+      metadata: { target: { page: "leave", classId: "c1", date: "2026-10-20" }, actionLabel: "Review request" },
+    });
+    expect(notificationAction(leave)).toEqual({ href: "/attendance/class/c1?date=2026-10-20", label: "Review request" });
+    expect(notificationAction(item({ metadata: { target: { page: "leave" } } }))).toEqual({ href: "/attendance", label: "Open register" });
+
+    const payments = item({ category: "payments", metadata: { target: { page: "payments" as never } } });
+    expect(notificationAction(payments)).toBeNull();
+    // A legacy internal link still works beside a target this app cannot route.
+    expect(notificationAction(item({ metadata: { target: { page: "payments" as never }, href: "/settings" } }))).toEqual({ href: "/settings", label: "Open" });
   });
 
   it("links a legacy internal href or url as Open, and nothing else", () => {
