@@ -165,7 +165,7 @@ export const queryKeys = {
     participants: (roomId: string) => ["chat", "room", roomId, "participants"] as const,
     /** `GET /chat/contacts` — the "New message" picker (Round 4 §26). */
     contacts: (userId: string) => ["chat", userId, "contacts"] as const,
-    /** `GET /chat/rooms/:roomId/media?kind=` — shared images, documents or links (Round 4 §29). */
+    /** `GET /chat/rooms/:roomId/media?kind=` — shared images, videos, documents or links (Round 4 §29, videos since B10). */
     media: (roomId: string, kind: string) => ["chat", "room", roomId, "media", kind] as const,
   },
   profile: {

@@ -79,7 +79,7 @@ interface Counts {
 }
 interface Media {
   items: { url: string; name: string | null }[];
-  counts: { image: number; document: number; link: number };
+  counts: { image: number; video: number; document: number; link: number };
 }
 interface Lesson {
   course: { id: string; title: string };
@@ -352,7 +352,12 @@ test("an image and a link sent in the class group are listed under Images and Li
 
   const info = await openInfo(page);
   const tabs = info.getByRole("tablist", { name: "Conversation info" });
-  for (const [label, count] of [["Images", media.counts.image], ["Documents", media.counts.document], ["Links", media.counts.link]] as const) {
+  for (const [label, count] of [
+    ["Images", media.counts.image],
+    ["Videos", media.counts.video],
+    ["Documents", media.counts.document],
+    ["Links", media.counts.link],
+  ] as const) {
     await expect(tabs.getByRole("tab", { name: new RegExp(`^${label}`) })).toHaveText(new RegExp(`^${label}\\s*${count}$`));
   }
   await tabs.getByRole("tab", { name: /^Images/ }).click();

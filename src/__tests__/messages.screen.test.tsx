@@ -261,11 +261,14 @@ describe("the info modal", () => {
     return screen.findByRole("dialog", { name: /Conversation info/ });
   }
 
-  it("lists Members, Images, Documents and Links with counts, and pages the media", async () => {
+  it("lists Members, Images, Videos, Documents and Links with counts, and pages the media", async () => {
     const dialog = await openInfo("room-c2");
     const tabs = within(dialog).getAllByRole("tab");
-    expect(tabs.map((t) => t.textContent)).toEqual(["Members2", "Images1", "Documents1", "Links1"].map((t) => expect.stringContaining(t.replace(/\d+$/, ""))));
+    expect(tabs.map((t) => t.textContent)).toEqual(
+      ["Members2", "Images1", "Videos1", "Documents1", "Links1"].map((t) => expect.stringContaining(t.replace(/\d+$/, ""))),
+    );
     await waitFor(() => expect(within(dialog).getByRole("tab", { name: /Documents/ })).toHaveTextContent("Documents1"));
+    expect(within(dialog).getByRole("tab", { name: /Videos/ })).toHaveTextContent("Videos1");
     expect(within(dialog).getByRole("tab", { name: /Members/ })).toHaveAttribute("aria-selected", "true");
 
     fireEvent.click(within(dialog).getByRole("tab", { name: /Documents/ }));
@@ -283,7 +286,7 @@ describe("the info modal", () => {
         { messageId: `m-${cursor ?? 0}`, kind, url: `https://files.test/${cursor ?? 0}.pdf`, name: `Notes ${cursor ?? "0"}.pdf`, mimeType: "application/pdf", size: 1024, sentAt: "2026-09-20T10:00:00Z", sender: { id: "x", name: "Seyi Tinubu" } },
       ],
       nextCursor: cursor ? null : "1",
-      counts: { image: 0, document: 2, link: 0 },
+      counts: { image: 0, video: 0, document: 2, link: 0 },
     }));
     const dialog = await openInfo("room-c2");
     fireEvent.click(within(dialog).getByRole("tab", { name: /Documents/ }));
@@ -291,6 +294,21 @@ describe("the info modal", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Load more" }));
     expect(await within(dialog).findByText("Notes 1.pdf")).toBeInTheDocument();
     expect(within(dialog).queryByRole("button", { name: "Load more" })).not.toBeInTheDocument();
+  });
+
+  it("plays shared videos in their own tab, not under Documents", async () => {
+    const dialog = await openInfo("room-c2");
+    fireEvent.click(within(dialog).getByRole("tab", { name: /Videos/ }));
+    const video = await within(dialog).findByLabelText(/^fractions-on-the-board\.mp4, from Seyi Tinubu/);
+    expect(video.tagName).toBe("VIDEO");
+    expect(video).toHaveAttribute("src", expect.stringContaining("fractions-on-the-board.mp4"));
+    expect(video).toHaveAttribute("preload", "metadata");
+    expect(within(dialog).getByRole("link", { name: "Download fractions-on-the-board.mp4" })).toBeInTheDocument();
+    expect(service.getRoomMedia).toHaveBeenCalledWith("room-c2", "video", null, 30);
+
+    fireEvent.click(within(dialog).getByRole("tab", { name: /Documents/ }));
+    expect(await within(dialog).findByText("Exercise 2c worked example.pdf")).toBeInTheDocument();
+    expect(within(dialog).queryByText("fractions-on-the-board.mp4")).not.toBeInTheDocument();
   });
 
   it("says when nothing was shared", async () => {

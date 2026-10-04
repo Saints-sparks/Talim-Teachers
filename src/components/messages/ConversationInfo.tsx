@@ -8,7 +8,7 @@ import { canLeaveGroup, canManageGroup, hasGroupDetails, roleLabel } from "@/app
 import { focusRing } from "@/components/tl/styles";
 import { useGroupInfoEditor } from "@/hooks/messages/useGroupInfoEditor";
 import { useRoomMedia } from "@/hooks/messages/useInbox";
-import type { SharedMediaKind } from "@/types/inboxSettings";
+import { SHARED_MEDIA_KINDS, type SharedMediaKind } from "@/types/inboxSettings";
 import ChatInfoDialog from "./ChatInfoDialog";
 import GroupDetails from "./GroupDetails";
 import GroupMembers from "./GroupMembers";
@@ -20,9 +20,7 @@ export type InfoTab = "members" | SharedMediaKind;
 
 const TABS: readonly { id: InfoTab; label: string }[] = [
   { id: "members", label: "Members" },
-  { id: "image", label: MEDIA_LABELS.image },
-  { id: "document", label: MEDIA_LABELS.document },
-  { id: "link", label: MEDIA_LABELS.link },
+  ...SHARED_MEDIA_KINDS.map((kind) => ({ id: kind, label: MEDIA_LABELS[kind] })),
 ];
 
 const TYPE_LABELS: Record<string, string> = {
@@ -54,7 +52,7 @@ const fullName = (p: ChatParticipant) => `${p.firstName || ""} ${p.lastName || "
 
 /**
  * The conversation info (the design's modal): a rail of tabs (Members,
- * Images, Documents, Links, each with its count) and the tab's content. For
+ * Images, Videos, Documents, Links, each with its count) and the tab's content. For
  * a group, Members starts with the group's picture, name and description —
  * editable inline by group admins only — then the members with a "Group
  * admin" badge, and admins can add and remove members. A direct chat lists
@@ -76,7 +74,7 @@ export default function ConversationInfo({ open, onClose, roomId, room, particip
     if (open) setTab("members");
   }, [open]);
 
-  // The images page carries the totals for all three media tabs.
+  // The images page carries the totals for every media tab.
   const counts = useRoomMedia(roomId, "image", open).data?.pages[0]?.counts;
 
   const isGroup = hasGroupDetails(room);

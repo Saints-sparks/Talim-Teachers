@@ -151,7 +151,7 @@ export function useClassGroup(): ClassGroupOpener {
  * "Load more" follows `nextCursor`). Every page carries the totals per kind.
  *
  * @param roomId - The room.
- * @param kind - Images, documents or links.
+ * @param kind - Images, videos, documents or links.
  * @param enabled - Only fetch while the info modal shows this kind (or needs the counts).
  * @returns The infinite query.
  */

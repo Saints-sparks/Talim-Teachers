@@ -97,10 +97,16 @@ export interface OfficeRoom extends Partial<RoomViewAdditions> {
 
 // ─── §29 Shared media: GET /chat/rooms/:roomId/media ───────────────────────
 
-/** The kinds the media endpoint serves. */
-export type SharedMediaKind = "image" | "document" | "link";
+/**
+ * The kinds the media endpoint serves. Videos have their own kind since the
+ * portals backend (B10); they used to be filed under `document`.
+ */
+export type SharedMediaKind = "image" | "video" | "document" | "link";
 
-/** One shared image, document or link (links are URLs found in message text). */
+/** Every media kind, in the endpoint's (and the info modal's) order. */
+export const SHARED_MEDIA_KINDS: readonly SharedMediaKind[] = ["image", "video", "document", "link"];
+
+/** One shared image, video, document or link (links are URLs found in message text). */
 export interface SharedMediaItem {
   messageId: string;
   kind: SharedMediaKind;

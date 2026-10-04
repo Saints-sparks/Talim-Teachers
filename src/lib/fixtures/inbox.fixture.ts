@@ -245,6 +245,16 @@ const MEDIA: Record<string, SharedMediaItem[]> = {
       sender: { id: FIXTURE_TEACHER_ID, name: "Seyi Tinubu" },
     },
     {
+      messageId: "m-c2-6",
+      kind: "video",
+      url: "https://res.cloudinary.com/talim-fixture/video/upload/fractions-on-the-board.mp4",
+      name: "fractions-on-the-board.mp4",
+      mimeType: "video/mp4",
+      size: 4_820_000,
+      sentAt: "2026-09-23T09:40:00.000Z",
+      sender: { id: FIXTURE_TEACHER_ID, name: "Seyi Tinubu" },
+    },
+    {
       messageId: "m-c2-5",
       kind: "link",
       url: "https://www.khanacademy.org/math/pre-algebra",
@@ -262,7 +272,7 @@ const MEDIA: Record<string, SharedMediaItem[]> = {
  * by index (the cursor is the next index as a string).
  *
  * @param roomId - The room.
- * @param kind - Images, documents or links.
+ * @param kind - Images, videos, documents or links.
  * @param cursor - Where the previous page stopped.
  * @param limit - Page size.
  * @returns One page, with the totals per kind.
@@ -274,7 +284,7 @@ export function makeRoomMediaFixture(roomId: string, kind: SharedMediaKind, curs
   const items = ofKind.slice(start, start + limit);
   const next = start + limit < ofKind.length ? String(start + limit) : null;
   const count = (k: SharedMediaKind) => all.filter((item) => item.kind === k).length;
-  return { items, nextCursor: next, counts: { image: count("image"), document: count("document"), link: count("link") } };
+  return { items, nextCursor: next, counts: { image: count("image"), video: count("video"), document: count("document"), link: count("link") } };
 }
 
 // ─── Notifications (§30) ────────────────────────────────────────────────────

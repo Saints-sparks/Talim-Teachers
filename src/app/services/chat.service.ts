@@ -225,8 +225,9 @@ export const ROOM_MEDIA_PAGE_SIZE = 30;
 
 /**
  * `GET /chat/rooms/:roomId/media?kind=&cursor=&limit=` (§29): shared images,
- * documents or links (URLs found in message text), newest first, without
- * deleted messages, with the total per kind.
+ * videos, documents or links (URLs found in message text), newest first,
+ * without deleted messages, with the total per kind. A count the server
+ * leaves out (an older backend has no `video`) reads as 0.
  *
  * @param roomId - The room (participants only).
  * @param kind - Which kind to list.
@@ -251,6 +252,11 @@ export const getRoomMedia = async (
   return {
     items: Array.isArray(page?.items) ? page.items : [],
     nextCursor: page?.nextCursor ?? null,
-    counts: { image: page?.counts?.image ?? 0, document: page?.counts?.document ?? 0, link: page?.counts?.link ?? 0 },
+    counts: {
+      image: page?.counts?.image ?? 0,
+      video: page?.counts?.video ?? 0,
+      document: page?.counts?.document ?? 0,
+      link: page?.counts?.link ?? 0,
+    },
   };
 };

@@ -104,7 +104,7 @@ jest.mock("@/hooks/academic/useCurrentTerm", () => ({
 jest.mock("@/app/services/chat.service", () => ({
   ROOM_MEDIA_PAGE_SIZE: 30,
   getChatContacts: jest.fn(async () => []),
-  getRoomMedia: jest.fn(async () => ({ items: [], nextCursor: null, counts: { image: 0, document: 0, link: 0 } })),
+  getRoomMedia: jest.fn(async () => ({ items: [], nextCursor: null, counts: { image: 0, video: 0, document: 0, link: 0 } })),
 }));
 jest.mock("@/app/context/ChatContext", () => ({
   useChat: () => ({

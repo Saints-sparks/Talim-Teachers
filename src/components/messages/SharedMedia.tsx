@@ -9,7 +9,7 @@ import type { SharedMediaItem, SharedMediaKind } from "@/types/inboxSettings";
 import { useRoomMedia } from "@/hooks/messages/useInbox";
 
 /** The label of each media kind (the info modal's tabs). */
-export const MEDIA_LABELS: Record<SharedMediaKind, string> = { image: "Images", document: "Documents", link: "Links" };
+export const MEDIA_LABELS: Record<SharedMediaKind, string> = { image: "Images", video: "Videos", document: "Documents", link: "Links" };
 
 /**
  * "18 Sep 2026" for a shared item.
@@ -34,6 +34,30 @@ function badgeOf(item: SharedMediaItem): string {
   return ext && ext.length <= 5 ? ext.slice(0, 4).toUpperCase() : "FILE";
 }
 
+/**
+ * The round Download button on a document or video row.
+ *
+ * @param props - The row's props.
+ * @param props.item - The shared file to download.
+ * @returns A link that downloads the file (opens it in a new tab where the host refuses `download`).
+ */
+function DownloadLink({ item }: { item: SharedMediaItem }) {
+  const fallback = item.kind === "video" ? "video" : "file";
+  return (
+    <a
+      href={item.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      download={item.name || true}
+      aria-label={`Download ${item.name || fallback}`}
+      title="Download"
+      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-tl-muted hover:bg-tl-bg hover:text-tl-ink ${focusRing}`}
+    >
+      <Download className="h-4 w-4" aria-hidden />
+    </a>
+  );
+}
+
 /** Props for {@link SharedMedia}. */
 export interface SharedMediaProps {
   roomId: string;
@@ -42,8 +66,10 @@ export interface SharedMediaProps {
 
 /**
  * One media tab of the conversation info (§29 `GET /chat/rooms/:id/media`):
- * images as a grid that opens the chat kit's Lightbox, documents with their
- * size, sender and date and a Download link, links with who shared them.
+ * images as a grid that opens the chat kit's Lightbox, videos as players
+ * (loading only their metadata until played) with their name, size, sender,
+ * date and a Download link, documents with their size, sender and date and a
+ * Download link, links with who shared them.
  * Newest first, with "Load more" while the server has more; its own loading,
  * empty ("No images shared in this conversation yet.") and error states.
  *
@@ -116,6 +142,41 @@ export default function SharedMedia({ roomId, kind }: SharedMediaProps) {
     );
   }
 
+  if (kind === "video") {
+    return (
+      <div className="mt-3 flex flex-col">
+        <ul className="flex flex-col gap-4" aria-label="Shared videos">
+          {items.map((item) => {
+            const title = item.name || "Video";
+            const meta = [formatBytes(item.size ?? undefined), item.sender.name, sentOn(item.sentAt)].filter(Boolean).join(" · ");
+            return (
+              <li key={`${item.messageId}-${item.url}`} className="flex flex-col gap-2">
+                <video
+                  src={item.url}
+                  controls
+                  preload="metadata"
+                  playsInline
+                  aria-label={`${title}, from ${item.sender.name}, ${sentOn(item.sentAt)}`}
+                  className="block aspect-video w-full rounded-xl bg-black"
+                />
+                <div className="flex items-center gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[15px] font-bold text-tl-ink" title={item.name ?? undefined}>
+                      {title}
+                    </p>
+                    <p className="mt-0.5 truncate text-[13px] text-tl-muted">{meta}</p>
+                  </div>
+                  <DownloadLink item={item} />
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+        {more}
+      </div>
+    );
+  }
+
   return (
     <div className="mt-2 flex flex-col">
       <ul className="flex flex-col" aria-label={`Shared ${label}`}>
@@ -144,19 +205,7 @@ export default function SharedMedia({ roomId, kind }: SharedMediaProps) {
                 )}
                 <p className="mt-0.5 truncate text-[13px] text-tl-muted">{meta}</p>
               </div>
-              {kind === "document" ? (
-                <a
-                  href={item.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  download={item.name || true}
-                  aria-label={`Download ${item.name || "file"}`}
-                  title="Download"
-                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-tl-muted hover:bg-tl-bg hover:text-tl-ink ${focusRing}`}
-                >
-                  <Download className="h-4 w-4" aria-hidden />
-                </a>
-              ) : null}
+              {kind === "document" ? <DownloadLink item={item} /> : null}
             </li>
           );
         })}
