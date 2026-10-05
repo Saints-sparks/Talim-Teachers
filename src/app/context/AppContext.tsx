@@ -4,32 +4,27 @@ import React, { createContext, useCallback, useContext, useEffect, useState } fr
 import { fetchTeacherDetails } from "../services/api.service";
 import { useAuth } from "./AuthContext";
 import { logger } from "@/lib/logger";
+import type { components } from "@/types/api";
 import type { User } from "@/types/auth";
 
+type S = components["schemas"];
+
+/** A class as the teacher record returns it (`GET /teachers/:userId`). */
+export type TeacherClass = S["TeacherClassDto"];
+
+/** A course as the teacher record returns it, with its class populated and its periods. */
+export type TeacherCourse = S["TeacherCourseDto"];
+
 /**
- * The teacher roster endpoints are not typed yet: every page casts the class
- * and course records to the shape it needs. Kept deliberately loose in one
- * named place (rather than `any` scattered through the file) so the page pass
- * can replace it resource by resource.
+ * The teacher record behind the signed-in user, with their roster
+ * (`TeacherProfileResponseDto`). `assignedClasses` and `classTeacherCourses`
+ * are not in the contract: older records sent them, and the roster still
+ * falls back to them, so they stay optional here.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Untyped = any;
-
-/** A class as the teacher record returns it. */
-export type TeacherClass = Untyped;
-
-/** A course as the teacher record returns it. */
-export type TeacherCourse = Untyped;
-
-/** The teacher record behind the signed-in user, with their roster. */
-export interface TeacherDetails {
-  _id?: string;
-  classTeacherClasses?: TeacherClass[];
+export type TeacherDetails = S["TeacherProfileResponseDto"] & {
   assignedClasses?: TeacherClass[];
-  assignedCourses?: TeacherCourse[];
   classTeacherCourses?: TeacherCourse[];
-  [key: string]: unknown;
-}
+};
 
 /** What `useAppContext()` provides. */
 export interface AppContextType {

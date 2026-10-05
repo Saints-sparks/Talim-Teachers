@@ -13,9 +13,16 @@ import { uploadProfileAvatar } from "../lib/avatarUpload";
 import { getErrorMessage } from "@/lib/apiError";
 import { useTeacherOnboarding } from "@/app/context/OnboardingContext";
 
-/** The parts of the teacher record the onboarding summary reads. */
+/**
+ * The parts of the teacher record the onboarding summary reads. Hand-written
+ * because it disagrees with the contract: it reads `userId` as a populated
+ * user, but `GET /teachers/:userId` answers the id string
+ * (`TeacherProfileResponseDto.userId`), so the name and phone fall back to
+ * "Not set". Kept as it was by the type sync (no behaviour change); fixing
+ * the page means reading those fields from the signed-in user instead.
+ */
 interface TeacherRecord {
-  userId?: { firstName?: string; lastName?: string; email?: string; phoneNumber?: string };
+  userId?: { firstName?: string; lastName?: string; email?: string; phoneNumber?: string; userAvatar?: string };
   employmentRole?: string;
   employmentType?: string;
   highestAcademicQualification?: string;
@@ -71,7 +78,7 @@ export default function TeacherOnboardingPhase1() {
 
       setLoading(true);
       try {
-        const data = await fetchTeacherDetails(userId, token);
+        const data = (await fetchTeacherDetails(userId, token)) as unknown as TeacherRecord;
         if (cancelled) return;
         setTeacher(data);
         setAvatarPreview(userAvatar || data?.userId?.userAvatar || null);

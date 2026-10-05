@@ -53,11 +53,11 @@ export type SubjectCard = S["SubjectCardDto"];
 export type ResourceVisibility = S["CreateResourceDto"]["visibility"];
 
 /**
- * The visibility a new resource starts with. HAND-WRITTEN: the product
- * owner's Round 4 addendum (2026-09-30) moves the backend's default for a
- * body without `visibility` from `students` to `students_and_parents`, and
- * the upload sheet preselects the same. Replace with the generated default
- * once `npm run types:api` carries it (the generated DTO has no default yet).
+ * The visibility a new resource starts with: the product owner's Round 4
+ * addendum (2026-09-30) made `students_and_parents` the backend's default,
+ * and the upload sheet preselects the same. HAND-WRITTEN: the contract
+ * documents that default (`@default` on `CreateResourceDto.visibility`), but
+ * a generated type carries no values, so the constant stays here.
  */
 export const DEFAULT_RESOURCE_VISIBILITY: ResourceVisibility = "students_and_parents";
 

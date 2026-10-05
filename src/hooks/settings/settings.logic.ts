@@ -424,7 +424,8 @@ function names(value: unknown, name: (entry: Record<string, unknown>) => string)
  * `classTeacherClasses`, which also mixes in classes merely assigned on the
  * profile.
  *
- * @param record - The teacher record (`GET /teachers/:id`), untyped.
+ * @param record - The teacher record (`GET /teachers/:id`, `TeacherProfileResponseDto`), read
+ *   as a loose record on purpose so an older API's shape still reads.
  * @returns The class names, blanks and duplicates removed.
  */
 export function classTeacherOfNames(record: Record<string, unknown> | null | undefined): string[] {
@@ -439,7 +440,7 @@ export function classTeacherOfNames(record: Record<string, unknown> | null | und
  * profile's `isFormTeacher` flag no longer grants the role and goes stale, so
  * it is read only when the API sends no `classTeacherOf`.
  *
- * @param record - The teacher record (`GET /teachers/:id`), untyped, or null while loading.
+ * @param record - The teacher record (`GET /teachers/:id`) as a loose record (older APIs lack `classTeacherOf`), or null while loading.
  * @param isFormTeacher - `employment.isFormTeacher` from `GET /teacher/settings`.
  * @returns True when the teacher leads at least one class.
  */
@@ -456,7 +457,7 @@ export function isClassTeacher(record: Record<string, unknown> | null | undefine
  * (`GET /teachers/:id`). Only filled values are kept, and a section with none
  * is left out.
  *
- * @param record - The teacher record (`useAppContext().teacherData`), untyped.
+ * @param record - The teacher record (`useAppContext().teacherData`), read as a loose record so older shapes still read.
  * @param employmentType - `employment.employmentType` from `GET /teacher/settings`, preferred over the record's.
  * @returns The sections to show, possibly none.
  */

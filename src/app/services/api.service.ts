@@ -16,18 +16,22 @@ import { api } from "@/lib/apiClient";
 import { logger } from "@/lib/logger";
 import { getErrorMessage } from "@/lib/apiError";
 import { Student } from "@/types/student";
+import type { components } from "@/types/api";
 import type { CreateResourceBody, MarkAttendancePayload, UpdateResourceBody } from "@/types/apiPayloads";
 
 /**
  * The response shape of an endpoint whose consumers have not been typed yet.
- *
- * Several of these calls are read by pages in areas still being migrated, and
- * each of those pages narrows the record to the fields it needs. Kept in one
- * named place (rather than `any` scattered through the file) so it is obvious
- * what is left to type; each becomes a real interface as its page is migrated.
+ * Left only on the resource, course and timetable reads: those routes still
+ * declare no response schema (or an empty `Timetable`) in the contract, so
+ * there is nothing generated to alias. Each becomes a real type once they do.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Untyped = any;
+
+type S = components["schemas"];
+
+/** `GET /teachers/:userId`: the teacher profile with its populated roster, from the generated contract. */
+export type TeacherProfile = S["TeacherProfileResponseDto"];
 
 /** A page of records as the list endpoints return them. */
 export interface PaginatedBody<T> {
@@ -266,11 +270,11 @@ export const fetchStudent = async (id: string, _token?: string): Promise<Student
  * @returns The teacher record.
  * @throws Error with a user-safe message when the request fails.
  */
-export const fetchTeacherDetails = async (id: string, _token?: string): Promise<Untyped> => {
+export const fetchTeacherDetails = async (id: string, _token?: string): Promise<TeacherProfile> => {
   if (!id) throw new Error("Teacher ID is missing.");
 
   try {
-    return await api.get<TeacherRecord>(`/teachers/${id}`);
+    return await api.get<TeacherProfile>(`/teachers/${id}`);
   } catch (err) {
     throw new Error(getErrorMessage(err, "Failed to fetch teacher data."));
   }
@@ -370,8 +374,10 @@ export const updateResource = async (
  * @returns The stored attendance record.
  * @throws ApiError when the server rejects the payload.
  */
-export const submitAttendance = async (payload: AttendancePayload, _token?: string): Promise<Untyped> =>
-  api.post("/attendance", payload);
+export const submitAttendance = async (
+  payload: AttendancePayload,
+  _token?: string,
+): Promise<S["AttendanceRecordDto"]> => api.post<S["AttendanceRecordDto"]>("/attendance", payload);
 
 /**
  * A teacher's weekly timetable.
