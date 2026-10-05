@@ -28,8 +28,12 @@ export interface TermPickerProps {
  * @param currentTermId - The current term's id.
  * @returns The option label.
  */
-export function termOptionLabel(term: Pick<SchoolTerm, "_id" | "name" | "academicYearName">, currentTermId?: string): string {
-  const year = term.academicYearName ? ` · ${term.academicYearName}` : "";
+export function termOptionLabel(
+  term: Pick<SchoolTerm, "_id" | "name" | "session" | "academicYearName">,
+  currentTermId?: string,
+): string {
+  const session = term.session ?? term.academicYearName;
+  const year = session ? ` · ${session}` : "";
   return `${term.name}${year}${term._id === currentTermId ? " (current)" : ""}`;
 }
 
@@ -44,7 +48,7 @@ export function termOptionLabel(term: Pick<SchoolTerm, "_id" | "name" | "academi
 export function TermPicker({ value, currentTermId, currentTermName, onChange, id, guide }: TermPickerProps) {
   const terms = useSchoolTerms();
   const list = terms.data ?? [];
-  const current = currentTermId ?? list.find((t) => t.isActive)?._id;
+  const current = currentTermId ?? list.find((t) => t.isCurrent ?? t.isActive)?._id;
   const selected = value ?? current ?? "";
   const hasSelected = list.some((t) => t._id === selected);
 

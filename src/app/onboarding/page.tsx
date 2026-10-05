@@ -13,16 +13,24 @@ import { uploadProfileAvatar } from "../lib/avatarUpload";
 import { getErrorMessage } from "@/lib/apiError";
 import { useTeacherOnboarding } from "@/app/context/OnboardingContext";
 
+/** The signed-in teacher's own name and contact fields, when a record carries them populated. */
+interface TeacherUserFields {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phoneNumber?: string;
+  userAvatar?: string;
+}
+
 /**
- * The parts of the teacher record the onboarding summary reads. Hand-written
- * because it disagrees with the contract: it reads `userId` as a populated
- * user, but `GET /teachers/:userId` answers the id string
- * (`TeacherProfileResponseDto.userId`), so the name and phone fall back to
- * "Not set". Kept as it was by the type sync (no behaviour change); fixing
- * the page means reading those fields from the signed-in user instead.
+ * The parts of the teacher record the onboarding summary reads.
+ * `GET /teachers/:userId` answers `userId` as the id string
+ * (`TeacherProfileResponseDto.userId`); older API versions populated it. The
+ * page therefore takes name and contact from a populated `userId` when there
+ * is one, and from the signed-in user otherwise (see {@link populatedUser}).
  */
 interface TeacherRecord {
-  userId?: { firstName?: string; lastName?: string; email?: string; phoneNumber?: string; userAvatar?: string };
+  userId?: string | TeacherUserFields;
   employmentRole?: string;
   employmentType?: string;
   highestAcademicQualification?: string;
@@ -33,6 +41,17 @@ interface TeacherRecord {
   assignedClasses?: Array<{ _id?: string; name?: string }>;
   assignedCourses?: Array<{ _id?: string; title?: string; courseCode?: string }>;
   classTeacherCourses?: Array<{ _id?: string; title?: string; courseCode?: string }>;
+}
+
+/**
+ * The teacher's own user fields when the record carries `userId` populated.
+ *
+ * @param record - The teacher record, if loaded.
+ * @returns The populated user, or null when `userId` is an id string or missing.
+ */
+function populatedUser(record: TeacherRecord | null | undefined): TeacherUserFields | null {
+  const ref = record?.userId;
+  return ref && typeof ref === "object" ? ref : null;
 }
 
 /**
@@ -81,7 +100,7 @@ export default function TeacherOnboardingPhase1() {
         const data = (await fetchTeacherDetails(userId, token)) as unknown as TeacherRecord;
         if (cancelled) return;
         setTeacher(data);
-        setAvatarPreview(userAvatar || data?.userId?.userAvatar || null);
+        setAvatarPreview(userAvatar || populatedUser(data)?.userAvatar || null);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -94,7 +113,7 @@ export default function TeacherOnboardingPhase1() {
   }, [userId, userAvatar]);
 
   const teacherInfo = useMemo(() => {
-    const teacherUser = teacher?.userId || user || {};
+    const teacherUser = populatedUser(teacher) || user || {};
     return {
       name:
         [teacherUser.firstName, teacherUser.lastName].filter(Boolean).join(" ") ||

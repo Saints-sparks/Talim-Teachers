@@ -30,18 +30,21 @@ import type {
 export type IdRef = string | { _id?: string; id?: string } | null | undefined;
 
 /**
- * A term of the school's academic year. Hand-written, and out of step with
- * the contract: `GET /academic-year-term/term/school` answers
- * `SchoolTermDto`, which names the year `session` and the current term
- * `isCurrent`; `academicYearName` and `isActive` are never sent, so the term
- * picker shows no year and finds no current term on its own. Left as it was
- * by the type sync (no behaviour change); fixing it means reading the
- * generated names.
+ * A term of the school's academic year, as `GET /academic-year-term/term/school`
+ * answers it (`SchoolTermDto`): the year is `session` and the current term is
+ * flagged `isCurrent`. `academicYearName` and `isActive` are the names older
+ * API versions used; they are read only as a fallback.
  */
 export interface Term {
   _id: string;
   name: string;
+  /** The academic year, e.g. "2026/2027". */
+  session?: string;
+  /** True for the school's current term. */
+  isCurrent?: boolean;
+  /** @deprecated Older API name for `isCurrent`. */
   isActive?: boolean;
+  /** @deprecated Older API name for `session`. */
   academicYearName?: string;
   startDate?: string;
   endDate?: string;
