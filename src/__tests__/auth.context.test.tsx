@@ -2,12 +2,15 @@
  * @jest-environment jsdom
  */
 import React from "react";
-import { render, screen, waitFor, act } from "@testing-library/react";
+import { render, screen, waitFor, act, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { AuthProvider, useAuth } from "@/app/context/AuthContext";
+import { AuthProvider, useAuth, type AuthContextType } from "@/app/context/AuthContext";
+import { toast } from "@/components/CustomToast";
+import { classifyLoginError } from "@/hooks/auth/signIn.logic";
 import { useSchoolId } from "@/hooks/useSchoolId";
 import { sessionStore } from "@/lib/session";
 import { apiClient } from "@/lib/apiClient";
+import { TALIM_APP_HEADER } from "@/lib/talimApp";
 
 const replace = jest.fn();
 const push = jest.fn();
@@ -203,5 +206,82 @@ describe("AuthContext", () => {
 
     await waitFor(() => expect(sessionStore.getToken()).toBeNull());
     expect(localStorage.getItem("accessToken")).toBeNull();
+  });
+});
+
+describe("a sign-in refused for the role", () => {
+  /** The wording of both gates: the API's (403 with `X-Talim-App`) and this portal's after introspect. */
+  const GATE =
+    'Access denied. This portal is for teachers only. Your account is registered as "school admin". ' +
+    "Please use the correct Talim app for your role.";
+
+  /**
+   * Renders the provider, waits for the restore attempt to find no session,
+   * signs in and returns what `login` threw.
+   *
+   * @returns The error `login` rejected with.
+   */
+  async function signInAndCatch(): Promise<unknown> {
+    let auth: AuthContextType | null = null;
+    /**
+     * Hands the context to the test.
+     *
+     * @returns Nothing visible.
+     */
+    function Capture() {
+      auth = useAuth();
+      return null;
+    }
+    render(
+      <AuthProvider>
+        <Capture />
+        <SessionProbe />
+      </AuthProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId("state")).toHaveTextContent("signed-out"));
+    let thrown: unknown = null;
+    await act(async () => {
+      thrown = await auth!
+        .login({ email: "admin@talim.test", password: "pw", deviceToken: "web-token", platform: "web" })
+        .then(() => null, (error: unknown) => error);
+    });
+    return thrown;
+  }
+
+  it("by the API (403 FORBIDDEN) ends exactly like the portal's own access-denied gate", async () => {
+    (toast.error as jest.Mock).mockClear();
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(401, { error: { code: "UNAUTHENTICATED" } }))
+      .mockResolvedValueOnce(jsonResponse(403, { success: false, error: { code: "FORBIDDEN", message: GATE } }));
+    const fromApi = await signInAndCatch();
+    const loginCall = fetchMock.mock.calls[1] as [string, RequestInit];
+    expect(loginCall[0]).toBe("http://api.test/auth/login");
+    expect((loginCall[1].headers as Record<string, string>)[TALIM_APP_HEADER]).toBe("teachers");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(classifyLoginError(fromApi)).toEqual({ kind: "access_denied", message: GATE });
+    expect(toast.error).toHaveBeenLastCalledWith(GATE);
+    expect(sessionStore.getToken()).toBeNull();
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it("classifies the API's refusal and the client-side gate the same way", async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(401, { error: { code: "UNAUTHENTICATED" } }))
+      .mockResolvedValueOnce(jsonResponse(403, { success: false, error: { code: "FORBIDDEN", message: GATE } }));
+    const fromApi = await signInAndCatch();
+    cleanup();
+
+    fetchMock.mockReset();
+    sessionStore._resetForTests();
+    apiClient.setAccessToken(null);
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(401, { error: { code: "UNAUTHENTICATED" } }))
+      .mockResolvedValueOnce(jsonResponse(200, { access_token: "token-1" }))
+      .mockResolvedValueOnce(jsonResponse(200, { active: true, user: { ...teacher, role: "school_admin" } }));
+    const fromIntrospect = await signInAndCatch();
+
+    expect(classifyLoginError(fromIntrospect)).toEqual(classifyLoginError(fromApi));
+    expect((fromIntrospect as Error).message).toBe((fromApi as Error).message);
+    expect(sessionStore.getToken()).toBeNull();
   });
 });
