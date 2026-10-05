@@ -20,7 +20,13 @@
 import type { NotificationCategory, TeacherNotification } from "@/app/lib/notifications/inbox";
 import { extractRecords, extractTotal, type NotificationListBody } from "@/app/services/notifications.service";
 import { attentionHref } from "@/hooks/today/today.routes";
-import type { AttachmentFileKind, NotificationCountsBody, NotificationTarget, NotificationTargetPage } from "@/types/inboxSettings";
+import type {
+  AttachmentFileKind,
+  CountCategory,
+  NotificationCountsBody,
+  NotificationTarget,
+  NotificationTargetPage,
+} from "@/types/inboxSettings";
 
 // ─── Tabs ───────────────────────────────────────────────────────────────────
 
@@ -203,7 +209,7 @@ export function countsAfterUnread(counts: NotificationCountsBody, category: Noti
 export function countsAfterReadAll(counts: NotificationCountsBody): NotificationCountsBody {
   const byCategory: NotificationCountsBody["byCategory"] = {};
   for (const [category, entry] of Object.entries(counts.byCategory)) {
-    if (entry) byCategory[category] = { ...entry, unread: 0 };
+    if (entry) byCategory[category as CountCategory] = { ...entry, unread: 0 };
   }
   return { ...counts, unread: 0, byCategory };
 }
@@ -299,7 +305,10 @@ export interface NotificationAction {
   label: string;
 }
 
-const DEFAULT_ACTION_LABELS: Record<NotificationTargetPage, string> = {
+/** The target pages other portals route (a parent's `results` and `children`, `payments`): none here. */
+type UnroutedTargetPage = Extract<NotificationTargetPage, "payments" | "results" | "children">;
+
+const DEFAULT_ACTION_LABELS: Record<Exclude<NotificationTargetPage, UnroutedTargetPage>, string> = {
   attendance: "Take register",
   grading: "Open grading",
   messages: "Open message",
@@ -321,7 +330,7 @@ const ROUTED_PAGES: ReadonlySet<string> = new Set(Object.keys(DEFAULT_ACTION_LAB
  * @returns e.g. "Take register", "Open grading".
  */
 export function defaultActionLabel(page: NotificationTargetPage | string): string {
-  return DEFAULT_ACTION_LABELS[page as NotificationTargetPage] ?? "Open";
+  return DEFAULT_ACTION_LABELS[page as Exclude<NotificationTargetPage, UnroutedTargetPage>] ?? "Open";
 }
 
 /**

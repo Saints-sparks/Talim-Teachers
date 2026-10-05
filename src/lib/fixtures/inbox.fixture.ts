@@ -22,6 +22,7 @@ import { FIXTURE_SCHOOL, FIXTURE_STUDENTS } from "@/lib/fixtures/classroom.fixtu
 import type { NotificationRecord } from "@/app/services/notifications.service";
 import type {
   ChatContact,
+  CountCategory,
   NotificationCountsBody,
   OfficeRoom,
   RoomCategory,
@@ -444,7 +445,7 @@ function categoryOf(record: NotificationRecord, feed: "notification" | "announce
 export function makeNotificationCountsFixture(): NotificationCountsBody {
   const body: NotificationCountsBody = { all: 0, unread: 0, byCategory: {} };
   const add = (record: NotificationRecord, feed: "notification" | "announcement") => {
-    const category = categoryOf(record, feed);
+    const category = categoryOf(record, feed) as CountCategory;
     const entry = body.byCategory[category] ?? { all: 0, unread: 0 };
     entry.all += 1;
     body.all += 1;

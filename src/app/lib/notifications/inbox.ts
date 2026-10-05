@@ -18,28 +18,22 @@ import type {
   NotificationRecord,
   PersonRef,
 } from "@/app/services/notifications.service";
+import type { components } from "@/types/api";
 import type { AttachmentFile, AttachmentFileKind } from "@/types/inboxSettings";
 
+/** One item of `GET /notifications` as the generated contract types it. */
+type NotificationItem = components["schemas"]["NotificationItemDto"];
+
 /** Where a notification came from. */
-export type NotificationSource = "school" | "talim" | "system";
+export type NotificationSource = NotificationItem["source"];
 
 /**
- * The categories the inbox groups by; mirrors the backend `NotificationCategory`
- * enum. `payments` and `leave` arrived with the portals backend (B11); older
- * rows keep their old categories (leave under `attendance`, payments under
- * `account`).
+ * The categories the inbox groups by: the backend `NotificationCategory`
+ * enum, from the generated contract. `payments` and `leave` arrived with the
+ * portals backend (B11); older rows keep their old categories (leave under
+ * `attendance`, payments under `account`).
  */
-export type NotificationCategory =
-  | "announcement"
-  | "attendance"
-  | "academics"
-  | "grading"
-  | "resources"
-  | "messages"
-  | "account"
-  | "payments"
-  | "leave"
-  | "other";
+export type NotificationCategory = NotificationItem["category"];
 
 /** One inbox item, normalised from either server list. */
 export interface TeacherNotification {

@@ -9,11 +9,12 @@
  * query, invalidated explicitly by the mutations below.
  *
  * Round 4 (§31, §32 of `talimBE-V2/docs/redesign-teachers-round4-inbox-settings.md`):
- * - `messages` is exactly `{ showOnlineStatus, readReceipts, soundEnabled }`.
+ * - `messages` is shown as `{ showOnlineStatus, readReceipts, soundEnabled }`
+ *   (the DTO also has `groupNotifications`, `unreadBadge` and
+ *   `defaultFilter`, which this portal neither shows nor sends).
  * - The old `notifications` section is gone from the DTOs (alert switches
  *   live in `/notifications/preferences`); it is neither read nor sent.
- * The generated contract does not have that shape yet, so the payload type is
- * hand-written here from `MessagePreferences` until `npm run types:api` does.
+ * The PATCH body is the generated `UpdateTeacherPreferencesDto`.
  *
  * Whenever the settings load, and whenever the teaching section is saved,
  * the landing page is cached on this device (`cacheLandingPage`) so sign-in
@@ -52,13 +53,8 @@ export interface TeacherPreferences {
   theme: TeacherThemePref;
 }
 
-/**
- * The body of `PATCH /teacher/settings/preferences` in Round 4: the generated
- * DTO without `notifications`, and with the new `messages` section.
- */
-export type TeacherPreferencesBody = Omit<TeacherPreferencesPayload, "notifications" | "messages"> & {
-  messages?: TeacherMessagePrefs;
-};
+/** The body of `PATCH /teacher/settings/preferences`: the generated `UpdateTeacherPreferencesDto`. */
+export type TeacherPreferencesBody = TeacherPreferencesPayload;
 
 /** The profile block of `GET /teacher/settings`. */
 export interface TeacherSettingsProfile {

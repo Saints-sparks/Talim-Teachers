@@ -7,15 +7,15 @@
  * `useTeacherSettings`: they are the server-side switches the notification
  * service itself reads before sending anything, shared with the mobile app.
  * Round 4 (§31) adds `gradingEnabled`, `registerReminderEnabled` and
- * `resourceOpenedEnabled`; the generated DTO lacks them, so they are typed
- * from the hand-written `AlertPreferenceAdditions` until it catches up.
+ * `resourceOpenedEnabled`, picked from the generated DTO like the rest.
+ * `GET /notifications/preferences` is still untyped in the contract
+ * (`NotificationPreference`), so the PATCH body's fields type what it returns.
  */
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
 import { api } from "@/lib/apiClient";
 import { queryKeys, staleTimes } from "@/lib/queryKeys";
 import { useAuth } from "@/app/context/AuthContext";
 import type { NotificationPreferencesPayload } from "@/types/apiPayloads";
-import type { AlertPreferenceAdditions } from "@/types/inboxSettings";
 
 /**
  * The switches this portal exposes. `UpdateNotificationPreferenceDto` declares
@@ -35,12 +35,14 @@ export type NotificationPreferences = Required<
     | "quietHoursEnabled"
     | "quietHoursStart"
     | "quietHoursEnd"
+    | "gradingEnabled"
+    | "registerReminderEnabled"
+    | "resourceOpenedEnabled"
   >
-> &
-  AlertPreferenceAdditions;
+>;
 
-/** The PATCH body: the generated DTO plus the Round 4 switches. */
-export type NotificationPreferencesBody = NotificationPreferencesPayload & Partial<AlertPreferenceAdditions>;
+/** The PATCH body: the generated DTO, Round 4 switches included. */
+export type NotificationPreferencesBody = NotificationPreferencesPayload;
 
 /** What a teacher sees switched on before the server has answered. */
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
