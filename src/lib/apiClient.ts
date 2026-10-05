@@ -1,6 +1,7 @@
 import { API_BASE_URL } from "@/app/lib/api/config";
 import { ApiError, ApiErrorBody } from "./apiError";
 import { sessionStore } from "./session";
+import { TALIM_APP, TALIM_APP_HEADER } from "./talimApp";
 
 /** Request options accepted by the client (a superset of `fetch`'s). */
 export interface RequestConfig extends RequestInit {
@@ -71,6 +72,10 @@ export function unwrapEnvelope<T>(body: unknown): T {
  *
  * - Prefixes relative paths with `API_BASE_URL` and attaches the bearer token
  *   held by `sessionStore` — the one place the session lives.
+ * - Names this portal on every request (`X-Talim-App: teachers`, see
+ *   `./talimApp.ts`), so the API keeps this portal's session in its own
+ *   refresh cookie and another portal's sign-in in the same browser can't
+ *   replace it.
  * - Refreshes the token once on 401 (queueing concurrent requests), then
  *   signs the teacher out if that fails.
  * - Detects offline / unreachable / timed-out requests and reports them as
@@ -202,19 +207,26 @@ class ApiClient {
   }
 
   /**
-   * Adds the bearer token and the refresh cookie to a request.
+   * Adds the refresh cookie, the `X-Talim-App` header and the bearer token to
+   * a request. The app header goes on every request, `skipAuth` ones included:
+   * it is what makes the API read and set this portal's own refresh cookie
+   * (`refreshToken_teachers`) on sign-in, refresh, logout, change-password and
+   * the sessions routes. Headers the caller passes win over both.
    *
    * @param config - The request config.
-   * @returns The same config, with credentials and auth applied.
+   * @returns The same config, with credentials, the app header and auth applied.
    */
   private withAuth(config: RequestConfig): RequestConfig {
     config.credentials = "include";
-    if (config.skipAuth) return config;
-    const token = this.getAccessToken();
-    if (token) {
-      if (!this.accessToken) this.accessToken = token;
-      config.headers = { Authorization: `Bearer ${token}`, ...(config.headers as Record<string, string>) };
+    const headers: Record<string, string> = { [TALIM_APP_HEADER]: TALIM_APP };
+    if (!config.skipAuth) {
+      const token = this.getAccessToken();
+      if (token) {
+        if (!this.accessToken) this.accessToken = token;
+        headers.Authorization = `Bearer ${token}`;
+      }
     }
+    config.headers = { ...headers, ...(config.headers as Record<string, string>) };
     return config;
   }
 
@@ -341,7 +353,8 @@ class ApiClient {
   /**
    * Uploads a `FormData` body and reports progress. `fetch` cannot report
    * upload progress, so this one method uses `XMLHttpRequest` — with the same
-   * base URL, bearer token and `ApiError` handling as every other request.
+   * base URL, `X-Talim-App` header, bearer token and `ApiError` handling as
+   * every other request.
    *
    * @typeParam T - Shape of the successful body.
    * @param url - Path or absolute URL.
@@ -357,6 +370,7 @@ class ApiClient {
       const request = new XMLHttpRequest();
       request.open("POST", fullUrl, true);
       request.withCredentials = true;
+      request.setRequestHeader(TALIM_APP_HEADER, TALIM_APP);
       if (token) request.setRequestHeader("Authorization", `Bearer ${token}`);
 
       if (onProgress) {

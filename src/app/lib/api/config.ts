@@ -8,12 +8,10 @@ if (!configuredApiBaseUrl) {
   );
 }
 
+/**
+ * The API origin, without a trailing slash (the realtime socket connects to
+ * it too). HTTP requests go through the client in `src/lib/apiClient.ts`,
+ * which adds the `X-Talim-App` header the auth routes need, so there are
+ * deliberately no ready-made endpoint URLs here for a raw `fetch` to use.
+ */
 export const API_BASE_URL = configuredApiBaseUrl.replace(/\/+$/, "");
-
-export const API_ENDPOINTS = {
-  LOGIN: `${API_BASE_URL}/auth/login`,
-  FORGOT_PASSWORD: `${API_BASE_URL}/auth/forgot-password`,
-  RESET_PASSWORD: `${API_BASE_URL}/auth/reset-password`,
-  REFRESH: `${API_BASE_URL}/auth/refresh`,
-  // Add other endpoints as needed
-} as const;
