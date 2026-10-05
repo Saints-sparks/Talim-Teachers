@@ -21,9 +21,10 @@ import type { CreateResourceBody, MarkAttendancePayload, UpdateResourceBody } fr
 
 /**
  * The response shape of an endpoint whose consumers have not been typed yet.
- * Left only on the resource, course and timetable reads: those routes still
- * declare no response schema (or an empty `Timetable`) in the contract, so
- * there is nothing generated to alias. Each becomes a real type once they do.
+ * Left only where the contract has nothing precise to alias: the resource
+ * and course routes declare no response schema, the teacher timetable answers
+ * an empty `Timetable` schema, and the active-assessments list is typed only
+ * from examples (every field optional). Each becomes a real type once they do.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Untyped = any;

@@ -2,8 +2,8 @@
  * Dev and test fixtures for the Attendance and Students screens
  * (`GET /teachers/me/classes`, `GET|PUT /registers/:classId`,
  * `GET /teachers/me/classes/:classId/students`,
- * `GET /teachers/me/students/:studentId`), in the hand-written contract shape
- * of `src/types/classroom.ts`.
+ * `GET /teachers/me/students/:studentId`), in the contract shape of
+ * `src/types/classroom.ts` (aliases of the generated contract).
  *
  * Mirrors the seed of `TALIM Redesign/Talim Teacher Portal.dc.html`: Seyi
  * Tinubu is class teacher of JSS1 A (12 students; Zainab Yusuf on approved

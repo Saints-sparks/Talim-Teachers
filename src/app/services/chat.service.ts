@@ -13,6 +13,7 @@
  * `src/lib/fixtures/inbox.fixture.ts`.
  */
 import { ChatRoom } from "@/types/chat";
+import type { components } from "@/types/api";
 import { api, apiClient } from "@/lib/apiClient";
 import type { AddChatParticipantsBody, CreateChatRoomBody, CreateGroupChatBody, UpdateChatRoomBody } from "@/types/apiPayloads";
 import { fixturesEnabled } from "@/lib/fixtures/flag";
@@ -28,12 +29,14 @@ export type CreateGroupChatPayload = Omit<CreateGroupChatBody, "type" | "partici
   participants: string[];
 };
 
-/** A chat room as `POST /chat/groups` returns it. */
-export type CreatedChatRoom = ChatRoom & {
-  /** The server reuses an existing class or course group and says so here. */
-  reused?: boolean;
-  roomId?: string;
-};
+/**
+ * A chat room as `POST /chat/groups` returns it (`ChatRoomResponseDto`). The
+ * server reuses an existing class or course group and says so in `reused`.
+ */
+export type CreatedChatRoom = components["schemas"]["ChatRoomResponseDto"];
+
+/** `POST /chat/rooms`: the room in the viewer's room-view shape, with `reused` when it already existed. */
+export type CreatedDirectRoom = components["schemas"]["ChatRoomCreatedDto"];
 
 /** What {@link createGroupChat} resolves with. */
 export interface CreateGroupChatResponse {
@@ -175,7 +178,7 @@ export const deleteChatMessage = async (messageId: string): Promise<void> => {
 export const startDirectChat = async (otherUserId: string, myUserId: string): Promise<string> => {
   if (fixturesEnabled()) return `dm-${otherUserId}`;
   const body: CreateChatRoomBody = { type: "one_to_one", participants: [myUserId, otherUserId] };
-  const room = await api.post<CreatedChatRoom>("/chat/rooms", body);
+  const room = await api.post<CreatedDirectRoom>("/chat/rooms", body);
   const id = room?._id || room?.roomId;
   if (!id) throw new Error("The conversation could not be opened.");
   return String(id);
