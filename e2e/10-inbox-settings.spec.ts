@@ -8,6 +8,7 @@ import { apiCall, apiLogin, unwrap } from "./support/api";
 import { MAIL_DIR, seed } from "./support/backend";
 import { signInThroughUi } from "./support/auth";
 import { dismissGuide } from "./support/ui";
+import { TALIM_APP, TALIM_APP_HEADER } from "../src/lib/talimApp";
 
 /**
  * Round 4 (Messages, Notifications, Settings) and Round 5 (sign-in pages,
@@ -560,7 +561,12 @@ test("Security: this device is marked, and Sign out of other devices ends the ot
     await expect(panel.getByText("This device", { exact: true })).toHaveCount(1);
 
     // The other browser: its next refresh is refused, and once its access token is gone it is back at sign-in.
-    const status = await b.page.evaluate(async (api) => (await fetch(`${api}/auth/refresh`, { method: "POST", credentials: "include" })).status, API_URL);
+    // The probe names the portal like the app does, so it reads this portal's own cookie (`refreshToken_teachers`).
+    const status = await b.page.evaluate(
+      async ({ api, header, app }) =>
+        (await fetch(`${api}/auth/refresh`, { method: "POST", credentials: "include", headers: { [header]: app } })).status,
+      { api: API_URL, header: TALIM_APP_HEADER, app: TALIM_APP },
+    );
     expect(status).toBe(401);
     await b.page.evaluate(() => localStorage.removeItem("accessToken"));
     await b.page.goto("/dashboard");
