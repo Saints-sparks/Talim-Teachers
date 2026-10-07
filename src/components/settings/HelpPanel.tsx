@@ -1,33 +1,54 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { TOUR_STEPS, useTour } from "@/components/tour/TourProvider";
+import { SupportTickets } from "@/components/support/SupportTickets";
 import { useAuth } from "@/app/context/AuthContext";
 import { usePreferenceSaver } from "@/hooks/settings/usePreferenceSaver";
 import { gettingStartedDescription } from "@/hooks/settings/settings.logic";
+import { supportHref } from "@/hooks/support/tickets.logic";
 import { ContactOfficeSheet } from "./ContactOfficeSheet";
-import { ReportProblemSheet } from "./ReportProblemSheet";
 import { LinkRow, SettingsGroup, ToggleRow } from "./SettingsRows";
+
+/** Props for {@link HelpPanel}. */
+export interface HelpPanelProps {
+  /** A ticket to open on arrival (`/settings?tab=help&ticket=<id>`, a support notification's link). */
+  ticketId?: string | null;
+}
 
 /**
  * Settings → Help: the portal tour, the page guides switch, the school
- * office's contact sheet and the problem report for Talim support.
+ * office's contact sheet, and My tickets for the Talim support team (v1.5
+ * tickets, which replaced "Report a problem"). The open ticket follows
+ * `?ticket=`, so a support notification opens its thread and closing the
+ * thread drops the parameter.
  *
+ * @param props - See {@link HelpPanelProps}.
+ * @param props.ticketId - The ticket to open on arrival.
  * @returns The panel content.
  */
-export function HelpPanel() {
+export function HelpPanel({ ticketId = null }: HelpPanelProps) {
   const tour = useTour();
+  const router = useRouter();
   const { user } = useAuth();
   const { preferences, save, savingKey } = usePreferenceSaver();
-  const [sheet, setSheet] = useState<"contact" | "report" | null>(null);
+  const [contactOpen, setContactOpen] = useState(false);
+  const [openTicket, setOpenTicket] = useState<string | null>(ticketId);
+
+  // Follow the URL (a notification clicked while Help is open, back and forward).
+  useEffect(() => setOpenTicket(ticketId), [ticketId]);
 
   /**
-   * Opens or closes one of the sheets.
+   * Opens or closes a ticket's thread and records it in the URL.
    *
-   * @param which - The sheet.
-   * @returns The `onOpenChange` handler for it.
+   * @param id - The ticket, or null to close the thread.
    */
-  const toggleSheet = (which: "contact" | "report") => (open: boolean) => setSheet(open ? which : null);
+  const showTicket = (id: string | null) => {
+    setOpenTicket(id);
+    const target = supportHref(id);
+    if (`${window.location.pathname}${window.location.search}` !== target) router.replace(target, { scroll: false });
+  };
 
   return (
     <>
@@ -40,11 +61,10 @@ export function HelpPanel() {
           disabled={savingKey === "guides.showAppTips"}
           onChange={(value) => save("guides.showAppTips", { guides: { ...preferences.guides, showAppTips: value } })}
         />
-        <LinkRow label="Contact the school office" description="Call, email or visit" onClick={() => setSheet("contact")} />
-        <LinkRow label="Report a problem" description="Goes straight to the Talim support team" onClick={() => setSheet("report")} />
+        <LinkRow label="Contact the school office" description="Call, email or visit" onClick={() => setContactOpen(true)} />
       </SettingsGroup>
-      <ContactOfficeSheet open={sheet === "contact"} onOpenChange={toggleSheet("contact")} fallbackSchoolName={user?.schoolName} />
-      <ReportProblemSheet open={sheet === "report"} onOpenChange={toggleSheet("report")} email={user?.email} />
+      <SupportTickets openTicketId={openTicket} onOpenTicket={showTicket} />
+      <ContactOfficeSheet open={contactOpen} onOpenChange={setContactOpen} fallbackSchoolName={user?.schoolName} />
     </>
   );
 }

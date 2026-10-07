@@ -5,7 +5,6 @@
  * - `PATCH /teacher/settings/profile` (name and phone; email is read-only)
  * - `GET /auth/sessions`, `DELETE /auth/sessions/:id`, `POST /auth/sessions/revoke-others`
  * - `GET /auth/password-policy` (public)
- * - `POST /support/tickets`
  * - `GET /teachers/me/school`
  *
  * Every call goes through the typed client, which unwraps the success
@@ -20,8 +19,6 @@ import type {
   PasswordPolicy,
   RevokeOthersResult,
   SchoolContact,
-  SupportTicketBody,
-  SupportTicketResult,
   UpdateProfileBody,
 } from "@/types/inboxSettings";
 
@@ -96,22 +93,6 @@ export const accountService = {
       return makePasswordPolicyFixture();
     }
     return api.get<PasswordPolicy>("/auth/password-policy", { skipAuth: true });
-  },
-
-  /**
-   * `POST /support/tickets`: a problem report for the Talim support team (the
-   * school never sees it).
-   *
-   * @param body - Area, description (10–2000 characters) and context.
-   * @returns The reference to quote, e.g. `TS-51234`.
-   * @throws ApiError: 400 for a description outside the limits.
-   */
-  createSupportTicket: async (body: SupportTicketBody): Promise<SupportTicketResult> => {
-    if (fixturesEnabled()) {
-      const { createSupportTicketFixture } = await import("@/lib/fixtures/settings.fixture");
-      return createSupportTicketFixture(body);
-    }
-    return api.post<SupportTicketResult>("/support/tickets", body);
   },
 
   /**

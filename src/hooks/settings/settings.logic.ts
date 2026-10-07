@@ -5,8 +5,8 @@
  * Nothing here touches React or the network, so all of it is unit-tested in
  * `src/__tests__/settings.logic.test.ts`.
  */
-import { PROFILE_NAME_MAX, PROFILE_PHONE_PATTERN, SUPPORT_DESCRIPTION_MAX, SUPPORT_DESCRIPTION_MIN } from "@/types/inboxSettings";
-import type { AuthSession, SchoolContact, SupportArea } from "@/types/inboxSettings";
+import { PROFILE_NAME_MAX, PROFILE_PHONE_PATTERN } from "@/types/inboxSettings";
+import type { AuthSession, SchoolContact } from "@/types/inboxSettings";
 
 // ─── Tabs ───────────────────────────────────────────────────────────────────
 
@@ -303,41 +303,6 @@ export function telHref(phone: string): string {
  */
 export function mapsHref(address: string): string {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
-}
-
-/** The report sheet's area chips (the design's order and labels). */
-export const SUPPORT_AREAS: ReadonlyArray<{ id: SupportArea; label: string }> = [
-  { id: "grading", label: "Grading" },
-  { id: "attendance", label: "Attendance" },
-  { id: "timetable", label: "Timetable" },
-  { id: "messages", label: "Messages" },
-  { id: "signing_in", label: "Signing in" },
-  { id: "other", label: "Something else" },
-];
-
-/**
- * Whether a problem description can be sent.
- *
- * @param text - What the teacher typed.
- * @returns True for 10–2000 characters after trimming.
- */
-export function isSupportDescriptionValid(text: string): boolean {
-  const length = text.trim().length;
-  return length >= SUPPORT_DESCRIPTION_MIN && length <= SUPPORT_DESCRIPTION_MAX;
-}
-
-/**
- * The line under the description box.
- *
- * @param text - What the teacher typed.
- * @returns e.g. "4 / 2000 · at least 10 characters", or "120 / 2000".
- */
-export function supportCountLabel(text: string): string {
-  const length = text.trim().length;
-  const count = `${length} / ${SUPPORT_DESCRIPTION_MAX}`;
-  if (length < SUPPORT_DESCRIPTION_MIN) return `${count} · at least ${SUPPORT_DESCRIPTION_MIN} characters`;
-  if (length > SUPPORT_DESCRIPTION_MAX) return `${count} · too long`;
-  return count;
 }
 
 // ─── Profile ────────────────────────────────────────────────────────────────

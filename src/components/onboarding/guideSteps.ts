@@ -10,6 +10,7 @@ import {
   Download,
   FileUp,
   LayoutGrid,
+  LifeBuoy,
   Lightbulb,
   ListChecks,
   MessageSquareText,
@@ -37,6 +38,8 @@ export type GuideConfig = {
   exactOnly?: boolean;
   /** Only for this `?mode=` of the page (the Grading class report); such a guide is found by {@link guideConfigFor}. */
   mode?: string;
+  /** Only for this `?tab=` of the page (Settings → Help, where My tickets lives); found by {@link guideConfigFor}. */
+  tab?: string;
   steps: GuideStep[];
 };
 
@@ -581,8 +584,30 @@ export const guideConfigs: GuideConfig[] = [
       {
         target: "settings-tab-help",
         title: "Help when you need it",
-        description: "Replay the tour, call, email or message the school office, or report a problem straight to the Talim support team.",
+        description: "Replay the tour, call, email or message the school office, or raise a ticket with the Talim support team and follow its replies.",
         icon: Lightbulb,
+      },
+    ],
+  },
+  {
+    id: "settings-help",
+    pathMatchers: ["/settings"],
+    exactOnly: true,
+    tab: "help",
+    steps: [
+      {
+        target: "settings-tab-help",
+        eyebrow: "Help",
+        title: "People to ask",
+        description: "Replay the portal tour, turn the page guides on or off, or call, email and message the school office.",
+        icon: Lightbulb,
+      },
+      {
+        target: "settings-support",
+        title: "Your support tickets",
+        description:
+          "Raise a ticket with the Talim support team and follow it here: replies, files, and its status. Reopen it within 7 days of it being resolved, or close it when you're done.",
+        icon: LifeBuoy,
       },
     ],
   },
@@ -590,7 +615,7 @@ export const guideConfigs: GuideConfig[] = [
 
 export function findGuideConfig(pathname: string) {
   return guideConfigs
-    .filter((config) => !config.mode)
+    .filter((config) => !config.mode && !config.tab)
     .filter((config) =>
       config.pathMatchers.some(
         (matcher) =>
@@ -608,7 +633,8 @@ export function findGuideConfig(pathname: string) {
 /**
  * The guide for a page and its query: the curriculum editor while
  * `/curriculum?mode=create|edit` is open, a guide declared for the page's
- * `?mode=` (Grading's class report), else the page's own guide.
+ * `?mode=` (Grading's class report) or `?tab=` (Settings → Help), else the
+ * page's own guide.
  *
  * @param pathname - The path.
  * @param params - The query string.
@@ -622,6 +648,11 @@ export function guideConfigFor(pathname: string, params: Pick<URLSearchParams, "
   if (mode) {
     const moded = guideConfigs.find((config) => config.mode === mode && config.pathMatchers.some((matcher) => pathname === matcher || (!config.exactOnly && pathname.startsWith(matcher))));
     if (moded) return moded;
+  }
+  const tab = params?.get("tab") ?? null;
+  if (tab) {
+    const tabbed = guideConfigs.find((config) => config.tab === tab && config.pathMatchers.some((matcher) => pathname === matcher || (!config.exactOnly && pathname.startsWith(matcher))));
+    if (tabbed) return tabbed;
   }
   return findGuideConfig(pathname);
 }

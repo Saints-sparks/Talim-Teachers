@@ -24,7 +24,7 @@ import { TALIM_APP, TALIM_APP_HEADER } from "../src/lib/talimApp";
  * - Notifications: the tab counts, Mark all as read, a notification's action.
  * - Settings: Account (saved on blur, email read-only), the landing page,
  *   sessions and "Sign out of other devices", the password rules from
- *   `GET /auth/password-policy`, "Report a problem".
+ *   `GET /auth/password-policy`, a new support ticket (v1.5).
  * - Forgotten password (the code read from the backend's mail sink), Attendance
  *   history, `/resources?upload=1`, Curriculum from Subjects, the 404.
  * - axe on the new screens in both themes, and screenshots
@@ -606,21 +606,24 @@ test("Security: the password rules are the ones GET /auth/password-policy answer
   await expect(sheet.getByRole("button", { name: "Update password" })).toBeDisabled();
 });
 
-test("Help: Report a problem answers with a TS- reference", async ({ page }) => {
+test("Help: a new ticket goes to the Talim desk and opens its thread", async ({ page }) => {
   await openPage(page, "/settings?tab=help", /\/teacher\/settings$/);
-  await page.locator("#settings-panel").getByRole("button", { name: "Report a problem" }).click();
-  const sheet = page.getByRole("dialog", { name: "Tell Talim what is not working" });
+  await page.locator("#settings-panel").getByRole("button", { name: "New ticket" }).click();
+  const sheet = page.getByRole("dialog", { name: "How can we help?" });
+  await expect(sheet.getByRole("group", { name: "Send to" })).toContainText("Talim support");
   await sheet.getByRole("button", { name: "Messages", exact: true }).click();
-  await sheet.getByLabel("What went wrong").fill(`E2E ${RUN}: the group picture does not change after I upload a new one.`);
-  const sent = page.waitForResponse((r) => r.url().endsWith("/support/tickets") && r.request().method() === "POST");
+  await sheet.getByLabel("Subject").fill(`E2E ${RUN}: group picture`);
+  await sheet.getByLabel("Message").fill("The group picture does not change after I upload a new one.");
+  const sent = page.waitForResponse((r) => r.url().endsWith("/tickets") && r.request().method() === "POST");
   await sheet.getByRole("button", { name: "Send to Talim support" }).click();
   const res = await sent;
   expect(res.status()).toBe(201);
-  const { reference } = unwrap<{ reference: string }>(await res.json());
-  expect(reference).toMatch(/^TS-[A-HJ-NP-Z2-9]{5}$/);
-  await expect(sheet.getByRole("status")).toHaveText("Report sent");
-  await expect(sheet.getByText(reference, { exact: true })).toBeVisible();
-  expect(res.request().postDataJSON()).toMatchObject({ area: "messages" });
+  const ticket = unwrap<{ id: string; reference: string }>(await res.json());
+  expect(ticket.reference).toMatch(/^TS-[A-HJ-NP-Z2-9]{5}$/);
+  expect(res.request().postDataJSON()).toMatchObject({ desk: "talim", area: "messages" });
+  const thread = page.getByRole("dialog", { name: `E2E ${RUN}: group picture` });
+  await expect(thread.getByText(ticket.reference, { exact: true })).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`ticket=${ticket.id}`));
 });
 
 // ─── Signed-out pages and the rest of Round 5 ───────────────────────────────

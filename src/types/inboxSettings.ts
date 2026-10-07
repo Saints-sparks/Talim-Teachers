@@ -177,20 +177,9 @@ export type PasswordPolicy = Pick<
   "minLength" | "requireUppercase" | "requireLowercase" | "requireNumber" | "requireSymbol" | "historyCount"
 >;
 
-// ─── §35 Support tickets: POST /support/tickets ────────────────────────────
-
-/** The body. `description` is 10–2000 characters. */
-export type SupportTicketBody = S["CreateSupportTicketDto"];
-
-/** Where the problem happened (the design's area chips). */
-export type SupportArea = SupportTicketBody["area"];
-
-/** The description's length limits. */
-export const SUPPORT_DESCRIPTION_MIN = 10;
-export const SUPPORT_DESCRIPTION_MAX = 2000;
-
-/** The answer: the reference to quote, e.g. `TS-51234`. */
-export type SupportTicketResult = S["SupportTicketCreatedDto"];
+// ─── §35 Support tickets ───────────────────────────────────────────────────
+// Replaced in v1.5 by the unified tickets (`./v15.ts`: `GET /tickets/mine`,
+// `POST /tickets` and the rest), in `src/app/services/support/tickets.service.ts`.
 
 // ─── §36 School contact: GET /teachers/me/school ───────────────────────────
 

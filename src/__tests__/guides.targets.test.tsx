@@ -332,6 +332,17 @@ const PAGES: { path: string; query?: string; guide: string; mount: () => Promise
       await screen.findByRole("navigation", { name: "Settings sections" });
     },
   },
+  {
+    path: "/settings",
+    query: "tab=help",
+    guide: "settings-help",
+    mount: async () => {
+      // Help reads the preferences, the school contact and GET /tickets/mine (an empty page here).
+      jest.spyOn(api, "get").mockResolvedValue({});
+      render(<SettingsScreen initialTab="help" />);
+      await screen.findByRole("button", { name: "New ticket" });
+    },
+  },
 ];
 
 describe.each(PAGES)("the $guide guide on $path", ({ path, query, guide, mount }) => {

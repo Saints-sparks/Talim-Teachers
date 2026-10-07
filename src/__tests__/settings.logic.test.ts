@@ -4,7 +4,6 @@ import {
   formatJoinedDate,
   gettingStartedDescription,
   humanise,
-  isSupportDescriptionValid,
   mapsHref,
   numberWord,
   officeHoursValue,
@@ -20,7 +19,6 @@ import {
   sessionLabel,
   settingsHref,
   sortSessions,
-  supportCountLabel,
   telHref,
   validateProfileField,
 } from "@/hooks/settings/settings.logic";
@@ -153,14 +151,6 @@ describe("help", () => {
     expect(mapsHref("14 Oduduwa Crescent, GRA Ikeja, Lagos")).toBe(
       "https://www.google.com/maps/search/?api=1&query=14%20Oduduwa%20Crescent%2C%20GRA%20Ikeja%2C%20Lagos",
     );
-  });
-
-  it("accepts a problem description of 10 to 2000 characters", () => {
-    expect(isSupportDescriptionValid("too short")).toBe(false);
-    expect(isSupportDescriptionValid("   Scores vanish   ")).toBe(true);
-    expect(isSupportDescriptionValid("x".repeat(2001))).toBe(false);
-    expect(supportCountLabel("abc")).toBe("3 / 2000 · at least 10 characters");
-    expect(supportCountLabel("x".repeat(12))).toBe("12 / 2000");
   });
 });
 

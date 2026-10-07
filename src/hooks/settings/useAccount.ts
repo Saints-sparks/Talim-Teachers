@@ -2,16 +2,16 @@
 
 /**
  * React Query hooks over Round 4's account endpoints (`accountService`,
- * §33–36): the profile save, signed-in sessions, the password policy, support
- * tickets and the school office's contact details. Keys come from
- * `queryKeys.settings`.
+ * §33–36): the profile save, signed-in sessions, the password policy and the
+ * school office's contact details. Keys come from `queryKeys.settings`.
+ * Support tickets moved to `src/hooks/support/useTickets.ts` (v1.5).
  */
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { useAuth } from "@/app/context/AuthContext";
 import { accountService } from "@/app/services/account/account.service";
 import { queryKeys, staleTimes } from "@/lib/queryKeys";
-import type { AuthSession, PasswordPolicy, RevokeOthersResult, SchoolContact, SupportTicketBody, SupportTicketResult } from "@/types/inboxSettings";
+import type { AuthSession, PasswordPolicy, RevokeOthersResult, SchoolContact } from "@/types/inboxSettings";
 import type { ProfileField } from "./settings.logic";
 
 /** The password policy changes with a deploy at most: keep it for the session. */
@@ -125,17 +125,6 @@ export function useSchoolContact(enabled = true): UseQueryResult<SchoolContact, 
     queryFn: () => accountService.getSchoolContact(),
     enabled: Boolean(userId) && enabled,
     staleTime: staleTimes.reference,
-  });
-}
-
-/**
- * Sends a problem report to the Talim support team (`POST /support/tickets`).
- *
- * @returns The mutation; it resolves with the ticket's reference.
- */
-export function useCreateSupportTicket() {
-  return useMutation<SupportTicketResult, unknown, SupportTicketBody>({
-    mutationFn: (body) => accountService.createSupportTicket(body),
   });
 }
 

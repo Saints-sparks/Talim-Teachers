@@ -2,7 +2,7 @@
  * Dev and test fixtures for Round 4's Settings (`PATCH /teacher/settings/profile`,
  * `GET /auth/sessions`, `DELETE /auth/sessions/:id`,
  * `POST /auth/sessions/revoke-others`, `GET /auth/password-policy`,
- * `POST /support/tickets` and `GET /teachers/me/school`), in the shapes of
+ * and `GET /teachers/me/school`), in the shapes of
  * `src/types/inboxSettings.ts`.
  *
  * The school and its office are the design's (Easy Sparks Education Center,
@@ -11,7 +11,7 @@
  * statically.
  */
 import { FIXTURE_SCHOOL } from "@/lib/fixtures/classroom.fixture";
-import type { AuthSession, PasswordPolicy, RevokeOthersResult, SchoolContact, SupportTicketBody, SupportTicketResult } from "@/types/inboxSettings";
+import type { AuthSession, PasswordPolicy, RevokeOthersResult, SchoolContact } from "@/types/inboxSettings";
 
 /**
  * `GET /teachers/me/school`.
@@ -109,14 +109,3 @@ export function revokeOtherSessionsFixture(): RevokeOthersResult {
   return { revoked: before - sessions.length };
 }
 
-/**
- * `POST /support/tickets`.
- *
- * @param body - The ticket.
- * @returns A reference derived from the description, so it is stable in tests.
- */
-export function createSupportTicketFixture(body: SupportTicketBody): SupportTicketResult {
-  let hash = 0;
-  for (const ch of `${body.area}:${body.description}`) hash = (hash * 31 + ch.charCodeAt(0)) % 90_000;
-  return { reference: `TS-${String(10_000 + hash).padStart(5, "0")}`, createdAt: "2026-09-25T09:25:00.000Z" };
-}

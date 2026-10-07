@@ -11,6 +11,7 @@ import { APP_VERSION } from "@/lib/appVersion";
 import { landingCacheKey } from "@/app/lib/landing";
 import { mockTeacher } from "@/test-utils/render";
 import { resetSettingsFixtureStore } from "@/lib/fixtures/settings.fixture";
+import { listMyTicketsFixture } from "@/lib/fixtures/tickets.fixture";
 import { gettingStartedDescription, type SettingsTabId } from "@/hooks/settings/settings.logic";
 import { TOUR_STEPS } from "@/components/tour/TourProvider";
 
@@ -46,7 +47,6 @@ jest.mock("@/app/services/account/account.service", () => {
       revokeSession: jest.fn(async (id: string) => fixture.revokeSessionFixture(id)),
       revokeOtherSessions: jest.fn(async () => fixture.revokeOtherSessionsFixture()),
       getPasswordPolicy: jest.fn(async () => fixture.makePasswordPolicyFixture()),
-      createSupportTicket: jest.fn(async (body: object) => fixture.createSupportTicketFixture(body)),
       getSchoolContact: jest.fn(async () => fixture.makeSchoolContactFixture()),
     },
   };
@@ -94,6 +94,7 @@ function serve(overrides: Record<string, () => Promise<unknown>> = {}) {
     if (overrides[url]) return overrides[url]();
     if (url === "/teacher/settings") return Promise.resolve(stored);
     if (url === "/notifications/preferences") return Promise.resolve(ALERTS);
+    if (url.startsWith("/tickets/mine")) return Promise.resolve(listMyTicketsFixture());
     return Promise.reject(new Error(`unexpected GET ${url}`));
   });
 }
@@ -345,7 +346,7 @@ describe("Appearance tab", () => {
 });
 
 describe("Help tab", () => {
-  it("lists the tour, the page guides switch, the office and the problem report", async () => {
+  it("lists the tour, the page guides switch, the office and My tickets", async () => {
     renderTab("help");
 
     const tour = screen.getByRole("button", { name: "Getting started" });
@@ -357,7 +358,9 @@ describe("Help tab", () => {
     expect(guides).toHaveAttribute("aria-checked", "true");
     expect(guides).toHaveAccessibleDescription("A short guide on each page the first time you open it");
     expect(screen.getByRole("button", { name: "Contact the school office" })).toHaveAccessibleDescription("Call, email or visit");
-    expect(screen.getByRole("button", { name: "Report a problem" })).toHaveAccessibleDescription("Goes straight to the Talim support team");
+    expect(screen.queryByRole("button", { name: "Report a problem" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "New ticket" })).toBeInTheDocument();
+    expect(await screen.findByRole("list", { name: "My tickets" })).toBeInTheDocument();
 
     fireEvent.click(guides);
     await waitFor(() => expect(patch).toHaveBeenCalledWith("/teacher/settings/preferences", { guides: { showAppTips: false } }));

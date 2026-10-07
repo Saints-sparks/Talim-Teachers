@@ -14,8 +14,13 @@ import { SecurityPanel } from "./SecurityPanel";
 import { panelCard } from "./SettingsRows";
 import { TeachingPanel } from "./TeachingPanel";
 
+/** What a panel may be given: only Help uses it (the ticket to open). */
+interface SettingsPanelProps {
+  ticketId?: string | null;
+}
+
 /** The content of each tab's panel. */
-const PANELS: Readonly<Record<SettingsTabId, ComponentType>> = {
+const PANELS: Readonly<Record<SettingsTabId, ComponentType<SettingsPanelProps>>> = {
   account: AccountPanel,
   notifications: NotificationsPanel,
   messages: MessagesPanel,
@@ -30,6 +35,8 @@ const PANELS: Readonly<Record<SettingsTabId, ComponentType>> = {
 export interface SettingsScreenProps {
   /** The tab `?tab=` names (already parsed, aliases followed). */
   initialTab?: SettingsTabId;
+  /** The ticket `?ticket=` names, opened on the Help tab (a support notification's link). */
+  ticketId?: string | null;
 }
 
 /**
@@ -41,9 +48,10 @@ export interface SettingsScreenProps {
  *
  * @param props - See {@link SettingsScreenProps}.
  * @param props.initialTab - The tab to open.
+ * @param props.ticketId - The support ticket to open on the Help tab.
  * @returns The screen.
  */
-export function SettingsScreen({ initialTab = "account" }: SettingsScreenProps) {
+export function SettingsScreen({ initialTab = "account", ticketId = null }: SettingsScreenProps) {
   const router = useRouter();
   const [active, setActive] = useState<SettingsTabId>(initialTab);
 
@@ -107,7 +115,7 @@ export function SettingsScreen({ initialTab = "account" }: SettingsScreenProps) 
               {tab.title}
             </h2>
             <p className="mt-1 text-sm text-tl-muted">{tab.body}</p>
-            <Panel key={active} />
+            <Panel key={active} {...(active === "help" ? { ticketId } : {})} />
           </section>
         </div>
       </div>

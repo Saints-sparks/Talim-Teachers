@@ -185,6 +185,14 @@ export const queryKeys = {
     /** `GET /teachers/me/school` — the school office's contact details (Round 4 §36). */
     schoolContact: (userId: string) => ["settings", userId, "school-contact"] as const,
   },
+  /** The v1.5 tickets the signed-in user raised (Settings → Help → Support). */
+  support: {
+    all: ["support"] as const,
+    /** `GET /tickets/mine`, every loaded page. */
+    mine: (userId: string) => ["support", userId, "mine"] as const,
+    /** `GET /tickets/:id`. */
+    ticket: (userId: string, ticketId: string) => ["support", userId, "ticket", ticketId] as const,
+  },
 } as const;
 
 /**

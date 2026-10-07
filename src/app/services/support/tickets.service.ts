@@ -1,0 +1,147 @@
+/**
+ * The requester's side of the v1.5 ticket system
+ * (`talimBE-V2/docs/v1.5-platform-sync.md` §1, "Requester"):
+ *
+ * - `GET /tickets/mine?status=&page=&limit=`
+ * - `GET /tickets/:id` (internal notes already removed by the API)
+ * - `POST /tickets`
+ * - `POST /tickets/:id/messages` (409 when the ticket is closed or full)
+ * - `POST /tickets/:id/reopen` (409 outside the 7-day window)
+ * - `POST /tickets/:id/close`
+ * - attachments go up first through the chat upload, `POST /upload/chat-attachment`
+ *
+ * It replaces the old `POST /support/tickets` problem report. Every screen
+ * makes one list call; nothing here is called per row. With
+ * `NEXT_PUBLIC_USE_FIXTURES=true` in a dev build the calls answer from
+ * `src/lib/fixtures/tickets.fixture.ts`.
+ */
+import { uploadChatAttachment, type ChatAttachmentUpload } from "@/app/services/chat.service";
+import { api } from "@/lib/apiClient";
+import { fixturesEnabled } from "@/lib/fixtures/flag";
+import type { CreateTicketPayload, MyTicketsQuery, PostTicketMessagePayload, Ticket, TicketPage } from "@/types/v15";
+
+/**
+ * A query string from the defined values only.
+ *
+ * @param query - Status, page and limit.
+ * @returns `?page=1&limit=20`, or an empty string when nothing is set.
+ */
+function toQuery(query: MyTicketsQuery): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && value !== null && value !== "") params.set(key, String(value));
+  }
+  const text = params.toString();
+  return text ? `?${text}` : "";
+}
+
+/**
+ * The fixture module, loaded only in fixture mode.
+ *
+ * @returns The module.
+ */
+const fixtures = () => import("@/lib/fixtures/tickets.fixture");
+
+export const ticketsService = {
+  /**
+   * `GET /tickets/mine`: one page of the signed-in user's tickets, most
+   * recent activity first.
+   *
+   * @param query - Status filter, page and page size.
+   * @returns The page and its meta.
+   * @throws ApiError when the request fails.
+   */
+  listMine: async (query: MyTicketsQuery = {}): Promise<TicketPage> => {
+    if (fixturesEnabled()) return (await fixtures()).listMyTicketsFixture(query);
+    const body = await api.get<TicketPage>(`/tickets/mine${toQuery(query)}`);
+    return { data: Array.isArray(body?.data) ? body.data : [], meta: body?.meta ?? { total: 0, page: query.page ?? 1, lastPage: 1, limit: query.limit ?? 20 } };
+  },
+
+  /**
+   * `GET /tickets/:id`: one of the user's tickets with its thread.
+   *
+   * @param id - The ticket.
+   * @returns The ticket.
+   * @throws ApiError: 404 when it is not the user's ticket.
+   */
+  get: async (id: string): Promise<Ticket> => {
+    if (fixturesEnabled()) return (await fixtures()).getTicketFixture(id);
+    return api.get<Ticket>(`/tickets/${encodeURIComponent(id)}`);
+  },
+
+  /**
+   * `POST /tickets`: raises a ticket. Teachers raise them to the Talim desk.
+   *
+   * @param payload - Desk, area, subject, first message and attachments.
+   * @returns The new ticket.
+   * @throws ApiError: 400 for a field the server refuses, 403 for a desk the role may not use.
+   */
+  create: async (payload: CreateTicketPayload): Promise<Ticket> => {
+    if (fixturesEnabled()) return (await fixtures()).createTicketFixture(payload);
+    return api.post<Ticket>("/tickets", payload);
+  },
+
+  /**
+   * `POST /tickets/:id/messages`: the requester's reply. Callers refetch the
+   * ticket afterwards, whatever the answer's shape.
+   *
+   * @param id - The ticket.
+   * @param payload - The text and attachments.
+   * @returns Nothing useful; refetch the ticket.
+   * @throws ApiError: 409 when the ticket is closed or holds 500 messages.
+   */
+  reply: async (id: string, payload: PostTicketMessagePayload): Promise<void> => {
+    if (fixturesEnabled()) {
+      (await fixtures()).replyTicketFixture(id, payload);
+      return;
+    }
+    await api.post(`/tickets/${encodeURIComponent(id)}/messages`, payload);
+  },
+
+  /**
+   * `POST /tickets/:id/reopen`: reopens a resolved ticket.
+   *
+   * @param id - The ticket.
+   * @returns Nothing useful; refetch the ticket.
+   * @throws ApiError: 409 more than 7 days after it was resolved.
+   */
+  reopen: async (id: string): Promise<void> => {
+    if (fixturesEnabled()) {
+      (await fixtures()).reopenTicketFixture(id);
+      return;
+    }
+    await api.post(`/tickets/${encodeURIComponent(id)}/reopen`);
+  },
+
+  /**
+   * `POST /tickets/:id/close`: the requester closes their own ticket.
+   *
+   * @param id - The ticket.
+   * @returns Nothing useful; refetch the ticket.
+   * @throws ApiError when the request fails.
+   */
+  close: async (id: string): Promise<void> => {
+    if (fixturesEnabled()) {
+      (await fixtures()).closeTicketFixture(id);
+      return;
+    }
+    await api.post(`/tickets/${encodeURIComponent(id)}/close`);
+  },
+
+  /**
+   * Uploads one file for a ticket message through the app's existing chat
+   * upload (`POST /upload/chat-attachment`); a fixture URL in fixture mode.
+   *
+   * @param file - The file.
+   * @param onProgress - Called with a 0-1 fraction as bytes are sent.
+   * @returns The stored file's URL and metadata.
+   * @throws ApiError when the upload fails.
+   */
+  uploadAttachment: async (file: File, onProgress?: (fraction: number) => void): Promise<ChatAttachmentUpload> => {
+    if (fixturesEnabled()) {
+      onProgress?.(1);
+      return { url: `https://res.cloudinary.com/talim/raw/upload/${encodeURIComponent(file.name)}`, type: "file", name: file.name, mimeType: file.type, size: file.size };
+    }
+    return uploadChatAttachment(file, onProgress);
+  },
+};
