@@ -243,14 +243,14 @@ function backToQueue(stored: Ticket): void {
 /**
  * `GET /tickets/mine`.
  *
- * @param query - Status, page and limit.
+ * @param query - Statuses (any of them; none for all), page and limit.
  * @returns The page, most recent activity first.
  */
 export function listMyTicketsFixture(query: MyTicketsQuery = {}): TicketPage {
   const limit = query.limit ?? 20;
   const page = query.page ?? 1;
   const rows = tickets
-    .filter((item) => !query.status || item.status === query.status)
+    .filter((item) => !query.status?.length || query.status.includes(item.status))
     .sort((a, b) => Date.parse(b.lastActivityAt) - Date.parse(a.lastActivityAt));
   return {
     data: rows.slice((page - 1) * limit, page * limit).map(summary),

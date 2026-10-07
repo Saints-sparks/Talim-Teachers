@@ -23,15 +23,17 @@ import { fixturesEnabled } from "@/lib/fixtures/flag";
 import type { CreateTicketPayload, MyTicketsQuery, PostTicketMessagePayload, Ticket, TicketPage } from "@/types/tickets";
 
 /**
- * A query string from the defined values only.
+ * A query string from the defined values only; a list (`status`) goes
+ * comma-separated, as the API takes it.
  *
- * @param query - Status, page and limit.
- * @returns `?page=1&limit=20`, or an empty string when nothing is set.
+ * @param query - Statuses, page and limit.
+ * @returns `?status=open,in_progress&page=1&limit=20`, or an empty string when nothing is set.
  */
 function toQuery(query: MyTicketsQuery): string {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(query)) {
-    if (value !== undefined && value !== null && String(value) !== "") params.set(key, String(value));
+    const part = Array.isArray(value) ? value.join(",") : String(value ?? "");
+    if (part !== "") params.set(key, part);
   }
   const text = params.toString();
   return text ? `?${text}` : "";
