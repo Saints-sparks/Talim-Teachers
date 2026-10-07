@@ -12,6 +12,7 @@ import { landingCacheKey } from "@/app/lib/landing";
 import { mockTeacher } from "@/test-utils/render";
 import { resetSettingsFixtureStore } from "@/lib/fixtures/settings.fixture";
 import { listMyTicketsFixture } from "@/lib/fixtures/tickets.fixture";
+import packageJson from "../../package.json";
 import { gettingStartedDescription, type SettingsTabId } from "@/hooks/settings/settings.logic";
 import { TOUR_STEPS } from "@/components/tour/TourProvider";
 
@@ -372,7 +373,9 @@ describe("About tab", () => {
     renderTab("about");
 
     expect(screen.getByText("Talim Teachers")).toBeInTheDocument();
-    expect(screen.getByText(APP_VERSION)).toBeInTheDocument();
+    expect(APP_VERSION).toBe(packageJson.version);
+    expect(APP_VERSION).toBe("1.5.0");
+    expect(screen.getByText("Version 1.5.0")).toBeInTheDocument();
     expect(await screen.findByText("Easy Sparks Education Center")).toBeInTheDocument();
     const privacy = screen.getByRole("link", { name: "Privacy Policy (opens in a new tab)" });
     expect(privacy).toHaveAccessibleDescription("How staff and student data is handled");

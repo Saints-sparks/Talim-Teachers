@@ -11,9 +11,9 @@ export const PRIVACY_POLICY_URL = "https://mytalim.com/privacy";
 export const TERMS_OF_SERVICE_URL = "https://mytalim.com/terms";
 
 /**
- * Settings → About: the app, its version (from `package.json`, also sent
- * with support tickets), the school, and links to the privacy policy and
- * terms (opened in a new tab).
+ * Settings → About: the app and its version ("Version 1.5.0", read from
+ * `package.json`), the school, and links to the privacy policy and terms
+ * (opened in a new tab).
  *
  * @returns The panel content.
  */
@@ -25,8 +25,7 @@ export function AboutPanel() {
   return (
     <>
       <SettingsGroup heading="Application">
-        <ValueRow label="App" value="Talim Teachers" />
-        <ValueRow label="Version" value={APP_VERSION} />
+        <ValueRow label="Talim Teachers" description="The teacher portal" value={`Version ${APP_VERSION}`} />
         <ValueRow label="School" value={school} />
       </SettingsGroup>
       <SettingsGroup heading="Legal">
