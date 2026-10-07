@@ -1,36 +1,42 @@
 /**
  * Fixtures for the v1.5 tickets (`ticketsService` in fixture mode, and the
  * tests): an in-memory store seeded with four of the teacher's tickets on
- * the Talim desk, one per interesting state.
+ * the Talim desk, one per interesting state, typed with the generated
+ * `TicketDto` so a contract change fails the type-check here too.
  *
- * - `tk-open`: open, with an unread staff reply.
+ * - `tk-open`: open, with one unread staff reply.
  * - `tk-waiting`: waiting on the teacher.
  * - `tk-resolved`: resolved two days ago, so it can be reopened.
  * - `tk-old`: resolved ten days ago, past the 7-day window (reopen answers 409).
  *
- * Like the API, a reply to a closed ticket answers 409 and a reopen outside
- * the window answers 409. Times are relative to the moment of seeding.
+ * Like the API: opening a ticket or writing on it marks it read; a reply to a
+ * closed ticket answers 409 `TICKET_CLOSED`; a reopen (or reply) outside the
+ * window answers 409 `REOPEN_WINDOW_PASSED`; a reopen of a ticket that is not
+ * resolved answers 409 `INVALID_TRANSITION`. Times are relative to the
+ * moment of seeding.
  */
 import { ApiError } from "@/lib/apiError";
-import type {
-  Attachment,
-  CreateTicketPayload,
-  MyTicketsQuery,
-  PostTicketMessagePayload,
-  Ticket,
-  TicketMessage,
-  TicketPage,
-  TicketSummary,
-} from "@/types/v15";
+import {
+  TICKET_REOPEN_WINDOW_DAYS,
+  type Attachment,
+  type CreateTicketPayload,
+  type MyTicketsQuery,
+  type PostTicketMessagePayload,
+  type Ticket,
+  type TicketMessage,
+  type TicketPage,
+  type TicketSummary,
+} from "@/types/tickets";
 
 /** The fixture requester: the same id as the tests' `mockTeacher`. */
 export const FIXTURE_REQUESTER_ID = "68c0a1b2c3d4e5f600000001";
 
 const HOUR = 60 * 60_000;
 const DAY = 24 * HOUR;
-const REQUESTER = { userId: FIXTURE_REQUESTER_ID, role: "teacher" as const, name: "Ada Bello" };
-const ME = { id: FIXTURE_REQUESTER_ID, name: "Ada Bello", role: "teacher" as const };
-const AGENT = { id: "agent-1", name: "Tolu from Talim", role: "admin" as const };
+const WINDOW = TICKET_REOPEN_WINDOW_DAYS * DAY;
+const SCHOOL = { id: "68c0a1b2c3d4e5f6000000aa", name: "Easy Sparks College" };
+const ME = { id: FIXTURE_REQUESTER_ID, name: "Ada Bello", role: "teacher" };
+const AGENT = { id: "agent-1", name: "Tolu from Talim", role: "admin" };
 
 let tickets: Ticket[] = [];
 let sequence = 0;
@@ -47,7 +53,7 @@ function before(now: number, ago: number): string {
 }
 
 /**
- * One message.
+ * One public message.
  *
  * @param id - Its id.
  * @param author - Who wrote it.
@@ -61,6 +67,37 @@ function message(id: string, author: TicketMessage["author"], body: string, crea
 }
 
 /**
+ * A full ticket as the API answers it to its requester, from the fields
+ * that differ between the seeded tickets.
+ *
+ * @param fields - Id, reference, area, subject, status, times, messages and unread count.
+ * @returns The ticket.
+ */
+function ticket(fields: Pick<Ticket, "id" | "reference" | "area" | "subject" | "status" | "createdAt" | "lastActivityAt" | "messages"> & Partial<Ticket>): Ticket {
+  const resolvedAt = fields.resolvedAt ?? null;
+  return {
+    desk: "talim",
+    priority: "normal",
+    school: SCHOOL,
+    childId: null,
+    child: null,
+    assignee: null,
+    escalatedFrom: null,
+    access: "requester",
+    firstResponseAt: null,
+    resolvedAt,
+    closedAt: null,
+    reopenableUntil: fields.status === "resolved" && resolvedAt ? new Date(Date.parse(resolvedAt) + WINDOW).toISOString() : null,
+    escalatedAt: null,
+    context: null,
+    requester: { id: ME.id, name: ME.name, role: ME.role },
+    messageCount: fields.messages.length,
+    unread: 0,
+    ...fields,
+  };
+}
+
+/**
  * Seeds (or re-seeds) the store.
  *
  * @param now - The time the seeded tickets are relative to.
@@ -69,10 +106,8 @@ function message(id: string, author: TicketMessage["author"], body: string, crea
 export function resetTicketsFixture(now: Date = new Date()): void {
   const at = now.getTime();
   sequence = 0;
-  const base = { desk: "talim" as const, schoolId: "68c0a1b2c3d4e5f6000000aa", requester: REQUESTER, priority: "normal" as const };
   tickets = [
-    {
-      ...base,
+    ticket({
       id: "tk-open",
       reference: "TS-7KQ2M",
       area: "grading",
@@ -80,16 +115,16 @@ export function resetTicketsFixture(now: Date = new Date()): void {
       status: "open",
       createdAt: before(at, 5 * HOUR),
       lastActivityAt: before(at, 2 * HOUR),
-      unread: true,
+      firstResponseAt: before(at, 2 * HOUR),
+      unread: 1,
       messages: [
         message("m-1", ME, "I published 1st CA for JSS2 B but students say they cannot see it.", before(at, 5 * HOUR), [
           { url: "https://res.cloudinary.com/talim/image/upload/grading.png", name: "grading.png", mimeType: "image/png", size: 182_000 },
         ]),
         message("m-2", AGENT, "Thanks, Ada. We're looking into it now.", before(at, 2 * HOUR)),
       ],
-    },
-    {
-      ...base,
+    }),
+    ticket({
       id: "tk-waiting",
       reference: "TS-3HD8P",
       area: "signing_in",
@@ -102,9 +137,8 @@ export function resetTicketsFixture(now: Date = new Date()): void {
         message("m-3", ME, "The app signs me out on my tablet every morning.", before(at, 3 * DAY)),
         message("m-4", AGENT, "Which browser does the tablet use?", before(at, 1 * DAY)),
       ],
-    },
-    {
-      ...base,
+    }),
+    ticket({
       id: "tk-resolved",
       reference: "TS-9WX4A",
       area: "timetable",
@@ -117,9 +151,8 @@ export function resetTicketsFixture(now: Date = new Date()): void {
         message("m-5", ME, "Period 3 on Tuesday shows Lab 2 but we use Room 4.", before(at, 4 * DAY)),
         message("m-6", AGENT, "Fixed: the school updated the room.", before(at, 2 * DAY)),
       ],
-    },
-    {
-      ...base,
+    }),
+    ticket({
       id: "tk-old",
       reference: "TS-2BN6R",
       area: "messages",
@@ -132,31 +165,31 @@ export function resetTicketsFixture(now: Date = new Date()): void {
         message("m-7", ME, "Parent messages reach me hours late.", before(at, 14 * DAY)),
         message("m-8", AGENT, "Push delivery was delayed; it is fixed now.", before(at, 10 * DAY)),
       ],
-    },
+    }),
   ];
 }
 
 resetTicketsFixture();
 
 /**
- * A ticket's list row: everything but the thread.
+ * A ticket's list row: everything but the detail-only fields.
  *
- * @param ticket - The ticket.
+ * @param stored - The ticket.
  * @returns The summary.
  */
-function summary(ticket: Ticket): TicketSummary {
-  const { messages: _messages, ...rest } = ticket;
+function summary(stored: Ticket): TicketSummary {
+  const { messages: _messages, reopenableUntil: _until, escalatedAt: _escalatedAt, context: _context, ...rest } = stored;
   return rest;
 }
 
 /**
  * A deep copy, so callers can't change the store.
  *
- * @param ticket - The stored ticket.
+ * @param stored - The stored ticket.
  * @returns The copy.
  */
-function copy(ticket: Ticket): Ticket {
-  return JSON.parse(JSON.stringify(ticket)) as Ticket;
+function copy(stored: Ticket): Ticket {
+  return JSON.parse(JSON.stringify(stored)) as Ticket;
 }
 
 /**
@@ -167,9 +200,44 @@ function copy(ticket: Ticket): Ticket {
  * @throws ApiError 404 when there is none.
  */
 function find(id: string): Ticket {
-  const ticket = tickets.find((item) => item.id === id);
-  if (!ticket) throw new ApiError("NOT_FOUND", "Ticket not found.", 404);
-  return ticket;
+  const stored = tickets.find((item) => item.id === id);
+  if (!stored) throw new ApiError("NOT_FOUND", "Ticket not found.", 404);
+  return stored;
+}
+
+/**
+ * A 409 as the API sends it: the reason at the top-level `code`.
+ *
+ * @param reason - e.g. `TICKET_CLOSED`.
+ * @param message - The server's message.
+ * @returns The error.
+ */
+function conflict(reason: string, message: string): ApiError {
+  return ApiError.fromResponse({ status: 409 }, { code: reason, statusCode: 409, message, error: { code: "CONFLICT", message } });
+}
+
+/**
+ * Whether a resolved ticket is past its reopen window.
+ *
+ * @param stored - The ticket.
+ * @returns True when it was resolved more than 7 days ago.
+ */
+function pastWindow(stored: Ticket): boolean {
+  const resolved = Date.parse(stored.resolvedAt ?? "");
+  return Number.isNaN(resolved) || Date.now() - resolved > WINDOW;
+}
+
+/**
+ * Puts a resolved or waiting ticket back in the queue, as the API does on a
+ * requester's reply or reopen: `in_progress` when assigned, else `open`.
+ *
+ * @param stored - The ticket.
+ * @returns Nothing.
+ */
+function backToQueue(stored: Ticket): void {
+  stored.status = stored.assignee ? "in_progress" : "open";
+  stored.resolvedAt = null;
+  stored.reopenableUntil = null;
 }
 
 /**
@@ -182,7 +250,7 @@ export function listMyTicketsFixture(query: MyTicketsQuery = {}): TicketPage {
   const limit = query.limit ?? 20;
   const page = query.page ?? 1;
   const rows = tickets
-    .filter((ticket) => !query.status || ticket.status === query.status)
+    .filter((item) => !query.status || item.status === query.status)
     .sort((a, b) => Date.parse(b.lastActivityAt) - Date.parse(a.lastActivityAt));
   return {
     data: rows.slice((page - 1) * limit, page * limit).map(summary),
@@ -198,9 +266,9 @@ export function listMyTicketsFixture(query: MyTicketsQuery = {}): TicketPage {
  * @throws ApiError 404 when there is none.
  */
 export function getTicketFixture(id: string): Ticket {
-  const ticket = find(id);
-  ticket.unread = false;
-  return copy(ticket);
+  const stored = find(id);
+  stored.unread = 0;
+  return copy(stored);
 }
 
 /**
@@ -212,71 +280,76 @@ export function getTicketFixture(id: string): Ticket {
 export function createTicketFixture(payload: CreateTicketPayload): Ticket {
   sequence += 1;
   const now = new Date().toISOString();
-  const ticket: Ticket = {
+  const created = ticket({
     id: `tk-new-${sequence}`,
     reference: `TS-N${String(sequence).padStart(4, "0")}`,
     desk: payload.desk,
-    schoolId: "68c0a1b2c3d4e5f6000000aa",
-    requester: REQUESTER,
     childId: payload.childId ?? null,
     area: payload.area,
     subject: payload.subject,
     status: "open",
-    priority: "normal",
     createdAt: now,
     lastActivityAt: now,
-    messages: [message(`m-new-${sequence}`, ME, payload.body, now, payload.attachments ?? [])],
-  };
-  tickets.unshift(ticket);
-  return copy(ticket);
+    messages: [message(`m-new-${sequence}`, ME, payload.body, now, (payload.attachments ?? []).map((file) => ({ ...file })))],
+  });
+  tickets.unshift(created);
+  return copy(created);
 }
 
 /**
- * `POST /tickets/:id/messages`.
+ * `POST /tickets/:id/messages`. A reply to a waiting ticket, or to a resolved
+ * one within 7 days, puts it back in the queue.
  *
  * @param id - The ticket.
  * @param payload - The reply.
- * @returns Nothing.
- * @throws ApiError 409 when the ticket is closed.
+ * @returns The ticket after the reply.
+ * @throws ApiError 409 `TICKET_CLOSED`, or `REOPEN_WINDOW_PASSED` for a resolved ticket past its window.
  */
-export function replyTicketFixture(id: string, payload: PostTicketMessagePayload): void {
-  const ticket = find(id);
-  if (ticket.status === "closed") throw new ApiError("CONFLICT", "This ticket is closed.", 409);
+export function replyTicketFixture(id: string, payload: PostTicketMessagePayload): Ticket {
+  const stored = find(id);
+  if (stored.status === "closed") throw conflict("TICKET_CLOSED", "This ticket is closed.");
+  if (stored.status === "resolved" && pastWindow(stored)) throw conflict("REOPEN_WINDOW_PASSED", "This ticket was resolved more than 7 days ago.");
   sequence += 1;
   const now = new Date().toISOString();
-  ticket.messages.push(message(`m-reply-${sequence}`, ME, payload.body, now, payload.attachments ?? []));
-  ticket.lastActivityAt = now;
-  if (ticket.status === "waiting_on_user") ticket.status = "open";
+  stored.messages.push(message(`m-reply-${sequence}`, ME, payload.body, now, (payload.attachments ?? []).map((file) => ({ ...file }))));
+  stored.messageCount = stored.messages.length;
+  stored.lastActivityAt = now;
+  stored.unread = 0;
+  if (stored.status === "waiting_on_user" || stored.status === "resolved") backToQueue(stored);
+  return copy(stored);
 }
 
 /**
  * `POST /tickets/:id/reopen`.
  *
  * @param id - The ticket.
- * @returns Nothing.
- * @throws ApiError 409 when it is not resolved or was resolved more than 7 days ago.
+ * @returns The reopened ticket.
+ * @throws ApiError 409 `INVALID_TRANSITION` when it is not resolved, `REOPEN_WINDOW_PASSED` after 7 days.
  */
-export function reopenTicketFixture(id: string): void {
-  const ticket = find(id);
-  const resolved = Date.parse(ticket.resolvedAt ?? "");
-  if (ticket.status !== "resolved" || Number.isNaN(resolved) || Date.now() - resolved > 7 * DAY) {
-    throw new ApiError("CONFLICT", "This ticket can no longer be reopened.", 409);
-  }
-  ticket.status = "open";
-  ticket.resolvedAt = null;
-  ticket.lastActivityAt = new Date().toISOString();
+export function reopenTicketFixture(id: string): Ticket {
+  const stored = find(id);
+  if (stored.status !== "resolved") throw conflict("INVALID_TRANSITION", "Only a resolved ticket can be reopened.");
+  if (pastWindow(stored)) throw conflict("REOPEN_WINDOW_PASSED", "This ticket was resolved more than 7 days ago.");
+  backToQueue(stored);
+  stored.lastActivityAt = new Date().toISOString();
+  stored.unread = 0;
+  return copy(stored);
 }
 
 /**
- * `POST /tickets/:id/close`.
+ * `POST /tickets/:id/close`. Closing a closed ticket answers it unchanged.
  *
  * @param id - The ticket.
- * @returns Nothing.
+ * @returns The closed ticket.
  */
-export function closeTicketFixture(id: string): void {
-  const ticket = find(id);
+export function closeTicketFixture(id: string): Ticket {
+  const stored = find(id);
+  if (stored.status === "closed") return copy(stored);
   const now = new Date().toISOString();
-  ticket.status = "closed";
-  ticket.closedAt = now;
-  ticket.lastActivityAt = now;
+  stored.status = "closed";
+  stored.closedAt = now;
+  stored.reopenableUntil = null;
+  stored.lastActivityAt = now;
+  stored.unread = 0;
+  return copy(stored);
 }

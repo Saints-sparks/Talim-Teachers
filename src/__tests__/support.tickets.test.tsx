@@ -69,22 +69,31 @@ beforeEach(() => {
 });
 
 describe("My tickets list", () => {
-  it("lists the tickets with status chips, the unread dot and last activity, in one call", async () => {
+  it("lists the tickets with status chips, the \"N new\" badge and last activity, in one call", async () => {
     render(<HelpPanel />);
     const list = await ticketList();
     const rows = within(list).getAllByRole("button");
     expect(rows).toHaveLength(4);
-    expect(rows[0]).toHaveTextContent("New reply.");
+    expect(rows[0]).toHaveTextContent("1 new");
     expect(rows[0]).toHaveTextContent("Students can't see 1st CA for JSS2 B");
     expect(rows[0]).toHaveTextContent("TS-7KQ2M · Talim support · Updated 2 hours ago");
     expect(rows[0]).toHaveTextContent("Open");
     expect(rows[1]).toHaveTextContent("Waiting on you");
-    expect(rows[1]).not.toHaveTextContent("New reply.");
+    expect(rows[1]).not.toHaveTextContent("new");
     expect(rows[2]).toHaveTextContent("Resolved");
     expect(service.listMine).toHaveBeenCalledTimes(1);
     expect(service.listMine).toHaveBeenCalledWith({ page: 1, limit: 20 });
     expect(service.get).not.toHaveBeenCalled();
     expect(screen.queryByRole("button", { name: "Report a problem" })).not.toBeInTheDocument();
+  });
+
+  it("clears a ticket's \"N new\" badge once it is opened (the server marks it read)", async () => {
+    render(<HelpPanel />);
+    const list = await ticketList();
+    fireEvent.click(within(list).getAllByRole("button")[0]);
+    expect(await screen.findByRole("heading", { name: "Students can't see 1st CA for JSS2 B" })).toBeInTheDocument();
+    await waitFor(() => expect(within(list).getAllByRole("button", { hidden: true })[0]).not.toHaveTextContent("1 new"));
+    expect(service.listMine).toHaveBeenCalledTimes(1);
   });
 
   it("shows an empty state, and an error with a retry", async () => {
@@ -144,13 +153,13 @@ describe("Ticket thread", () => {
   });
 
   it("explains a 409 on a reply, keeps the draft and reloads the ticket", async () => {
-    service.reply.mockRejectedValueOnce(ApiError.fromResponse({ status: 409 }, { error: { code: "CONFLICT", message: "This ticket was closed by support." } }));
+    service.reply.mockRejectedValueOnce(ApiError.fromResponse({ status: 409 }, { code: "TICKET_CLOSED", message: "Ticket is closed.", error: { code: "CONFLICT", message: "Ticket is closed." } }));
     render(<HelpPanel ticketId="tk-open" />);
     const dialog = await screen.findByRole("dialog");
     fireEvent.change(await within(dialog).findByLabelText("Your reply"), { target: { value: "Any news?" } });
     const loads = service.get.mock.calls.length;
     fireEvent.click(within(dialog).getByRole("button", { name: "Send reply" }));
-    expect(await within(dialog).findByRole("alert")).toHaveTextContent("This ticket was closed by support.");
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent("This ticket is closed, so it takes no more replies. Raise a new ticket if you still need help.");
     expect(within(dialog).getByLabelText("Your reply")).toHaveValue("Any news?");
     await waitFor(() => expect(service.get.mock.calls.length).toBeGreaterThan(loads));
   });
@@ -166,7 +175,7 @@ describe("Ticket thread", () => {
   });
 
   it("shows the 409 when the server refuses a reopen after the window", async () => {
-    service.reopen.mockRejectedValueOnce(ApiError.fromResponse({ status: 409 }, null));
+    service.reopen.mockRejectedValueOnce(ApiError.fromResponse({ status: 409 }, { code: "REOPEN_WINDOW_PASSED", message: "Too late.", error: { code: "CONFLICT", message: "Too late." } }));
     render(<HelpPanel ticketId="tk-resolved" />);
     const dialog = await screen.findByRole("dialog");
     fireEvent.click(await within(dialog).findByRole("button", { name: "Reopen" }));
@@ -261,6 +270,7 @@ describe("New ticket", () => {
         subject: "Locked out after the update",
         body: "It says my password expired.",
         attachments: [{ url: "https://files.test/screen.png", name: "screen.png", mimeType: "image/png", size: 3 }],
+        context: { path: "/settings?tab=help", appVersion: "1.5.0", userAgent: navigator.userAgent },
       }),
     );
     expect(await screen.findByRole("heading", { name: "Locked out after the update" })).toBeInTheDocument();

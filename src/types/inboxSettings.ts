@@ -20,7 +20,6 @@
  *    the password copy comes from the backend's real policy.
  */
 import type { components } from "./api";
-import type { SupportNotificationTarget } from "./v15";
 
 type S = components["schemas"];
 
@@ -94,11 +93,9 @@ export type SharedMediaPage = S["ChatMediaPageDto"];
 
 /**
  * `metadata.target` on a notification (same shape as `attention.action.target`):
- * where its action goes. NOT IN CONTRACT yet: v1.5's support target
- * `{ page: 'support', ticketId }` (§1 Notifications), which the generated
- * `NotificationTargetDto` lacks; see `SupportNotificationTarget` in `./v15.ts`.
+ * where its action goes. v1.5's support target is `{ page: 'support', ticketId }`.
  */
-export type NotificationTarget = S["NotificationTargetDto"] | SupportNotificationTarget;
+export type NotificationTarget = S["NotificationTargetDto"];
 
 /**
  * Every page a notification's action can name, the parents' and payments'
@@ -109,12 +106,8 @@ export type NotificationTargetPage = NotificationTarget["page"];
 /** `{ all, unread }` for one category. */
 export type CategoryCount = S["InboxCountDto"];
 
-/**
- * A category the counts are kept under (the backend's `NotificationCategory`).
- * NOT IN CONTRACT yet: v1.5's `support` (§1 Notifications), missing from the
- * generated `InboxCountsByCategoryDto`.
- */
-export type CountCategory = keyof S["InboxCountsByCategoryDto"] | "support";
+/** A category the counts are kept under (the backend's `NotificationCategory`, `support` included). */
+export type CountCategory = keyof S["InboxCountsByCategoryDto"];
 
 /**
  * `GET /notifications/counts`. Announcements count under `announcement`, and
@@ -185,7 +178,7 @@ export type PasswordPolicy = Pick<
 >;
 
 // ─── §35 Support tickets ───────────────────────────────────────────────────
-// Replaced in v1.5 by the unified tickets (`./v15.ts`: `GET /tickets/mine`,
+// Replaced in v1.5 by the unified tickets (`./tickets.ts`: `GET /tickets/mine`,
 // `POST /tickets` and the rest), in `src/app/services/support/tickets.service.ts`.
 
 // ─── §36 School contact: GET /teachers/me/school ───────────────────────────

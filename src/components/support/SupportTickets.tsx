@@ -6,8 +6,8 @@ import { useAuth } from "@/app/context/AuthContext";
 import { focusRing, ghostButton, pill, pillTone, primaryButton } from "@/components/tl/styles";
 import { PanelError, PanelSkeleton, SettingsGroup } from "@/components/settings/SettingsRows";
 import { useMyTickets } from "@/hooks/support/useTickets";
-import { deskLabel, statusChip, updatedLabel } from "@/hooks/support/tickets.logic";
-import type { TicketSummary } from "@/types/v15";
+import { deskLabel, statusChip, unreadLabel, updatedLabel } from "@/hooks/support/tickets.logic";
+import type { TicketSummary } from "@/types/tickets";
 import { NewTicketSheet } from "./NewTicketSheet";
 import { TicketThreadSheet } from "./TicketThreadSheet";
 
@@ -22,7 +22,8 @@ export interface SupportTicketsProps {
 /**
  * Settings → Help → My tickets (v1.5 §1): a "New ticket" button and the
  * teacher's tickets, most recent activity first, each with its status chip,
- * desk, reference, an unread dot when support has written since, and when it
+ * desk, reference, an "N new" badge for support's replies since the teacher
+ * last opened it (`unread`; opening clears it on the server), and when it
  * last changed. One `GET /tickets/mine` per page ("Load more"); no call per
  * row. A row opens the ticket's thread; a new ticket opens its thread once sent.
  *
@@ -110,7 +111,7 @@ interface TicketRowProps {
 }
 
 /**
- * One ticket in the list: subject, status chip, unread dot, reference,
+ * One ticket in the list: subject, "N new" badge, status chip, reference,
  * desk and last activity, as one 44px+ button.
  *
  * @param props - See {@link TicketRowProps}.
@@ -122,6 +123,7 @@ interface TicketRowProps {
  */
 function TicketRow({ ticket, now, schoolName, onOpen }: TicketRowProps) {
   const chip = statusChip(ticket.status);
+  const fresh = unreadLabel(ticket);
   return (
     <button
       type="button"
@@ -130,16 +132,12 @@ function TicketRow({ ticket, now, schoolName, onOpen }: TicketRowProps) {
     >
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2">
-          {ticket.unread ? (
-            <>
-              <span aria-hidden className="h-2.5 w-2.5 shrink-0 rounded-full bg-tl-brand" />
-              <span className="sr-only">New reply. </span>
-            </>
-          ) : null}
+          {fresh ? <span aria-hidden className="h-2.5 w-2.5 shrink-0 rounded-full bg-tl-brand" /> : null}
           <span className="truncate text-[15px] font-extrabold text-tl-ink">{ticket.subject}</span>
+          {fresh ? <span className={`${pill} ${pillTone.accent} shrink-0`}>{fresh}</span> : null}
         </span>
         <span className="mt-0.5 block text-[13px] text-tl-muted">
-          {ticket.reference} · {deskLabel(ticket.desk, schoolName)} · {updatedLabel(ticket, now)}
+          {ticket.reference} · {deskLabel(ticket.desk, ticket.school?.name ?? schoolName)} · {updatedLabel(ticket, now)}
         </span>
       </span>
       <span className={`${pill} ${pillTone[chip.tone]}`}>{chip.label}</span>

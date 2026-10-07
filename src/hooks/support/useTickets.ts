@@ -4,7 +4,8 @@
  * React Query hooks over the v1.5 tickets (`ticketsService`): the user's
  * list (one call per page, "Load more"), one ticket with its thread, and the
  * create, reply, reopen and close calls. Every write refreshes the ticket and
- * the list. Keys come from `queryKeys.support`.
+ * the list; opening a ticket clears its `unread` in the cached list (the
+ * server has marked it read). Keys come from `queryKeys.support`.
  */
 import {
   useInfiniteQuery,
@@ -20,7 +21,7 @@ import { useAuth } from "@/app/context/AuthContext";
 import { useAttachmentUpload } from "@/components/chat-kit/useAttachmentUpload";
 import { ticketsService } from "@/app/services/support/tickets.service";
 import { queryKeys, staleTimes } from "@/lib/queryKeys";
-import type { Attachment, CreateTicketPayload, PostTicketMessagePayload, Ticket, TicketPage } from "@/types/v15";
+import type { Attachment, CreateTicketPayload, PostTicketMessagePayload, Ticket, TicketPage } from "@/types/tickets";
 import { TICKETS_PAGE_SIZE, toTicketAttachment } from "./tickets.logic";
 
 /**
@@ -51,16 +52,34 @@ export function useMyTickets(): UseInfiniteQueryResult<InfiniteData<TicketPage, 
 }
 
 /**
- * One ticket with its thread.
+ * The cached list pages with one ticket's `unread` set to 0.
+ *
+ * @param data - The cached pages, if any.
+ * @param ticketId - The ticket just opened.
+ * @returns New pages when that ticket had unread messages, else the same data.
+ */
+export function clearUnreadInPages(data: InfiniteData<TicketPage, number> | undefined, ticketId: string): InfiniteData<TicketPage, number> | undefined {
+  if (!data || !data.pages.some((page) => page.data.some((row) => row.id === ticketId && row.unread > 0))) return data;
+  return { ...data, pages: data.pages.map((page) => ({ ...page, data: page.data.map((row) => (row.id === ticketId ? { ...row, unread: 0 } : row)) })) };
+}
+
+/**
+ * One ticket with its thread. Opening it marks it read on the server, so its
+ * row in the cached list loses its "new" badge at once.
  *
  * @param ticketId - The ticket, or null while none is open.
  * @returns The query.
  */
 export function useTicket(ticketId: string | null): UseQueryResult<Ticket, unknown> {
   const userId = useUserId();
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: queryKeys.support.ticket(userId, ticketId ?? ""),
-    queryFn: () => ticketsService.get(ticketId as string),
+    queryFn: async () => {
+      const ticket = await ticketsService.get(ticketId as string);
+      queryClient.setQueriesData<InfiniteData<TicketPage, number>>({ queryKey: queryKeys.support.mine(userId) }, (data) => clearUnreadInPages(data, ticket.id));
+      return ticket;
+    },
     enabled: Boolean(userId && ticketId),
     staleTime: staleTimes.live,
   });
@@ -110,7 +129,7 @@ export function useCreateTicket() {
  */
 export function useReplyToTicket(ticketId: string) {
   const refresh = useRefreshTicket();
-  return useMutation<void, unknown, PostTicketMessagePayload>({
+  return useMutation<Ticket, unknown, PostTicketMessagePayload>({
     mutationFn: (payload) => ticketsService.reply(ticketId, payload),
     onSettled: () => refresh(ticketId),
   });
@@ -124,7 +143,7 @@ export function useReplyToTicket(ticketId: string) {
  */
 export function useReopenTicket(ticketId: string) {
   const refresh = useRefreshTicket();
-  return useMutation<void, unknown, void>({
+  return useMutation<Ticket, unknown, void>({
     mutationFn: () => ticketsService.reopen(ticketId),
     onSettled: () => refresh(ticketId),
   });
@@ -138,7 +157,7 @@ export function useReopenTicket(ticketId: string) {
  */
 export function useCloseTicket(ticketId: string) {
   const refresh = useRefreshTicket();
-  return useMutation<void, unknown, void>({
+  return useMutation<Ticket, unknown, void>({
     mutationFn: () => ticketsService.close(ticketId),
     onSettled: () => refresh(ticketId),
   });

@@ -26,7 +26,7 @@ import {
   validateReply,
   type TicketConflictAction,
 } from "@/hooks/support/tickets.logic";
-import { TICKET_BODY_MAX, type Ticket } from "@/types/v15";
+import { TICKET_BODY_MAX, type Ticket } from "@/types/tickets";
 import { TicketFilePicker } from "./TicketFilePicker";
 
 /** Props for {@link TicketThreadSheet}. */

@@ -20,15 +20,20 @@ import {
   supportHref,
   threadMessages,
   ticketAreasFor,
+  TICKET_CHANGED_MESSAGE,
+  TICKET_INVALID_TRANSITION_MESSAGE,
   ticketConflictMessage,
+  ticketContext,
   toCreatePayload,
+  totalUnread,
+  unreadLabel,
   updatedLabel,
   validateNewTicket,
   validateReply,
 } from "@/hooks/support/tickets.logic";
 import { attentionHref } from "@/hooks/today/today.routes";
 import { ApiError } from "@/lib/apiError";
-import type { Ticket, TicketMessage } from "@/types/v15";
+import type { Ticket, TicketMessage } from "@/types/tickets";
 
 const NOW = new Date("2026-10-07T12:00:00.000Z");
 const DAY = 24 * 60 * 60_000;
@@ -99,6 +104,16 @@ describe("new ticket and reply checks", () => {
     });
   });
 
+  it("sends where the user was as context, cut to the API's lengths", () => {
+    const context = ticketContext("1.5.0", { path: "/settings?tab=help", userAgent: "x".repeat(600) });
+    expect(context).toEqual({ path: "/settings?tab=help", appVersion: "1.5.0", userAgent: "x".repeat(500) });
+    expect(ticketContext("1.5.0", { path: null, userAgent: null })).toEqual({ appVersion: "1.5.0" });
+    expect(ticketContext("1.5.0").appVersion).toBe("1.5.0");
+    const body = toCreatePayload({ desk: "talim", area: "grading", subject: "Scores", body: "Gone" }, [], context);
+    expect(body.context).toEqual(context);
+    expect(toCreatePayload({ desk: "talim", area: "grading", subject: "Scores", body: "Gone" }, [], {})).not.toHaveProperty("context");
+  });
+
   it("counts after trimming", () => {
     expect(countLabel("  abc ", 140)).toBe("3 / 140");
     expect(countLabel("x".repeat(1200), 5000)).toBe("1,200 / 5,000");
@@ -158,7 +173,18 @@ describe("409 words", () => {
   const ticket = { status: "resolved" as const, resolvedAt: ago(10 * DAY), reference: "TS-2BN6R" };
   const bare409 = ApiError.fromResponse({ status: 409 }, null);
 
-  it("prefers the server's own message", () => {
+  it("maps the API's reason (top-level code) to its words", () => {
+    const reason = (code: string) => ApiError.fromResponse({ status: 409 }, { code, message: "Server words.", error: { code: "CONFLICT", message: "Server words." } });
+    expect(reason("TICKET_CLOSED").reasonCode).toBe("TICKET_CLOSED");
+    expect(ticketConflictMessage(reason("TICKET_CLOSED"), "reply", { ...ticket, status: "open" }, NOW)).toBe(TICKET_CLOSED_MESSAGE);
+    expect(ticketConflictMessage(reason("REOPEN_WINDOW_PASSED"), "reply", ticket, NOW)).toBe(reopenWindowMessage("TS-2BN6R"));
+    expect(ticketConflictMessage(reason("MESSAGE_CAP"), "reply", ticket, NOW)).toBe(TICKET_MESSAGE_CAP_MESSAGE);
+    expect(ticketConflictMessage(reason("INVALID_TRANSITION"), "reopen", ticket, NOW)).toBe(TICKET_INVALID_TRANSITION_MESSAGE);
+    expect(ticketConflictMessage(reason("TICKET_CHANGED"), "close", ticket, NOW)).toBe(TICKET_CHANGED_MESSAGE);
+    expect(ticketConflictMessage(reason("SOMETHING_NEW"), "close", ticket, NOW)).toBe("Server words.");
+  });
+
+  it("prefers the server's own message when there is no reason", () => {
     const server = ApiError.fromResponse({ status: 409 }, { error: { code: "CONFLICT", message: "Resolved over 7 days ago." } });
     expect(ticketConflictMessage(server, "reopen", ticket, NOW)).toBe("Resolved over 7 days ago.");
   });
@@ -193,10 +219,19 @@ describe("thread", () => {
   });
 
   it("calls the requester You and names which desk staff answer for", () => {
-    const ticket = { requester: { userId: "me", role: "teacher" as const }, desk: "talim" as const } as Pick<Ticket, "requester" | "desk">;
+    const ticket: Pick<Ticket, "requester" | "desk"> = { requester: { id: "me", name: "Ada Bello", role: "teacher" }, desk: "talim" };
     expect(authorLabel(message("1", ago(1), author("me", "teacher")), ticket)).toEqual({ name: "You", role: null });
     expect(authorLabel(message("2", ago(1), author("t1", "admin", "Tolu")), ticket)).toEqual({ name: "Tolu", role: "Talim support" });
     expect(authorLabel(message("3", ago(1), author("s1", "school_admin", "Mrs Obi")), ticket)).toEqual({ name: "Mrs Obi", role: "School" });
+  });
+});
+
+describe("unread", () => {
+  it("reads the server's count as an \"N new\" badge", () => {
+    expect(unreadLabel({ unread: 0 })).toBeNull();
+    expect(unreadLabel({ unread: 1 })).toBe("1 new");
+    expect(unreadLabel({ unread: 12 })).toBe("12 new");
+    expect(totalUnread([{ unread: 2 }, { unread: 0 }, { unread: 3 }])).toBe(5);
   });
 });
 

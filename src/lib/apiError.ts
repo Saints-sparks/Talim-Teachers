@@ -39,6 +39,8 @@ export interface ApiErrorBody {
   message?: string | string[];
   error?: { code?: string; message?: string; details?: ApiErrorDetail[] } | string;
   requestId?: string;
+  /** A route's own reason, beside the generic `error.code` (e.g. 409 `TICKET_CLOSED`). */
+  code?: string;
 }
 
 const KNOWN_CODES = new Set<ApiErrorCode>([
@@ -99,6 +101,13 @@ export class ApiError extends Error {
   readonly details: ApiErrorDetail[];
   readonly requestId?: string;
   /**
+   * The route's own reason, which the API sends as a top-level `code` beside
+   * the generic `error.code` (a ticket's 409 says `TICKET_CLOSED`,
+   * `REOPEN_WINDOW_PASSED`, `MESSAGE_CAP` or `INVALID_TRANSITION`).
+   * Read from the body; undefined when it carries none.
+   */
+  readonly reasonCode?: string;
+  /**
    * Axios-shaped view of the failed response, kept only so call sites written
    * against axios (`err.response?.data?.message`, `err.response?.status`) keep
    * working while they are migrated.
@@ -121,6 +130,8 @@ export class ApiError extends Error {
     this.status = status;
     this.details = details;
     this.requestId = requestId;
+    const reason = body && typeof body === "object" ? (body as ApiErrorBody).code : undefined;
+    this.reasonCode = typeof reason === "string" && reason ? reason : undefined;
     if (status > 0) this.response = { status, data: body ?? { message } };
   }
 

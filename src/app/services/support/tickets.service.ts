@@ -3,22 +3,24 @@
  * (`talimBE-V2/docs/v1.5-platform-sync.md` §1, "Requester"):
  *
  * - `GET /tickets/mine?status=&page=&limit=`
- * - `GET /tickets/:id` (internal notes already removed by the API)
- * - `POST /tickets`
+ * - `GET /tickets/:id` (internal notes already removed by the API; opening
+ *   it marks it read, so its `unread` drops to 0)
+ * - `POST /tickets` (with `context`: page, app version, browser)
  * - `POST /tickets/:id/messages` (409 when the ticket is closed or full)
  * - `POST /tickets/:id/reopen` (409 outside the 7-day window)
  * - `POST /tickets/:id/close`
  * - attachments go up first through the chat upload, `POST /upload/chat-attachment`
  *
  * It replaces the old `POST /support/tickets` problem report. Every screen
- * makes one list call; nothing here is called per row. With
+ * makes one list call; nothing here is called per row. Every write answers
+ * with the ticket as `GET /tickets/:id` reads it. With
  * `NEXT_PUBLIC_USE_FIXTURES=true` in a dev build the calls answer from
  * `src/lib/fixtures/tickets.fixture.ts`.
  */
 import { uploadChatAttachment, type ChatAttachmentUpload } from "@/app/services/chat.service";
 import { api } from "@/lib/apiClient";
 import { fixturesEnabled } from "@/lib/fixtures/flag";
-import type { CreateTicketPayload, MyTicketsQuery, PostTicketMessagePayload, Ticket, TicketPage } from "@/types/v15";
+import type { CreateTicketPayload, MyTicketsQuery, PostTicketMessagePayload, Ticket, TicketPage } from "@/types/tickets";
 
 /**
  * A query string from the defined values only.
@@ -29,7 +31,7 @@ import type { CreateTicketPayload, MyTicketsQuery, PostTicketMessagePayload, Tic
 function toQuery(query: MyTicketsQuery): string {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(query)) {
-    if (value !== undefined && value !== null && value !== "") params.set(key, String(value));
+    if (value !== undefined && value !== null && String(value) !== "") params.set(key, String(value));
   }
   const text = params.toString();
   return text ? `?${text}` : "";
@@ -58,7 +60,8 @@ export const ticketsService = {
   },
 
   /**
-   * `GET /tickets/:id`: one of the user's tickets with its thread.
+   * `GET /tickets/:id`: one of the user's tickets with its thread. The
+   * server marks it read for the requester.
    *
    * @param id - The ticket.
    * @returns The ticket.
@@ -72,7 +75,7 @@ export const ticketsService = {
   /**
    * `POST /tickets`: raises a ticket. Teachers raise them to the Talim desk.
    *
-   * @param payload - Desk, area, subject, first message and attachments.
+   * @param payload - Desk, area, subject, first message, attachments and `context`.
    * @returns The new ticket.
    * @throws ApiError: 400 for a field the server refuses, 403 for a desk the role may not use.
    */
@@ -82,50 +85,41 @@ export const ticketsService = {
   },
 
   /**
-   * `POST /tickets/:id/messages`: the requester's reply. Callers refetch the
-   * ticket afterwards, whatever the answer's shape.
+   * `POST /tickets/:id/messages`: the requester's reply. A reply to a
+   * resolved ticket within 7 days reopens it.
    *
    * @param id - The ticket.
    * @param payload - The text and attachments.
-   * @returns Nothing useful; refetch the ticket.
-   * @throws ApiError: 409 when the ticket is closed or holds 500 messages.
+   * @returns The ticket after the reply.
+   * @throws ApiError: 409 `TICKET_CLOSED`, `REOPEN_WINDOW_PASSED` or `MESSAGE_CAP` (`reasonCode`).
    */
-  reply: async (id: string, payload: PostTicketMessagePayload): Promise<void> => {
-    if (fixturesEnabled()) {
-      (await fixtures()).replyTicketFixture(id, payload);
-      return;
-    }
-    await api.post(`/tickets/${encodeURIComponent(id)}/messages`, payload);
+  reply: async (id: string, payload: PostTicketMessagePayload): Promise<Ticket> => {
+    if (fixturesEnabled()) return (await fixtures()).replyTicketFixture(id, payload);
+    return api.post<Ticket>(`/tickets/${encodeURIComponent(id)}/messages`, payload);
   },
 
   /**
    * `POST /tickets/:id/reopen`: reopens a resolved ticket.
    *
    * @param id - The ticket.
-   * @returns Nothing useful; refetch the ticket.
-   * @throws ApiError: 409 more than 7 days after it was resolved.
+   * @returns The reopened ticket.
+   * @throws ApiError: 409 `REOPEN_WINDOW_PASSED` more than 7 days after it was resolved, `INVALID_TRANSITION` when it is not resolved.
    */
-  reopen: async (id: string): Promise<void> => {
-    if (fixturesEnabled()) {
-      (await fixtures()).reopenTicketFixture(id);
-      return;
-    }
-    await api.post(`/tickets/${encodeURIComponent(id)}/reopen`);
+  reopen: async (id: string): Promise<Ticket> => {
+    if (fixturesEnabled()) return (await fixtures()).reopenTicketFixture(id);
+    return api.post<Ticket>(`/tickets/${encodeURIComponent(id)}/reopen`);
   },
 
   /**
    * `POST /tickets/:id/close`: the requester closes their own ticket.
    *
    * @param id - The ticket.
-   * @returns Nothing useful; refetch the ticket.
+   * @returns The closed ticket.
    * @throws ApiError when the request fails.
    */
-  close: async (id: string): Promise<void> => {
-    if (fixturesEnabled()) {
-      (await fixtures()).closeTicketFixture(id);
-      return;
-    }
-    await api.post(`/tickets/${encodeURIComponent(id)}/close`);
+  close: async (id: string): Promise<Ticket> => {
+    if (fixturesEnabled()) return (await fixtures()).closeTicketFixture(id);
+    return api.post<Ticket>(`/tickets/${encodeURIComponent(id)}/close`);
   },
 
   /**

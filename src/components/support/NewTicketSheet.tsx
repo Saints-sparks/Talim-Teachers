@@ -4,6 +4,7 @@ import React, { useEffect, useId, useRef, useState } from "react";
 import { Sheet } from "@/components/tl/Sheet";
 import { chip, fieldControl, fieldLabel, ghostButton, primaryButton } from "@/components/tl/styles";
 import { getErrorMessage } from "@/lib/apiError";
+import { APP_VERSION } from "@/lib/appVersion";
 import { useCreateTicket, useTicketUploads } from "@/hooks/support/useTickets";
 import {
   allowedDesks,
@@ -12,12 +13,13 @@ import {
   deskLabel,
   hasErrors,
   ticketAreasFor,
+  ticketContext,
   toCreatePayload,
   validateNewTicket,
   type NewTicketErrors,
   type NewTicketField,
 } from "@/hooks/support/tickets.logic";
-import { TICKET_BODY_MAX, TICKET_SUBJECT_MAX, type Ticket, type TicketArea, type TicketDesk } from "@/types/v15";
+import { TICKET_BODY_MAX, TICKET_SUBJECT_MAX, type Ticket, type TicketArea, type TicketDesk } from "@/types/tickets";
 import { TicketFilePicker } from "./TicketFilePicker";
 
 /** Props for {@link NewTicketSheet}. */
@@ -98,7 +100,7 @@ export function NewTicketSheet({ open, onOpenChange, role, schoolName, onCreated
     }
     try {
       const attachments = await uploads.upload(files);
-      const ticket = await create.mutateAsync(toCreatePayload({ ...draft, desk: draft.desk, area: draft.area }, attachments));
+      const ticket = await create.mutateAsync(toCreatePayload({ ...draft, desk: draft.desk, area: draft.area }, attachments, ticketContext(APP_VERSION)));
       onCreated(ticket);
     } catch (error) {
       setSendError(getErrorMessage(error, "We couldn't send your ticket. Please try again."));

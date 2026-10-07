@@ -15,6 +15,7 @@ import { ApiError } from "@/lib/apiError";
 import {
   TICKET_BODY_MAX,
   TICKET_BODY_MIN,
+  TICKET_CONTEXT_LIMITS,
   TICKET_REOPEN_WINDOW_DAYS,
   TICKET_SUBJECT_MAX,
   TICKET_SUBJECT_MIN,
@@ -22,11 +23,12 @@ import {
   type CreateTicketPayload,
   type Ticket,
   type TicketArea,
+  type TicketContext,
   type TicketDesk,
   type TicketMessage,
   type TicketStatus,
   type TicketSummary,
-} from "@/types/v15";
+} from "@/types/tickets";
 
 /** Most files one ticket message carries (Talim Admin's `MAX_ATTACHMENTS`, the API's cap). */
 export const MAX_TICKET_ATTACHMENTS = 5;
@@ -257,17 +259,44 @@ export function hasErrors(errors: NewTicketErrors): boolean {
 }
 
 /**
+ * Where the user is, for desk staff (`context` on `POST /tickets`): the page,
+ * this app's version and the browser, each cut to the length the API takes.
+ *
+ * @param appVersion - This app's version.
+ * @param where - The page and user agent; read from `window` when left out.
+ * @param where.path - The page, e.g. `/settings`.
+ * @param where.userAgent - The browser's user agent.
+ * @returns The context, with only the values that are known.
+ */
+export function ticketContext(appVersion: string, where?: { path?: string | null; userAgent?: string | null }): TicketContext {
+  const path = where ? where.path : typeof window === "undefined" ? null : `${window.location.pathname}${window.location.search}`;
+  const userAgent = where ? where.userAgent : typeof navigator === "undefined" ? null : navigator.userAgent;
+  const context: TicketContext = {};
+  if (path) context.path = path.slice(0, TICKET_CONTEXT_LIMITS.path);
+  if (appVersion) context.appVersion = appVersion.slice(0, TICKET_CONTEXT_LIMITS.appVersion);
+  if (userAgent) context.userAgent = userAgent.slice(0, TICKET_CONTEXT_LIMITS.userAgent);
+  return context;
+}
+
+/**
  * The `POST /tickets` body for a checked draft: trimmed text, the uploaded
- * files only when there are some, and the child only for a parent.
+ * files only when there are some, the child only for a parent, and where the
+ * user was.
  *
  * @param draft - A draft that passed {@link validateNewTicket} (desk and area set).
  * @param attachments - The uploaded files.
+ * @param context - From {@link ticketContext}; left out when empty.
  * @returns The body.
  */
-export function toCreatePayload(draft: NewTicketDraft & { desk: TicketDesk; area: TicketArea }, attachments: readonly Attachment[] = []): CreateTicketPayload {
+export function toCreatePayload(
+  draft: NewTicketDraft & { desk: TicketDesk; area: TicketArea },
+  attachments: readonly Attachment[] = [],
+  context?: TicketContext,
+): CreateTicketPayload {
   const payload: CreateTicketPayload = { desk: draft.desk, area: draft.area, subject: draft.subject.trim(), body: draft.body.trim() };
   if (attachments.length > 0) payload.attachments = [...attachments];
   if (draft.childId) payload.childId = draft.childId;
+  if (context && Object.keys(context).length > 0) payload.context = context;
   return payload;
 }
 
@@ -321,26 +350,32 @@ export function toTicketAttachment(uploaded: Attachment): Attachment {
 
 // ─── Reopen window ──────────────────────────────────────────────────────────
 
+/** What the reopen window is read from: the status, `resolvedAt`, and the detail's `reopenableUntil`. */
+export type ReopenFields = Pick<TicketSummary, "status" | "resolvedAt"> & Partial<Pick<Ticket, "reopenableUntil">>;
+
 /**
- * When a resolved ticket stops being reopenable: `resolvedAt` + 7 days.
+ * When a resolved ticket stops being reopenable: the server's
+ * `reopenableUntil` when the detail carries it, else `resolvedAt` + 7 days.
  *
- * @param ticket - The ticket's status and `resolvedAt`.
- * @returns The deadline, or null when the ticket is not resolved (or has no readable `resolvedAt`).
+ * @param ticket - The ticket's status, `resolvedAt` and `reopenableUntil`.
+ * @returns The deadline, or null when the ticket is not resolved (or has no readable date).
  */
-export function reopenDeadline(ticket: Pick<TicketSummary, "status" | "resolvedAt">): Date | null {
-  if (ticket.status !== "resolved" || !ticket.resolvedAt) return null;
-  const resolved = Date.parse(ticket.resolvedAt);
+export function reopenDeadline(ticket: ReopenFields): Date | null {
+  if (ticket.status !== "resolved") return null;
+  const until = Date.parse(ticket.reopenableUntil ?? "");
+  if (!Number.isNaN(until)) return new Date(until);
+  const resolved = Date.parse(ticket.resolvedAt ?? "");
   return Number.isNaN(resolved) ? null : new Date(resolved + REOPEN_WINDOW_MS);
 }
 
 /**
  * Whether the requester can still reopen a ticket.
  *
- * @param ticket - The ticket's status and `resolvedAt`.
+ * @param ticket - The ticket's status, `resolvedAt` and `reopenableUntil`.
  * @param now - The current time.
  * @returns True for a resolved ticket within 7 days of `resolvedAt`.
  */
-export function canReopen(ticket: Pick<TicketSummary, "status" | "resolvedAt">, now: Date = new Date()): boolean {
+export function canReopen(ticket: ReopenFields, now: Date = new Date()): boolean {
   const deadline = reopenDeadline(ticket);
   return deadline !== null && now.getTime() < deadline.getTime();
 }
@@ -348,11 +383,11 @@ export function canReopen(ticket: Pick<TicketSummary, "status" | "resolvedAt">, 
 /**
  * Whether a resolved ticket is past its reopen window (a reply would be refused too).
  *
- * @param ticket - The ticket's status and `resolvedAt`.
+ * @param ticket - The ticket's status, `resolvedAt` and `reopenableUntil`.
  * @param now - The current time.
  * @returns True for a resolved ticket that can no longer be reopened.
  */
-export function isPastReopenWindow(ticket: Pick<TicketSummary, "status" | "resolvedAt">, now: Date = new Date()): boolean {
+export function isPastReopenWindow(ticket: ReopenFields, now: Date = new Date()): boolean {
   return ticket.status === "resolved" && !canReopen(ticket, now);
 }
 
@@ -374,6 +409,12 @@ export function reopenWindowMessage(reference: string): string {
   return `This ticket was resolved more than 7 days ago, so it can't be reopened. Raise a new ticket and mention ${reference}.`;
 }
 
+/** The ticket's status moved on, so the action no longer applies. */
+export const TICKET_INVALID_TRANSITION_MESSAGE = "This ticket's status has changed, so that can't be done now. Check the latest and try again.";
+
+/** Someone else changed the ticket at the same moment. */
+export const TICKET_CHANGED_MESSAGE = "This ticket changed while you were working on it. Check the latest and try again.";
+
 /** What the requester was doing when the API answered 409. */
 export type TicketConflictAction = "reply" | "reopen" | "close";
 
@@ -388,9 +429,10 @@ export function isConflict(error: unknown): error is ApiError {
 }
 
 /**
- * The words for a 409 on a ticket. The server's own message wins when it sent
- * one; otherwise the ticket as last loaded decides: closed, past the reopen
- * window, or (for a reply) the 500-message cap.
+ * The words for a 409 on a ticket, from the API's reason (the top-level
+ * `code`): `TICKET_CLOSED`, `REOPEN_WINDOW_PASSED`, `MESSAGE_CAP`,
+ * `INVALID_TRANSITION` or `TICKET_CHANGED`. Without a known reason the
+ * server's own message wins, else the ticket as last loaded decides.
  *
  * @param error - What the request threw.
  * @param action - What was being done.
@@ -401,16 +443,54 @@ export function isConflict(error: unknown): error is ApiError {
 export function ticketConflictMessage(
   error: unknown,
   action: TicketConflictAction,
-  ticket: Pick<Ticket, "status" | "resolvedAt" | "reference">,
+  ticket: ReopenFields & Pick<Ticket, "reference">,
   now: Date = new Date(),
 ): string | null {
   if (!isConflict(error)) return null;
+  switch (error.reasonCode) {
+    case "TICKET_CLOSED":
+      return TICKET_CLOSED_MESSAGE;
+    case "REOPEN_WINDOW_PASSED":
+      return reopenWindowMessage(ticket.reference);
+    case "MESSAGE_CAP":
+      return TICKET_MESSAGE_CAP_MESSAGE;
+    case "INVALID_TRANSITION":
+      return TICKET_INVALID_TRANSITION_MESSAGE;
+    case "TICKET_CHANGED":
+      return TICKET_CHANGED_MESSAGE;
+    default:
+      break;
+  }
   const generic = ApiError.fromResponse({ status: 409 }, null).message;
   const server = error.message?.trim();
   if (server && server !== generic) return server;
   if (ticket.status === "closed") return TICKET_CLOSED_MESSAGE;
   if (action === "reopen" || isPastReopenWindow(ticket, now)) return reopenWindowMessage(ticket.reference);
   return action === "reply" ? TICKET_MESSAGE_CAP_MESSAGE : TICKET_CLOSED_MESSAGE;
+}
+
+// ─── Unread ─────────────────────────────────────────────────────────────────
+
+/**
+ * The "N new" badge of a ticket row: messages from support since the
+ * requester last opened it (`unread`; opening the ticket clears it on the server).
+ *
+ * @param ticket - The ticket's `unread`.
+ * @returns e.g. "2 new", or null when there is nothing new.
+ */
+export function unreadLabel(ticket: Pick<TicketSummary, "unread">): string | null {
+  const count = Number(ticket.unread) || 0;
+  return count > 0 ? `${count.toLocaleString("en-GB")} new` : null;
+}
+
+/**
+ * Unread messages across tickets, for a heading's badge.
+ *
+ * @param tickets - The tickets loaded.
+ * @returns The sum of their `unread`.
+ */
+export function totalUnread(tickets: readonly Pick<TicketSummary, "unread">[]): number {
+  return tickets.reduce((sum, ticket) => sum + (Number(ticket.unread) || 0), 0);
 }
 
 // ─── Thread ─────────────────────────────────────────────────────────────────
@@ -450,7 +530,7 @@ const SCHOOL_STAFF_ROLES: ReadonlySet<string> = new Set(["school_admin", "school
  * @returns The name and the role line.
  */
 export function authorLabel(message: Pick<TicketMessage, "author">, ticket: Pick<TicketSummary, "requester" | "desk">): MessageAuthorLabel {
-  if (message.author.id && message.author.id === ticket.requester.userId) return { name: "You", role: null };
+  if (message.author.id && message.author.id === ticket.requester.id) return { name: "You", role: null };
   const role = message.author.role === "admin" ? "Talim support" : SCHOOL_STAFF_ROLES.has(message.author.role) ? "School" : ticket.desk === "talim" ? "Talim support" : "School";
   return { name: message.author.name?.trim() || role, role };
 }
@@ -534,11 +614,11 @@ export function ticketTime(value: string | Date | null | undefined, now: Date = 
 /**
  * The hint beside "Reopen".
  *
- * @param ticket - The ticket's status and `resolvedAt`.
+ * @param ticket - The ticket's status, `resolvedAt` and `reopenableUntil`.
  * @param now - The current time.
  * @returns e.g. "You can reopen until 13 Oct, 9:20am", or null when it can't be reopened.
  */
-export function reopenHint(ticket: Pick<TicketSummary, "status" | "resolvedAt">, now: Date = new Date()): string | null {
+export function reopenHint(ticket: ReopenFields, now: Date = new Date()): string | null {
   const deadline = reopenDeadline(ticket);
   if (!deadline || !canReopen(ticket, now)) return null;
   return `You can reopen until ${ticketTime(deadline, now)}`;
