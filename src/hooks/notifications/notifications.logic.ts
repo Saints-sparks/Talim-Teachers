@@ -31,7 +31,7 @@ import type {
 // ─── Tabs ───────────────────────────────────────────────────────────────────
 
 /** The tabs of the Notifications page, as `?tab=` spells them. */
-export type NotificationTabId = "all" | "unread" | "academics" | "attendance" | "announcements";
+export type NotificationTabId = "all" | "unread" | "academics" | "attendance" | "announcements" | "support";
 
 /** One tab: its id and label. */
 export interface NotificationTab {
@@ -39,13 +39,14 @@ export interface NotificationTab {
   label: string;
 }
 
-/** The tabs, in the design's order (without its "Messages" tab). */
+/** The tabs, in the design's order (without its "Messages" tab), then v1.5's Support. */
 export const NOTIFICATION_TABS: readonly NotificationTab[] = [
   { id: "all", label: "All" },
   { id: "unread", label: "Unread" },
   { id: "academics", label: "Academics" },
   { id: "attendance", label: "Attendance" },
   { id: "announcements", label: "Announcements" },
+  { id: "support", label: "Support" },
 ];
 
 const TAB_IDS: ReadonlySet<string> = new Set(NOTIFICATION_TABS.map((tab) => tab.id));
@@ -71,14 +72,18 @@ export function notificationTabHref(tab: NotificationTabId): string {
   return tab === "all" ? "/notifications" : `/notifications?tab=${tab}`;
 }
 
+/** A tab that lists one group of categories. */
+type CategoryTabId = Exclude<NotificationTabId, "all" | "unread">;
+
 /** The category tab each category lists under; `null` for All and Unread only. */
-const TAB_OF_CATEGORY: Record<NotificationCategory, "academics" | "attendance" | "announcements" | null> = {
+const TAB_OF_CATEGORY: Record<NotificationCategory, CategoryTabId | null> = {
   academics: "academics",
   grading: "academics",
   resources: "academics",
   attendance: "attendance",
   leave: "attendance",
   announcement: "announcements",
+  support: "support",
   messages: null,
   account: null,
   payments: null,
@@ -89,9 +94,9 @@ const TAB_OF_CATEGORY: Record<NotificationCategory, "academics" | "attendance" |
  * The category tab a category belongs to.
  *
  * @param category - The notification's category.
- * @returns `academics` (academics, grading, resources), `attendance` (attendance, leave), `announcements`, or `null`.
+ * @returns `academics` (academics, grading, resources), `attendance` (attendance, leave), `announcements`, `support`, or `null`.
  */
-export function tabOfCategory(category: NotificationCategory): "academics" | "attendance" | "announcements" | null {
+export function tabOfCategory(category: NotificationCategory): CategoryTabId | null {
   return TAB_OF_CATEGORY[category] ?? null;
 }
 
@@ -151,7 +156,7 @@ export function countsFromItems(items: readonly TeacherNotification[]): Notifica
 /**
  * The number on each tab: All and Unread from the totals, Academics the sum of
  * `academics`, `grading` and `resources`, Attendance the sum of `attendance`
- * and `leave`, Announcements its one category.
+ * and `leave`, Announcements and Support their one category each.
  *
  * @param counts - `GET /notifications/counts`.
  * @returns The count per tab.
@@ -164,6 +169,7 @@ export function tabCounts(counts: NotificationCountsBody): Record<NotificationTa
     academics: all("academics") + all("grading") + all("resources"),
     attendance: all("attendance") + all("leave"),
     announcements: all("announcement"),
+    support: all("support"),
   };
 }
 
@@ -262,6 +268,7 @@ const CATEGORY_CHIPS: Record<NotificationCategory, Chip> = {
   attendance: { label: "Attendance", tone: "warning" },
   leave: { label: "Leave", tone: "warning" },
   announcement: { label: "Announcement", tone: "accent" },
+  support: { label: "Support", tone: "success" },
   messages: { label: "Messages", tone: "muted" },
   account: { label: "Account", tone: "muted" },
   payments: { label: "Payments", tone: "muted" },
@@ -318,6 +325,7 @@ const DEFAULT_ACTION_LABELS: Record<Exclude<NotificationTargetPage, UnroutedTarg
   announcements: "Open announcements",
   timetable: "Open timetable",
   settings: "Open settings",
+  support: "Open ticket",
 };
 
 /** The target pages this app has a route for; any other page (`payments`, a parent's `results`) gets no action. */

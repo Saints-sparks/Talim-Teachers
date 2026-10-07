@@ -55,8 +55,8 @@ function item(extra: Partial<NotificationRecord> = {}): TeacherNotification {
 beforeEach(() => resetInboxFixtureStore());
 
 describe("tabs", () => {
-  it("has All, Unread, Academics, Attendance and Announcements, and no Messages tab", () => {
-    expect(NOTIFICATION_TABS.map((tab) => tab.label)).toEqual(["All", "Unread", "Academics", "Attendance", "Announcements"]);
+  it("has All, Unread, Academics, Attendance, Announcements and Support, and no Messages tab", () => {
+    expect(NOTIFICATION_TABS.map((tab) => tab.label)).toEqual(["All", "Unread", "Academics", "Attendance", "Announcements", "Support"]);
     expect(NOTIFICATION_TABS.some((tab) => /message/i.test(tab.label))).toBe(false);
   });
 
@@ -75,6 +75,9 @@ describe("tabs", () => {
     expect(tabOfCategory("resources")).toBe("academics");
     expect(tabOfCategory("attendance")).toBe("attendance");
     expect(tabOfCategory("announcement")).toBe("announcements");
+    expect(tabOfCategory("support")).toBe("support");
+    expect(matchesTab({ category: "support", unread: false }, "support")).toBe(true);
+    expect(matchesTab({ category: "grading", unread: false }, "support")).toBe(false);
     expect(tabOfCategory("messages")).toBeNull();
     expect(tabOfCategory("account")).toBeNull();
     expect(tabOfCategory("other")).toBeNull();
@@ -128,8 +131,9 @@ describe("counts", () => {
         messages: { all: 1, unread: 0 },
       },
     };
-    expect(tabCounts(counts)).toEqual({ all: 12, unread: 5, academics: 6, attendance: 4, announcements: 1 });
-    expect(tabCounts({ all: 0, unread: 0, byCategory: {} })).toEqual({ all: 0, unread: 0, academics: 0, attendance: 0, announcements: 0 });
+    expect(tabCounts(counts)).toEqual({ all: 12, unread: 5, academics: 6, attendance: 4, announcements: 1, support: 0 });
+    expect(tabCounts({ all: 0, unread: 0, byCategory: {} })).toEqual({ all: 0, unread: 0, academics: 0, attendance: 0, announcements: 0, support: 0 });
+    expect(tabCounts({ all: 2, unread: 1, byCategory: { support: { all: 2, unread: 1 } } }).support).toBe(2);
   });
 
   it("counts leave on the Attendance tab and payments on no category tab", () => {
@@ -142,13 +146,13 @@ describe("counts", () => {
         payments: { all: 3, unread: 1 },
       },
     };
-    expect(tabCounts(counts)).toEqual({ all: 9, unread: 6, academics: 0, attendance: 6, announcements: 0 });
+    expect(tabCounts(counts)).toEqual({ all: 9, unread: 6, academics: 0, attendance: 6, announcements: 0, support: 0 });
     expect(countsAfterRead(counts, "leave").byCategory.leave).toEqual({ all: 4, unread: 3 });
   });
 
   it("counts the loaded items the way the server counts both feeds", () => {
     expect(countsFromItems(fixtureInbox())).toEqual(makeNotificationCountsFixture());
-    expect(tabCounts(makeNotificationCountsFixture())).toEqual({ all: 6, unread: 3, academics: 2, attendance: 1, announcements: 2 });
+    expect(tabCounts(makeNotificationCountsFixture())).toEqual({ all: 6, unread: 3, academics: 2, attendance: 1, announcements: 2, support: 0 });
   });
 
   it("lowers the unread counts on a read, restores them on a refusal, and zeroes them on read-all", () => {
@@ -197,6 +201,7 @@ describe("chips", () => {
     expect(categoryChip("other").label).toBe("Other");
     expect(categoryChip("leave")).toEqual({ label: "Leave", tone: "warning" });
     expect(categoryChip("payments")).toEqual({ label: "Payments", tone: "muted" });
+    expect(categoryChip("support")).toEqual({ label: "Support", tone: "success" });
   });
 
   it("names each attachment kind for what it is", () => {
@@ -210,6 +215,17 @@ describe("chips", () => {
 });
 
 describe("notificationAction", () => {
+  it("opens a support ticket's thread under Settings → Help (v1.5 deep link)", () => {
+    expect(notificationAction(item({ metadata: { target: { page: "support", ticketId: "tk-open" } } }))).toEqual({
+      href: "/settings?tab=help&ticket=tk-open",
+      label: "Open ticket",
+    });
+    expect(notificationAction(item({ metadata: { target: { page: "support", ticketId: "tk 9/1" }, actionLabel: "View reply" } }))).toEqual({
+      href: "/settings?tab=help&ticket=tk%209%2F1",
+      label: "View reply",
+    });
+  });
+
   it("routes a target through the shared mapper, with the producer's label", () => {
     expect(notificationAction(item({ metadata: { target: { page: "grading", courseId: "k1", assessmentId: "a1" }, actionLabel: "Open grading" } }))).toEqual({
       href: "/grading?courseId=k1&assessmentId=a1",

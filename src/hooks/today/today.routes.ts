@@ -13,6 +13,7 @@
  */
 import type { AttentionTarget, AttentionTone, RegisterStatus, SetupStepKey } from "@/types/today";
 import type { NotificationTarget } from "@/types/inboxSettings";
+import { supportHref } from "@/hooks/support/tickets.logic";
 
 /**
  * Builds a path with a query string, dropping empty values.
@@ -95,6 +96,8 @@ export function uploadResourceRoute(courseId?: string, week?: number | null): st
  * - `announcements` → the Notifications page on its Announcements tab.
  * - `timetable` → `/timetable` (with `?date=`, not read yet).
  * - `settings` → `/settings`.
+ * - `support` (v1.5) → Settings → Help with the ticket's thread open
+ *   (`/settings?tab=help&ticket=<id>`), or My tickets without an id.
  *
  * @param target - The action's target.
  * @returns The href.
@@ -119,6 +122,8 @@ export function attentionHref(target: AttentionTarget | NotificationTarget): str
       return withQuery("/timetable", { date: target.date });
     case "settings":
       return "/settings";
+    case "support":
+      return supportHref(target.ticketId);
     default:
       return "/dashboard";
   }

@@ -26,6 +26,7 @@ import {
   validateNewTicket,
   validateReply,
 } from "@/hooks/support/tickets.logic";
+import { attentionHref } from "@/hooks/today/today.routes";
 import { ApiError } from "@/lib/apiError";
 import type { Ticket, TicketMessage } from "@/types/v15";
 
@@ -203,6 +204,7 @@ describe("deep link", () => {
   it("opens Settings → Help with the thread, or My tickets without an id", () => {
     expect(supportHref("tk-open")).toBe("/settings?tab=help&ticket=tk-open");
     expect(supportHref(null)).toBe("/settings?tab=help");
+    expect(attentionHref({ page: "support", ticketId: "tk 1" })).toBe("/settings?tab=help&ticket=tk%201");
     expect(parseTicketParam(" tk-open ")).toBe("tk-open");
     expect(parseTicketParam("")).toBeNull();
     expect(parseTicketParam(null)).toBeNull();

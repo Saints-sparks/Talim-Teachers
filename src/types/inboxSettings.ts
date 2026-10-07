@@ -20,6 +20,7 @@
  *    the password copy comes from the backend's real policy.
  */
 import type { components } from "./api";
+import type { SupportNotificationTarget } from "./v15";
 
 type S = components["schemas"];
 
@@ -93,9 +94,11 @@ export type SharedMediaPage = S["ChatMediaPageDto"];
 
 /**
  * `metadata.target` on a notification (same shape as `attention.action.target`):
- * where its action goes.
+ * where its action goes. NOT IN CONTRACT yet: v1.5's support target
+ * `{ page: 'support', ticketId }` (§1 Notifications), which the generated
+ * `NotificationTargetDto` lacks; see `SupportNotificationTarget` in `./v15.ts`.
  */
-export type NotificationTarget = S["NotificationTargetDto"];
+export type NotificationTarget = S["NotificationTargetDto"] | SupportNotificationTarget;
 
 /**
  * Every page a notification's action can name, the parents' and payments'
@@ -106,8 +109,12 @@ export type NotificationTargetPage = NotificationTarget["page"];
 /** `{ all, unread }` for one category. */
 export type CategoryCount = S["InboxCountDto"];
 
-/** A category the counts are kept under (the backend's `NotificationCategory`). */
-export type CountCategory = keyof S["InboxCountsByCategoryDto"];
+/**
+ * A category the counts are kept under (the backend's `NotificationCategory`).
+ * NOT IN CONTRACT yet: v1.5's `support` (§1 Notifications), missing from the
+ * generated `InboxCountsByCategoryDto`.
+ */
+export type CountCategory = keyof S["InboxCountsByCategoryDto"] | "support";
 
 /**
  * `GET /notifications/counts`. Announcements count under `announcement`, and
@@ -116,7 +123,7 @@ export type CountCategory = keyof S["InboxCountsByCategoryDto"];
  * portal also builds counts itself (from a page of items, or a fallback).
  */
 export type NotificationCountsBody = Omit<S["InboxCountsDto"], "byCategory"> & {
-  byCategory: Partial<S["InboxCountsDto"]["byCategory"]>;
+  byCategory: Partial<Record<CountCategory, CategoryCount>>;
 };
 
 /** `PATCH /notifications/read-all` (also marks the caller's announcements read). */

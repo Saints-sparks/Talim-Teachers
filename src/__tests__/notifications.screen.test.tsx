@@ -98,7 +98,7 @@ describe("NotificationsScreen", () => {
 
     await waitFor(() => expect(tab("Unread")).toHaveTextContent("Unread3"));
     const tabs = within(screen.getByRole("tablist")).getAllByRole("tab");
-    expect(tabs.map((t) => t.textContent)).toEqual(["All6", "Unread3", "Academics2", "Attendance1", "Announcements2"]);
+    expect(tabs.map((t) => t.textContent)).toEqual(["All6", "Unread3", "Academics2", "Attendance1", "Announcements2", "Support0"]);
     expect(tab("All")).toHaveAttribute("aria-selected", "true");
     expect(tab("All")).toHaveAttribute("aria-controls", "notifications-panel");
 
@@ -138,9 +138,13 @@ describe("NotificationsScreen", () => {
     expect(tab("Attendance")).toHaveFocus();
     expect(rowTitles()).toEqual(["Register not yet submitted: JSS1 A"]);
 
-    fireEvent.keyDown(tab("Attendance"), { key: "End" });
+    fireEvent.keyDown(tab("Attendance"), { key: "ArrowRight" });
     expect(tab("Announcements")).toHaveAttribute("aria-selected", "true");
     expect(rowTitles()).toEqual(["Inter-house sports on Friday 9 October", "Staff meeting moved to Wednesday"]);
+
+    fireEvent.keyDown(tab("Announcements"), { key: "End" });
+    expect(tab("Support")).toHaveAttribute("aria-selected", "true");
+    expect(screen.queryByRole("list", { name: "Notifications" })).not.toBeInTheDocument();
 
     fireEvent.click(tab("All"));
     expect(replace).toHaveBeenLastCalledWith("/notifications", { scroll: false });

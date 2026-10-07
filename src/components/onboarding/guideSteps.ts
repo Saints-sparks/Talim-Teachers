@@ -530,7 +530,7 @@ export const guideConfigs: GuideConfig[] = [
         eyebrow: "Notifications",
         title: "Sorted into tabs",
         description:
-          "All, Unread, Academics (deadlines, grading and resources), Attendance and Announcements, each with how many there are. Messages have their own page.",
+          "All, Unread, Academics (deadlines, grading and resources), Attendance, Announcements and Support (replies to your tickets), each with how many there are. Messages have their own page.",
         icon: ListChecks,
       },
       {

@@ -31,9 +31,11 @@ export type NotificationSource = NotificationItem["source"];
  * The categories the inbox groups by: the backend `NotificationCategory`
  * enum, from the generated contract. `payments` and `leave` arrived with the
  * portals backend (B11); older rows keep their old categories (leave under
- * `attendance`, payments under `account`).
+ * `attendance`, payments under `account`). `support` (a staff reply or a
+ * status change on one of the teacher's tickets) is v1.5's (§1
+ * Notifications), NOT IN CONTRACT yet in the generated enum.
  */
-export type NotificationCategory = NotificationItem["category"];
+export type NotificationCategory = NotificationItem["category"] | "support";
 
 /** One inbox item, normalised from either server list. */
 export interface TeacherNotification {
@@ -190,6 +192,7 @@ const KNOWN_CATEGORIES: ReadonlySet<string> = new Set<NotificationCategory>([
   "account",
   "payments",
   "leave",
+  "support",
   "other",
 ]);
 
@@ -197,7 +200,7 @@ const KNOWN_CATEGORIES: ReadonlySet<string> = new Set<NotificationCategory>([
  * Whether a value is one of the backend's notification categories.
  *
  * @param value - Anything.
- * @returns True for `announcement`, `attendance`, …, `payments`, `leave`, `other`.
+ * @returns True for `announcement`, `attendance`, …, `payments`, `leave`, `support`, `other`.
  */
 export function isNotificationCategory(value: unknown): value is NotificationCategory {
   return typeof value === "string" && KNOWN_CATEGORIES.has(value);
