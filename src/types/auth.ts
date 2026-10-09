@@ -1,3 +1,5 @@
+import type { components } from "./api";
+
 export interface LoginCredentials {
   identifier?: string;
   email?: string;
@@ -55,13 +57,11 @@ export interface User {
   }>;
 }
 
-export interface AuthResponse {
+/** `deletionCancelled` (generated): present, and true, only when this sign-in cancelled a scheduled account deletion. */
+export interface AuthResponse extends Pick<components["schemas"]["AccessTokenResponseDto"], "deletionCancelled"> {
   access_token: string;
   refresh_token: string;
   user: User;
-  // TODO-switch to generated: `POST /auth/login`'s response once `npm run types:api` has it.
-  /** True when this sign-in cancelled a scheduled account deletion. */
-  deletionCancelled?: boolean;
 }
 
 export interface AuthError {
