@@ -442,8 +442,11 @@ test("Notifications: the tabs carry the counts, Mark all as read clears them, an
     audience: ["teachers"],
     status: "PUBLISHED",
   });
-  const counts = await apiCall<Counts>(token, "GET", "/notifications/counts");
-  expect(counts.unread).toBeGreaterThan(0);
+  // The announcement reaches the teacher through the notification queue, so wait for it.
+  let counts = await apiCall<Counts>(token, "GET", "/notifications/counts");
+  await expect
+    .poll(async () => (counts = await apiCall<Counts>(token, "GET", "/notifications/counts")).unread, { timeout: 30_000 })
+    .toBeGreaterThan(0);
   const cat = (c: string) => counts.byCategory[c]?.all ?? 0;
   const expected: [string, number][] = [
     ["All", counts.all],
@@ -472,8 +475,17 @@ test("Notifications: the tabs carry the counts, Mark all as read clears them, an
   await expect(tab("Unread")).toHaveText(/^Unread\s*0$/);
   await expect(tab("All")).toHaveText(new RegExp(`^All\\s*${counts.all}$`));
 
-  // The seed's publish confirmation links to its scores (§30 target, "View scores").
-  await page.getByRole("list", { name: "Notifications" }).getByRole("button").filter({ hasText: "Grades published: First Term CA 1" }).first().click();
+  // The seed's publish confirmation links to its scores (§30 target, "View scores"). It is under
+  // Academics; every suite run adds newer items, so it may sit behind "Load more".
+  await tab("Academics").click();
+  const published = page.getByRole("list", { name: "Notifications" }).getByRole("button").filter({ hasText: "Grades published: First Term CA 1" }).first();
+  const more = page.getByRole("button", { name: "Load more" });
+  // "Load more" goes away with the last page, so each try clicks it briefly and checks again.
+  await expect(async () => {
+    if (!(await published.isVisible()) && (await more.isVisible())) await more.click({ timeout: 2_000 });
+    await expect(published).toBeVisible({ timeout: 1_000 });
+  }).toPass({ timeout: 30_000 });
+  await published.click();
   const detail = page.getByRole("article", { name: "Grades published: First Term CA 1" }).first();
   await expect(detail).toBeVisible();
   await detail.getByRole("link", { name: "View scores" }).click();
@@ -732,12 +744,13 @@ test("Attendance history: the period presets and the dates filter the class's fi
     sum.onLeave += k.excusedDays ?? 0;
   }
   expect(sum.present + sum.late + sum.absent, "the seed's past days are in the range").toBeGreaterThan(0);
-  const rate = Math.round(((sum.present + sum.late) / (sum.present + sum.late + sum.absent)) * 1000) / 10;
+  // Shown as a whole percent (formatRate).
+  const rate = Math.round(((sum.present + sum.late) / (sum.present + sum.late + sum.absent)) * 100);
   await expect(tile("Present")).toHaveText(new RegExp(`^Present\\s*${sum.present}$`));
   await expect(tile("Late")).toHaveText(new RegExp(`^Late\\s*${sum.late}$`));
   await expect(tile("Absent")).toHaveText(new RegExp(`^Absent\\s*${sum.absent}$`));
   await expect(tile("On leave")).toHaveText(new RegExp(`^On leave\\s*${sum.onLeave}$`));
-  await expect(tile("Attendance rate")).toHaveText(new RegExp(`^Attendance rate\\s*${String(rate).replace(".", "\\.")}(\\.0)?%$`));
+  await expect(tile("Attendance rate")).toHaveText(new RegExp(`^Attendance rate\\s*${rate}%$`));
   // A range that ends before it starts is explained, not loaded.
   await from.fill(yesterday);
   await to.fill(earlier);

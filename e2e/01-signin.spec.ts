@@ -30,7 +30,7 @@ test.describe("teacher sign-in", () => {
 
   test("/signin and a signed-out /set-password both land on the one sign-in page", async ({ browser, baseURL }) => {
     // A fresh, signed-out context: the project default carries the teacher's session.
-    const context = await browser.newContext({ baseURL });
+    const context = await browser.newContext({ baseURL, storageState: { cookies: [], origins: [] } });
     const page = await context.newPage();
     await page.route((url) => !["localhost", "127.0.0.1"].includes(url.hostname), (route) => route.abort());
     for (const path of ["/signin", "/set-password"]) {

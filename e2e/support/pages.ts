@@ -28,8 +28,9 @@ export const TEACHER_PAGES: readonly PageSpec[] = [
   { path: "/curriculum", label: "Curriculum", content: /Choose a subject first/, empty: true },
   // The seed makes a Grade 5A class-group room (the lesson sheet's "Message the class"); it is in the conversations list.
   { path: "/messages", label: "Messages", content: /Class Group Chat/ },
-  // The publish confirmation the seed's Mathematics 5A publish sends the teacher.
-  { path: "/notifications", label: "Notifications", content: /Grades published: First Term CA 1/, feed: /\/notifications\/counts$/ },
+  // The Academics tab's count (the seed's publish and assessment notices). The newest-first list
+  // itself fills with what every suite run sends, so a seeded item can fall off its first page.
+  { path: "/notifications", label: "Notifications", content: /^Academics\s*\d+$/, feed: /\/notifications\/counts$/ },
   // Settings opens on Account: the teacher's email appears once their settings have loaded.
   { path: "/settings", label: "Settings", content: /teacher@e2e\.talim\.test/, feed: /\/teacher\/settings$/ },
 ];
