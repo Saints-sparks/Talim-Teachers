@@ -120,7 +120,8 @@ export const accountService = {
    *
    * @param body - The account's password and an optional reason.
    * @returns `{ status: 'scheduled', requestedAt, scheduledFor }`.
-   * @throws ApiError with `reasonCode` `INVALID_PASSWORD` (401), `ADMIN_ACCOUNT` (403),
+   * @throws ApiError: 400 `VALIDATION_FAILED` with a `password` field error for a wrong password;
+   *   `reasonCode` `ADMIN_ACCOUNT` (403),
    *   `LAST_SCHOOL_ADMIN` or `DELETION_SCHEDULED` (409).
    */
   requestDeletion: async (body: AccountDeletionBody): Promise<AccountDeletionScheduled> => {

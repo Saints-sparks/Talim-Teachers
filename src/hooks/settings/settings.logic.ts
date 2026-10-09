@@ -484,7 +484,6 @@ export const DELETION_REASON_MAX = 500;
 
 /** Copy for each refusal of `POST /auth/account/deletion`, used when the server sends no message. */
 export const DELETION_ERROR_COPY: Readonly<Record<string, string>> = {
-  INVALID_PASSWORD: "That password is not right. Please try again.",
   ADMIN_ACCOUNT: "Talim platform admin accounts can't be deleted from here.",
   LAST_SCHOOL_ADMIN: "You are your school's only admin. Make another admin first, or contact Talim support.",
   DELETION_SCHEDULED: "Your account is already scheduled for deletion.",
@@ -526,15 +525,18 @@ export function deletionNoticeFromSearch(search: string): string | null {
 
 /**
  * Where a failed deletion request's message belongs: on the password field
- * for a wrong password, otherwise in the banner over the form. Keyed on the
- * route's own `code` (`ApiError.reasonCode`), never on message text.
+ * for a wrong password (a 400 whose field errors name `password`, read with
+ * `ApiError.fieldErrors()` as the change-password sheet does), otherwise in
+ * the banner over the form. Refusals are keyed on the route's own `code`
+ * (`ApiError.reasonCode`), never on message text.
  *
  * @param error - Whatever `POST /auth/account/deletion` threw.
  * @returns The field message or the banner message (the other is null).
  */
 export function deletionErrorMessage(error: unknown): { field: string | null; banner: string | null } {
+  const password = error instanceof ApiError ? error.fieldErrors().password : undefined;
+  if (password) return { field: password, banner: null };
   const reason = error instanceof ApiError ? error.reasonCode : undefined;
-  if (reason === "INVALID_PASSWORD") return { field: DELETION_ERROR_COPY.INVALID_PASSWORD, banner: null };
   if (reason && DELETION_ERROR_COPY[reason]) return { field: null, banner: (error as ApiError).message || DELETION_ERROR_COPY[reason] };
   return { field: null, banner: getErrorMessage(error, "We couldn't delete your account. Please try again.") };
 }

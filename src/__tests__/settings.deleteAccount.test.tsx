@@ -52,11 +52,8 @@ const SCHEDULED = { status: "scheduled" as const, requestedAt: "2026-10-09T10:00
  * @returns The error.
  */
 function refusal(status: number, reason: string, message: string): ApiError {
-  return new ApiError(status === 401 ? "UNAUTHENTICATED" : "CONFLICT", message, status, [], undefined, {
-    success: false,
-    code: reason,
-    error: { code: status === 401 ? "UNAUTHENTICATED" : "CONFLICT", message },
-  });
+  const code = status === 403 ? "FORBIDDEN" : "CONFLICT";
+  return new ApiError(code, message, status, [], undefined, { success: false, code: reason, error: { code, message } });
 }
 
 /**
@@ -129,8 +126,16 @@ describe("Settings → Security → Danger zone", () => {
     expect(service.requestDeletion).toHaveBeenCalledWith({ password: "Correct#Pass1", reason: "Moving schools" });
   });
 
-  it("shows INVALID_PASSWORD on the password field and stays signed in", async () => {
-    service.requestDeletion.mockRejectedValueOnce(refusal(401, "INVALID_PASSWORD", "Invalid password"));
+  it("shows a wrong password (400, field error on password) on the field and stays signed in", async () => {
+    service.requestDeletion.mockRejectedValueOnce(
+      ApiError.fromResponse(
+        { status: 400 },
+        {
+          success: false,
+          error: { code: "VALIDATION_FAILED", message: "Your password is incorrect.", details: [{ field: "password", reason: "Password is incorrect" }] },
+        },
+      ),
+    );
     const logout = jest.fn();
     render(<DeleteAccountSection />, { auth: { logout } });
     const dialog = await openSheet();
@@ -139,7 +144,8 @@ describe("Settings → Security → Danger zone", () => {
 
     const field = within(dialog).getByLabelText("Password");
     await waitFor(() => expect(field).toHaveAttribute("aria-invalid", "true"));
-    expect(field).toHaveAccessibleDescription("That password is not right. Please try again.");
+    expect(field).toHaveAccessibleDescription("Password is incorrect");
+    expect(within(dialog).queryByText("Your password is incorrect.")).not.toBeInTheDocument();
     expect(logout).not.toHaveBeenCalled();
 
     fireEvent.change(field, { target: { value: "again" } });
