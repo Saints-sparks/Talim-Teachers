@@ -449,8 +449,10 @@ test("Notifications: the tabs carry the counts, Mark all as read clears them, an
     ["All", counts.all],
     ["Unread", counts.unread],
     ["Academics", cat("academics") + cat("grading") + cat("resources")],
-    ["Attendance", cat("attendance")],
+    // The Attendance tab also lists leave (tabCounts in src/hooks/notifications/notifications.logic.ts).
+    ["Attendance", cat("attendance") + cat("leave")],
     ["Announcements", cat("announcement")],
+    ["Support", cat("support")],
   ];
 
   await openPage(page, "/notifications", /\/notifications\/counts$/);
