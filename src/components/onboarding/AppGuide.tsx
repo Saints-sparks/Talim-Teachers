@@ -260,11 +260,20 @@ export default function AppGuide() {
     update();
     window.addEventListener("resize", update);
     window.addEventListener("scroll", update, true);
+    // Layout shifts move the target without a scroll or resize event (data arriving above it, a
+    // banner, the target itself growing): follow the target's and the page's size too.
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
+    const target = document.querySelector<HTMLElement>(`[data-guide="${currentStep.target}"]`);
+    if (observer) {
+      if (target) observer.observe(target);
+      observer.observe(document.body);
+    }
 
     return () => {
       window.cancelAnimationFrame(frame);
       window.removeEventListener("resize", update);
       window.removeEventListener("scroll", update, true);
+      observer?.disconnect();
     };
   }, [isOpen, currentStep?.target]);
 

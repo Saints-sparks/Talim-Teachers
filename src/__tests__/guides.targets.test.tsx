@@ -453,6 +453,43 @@ describe("AppGuide", () => {
     expect(screen.getByText("Step 1 of 4")).toBeInTheDocument();
   });
 
+  it("moves the spotlight when the page shifts under it (no scroll or resize event)", async () => {
+    const observed: { callback: ResizeObserverCallback; targets: Element[] }[] = [];
+    const original = (globalThis as { ResizeObserver?: unknown }).ResizeObserver;
+    (globalThis as { ResizeObserver?: unknown }).ResizeObserver = class {
+      private readonly entry: { callback: ResizeObserverCallback; targets: Element[] };
+      constructor(callback: ResizeObserverCallback) {
+        this.entry = { callback, targets: [] };
+        observed.push(this.entry);
+      }
+      observe(target: Element) {
+        this.entry.targets.push(target);
+      }
+      disconnect() {
+        this.entry.targets.length = 0;
+      }
+      unobserve() {}
+    };
+    try {
+      await mountStudentsWithGuide();
+      await screen.findByText("Step 1 of 5");
+      const highlight = await screen.findByTestId("guide-highlight");
+      const target = document.querySelector<HTMLElement>(`[data-guide="${highlight.getAttribute("data-guide-for")}"]`)!;
+      const live = observed.find((o) => o.targets.includes(target));
+      expect(live?.targets).toContain(document.body);
+      // Content above the target loads: it moves down 150px without any scroll or resize event.
+      target.getBoundingClientRect = () => ({ top: 400, left: 300, width: 600, height: 44, right: 900, bottom: 444, x: 300, y: 400, toJSON: () => ({}) });
+      await act(async () => {
+        live!.callback([], {} as ResizeObserver);
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+      expect(highlight.style.top).toBe("392px");
+      expect(highlight.style.left).toBe("292px");
+    } finally {
+      (globalThis as { ResizeObserver?: unknown }).ResizeObserver = original;
+    }
+  });
+
   it("stays closed once the guide has been seen on this device", async () => {
     localStorage.setItem("talim_teacher_guide:teacher-1:students:seen", "done");
     await mountStudentsWithGuide();
