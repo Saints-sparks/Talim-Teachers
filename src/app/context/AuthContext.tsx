@@ -76,6 +76,12 @@ export interface AuthContextType {
 export interface LogoutOptions {
   /** Where to land instead of plain sign-in (e.g. sign-in with the deletion notice). */
   redirectTo?: string;
+  /**
+   * The server has already ended every session (an account deletion): make
+   * no more authenticated calls, which would 401 and race a forced sign-out.
+   * The browser's push subscription is dropped locally only.
+   */
+  sessionEnded?: boolean;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -293,20 +299,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = useCallback(async (options?: LogoutOptions) => {
     const target = typeof options?.redirectTo === "string" && options.redirectTo ? options.redirectTo : SIGN_IN_ROUTE;
+    const sessionEnded = options?.sessionEnded === true;
     setIsLoading(true);
     // Stop this browser's push notifications while the token still works, but
     // never hold up signing out for long.
     await Promise.race([
-      unsubscribeWebPushOnLogout(),
+      sessionEnded ? unsubscribeBrowserPush(sessionStore.getUserId(), null) : unsubscribeWebPushOnLogout(),
       new Promise((resolve) => setTimeout(resolve, 3000)),
     ]);
 
-    try {
-      await authService.logout();
-    } catch (error) {
-      // The local session is cleared regardless; a failed server logout only
-      // means the refresh token expires on its own.
-      logger.debug("auth", "server logout failed", error);
+    if (!sessionEnded) {
+      try {
+        await authService.logout();
+      } catch (error) {
+        // The local session is cleared regardless; a failed server logout only
+        // means the refresh token expires on its own.
+        logger.debug("auth", "server logout failed", error);
+      }
     }
 
     clearSession();

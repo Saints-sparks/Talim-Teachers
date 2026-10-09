@@ -16,6 +16,7 @@ import { ApiError } from "@/lib/apiError";
 import { apiClient } from "@/lib/apiClient";
 import { sessionStore } from "@/lib/session";
 import { clearQueriesOnLogout } from "@/providers/query-provider";
+import { unsubscribeBrowserPush } from "@/lib/webPushSync";
 import {
   DELETION_CANCELLED_MESSAGE,
   deletionErrorMessage,
@@ -124,7 +125,7 @@ describe("Settings → Security → Danger zone", () => {
     fireEvent.change(within(dialog).getByLabelText(/Why are you leaving/), { target: { value: "  Moving schools " } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Delete account" }));
 
-    await waitFor(() => expect(logout).toHaveBeenCalledWith({ redirectTo: "/?deletionScheduledFor=2026-11-08T10%3A00%3A00.000Z" }));
+    await waitFor(() => expect(logout).toHaveBeenCalledWith({ redirectTo: "/?deletionScheduledFor=2026-11-08T10%3A00%3A00.000Z", sessionEnded: true }));
     expect(service.requestDeletion).toHaveBeenCalledWith({ password: "Correct#Pass1", reason: "Moving schools" });
   });
 
@@ -224,7 +225,7 @@ describe("AuthContext and the deletion", () => {
       <div>
         <span data-testid="state">{isAuthenticated ? "in" : "out"}</span>
         <button onClick={() => login({ email: teacher.email, password: "pw", deviceToken: "web", platform: "web" }).catch(() => undefined)}>sign in</button>
-        <button onClick={() => void logout({ redirectTo: "/?deletionScheduledFor=x" })}>sign out</button>
+        <button onClick={() => void logout({ redirectTo: "/?deletionScheduledFor=x", sessionEnded: true })}>sign out</button>
       </div>
     );
   }
@@ -274,6 +275,10 @@ describe("AuthContext and the deletion", () => {
     });
 
     await waitFor(() => expect(push).toHaveBeenCalledWith("/?deletionScheduledFor=x"));
+    // The server already ended the session: no logout call, push dropped locally only.
+    const calls = fetchMock.mock.calls.map(([url]) => String(url));
+    expect(calls.some((url) => url.endsWith("/auth/logout"))).toBe(false);
+    expect(unsubscribeBrowserPush).toHaveBeenCalledWith("68c0a1b2c3d4e5f600000001", null);
     expect(screen.getByTestId("state")).toHaveTextContent("out");
     expect(localStorage.getItem("accessToken")).toBeNull();
     expect(client.getQueryData(["settings", "teacher"])).toBeUndefined();

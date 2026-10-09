@@ -152,7 +152,8 @@ export function useInvalidateSessions(): () => void {
 /**
  * Asks for the account to be deleted (`POST /auth/account/deletion`). On
  * success the server has already ended every session, so this signs out here
- * through `AuthContext.logout` (tokens, stored user, query cache) and lands
+ * through `AuthContext.logout` (tokens, stored user, query cache; no further
+ * server calls, `sessionEnded`) and lands
  * on sign-in with the scheduled date (`deletionScheduledRoute`). The mutation
  * stays pending until the sign-out has run.
  *
@@ -163,7 +164,7 @@ export function useRequestAccountDeletion() {
   return useMutation<AccountDeletionScheduled, unknown, AccountDeletionBody>({
     mutationFn: (body) => accountService.requestDeletion(body),
     onSuccess: async ({ scheduledFor }) => {
-      await logout({ redirectTo: deletionScheduledRoute(scheduledFor) });
+      await logout({ redirectTo: deletionScheduledRoute(scheduledFor), sessionEnded: true });
     },
   });
 }
