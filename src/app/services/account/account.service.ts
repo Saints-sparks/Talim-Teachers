@@ -6,6 +6,7 @@
  * - `GET /auth/sessions`, `DELETE /auth/sessions/:id`, `POST /auth/sessions/revoke-others`
  * - `GET /auth/password-policy` (public)
  * - `GET /teachers/me/school`
+ * - `POST /auth/account/deletion` (v1.5 addendum: delete account)
  *
  * Every call goes through the typed client, which unwraps the success
  * envelope and throws `ApiError`. With `NEXT_PUBLIC_USE_FIXTURES=true` in a
@@ -15,6 +16,8 @@ import { api } from "@/lib/apiClient";
 import { fixturesEnabled } from "@/lib/fixtures/flag";
 import type { TeacherSettings } from "@/hooks/settings/useTeacherSettings";
 import type {
+  AccountDeletionBody,
+  AccountDeletionScheduled,
   AuthSession,
   PasswordPolicy,
   RevokeOthersResult,
@@ -108,5 +111,24 @@ export const accountService = {
       return makeSchoolContactFixture();
     }
     return api.get<SchoolContact>("/teachers/me/school");
+  },
+
+  /**
+   * `POST /auth/account/deletion`: schedules the caller's account for
+   * deletion in 30 days. The server signs every session out at once, so the
+   * caller must sign out locally afterwards.
+   *
+   * @param body - The account's password and an optional reason.
+   * @returns `{ status: 'scheduled', requestedAt, scheduledFor }`.
+   * @throws ApiError with `reasonCode` `INVALID_PASSWORD` (401), `ADMIN_ACCOUNT` (403),
+   *   `LAST_SCHOOL_ADMIN` or `DELETION_SCHEDULED` (409).
+   */
+  requestDeletion: async (body: AccountDeletionBody): Promise<AccountDeletionScheduled> => {
+    if (fixturesEnabled()) {
+      const requestedAt = new Date();
+      const scheduledFor = new Date(requestedAt.getTime() + 30 * 24 * 60 * 60_000);
+      return { status: "scheduled", requestedAt: requestedAt.toISOString(), scheduledFor: scheduledFor.toISOString() };
+    }
+    return api.post<AccountDeletionScheduled>("/auth/account/deletion", body);
   },
 };

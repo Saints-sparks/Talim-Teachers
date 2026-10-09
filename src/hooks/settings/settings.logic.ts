@@ -5,6 +5,8 @@
  * Nothing here touches React or the network, so all of it is unit-tested in
  * `src/__tests__/settings.logic.test.ts`.
  */
+import { ApiError, getErrorMessage } from "@/lib/apiError";
+import { SIGN_IN_ROUTE } from "@/lib/routes";
 import { PROFILE_NAME_MAX, PROFILE_PHONE_PATTERN } from "@/types/inboxSettings";
 import type { AuthSession, SchoolContact } from "@/types/inboxSettings";
 
@@ -467,4 +469,72 @@ export function profileRecordSections(record: Record<string, unknown> | null | u
   return sections
     .map((section) => ({ ...section, items: section.items.filter((item) => item.value !== "") }))
     .filter((section) => section.items.length > 0);
+}
+
+// ─── Delete account (v1.5 addendum) ─────────────────────────────────────────
+
+/** The sign-in toast after a sign-in that cancelled a scheduled deletion (`deletionCancelled: true`). */
+export const DELETION_CANCELLED_MESSAGE = "Welcome back. Your account deletion has been cancelled.";
+
+/** The sign-in query parameter that carries the scheduled deletion date (ISO). */
+export const DELETION_NOTICE_PARAM = "deletionScheduledFor";
+
+/** The most a deletion reason may hold (the backend's limit). */
+export const DELETION_REASON_MAX = 500;
+
+/** Copy for each refusal of `POST /auth/account/deletion`, used when the server sends no message. */
+export const DELETION_ERROR_COPY: Readonly<Record<string, string>> = {
+  INVALID_PASSWORD: "That password is not right. Please try again.",
+  ADMIN_ACCOUNT: "Talim platform admin accounts can't be deleted from here.",
+  LAST_SCHOOL_ADMIN: "You are your school's only admin. Make another admin first, or contact Talim support.",
+  DELETION_SCHEDULED: "Your account is already scheduled for deletion.",
+};
+
+/**
+ * The notice sign-in shows after a deletion request.
+ *
+ * @param scheduledFor - `scheduledFor` from the 200 response (ISO).
+ * @returns "Your account will be deleted on 8 Nov 2026. Sign in before then to cancel."
+ */
+export function deletionScheduledMessage(scheduledFor: string | null | undefined): string {
+  const date = formatJoinedDate(scheduledFor);
+  const when = date === "—" ? "in 30 days" : `on ${date}`;
+  return `Your account will be deleted ${when}. Sign in before then to cancel.`;
+}
+
+/**
+ * The sign-in URL to land on after a deletion request, carrying the date.
+ *
+ * @param scheduledFor - `scheduledFor` from the 200 response (ISO).
+ * @returns e.g. `/?deletionScheduledFor=2026-11-08T10%3A00%3A00.000Z`.
+ */
+export function deletionScheduledRoute(scheduledFor: string): string {
+  return `${SIGN_IN_ROUTE}?${new URLSearchParams({ [DELETION_NOTICE_PARAM]: scheduledFor }).toString()}`;
+}
+
+/**
+ * The deletion notice a sign-in URL asks for.
+ *
+ * @param search - `window.location.search`.
+ * @returns The notice, or null when the URL carries no readable date.
+ */
+export function deletionNoticeFromSearch(search: string): string | null {
+  const value = new URLSearchParams(search).get(DELETION_NOTICE_PARAM);
+  if (!value || Number.isNaN(new Date(value).getTime())) return null;
+  return deletionScheduledMessage(value);
+}
+
+/**
+ * Where a failed deletion request's message belongs: on the password field
+ * for a wrong password, otherwise in the banner over the form. Keyed on the
+ * route's own `code` (`ApiError.reasonCode`), never on message text.
+ *
+ * @param error - Whatever `POST /auth/account/deletion` threw.
+ * @returns The field message or the banner message (the other is null).
+ */
+export function deletionErrorMessage(error: unknown): { field: string | null; banner: string | null } {
+  const reason = error instanceof ApiError ? error.reasonCode : undefined;
+  if (reason === "INVALID_PASSWORD") return { field: DELETION_ERROR_COPY.INVALID_PASSWORD, banner: null };
+  if (reason && DELETION_ERROR_COPY[reason]) return { field: null, banner: (error as ApiError).message || DELETION_ERROR_COPY[reason] };
+  return { field: null, banner: getErrorMessage(error, "We couldn't delete your account. Please try again.") };
 }

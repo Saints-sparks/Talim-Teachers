@@ -3,7 +3,8 @@
 /**
  * React Query hooks over Round 4's account endpoints (`accountService`,
  * §33–36): the profile save, signed-in sessions, the password policy and the
- * school office's contact details. Keys come from `queryKeys.settings`.
+ * school office's contact details, and the v1.5 delete-account request.
+ * Keys come from `queryKeys.settings`.
  * Support tickets moved to `src/hooks/support/useTickets.ts` (v1.5).
  */
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
@@ -11,8 +12,15 @@ import { useCallback } from "react";
 import { useAuth } from "@/app/context/AuthContext";
 import { accountService } from "@/app/services/account/account.service";
 import { queryKeys, staleTimes } from "@/lib/queryKeys";
-import type { AuthSession, PasswordPolicy, RevokeOthersResult, SchoolContact } from "@/types/inboxSettings";
-import type { ProfileField } from "./settings.logic";
+import type {
+  AccountDeletionBody,
+  AccountDeletionScheduled,
+  AuthSession,
+  PasswordPolicy,
+  RevokeOthersResult,
+  SchoolContact,
+} from "@/types/inboxSettings";
+import { deletionScheduledRoute, type ProfileField } from "./settings.logic";
 
 /** The password policy changes with a deploy at most: keep it for the session. */
 const POLICY_STALE_MS = 60 * 60_000;
@@ -139,4 +147,23 @@ export function useInvalidateSessions(): () => void {
   return useCallback(() => {
     queryClient.invalidateQueries({ queryKey: queryKeys.settings.sessions(userId) });
   }, [queryClient, userId]);
+}
+
+/**
+ * Asks for the account to be deleted (`POST /auth/account/deletion`). On
+ * success the server has already ended every session, so this signs out here
+ * through `AuthContext.logout` (tokens, stored user, query cache) and lands
+ * on sign-in with the scheduled date (`deletionScheduledRoute`). The mutation
+ * stays pending until the sign-out has run.
+ *
+ * @returns The mutation; `mutate` takes `{ password, reason? }` and throws the `ApiError` on refusal.
+ */
+export function useRequestAccountDeletion() {
+  const { logout } = useAuth();
+  return useMutation<AccountDeletionScheduled, unknown, AccountDeletionBody>({
+    mutationFn: (body) => accountService.requestDeletion(body),
+    onSuccess: async ({ scheduledFor }) => {
+      await logout({ redirectTo: deletionScheduledRoute(scheduledFor) });
+    },
+  });
 }

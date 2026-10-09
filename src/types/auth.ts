@@ -59,6 +59,9 @@ export interface AuthResponse {
   access_token: string;
   refresh_token: string;
   user: User;
+  // TODO-switch to generated: `POST /auth/login`'s response once `npm run types:api` has it.
+  /** True when this sign-in cancelled a scheduled account deletion. */
+  deletionCancelled?: boolean;
 }
 
 export interface AuthError {

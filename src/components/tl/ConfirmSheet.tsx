@@ -20,6 +20,8 @@ export interface ConfirmSheetProps {
   busy?: boolean;
   /** The red confirm of a destructive action (Remove). */
   danger?: boolean;
+  /** Holds the confirm button until the content is complete (a password typed, a box ticked). */
+  confirmDisabled?: boolean;
   /** Extra content under the paragraph (an optional reason field). */
   children?: ReactNode;
 }
@@ -31,7 +33,20 @@ export interface ConfirmSheetProps {
  * @param props - See {@link ConfirmSheetProps}.
  * @returns The sheet.
  */
-export function ConfirmSheet({ open, onCancel, onConfirm, eyebrowText, title, body, confirmLabel, busyLabel, busy = false, danger = false, children }: ConfirmSheetProps) {
+export function ConfirmSheet({
+  open,
+  onCancel,
+  onConfirm,
+  eyebrowText,
+  title,
+  body,
+  confirmLabel,
+  busyLabel,
+  busy = false,
+  danger = false,
+  confirmDisabled = false,
+  children,
+}: ConfirmSheetProps) {
   return (
     <Sheet
       open={open}
@@ -43,7 +58,7 @@ export function ConfirmSheet({ open, onCancel, onConfirm, eyebrowText, title, bo
           <button type="button" className={`${ghostButton} min-h-[48px] flex-1`} onClick={onCancel} disabled={busy}>
             Cancel
           </button>
-          <button type="button" className={`${danger ? dangerButton : primaryButton} min-h-[48px] flex-1`} onClick={onConfirm} disabled={busy}>
+          <button type="button" className={`${danger ? dangerButton : primaryButton} min-h-[48px] flex-1`} onClick={onConfirm} disabled={busy || confirmDisabled}>
             {busy ? (busyLabel ?? confirmLabel) : confirmLabel}
           </button>
         </>

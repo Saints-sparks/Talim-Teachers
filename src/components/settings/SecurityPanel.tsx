@@ -10,6 +10,7 @@ import { useInvalidateSessions, usePasswordPolicy, useRevokeOtherSessions, useRe
 import { revokedOthersMessage, sessionDescription, sessionLabel, sortSessions } from "@/hooks/settings/settings.logic";
 import type { AuthSession } from "@/types/inboxSettings";
 import { ChangePasswordSheet } from "./ChangePasswordSheet";
+import { DeleteAccountSection } from "./DeleteAccountSection";
 import { LinkRow, PanelError, PanelSkeleton, SettingsGroup, ValueRow } from "./SettingsRows";
 
 /**
@@ -46,8 +47,9 @@ function SessionRow({ session, showBadge, busy, onSignOut }: { session: AuthSess
 /**
  * Settings → Security: change the password (the sheet checks the backend's
  * real policy), the list of signed-in devices with "Sign out" on each other
- * one, and "Sign out of other devices" behind a confirmation. Two-step
- * sign-in is not offered (decision 5 of Round 4).
+ * one, and "Sign out of other devices" behind a confirmation, then the
+ * Danger zone with Delete account (v1.5). Two-step sign-in is not offered
+ * (decision 5 of Round 4).
  *
  * @returns The panel content.
  */
@@ -121,6 +123,7 @@ export function SecurityPanel() {
           <LinkRow label="Sign out of other devices" description="Ends every other session immediately" onClick={() => setConfirmOthers(true)} />
         ) : null}
       </SettingsGroup>
+      <DeleteAccountSection />
 
       <ChangePasswordSheet open={passwordOpen} onOpenChange={setPasswordOpen} policy={policy.data} onChanged={invalidateSessions} />
       <ConfirmSheet

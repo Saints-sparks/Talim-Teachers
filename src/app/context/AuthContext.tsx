@@ -18,6 +18,7 @@ import {
 } from "@/lib/session";
 import { authService } from "@/app/services/auth.service";
 import { resolveSignedInRoute } from "@/app/lib/landing";
+import { DELETION_CANCELLED_MESSAGE } from "@/hooks/settings/settings.logic";
 import { startWebPushSync, unsubscribeBrowserPush, unsubscribeWebPushOnLogout } from "@/lib/webPushSync";
 import type { AuthResponse, LoginCredentials, User } from "@/types/auth";
 
@@ -43,8 +44,12 @@ export interface AuthContextType {
   isRestoringSession: boolean;
   /** Signs in, admits only teacher-portal roles, and routes onwards (to the teacher's landing page once set up). */
   login: (credentials: LoginCredentials) => Promise<AuthResponse>;
-  /** Clears the session everywhere and returns to sign-in. */
-  logout: () => Promise<void>;
+  /**
+   * Clears the session everywhere (tokens, the stored user and, through the
+   * `auth-changed` event, the query cache) and returns to sign-in, or to
+   * `options.redirectTo` (a sign-in URL carrying a notice).
+   */
+  logout: (options?: LogoutOptions) => Promise<void>;
   /** Obtains a fresh access token from the refresh cookie. */
   refreshToken: () => Promise<boolean>;
   /** Replaces the token after it was rotated elsewhere. */
@@ -65,6 +70,12 @@ export interface AuthContextType {
    * @deprecated Read `accessToken`, or `sessionStore.getToken()` outside React.
    */
   getAccessToken: () => string | null;
+}
+
+/** Options for {@link AuthContextType.logout}. */
+export interface LogoutOptions {
+  /** Where to land instead of plain sign-in (e.g. sign-in with the deletion notice). */
+  redirectTo?: string;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -141,7 +152,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user, accessToken]);
 
   const clearSession = useCallback(
-    (redirectToSignIn = false) => {
+    (redirectToSignIn = false, redirectTo: string = SIGN_IN_ROUTE) => {
       // A forced sign-out (expiry, refresh failure) never went through `logout`,
       // so this browser's push subscription is still live. Capture what is
       // needed to remove it before the session is wiped: after a normal
@@ -162,7 +173,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Not from a page for signed-out visitors: opening /forgot-password from a link has no session to restore.
       if (redirectToSignIn && typeof window !== "undefined" && !isSignedOutRoute(window.location.pathname)) {
         // Give the local unsubscribe a moment before the page unloads.
-        const redirect = () => window.location.assign(SIGN_IN_ROUTE);
+        const redirect = () => window.location.assign(redirectTo);
         if (pushCleanup) {
           Promise.race([pushCleanup, new Promise((resolve) => setTimeout(resolve, 1500))]).then(redirect, redirect);
         } else {
@@ -267,6 +278,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       window.dispatchEvent(new CustomEvent("auth-changed", { detail: { type: "login", user: userData } }));
 
       if (userData.mustChangePassword) toast.info("Set a new password to finish signing in.");
+      else if (response.deletionCancelled) toast.success(DELETION_CANCELLED_MESSAGE);
       else toast.success("Login successful!");
 
       // Set-password and onboarding first, then the teacher's "First screen
@@ -279,7 +291,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [adoptToken, clearSession, introspect, router],
   );
 
-  const logout = useCallback(async () => {
+  const logout = useCallback(async (options?: LogoutOptions) => {
+    const target = typeof options?.redirectTo === "string" && options.redirectTo ? options.redirectTo : SIGN_IN_ROUTE;
     setIsLoading(true);
     // Stop this browser's push notifications while the token still works, but
     // never hold up signing out for long.
@@ -298,8 +311,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     clearSession();
     setIsLoading(false);
-    window.dispatchEvent(new CustomEvent("auth-changed", { detail: { type: "logout" } }));
-    router.push(SIGN_IN_ROUTE);
+    window.dispatchEvent(new CustomEvent("auth-changed", { detail: { type: "logout", redirectTo: target } }));
+    router.push(target);
   }, [clearSession, router]);
 
   const changePassword = useCallback(
@@ -325,8 +338,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // A failed refresh anywhere (including inside the API client) ends the session.
   useEffect(() => {
     const handleAuthChanged = (event: Event) => {
-      const detail = (event as CustomEvent<{ type?: string }>).detail;
-      if (detail?.type === "logout") clearSession(true);
+      const detail = (event as CustomEvent<{ type?: string; redirectTo?: string }>).detail;
+      if (detail?.type === "logout") clearSession(true, detail.redirectTo || SIGN_IN_ROUTE);
     };
     window.addEventListener("auth-changed", handleAuthChanged);
     return () => window.removeEventListener("auth-changed", handleAuthChanged);

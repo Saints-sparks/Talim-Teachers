@@ -199,7 +199,7 @@ export default function SetPasswordPage() {
           </Link>
           <button
             type="button"
-            onClick={logout}
+            onClick={() => void logout()}
             className="inline-flex min-h-[44px] items-center text-gray-500 hover:underline dark:text-slate-400"
           >
             Sign out

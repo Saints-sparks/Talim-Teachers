@@ -38,7 +38,7 @@ export interface ChangePasswordSheetProps {
 }
 
 /**
- * One labelled password input.
+ * One labelled password input (also the Delete account sheet's).
  *
  * @param props - The field.
  * @param props.label - The visible label.
@@ -48,9 +48,10 @@ export interface ChangePasswordSheetProps {
  * @param props.placeholder - Shown while empty.
  * @param props.describedBy - The id of the note under the fields.
  * @param props.disabled - True while saving.
+ * @param props.error - A message about this field (a wrong password), shown under it and announced.
  * @returns The field.
  */
-function PasswordField({
+export function PasswordField({
   label,
   value,
   onChange,
@@ -58,6 +59,7 @@ function PasswordField({
   placeholder,
   describedBy,
   disabled,
+  error,
 }: {
   label: string;
   value: string;
@@ -66,8 +68,11 @@ function PasswordField({
   placeholder?: string;
   describedBy?: string;
   disabled: boolean;
+  error?: string | null;
 }) {
   const id = useId();
+  const errorId = useId();
+  const described = [describedBy, error ? errorId : undefined].filter(Boolean).join(" ") || undefined;
   return (
     <div className="flex flex-col gap-[7px]">
       <label htmlFor={id} className="text-xs font-extrabold uppercase tracking-[0.05em] text-tl-faint">
@@ -79,11 +84,17 @@ function PasswordField({
         value={value}
         autoComplete={autoComplete}
         placeholder={placeholder}
-        aria-describedby={describedBy}
+        aria-describedby={described}
+        aria-invalid={error ? true : undefined}
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
         className={`${fieldControl} min-h-[48px]`}
       />
+      {error ? (
+        <p id={errorId} role="alert" className="text-[13px] font-semibold text-tl-danger">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

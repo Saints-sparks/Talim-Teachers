@@ -369,7 +369,7 @@ describe("Help tab", () => {
 });
 
 describe("About tab", () => {
-  it("shows the app, the version, the school and the legal links", async () => {
+  it("shows the app, the version, the school and the legal and support links", async () => {
     renderTab("about");
 
     expect(screen.getByText("Talim Teachers")).toBeInTheDocument();
@@ -379,9 +379,10 @@ describe("About tab", () => {
     expect(await screen.findByText("Easy Sparks Education Center")).toBeInTheDocument();
     const privacy = screen.getByRole("link", { name: "Privacy Policy (opens in a new tab)" });
     expect(privacy).toHaveAccessibleDescription("How staff and student data is handled");
-    expect(privacy).toHaveAttribute("href", "https://mytalim.com/privacy");
+    expect(privacy).toHaveAttribute("href", "https://www.mytalim.com/privacy");
     expect(privacy).toHaveAttribute("target", "_blank");
     expect(privacy).toHaveAttribute("rel", "noopener noreferrer");
-    expect(screen.getByRole("link", { name: /Terms of Service/ })).toHaveAttribute("href", "https://mytalim.com/terms");
+    expect(screen.getByRole("link", { name: /Terms of Service/ })).toHaveAttribute("href", "https://www.mytalim.com/terms");
+    expect(screen.getByRole("link", { name: /Support/ })).toHaveAttribute("href", "https://www.mytalim.com/support");
   });
 });

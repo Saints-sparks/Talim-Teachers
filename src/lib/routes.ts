@@ -21,3 +21,17 @@ export function isSignedOutRoute(pathname: string): boolean {
   const path = pathname.replace(/\/+$/, "") || "/";
   return SIGNED_OUT_ROUTES.includes(path);
 }
+
+// ─── Public pages on the Talim website ──────────────────────────────────────
+
+/** The privacy policy (`mytalim.com/privacy`). */
+export const PRIVACY_POLICY_URL = "https://www.mytalim.com/privacy";
+
+/** The terms of service (`mytalim.com/terms`). */
+export const TERMS_OF_SERVICE_URL = "https://www.mytalim.com/terms";
+
+/** How to get help (`mytalim.com/support`). */
+export const SUPPORT_URL = "https://www.mytalim.com/support";
+
+/** What deleting an account does, and what to do without access (`mytalim.com/delete-account`). */
+export const DELETE_ACCOUNT_INFO_URL = "https://www.mytalim.com/delete-account";
